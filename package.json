@@ -1,0 +1,32 @@
+{
+  "name": "@local/dsh-toolkit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "本地 DSH 套件：rate-throttle / compact-router / agent-memory / search-router / web-search-local 五合一入口；一个版本号管全部。",
+  "exports": {
+    "./rate-throttle": "./lib/rate-throttle/index.js",
+    "./compact-router": "./lib/compact-router/index.js",
+    "./agent-memory": "./lib/agent-memory/lib/index.js",
+    "./agent-memory/plugin": "./lib/agent-memory/plugin.js",
+    "./search-router": "./lib/search-router/index.js",
+    "./web-search-local": "./lib/web-search-local/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/",
+    "scripts/",
+    "test/",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT"
+}
