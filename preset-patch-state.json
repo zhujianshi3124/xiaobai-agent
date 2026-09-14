@@ -1,0 +1,30 @@
+{
+  "standard": {
+    "file": "C:\\Users\\LENOVO\\AppData\\Roaming\\npm\\node_modules\\@deepseek-ai\\dsh\\node_modules\\@deepseek-ai\\dsh-agent-presets\\presets\\standard\\agent.cordis.yml",
+    "backup": "D:\\dsh-plugins\\dsh-toolkit\\preset-backups\\standard.agent.cordis.yml.bak",
+    "originalSha": "08a029c64fdeaabe415a5627ef73ce6f6c6bc61dadaf9989d11f9e15608907f6",
+    "patchedSha": "a5e4d87112f094d1714b8889f3fe94fbd20eb42d65b351f79b9ace5bdb139cb5",
+    "patchedAt": "2026-09-14T05:13:13.000Z"
+  },
+  "ptc": {
+    "file": "C:\\Users\\LENOVO\\AppData\\Roaming\\npm\\node_modules\\@deepseek-ai\\dsh\\node_modules\\@deepseek-ai\\dsh-agent-presets\\presets\\ptc\\agent.cordis.yml",
+    "backup": "D:\\dsh-plugins\\dsh-toolkit\\preset-backups\\ptc.agent.cordis.yml.bak",
+    "originalSha": "2a62e2dd692e65b86c792519a6d6f617404be59d9878acf0727c6b92dd077134",
+    "patchedSha": "7d9aff861cd61c851877d5943008945e12a7ecfef41d72290a53253eb3fe04ff",
+    "patchedAt": "2026-09-14T05:13:13.003Z"
+  },
+  "cordis": {
+    "file": "C:\\Users\\LENOVO\\AppData\\Roaming\\npm\\node_modules\\@deepseek-ai\\dsh\\node_modules\\@deepseek-ai\\dsh-agent-presets\\presets\\cordis\\agent.cordis.yml",
+    "backup": "D:\\dsh-plugins\\dsh-toolkit\\preset-backups\\cordis.agent.cordis.yml.bak",
+    "originalSha": "2b8d89c3137ce685f3d97f65aea5bd1c5099e08bba6c16815768245f8fb61d2d",
+    "patchedSha": "9525c9a6ca4076d569494da9e97ef1ac2c9316061728bf828f9e062761275efd",
+    "patchedAt": "2026-09-14T05:13:13.015Z"
+  },
+  "liangshen": {
+    "file": "C:/Users/LENOVO/.dsh/.agent-presets/liangshen/agent.cordis.yml",
+    "backup": "D:/dsh-plugins/dsh-toolkit/preset-backups/liangshen.agent.cordis.yml.bak",
+    "originalSha": "0c9d4015838cdf0c06b1d8f3e5bc9c8911976ecdce84acb8e5c2f1d3796c2ada",
+    "patchedSha": "1d6e3210705c8b7e6574e1bc9804c9679ff700f976e47a8c10fa2878b536f968",
+    "patchedAt": "2026-09-14T08:02:55.268Z"
+  }
+}

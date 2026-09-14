@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // apply-preset-patch.mjs — mount @local/dsh-toolkit/compact-router into the SHIPPED
-// presets (standard / ptc / cordis) by swapping their compaction-basic row.
+// presets (standard / ptc / cordis) and ACTIVE USER presets under ~/.dsh/.agent-presets
+// by swapping their compaction-basic / old local-route row.
 //
 //   node scripts/apply-preset-patch.mjs            # apply (idempotent)
 //   node scripts/apply-preset-patch.mjs --undo     # restore all patched presets
@@ -13,11 +14,11 @@
 //     preset file matches NEITHER hash on apply, the script refuses: the dsh
 //     install changed upstream — re-adapt instead of blind-patching.
 //   * minimal is deliberately never touched (it has no compaction by design).
-//   * If a preset still carries the old '@local/dsh-compact-router' row, this
-//     script refuses and asks you to run the old plugin's --undo first.
+//   * Backup dirs such as liangshen.bak-YYYYMMDD are NOT treated as active user
+//     presets; only directories with agent.cordis.yml and no ".bak" in the name.
 
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,7 +27,8 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const PLUGIN_DIR = dirname(SCRIPT_DIR);
 const BACKUP_DIR = join(PLUGIN_DIR, "preset-backups");
 const MARKER = join(PLUGIN_DIR, "preset-patch-state.json");
-const PRESET_IDS = ["standard", "ptc", "cordis"];
+const SHIPPED_PRESET_IDS = ["standard", "ptc", "cordis"];
+const USER_PRESETS_DIR = join(homedir(), ".dsh", ".agent-presets");
 
 const ROW_UPSTREAM = [
   "    - id: compaction-basic",
@@ -40,7 +42,7 @@ const ROW_NEW = [
   "        mode: auto",
   "        fallbackOnRateLimit: true",
   "        archive: true",
-  "        agentMemoryRoot: C:\\Users\\LENOVO\\.agent-memory",
+  "        agentMemoryRoot: C:\Users\LENOVO\.agent-memory",
 ].join("\n");
 
 const OLD_ROW_V2 = [
@@ -50,8 +52,10 @@ const OLD_ROW_V2 = [
   "        mode: auto",
   "        fallbackOnRateLimit: true",
   "        archive: true",
-  "        agentMemoryRoot: C:\\Users\\LENOVO\\.agent-memory",
+  "        agentMemoryRoot: C:\Users\LENOVO\.agent-memory",
 ].join("\n");
+
+const OLD_NAME_LINE = "      name: '@local/dsh-compact-router'";
 
 function sha256(text) {
   return createHash("sha256").update(text, "utf8").digest("hex");
@@ -73,6 +77,19 @@ function locatePresetsDir() {
   );
 }
 
+function discoverUserPresetIds() {
+  if (!existsSync(USER_PRESETS_DIR)) return [];
+  try {
+    return readdirSync(USER_PRESETS_DIR, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && !d.name.includes(".bak"))
+      .filter((d) => existsSync(join(USER_PRESETS_DIR, d.name, "agent.cordis.yml")))
+      .map((d) => d.name)
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
 function loadMarker() {
   try {
     return JSON.parse(readFileSync(MARKER, "utf8"));
@@ -85,8 +102,9 @@ function saveMarker(marker) {
   writeFileSync(MARKER, JSON.stringify(marker, null, 2));
 }
 
-function classify(id, presetsDir, marker) {
-  const file = join(presetsDir, id, "agent.cordis.yml");
+function classify(entry, marker) {
+  const id = entry.id;
+  const file = entry.file;
   if (!existsSync(file)) return { id, file, state: "missing" };
   const text = readFileSync(file, "utf8");
   const hash = sha256(text);
@@ -95,7 +113,7 @@ function classify(id, presetsDir, marker) {
     if (rec && rec.patchedSha === hash) return { id, file, state: "patched", hash };
     return { id, file, state: "unknown", hash };
   }
-  if (text.includes(OLD_ROW_V2)) return { id, file, state: "old-plugin", hash };
+  if (text.includes(OLD_ROW_V2) || text.includes(OLD_NAME_LINE)) return { id, file, state: "old-plugin", hash };
   if (text.includes(ROW_UPSTREAM)) {
     if (rec && rec.originalSha && rec.originalSha !== hash) {
       return { id, file, state: "changed-upstream", hash };
@@ -149,9 +167,13 @@ const presetsDir = process.argv.includes("--presets-dir")
   ? process.argv[process.argv.indexOf("--presets-dir") + 1]
   : locatePresetsDir();
 const marker = loadMarker();
-const entries = PRESET_IDS.map((id) => classify(id, presetsDir, marker));
+const entries = [
+  ...SHIPPED_PRESET_IDS.map((id) => ({ id, file: join(presetsDir, id, "agent.cordis.yml"), kind: "shipped" })),
+  ...discoverUserPresetIds().map((id) => ({ id, file: join(USER_PRESETS_DIR, id, "agent.cordis.yml"), kind: "user" })),
+].map((entry) => classify(entry, marker));
 
 console.log("presets dir: " + presetsDir);
+console.log("user presets dir: " + USER_PRESETS_DIR);
 if (arg === "--status") {
   for (const e of entries) console.log(e.id + ": " + e.state);
 } else if (arg === "--undo") {
