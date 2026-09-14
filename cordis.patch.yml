@@ -1,0 +1,78 @@
+# dsh-toolkit 总装补丁：一个 bundle 层替代五个旧插件的 patch 层。
+# 行为与旧 profile 最终生效状态等价（search-router 层覆盖 web-search-local 层后的结果）。
+# compact-router 不在此：由 scripts/apply-preset-patch.mjs 改写预设 compaction 行名。
+
+- id: web
+  config:
+    searchProvider: auto-search
+    fetchProvider: local-fetch
+
+- id: web-search-deepseek
+  disabled: false
+
+- insert:
+    - id: rate-throttle
+      name: '@local/dsh-toolkit/rate-throttle'
+      config:
+        enabled: false
+        throttleProviders: []
+        minIntervalMs: 3000
+        maxRequestsPerMinute: 6
+        adaptive: false
+        maxIntervalMs: 20000
+        backoffFactor: 2
+        logProviders: []
+        logPath: ''
+        routing:
+          enabled: true
+          autoGroups: true
+          autoGroupTtlMs: 300000
+          excludeProviders: [llm-deepseek, deepseek-official]
+          cooldownMs: 300000
+          tpmTurnSkip: true
+          tpmCooldownMs: 45000
+          downgradeContextMargin: 0.9
+          maxDowngradeCompactsPerTurn: 1
+          metricsWindowMs: 600000
+          metricsLogIntervalMs: 60000
+          clearCooldownOnUserSwitch: true
+          syncSelectionOnFailover: true
+          staticGroups:
+            - id: v4-pro
+              providers:
+                - { provider: sensenova-gateway, model: deepseek-v4-pro }
+                - { provider: sensenova-gateway-2, model: deepseek-v4-pro }
+                - { provider: nvidia, model: deepseek-ai/deepseek-v4-pro-0813 }
+                - { provider: modelscope-gateway, model: deepseek-ai/DeepSeek-V4-Pro-0813 }
+                - { provider: modelscope-gateway-2, model: deepseek-ai/DeepSeek-V4-Pro-0813 }
+            - id: v4-flash
+              providers:
+                - { provider: sensenova-gateway, model: deepseek-v4-flash }
+                - { provider: sensenova-gateway-2, model: deepseek-v4-flash }
+                - { provider: amd-gateway, model: DeepSeek-V4-Flash }
+                - { provider: nvidia, model: deepseek-ai/deepseek-v4-flash-0731 }
+                - { provider: modelscope-gateway, model: deepseek-ai/DeepSeek-V4-Flash-0731 }
+                - { provider: modelscope-gateway-2, model: deepseek-ai/DeepSeek-V4-Flash-0731 }
+
+- insert:
+    - id: web-search-local
+      name: '@local/dsh-toolkit/web-search-local'
+      config:
+        engines: [searxng, google, duckduckgo, mojeek, bing, baidu, sougou, 360]
+
+- insert:
+    - id: web-search-router
+      name: '@local/dsh-toolkit/search-router'
+      config:
+        mode: auto
+        officialProviders: [llm-deepseek]
+        officialProviderPatterns: []
+        officialModelPatterns: []
+        defaultWhenUnknown: local
+
+- insert:
+    - id: agent-memory-runtime
+      name: '@local/dsh-toolkit/agent-memory/plugin'
+      config:
+        dataRoot: C:\Users\LENOVO\.agent-memory
+        defaultWorkspace: null
