@@ -1,0 +1,37 @@
+{
+  "manifestVersion": 1,
+  "name": "@local/dsh-toolkit/compact-router",
+  "requirements": {
+    "runtime": {
+      "node": ">=22",
+      "dsh": ">=0.1.2-rc.1 <0.2.0"
+    },
+    "binaries": [],
+    "packages": {
+      "@deepseek-ai/dsh-compaction-basic": { "$from": "package.json#peerDependencies" }
+    },
+    "registers": {
+      "inject": [
+        "llm",
+        "tokenMeter",
+        "sessions",
+        "commands"
+      ],
+      "events": [],
+      "services": [
+        "compaction"
+      ],
+      "commands": [
+        "compact-mode",
+        "compact-llm",
+        "compact-instant",
+        "compact-auto",
+        "compact-archive"
+      ],
+      "providers": []
+    },
+    "exports": {
+      ".": "./index.js"
+    }
+  }
+}

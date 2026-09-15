@@ -1,0 +1,30 @@
+{
+  "manifestVersion": 1,
+  "name": "@local/dsh-toolkit/web-search-local",
+  "requirements": {
+    "runtime": {
+      "node": ">=22",
+      "dsh": ">=0.1.2-rc.1 <0.2.0"
+    },
+    "binaries": [],
+    "packages": {
+      "@deepseek-ai/dsh-web": { "$from": "package.json#peerDependencies" },
+      "@deepseek-ai/schemastery": { "$from": "package.json#dependencies" }
+    },
+    "registers": {
+      "inject": [
+        "web"
+      ],
+      "events": [],
+      "services": [],
+      "commands": [],
+      "providers": [
+        "local-multi",
+        "local-fetch"
+      ]
+    },
+    "exports": {
+      ".": "./index.js"
+    }
+  }
+}
