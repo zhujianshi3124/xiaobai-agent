@@ -1,0 +1,28 @@
+{
+  "manifestVersion": 1,
+  "name": "@local/dsh-toolkit/search-router",
+  "requirements": {
+    "runtime": {
+      "node": ">=22",
+      "dsh": ">=0.1.2-rc.1 <0.2.0"
+    },
+    "binaries": [],
+    "packages": {
+      "@deepseek-ai/dsh-web": { "$from": "package.json#peerDependencies" }
+    },
+    "registers": {
+      "inject": [
+        "web"
+      ],
+      "events": [],
+      "services": [],
+      "commands": [],
+      "providers": [
+        "auto-search"
+      ]
+    },
+    "exports": {
+      ".": "./index.js"
+    }
+  }
+}

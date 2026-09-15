@@ -1,0 +1,33 @@
+{
+  "manifestVersion": 1,
+  "name": "@local/dsh-toolkit/agent-memory",
+  "requirements": {
+    "runtime": {
+      "node": ">=22",
+      "dsh": ">=0.1.2-rc.1 <0.2.0"
+    },
+    "binaries": [
+      { "name": "npm" }
+    ],
+    "packages": {},
+    "registers": {
+      "inject": [],
+      "events": [
+        "session/created",
+        "agent/inbox/claimed",
+        "agent/pre-step",
+        "session/event",
+        "agent/request-error",
+        "agent/request",
+        "session/disposed"
+      ],
+      "services": [],
+      "commands": [],
+      "providers": []
+    },
+    "exports": {
+      ".": "./lib/index.js",
+      "./plugin": "./plugin.js"
+    }
+  }
+}
