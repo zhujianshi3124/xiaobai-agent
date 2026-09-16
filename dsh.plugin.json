@@ -1,0 +1,29 @@
+{
+  "manifestVersion": 1,
+  "name": "@local/dsh-toolkit",
+  "aliases": {
+    "@local/dsh-compact-router": "@local/dsh-toolkit/compact-router",
+    "@local/agent-memory": "@local/dsh-toolkit/agent-memory",
+    "dsh-rate-throttle": "@local/dsh-toolkit/rate-throttle",
+    "dsh-search-router": "@local/dsh-toolkit/search-router",
+    "@gausszhou/dsh-web-search-local": "@local/dsh-toolkit/web-search-local"
+  },
+  "requirements": {
+    "runtime": {
+      "node": ">=22",
+      "dsh": ">=0.1.2-rc.1 <0.2.0"
+    },
+    "binaries": [],
+    "packages": {},
+    "registers": {
+      "inject": [],
+      "events": [],
+      "services": [],
+      "commands": [],
+      "providers": []
+    },
+    "exports": {
+      "$from": "package.json#exports"
+    }
+  }
+}

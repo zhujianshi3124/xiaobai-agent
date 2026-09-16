@@ -1,0 +1,30 @@
+{
+  "manifestVersion": 1,
+  "name": "@local/dsh-toolkit/rate-throttle",
+  "requirements": {
+    "runtime": {
+      "node": ">=22",
+      "dsh": ">=0.1.2-rc.1 <0.2.0"
+    },
+    "binaries": [],
+    "packages": {},
+    "registers": {
+      "inject": [
+        "llm",
+        "tokenMeter"
+      ],
+      "events": [
+        "llm/adapters-updated",
+        "agent/request",
+        "agent/request-error",
+        "session/event"
+      ],
+      "services": [],
+      "commands": [],
+      "providers": []
+    },
+    "exports": {
+      ".": "./index.js"
+    }
+  }
+}
