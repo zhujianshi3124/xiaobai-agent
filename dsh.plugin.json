@@ -25,5 +25,8 @@
     "exports": {
       "$from": "package.json#exports"
     }
+  },
+  "requiredAliases": {
+    "@local/dsh-compact-router": "@local/dsh-toolkit/compact-router"
   }
 }
