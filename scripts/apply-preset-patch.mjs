@@ -162,24 +162,53 @@ function undoOne(entry, marker) {
   return entry.id + ": RESTORED from backup";
 }
 
-const arg = process.argv[2] || "";
+const argv = process.argv.slice(2);
 const KNOWN_FLAGS = new Set(["--status", "--undo", "--only", "--presets-dir"]);
-const badFlag = process.argv.slice(2).find((a) => a.startsWith("--") && !KNOWN_FLAGS.has(a));
+const badFlag = argv.find((a) => a.startsWith("--") && !KNOWN_FLAGS.has(a));
 if (badFlag) {
   console.log("unknown option: " + badFlag);
   console.log("usage: node scripts/apply-preset-patch.mjs [--status | --undo] [--only <id>] [--presets-dir <path>]");
   process.exit(2);
 }
-const onlyIndex = process.argv.indexOf("--only");
-const only = onlyIndex >= 0 ? process.argv[onlyIndex + 1] : null;
-if (onlyIndex >= 0 && (arg !== "--undo" || !only || only.startsWith("--"))) {
+let command = "";
+let only = null;
+let presetsDir = null;
+for (let i = 0; i < argv.length; i++) {
+  const a = argv[i];
+  if (a === "--status" || a === "--undo") {
+    if (command && command !== a) {
+      console.log("conflicting commands: --status and --undo cannot be combined");
+      process.exit(2);
+    }
+    command = a;
+  } else if (a === "--only") {
+    const v = argv[i + 1];
+    if (!v || v.startsWith("--")) {
+      console.log("--only requires a preset id");
+      process.exit(2);
+    }
+    only = v;
+    i++;
+  } else if (a === "--presets-dir") {
+    const v = argv[i + 1];
+    if (!v || v.startsWith("--")) {
+      console.log("--presets-dir requires a path");
+      process.exit(2);
+    }
+    presetsDir = v;
+    i++;
+  } else {
+    console.log("unexpected argument: " + a);
+    console.log("usage: node scripts/apply-preset-patch.mjs [--status | --undo] [--only <id>] [--presets-dir <path>]");
+    process.exit(2);
+  }
+}
+if (only && command !== "--undo") {
   console.log("--only is only valid with --undo and requires a preset id");
   console.log("usage: node scripts/apply-preset-patch.mjs --undo --only <id>");
   process.exit(2);
 }
-const presetsDir = process.argv.includes("--presets-dir")
-  ? process.argv[process.argv.indexOf("--presets-dir") + 1]
-  : locatePresetsDir();
+if (!presetsDir) presetsDir = locatePresetsDir();
 const marker = loadMarker();
 const entries = [
   ...SHIPPED_PRESET_IDS.map((id) => ({ id, file: join(presetsDir, id, "agent.cordis.yml"), kind: "shipped" })),
@@ -188,9 +217,9 @@ const entries = [
 
 console.log("presets dir: " + presetsDir);
 console.log("user presets dir: " + USER_PRESETS_DIR);
-if (arg === "--status") {
+if (command === "--status") {
   for (const e of entries) console.log(e.id + ": " + e.state);
-} else if (arg === "--undo") {
+} else if (command === "--undo") {
   const targets = only ? entries.filter((e) => e.id === only) : entries;
   if (only && targets.length === 0) {
     console.log("no such preset: " + only);
@@ -200,7 +229,7 @@ if (arg === "--status") {
   saveMarker(marker);
   results.forEach((r) => console.log(r));
   console.log(only ? "\nPreset '" + only + "' restored." : "\nAll kit-patched presets restored.");
-} else if (arg === "") {
+} else if (command === "") {
   const results = entries.map((e) => applyOne(e, marker));
   results.forEach((r) => console.log(r));
   const refused = results.filter((r) => r.includes("REFUSED")).length;
