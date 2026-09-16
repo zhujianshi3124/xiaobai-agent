@@ -7,7 +7,7 @@ const defaultRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 const root = process.argv[2] ? path.resolve(process.argv[2]) : defaultRoot;
 const libDir = path.join(root, 'lib');
 const testDir = path.join(root, 'test');
-const plugins = ['agent-memory', 'compact-router', 'rate-throttle', 'search-router', 'web-search-local'];
+const plugins = fs.readdirSync(libDir, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name);
 
 function walk(dir) {
   const out = [];
