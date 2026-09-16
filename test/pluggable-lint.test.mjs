@@ -32,6 +32,7 @@ function runLint(dir) {
 test('pluggable-lint：静态 import 兄弟插件必须报出', () => {
   const dir = makeSandbox({
     'lib/rate-throttle/bad-static.mjs': "import { x } from '../compact-router/index.js';",
+    'lib/compact-router/index.mjs': "export const x = 1;",
   });
   try {
     const r = runLint(dir);
@@ -46,6 +47,7 @@ test('pluggable-lint：静态 import 兄弟插件必须报出', () => {
 test('pluggable-lint：eager re-export 必须报出', () => {
   const dir = makeSandbox({
     'lib/rate-throttle/bad-reexport.mjs': "export { x } from '../compact-router/index.js';",
+    'lib/compact-router/index.mjs': "export const x = 1;",
   });
   try {
     const r = runLint(dir);
@@ -68,6 +70,36 @@ test('pluggable-lint：动态 import / 自身引用 / 第三方包不误报', ()
     assert.equal(r.status, 0, r.stderr || r.stdout);
     assert.doesNotMatch(r.stderr, /跨插件静态依赖违规/);
     assert.match(r.stdout, /通过/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+test('pluggable-lint：test/ 内静态 import 兄弟插件必须报出', () => {
+  const dir = makeSandbox({
+    'lib/rate-throttle/bad.mjs': "export const x = 1;",
+    'test/rate-throttle.bad.test.mjs': "import { x } from '../lib/compact-router/index.js';",
+    'lib/compact-router/index.mjs': "export const x = 1;",
+  });
+  try {
+    const r = runLint(dir);
+    assert.equal(r.status, 1, r.stderr || r.stdout);
+    assert.match(r.stderr, /静态 import/);
+    assert.match(r.stderr, /compact-router/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('pluggable-lint：自身插件命名的集成测试动态引用兄弟插件放行', () => {
+  const dir = makeSandbox({
+    'lib/agent-memory/index.mjs': "export const a = 1;",
+    'lib/compact-router/index.mjs': "export const b = 2;",
+    'test/agent-memory.compact-router.integration.test.mjs': "import { a } from '../lib/agent-memory/index.mjs';\nconst m = await import('../lib/compact-router/index.js');",
+  });
+  try {
+    const r = runLint(dir);
+    assert.equal(r.status, 0, r.stderr || r.stdout);
+    assert.doesNotMatch(r.stderr, /跨插件静态依赖违规/);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
