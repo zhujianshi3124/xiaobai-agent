@@ -7,7 +7,8 @@
 import { instantDigest, isInstructionMessage, isResumeCommand, contentToText, isPriorCheckpoint, extractCheckpointInstructions } from "../lib/compact-router/instant-digest.js";
 import { buildLedgerGuidance, buildGuidanceSection, defaultDataRoot } from "../lib/compact-router/guidance.js";
 import { readLedgerItems, buildCanonicalInstructions, buildCanonicalFromLedger, buildLedgerPointer } from "../lib/compact-router/agent-memory.js";
-import * as agentMemoryLib from "../lib/agent-memory/lib/index.js";
+import { fileURLToPath } from "node:url";
+const SUITE_ROOT = fileURLToPath(new URL("..", import.meta.url));
 let failures = 0;
 function check(name, cond, extra = "") {
   console.log(`${cond ? "PASS" : "FAIL"}  ${name}${extra ? `  (${extra})` : ""}`);
@@ -240,24 +241,30 @@ check("canonical: digest 含指针", aiC.includes("（正典：D:\\ws-a/sessions
 check("canonical: digest 含台账条目", aiC.includes("- [台账] L-001 [待办] 实现注册表写入器"));
 check("canonical: 启发式降级（无 [i] 条目行）", !aiC.includes("- [9] user:"));
 
-// 适配层：读真实台账（注入 agent-memory lib）
+// 适配层：读真实台账（注入 agent-memory lib）；agent-memory 缺席时跳过（不红）
 const os = await import("node:os");
 const fsx = await import("node:fs");
 const pth = await import("node:path");
-const tmp = fsx.mkdtempSync(pth.join(os.tmpdir(), "am-canon-"));
-const wsT = pth.resolve(pth.join(tmp, "ws"));
-fsx.mkdirSync(wsT, { recursive: true });
-const sess = agentMemoryLib.createSession(tmp, { dshSessionId: "canon-sess-1", taskSummary: "正典测试", workspace: wsT, modelTurn: 1 });
-agentMemoryLib.addEntry(tmp, sess.sid, { desc: "进行中条目：实现引导注入", workspace: wsT, modelTurn: 2 });
-agentMemoryLib.setEntryStatus(tmp, sess.sid, "L-000", "已完成", { workspace: wsT, modelTurn: 3 });
-agentMemoryLib.addEntry(tmp, sess.sid, { desc: "待办条目：P1 防递归", workspace: wsT, modelTurn: 4 });
-const rows = await readLedgerItems({ agentMemoryLib, root: tmp, sid: sess.sid });
-check("adapter: 读台账待办条目", Array.isArray(rows) && rows.some((r) => r.desc.includes("P1 防递归")));
-check("adapter: 已完成条目不在进行中/待办采集范围", !rows.some((r) => r.no === "L-000"));
-const canonFromLedger = await buildCanonicalFromLedger({ agentMemoryLib, root: tmp, sid: sess.sid });
-check("adapter: 从台账生成正典副本", canonFromLedger.includes("P1 防递归"));
-const outCL = instantDigest({ messages }, { agentMemoryCanonical: canonFromLedger });
-check("adapter: digest 含台账正典", aiSection(outCL).includes("（正典：") && aiSection(outCL).includes("[台账]"));
+const amAvailable = fsx.existsSync(pth.join(SUITE_ROOT, "lib", "agent-memory", "dsh.plugin.json"));
+if (amAvailable) {
+  const agentMemoryLib = await import("../lib/agent-memory/lib/index.js");
+  const tmp = fsx.mkdtempSync(pth.join(os.tmpdir(), "am-canon-"));
+  const wsT = pth.resolve(pth.join(tmp, "ws"));
+  fsx.mkdirSync(wsT, { recursive: true });
+  const sess = agentMemoryLib.createSession(tmp, { dshSessionId: "canon-sess-1", taskSummary: "正典测试", workspace: wsT, modelTurn: 1 });
+  agentMemoryLib.addEntry(tmp, sess.sid, { desc: "进行中条目：实现引导注入", workspace: wsT, modelTurn: 2 });
+  agentMemoryLib.setEntryStatus(tmp, sess.sid, "L-000", "已完成", { workspace: wsT, modelTurn: 3 });
+  agentMemoryLib.addEntry(tmp, sess.sid, { desc: "待办条目：P1 防递归", workspace: wsT, modelTurn: 4 });
+  const rows = await readLedgerItems({ agentMemoryLib, root: tmp, sid: sess.sid });
+  check("adapter: 读台账待办条目", Array.isArray(rows) && rows.some((r) => r.desc.includes("P1 防递归")));
+  check("adapter: 已完成条目不在进行中/待办采集范围", !rows.some((r) => r.no === "L-000"));
+  const canonFromLedger = await buildCanonicalFromLedger({ agentMemoryLib, root: tmp, sid: sess.sid });
+  check("adapter: 从台账生成正典副本", canonFromLedger.includes("P1 防递归"));
+  const outCL = instantDigest({ messages }, { agentMemoryCanonical: canonFromLedger });
+  check("adapter: digest 含台账正典", aiSection(outCL).includes("（正典：") && aiSection(outCL).includes("[台账]"));
+} else {
+  check("adapter: agent-memory 缺席 → 跳过真实台账段", true);
+}
 
 // --- instantOnceFor hook (downgrade-compaction seam for dsh-rate-throttle) ---
 import RouterCompactionEngine, { resolveSummarizeMode } from "../lib/compact-router/index.js";
