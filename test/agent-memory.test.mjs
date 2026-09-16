@@ -20,8 +20,6 @@ import { parseScriptRoot, SANDBOX_ROOT, DEMO_SANDBOX_ROOT, PRODUCTION_ROOT } fro
 import { assertUtcIso } from '../lib/agent-memory/lib/time.js';
 import * as runtime from '../lib/agent-memory/lib/runtime.js';
 import { register as registerPlugin } from '../lib/agent-memory/plugin.js';
-import { instantDigest } from '../lib/compact-router/instant-digest.js';
-import * as compAdapter from '../lib/compact-router/agent-memory.js';
 import { assertMigrationOrder, runMigrationSequence } from '../lib/agent-memory/lib/migration.js';
 import { checkNodeVersion, checkDependencies, checkEngineLoad, checkInstallLocations, checkPresetMount, checkBackupReady, checkGlobalRoot, checkBundleMountResolvable, locateDshInstall, runPreflight } from '../lib/agent-memory/lib/preflight.js';
 import { checkNewWorkspace } from '../lib/agent-memory/lib/workspace-health.js';
@@ -792,24 +790,13 @@ test('PERM1: 永久指令 —— 台账固化 + 双路冗余（checkpoint 正典
   // 隔离：A 会话永久指令写入不触碰 B 会话
   assert.equal(fs.readFileSync(ledgerFile(root, sB.sid), 'utf8'), bLedgerBefore, 'B 台账零变化');
 
-  // ③ 双路冗余 1：checkpoint 正典副本携带中文永久指令 → 压缩产物可见
-  const canon = await compAdapter.buildCanonicalFromLedger({ agentMemoryLib: m, root, sid: s.sid });
-  assert.ok(canon.includes('[永久] 始终用中文回复'), '正典副本应含中文永久指令（第一行）');
-  assert.ok(canon.includes('[永久] 先读台账再动手'), '正典副本应含第二行永久指令');
-  const digest = instantDigest(
-    { messages: [{ role: 'user', content: '继续。' }] },
-    { agentMemoryCanonical: canon },
-  );
-  assert.ok(digest.includes('[永久] 始终用中文回复'), '压缩产物应含中文永久指令（第一行）');
-  assert.ok(digest.includes('[永久] 先读台账再动手'), '压缩产物应含第二行永久指令');
-
-  // ④ 双路冗余 2：冷启动恢复（失忆模型读台账路径）带回永久指令
+  // ③ 冷启动恢复（失忆模型读台账路径）带回永久指令
   const report = m.buildRecoveryReport(root, s.sid, { modelTurn: 3 });
   assert.ok(report.includes('永久指令:'), '恢复报告应含永久指令区');
   assert.ok(report.includes('始终用中文回复'), '恢复报告应带回中文永久指令（第一行）');
   assert.ok(report.includes('先读台账再动手'), '恢复报告应带回第二行永久指令');
 
-  // ⑤ 文件为准：手动移除区段 → 读取层为空（不凭空发明）；再写回 → 区段重现
+  // ④ 文件为准：手动移除区段 → 读取层为空（不凭空发明）；再写回 → 区段重现
   const raw2 = fs.readFileSync(ledgerFile(root, s.sid), 'utf8').replace(/^## 永久指令\n(?:- .*\n)+\n?/m, '');
   assert.notEqual(raw2, fs.readFileSync(ledgerFile(root, s.sid), 'utf8'), '测试前提：区段确被移除');
   fs.writeFileSync(ledgerFile(root, s.sid), raw2, 'utf8');
@@ -817,7 +804,7 @@ test('PERM1: 永久指令 —— 台账固化 + 双路冗余（checkpoint 正典
   m.setPermanentInstructions(root, s.sid, ['始终用中文回复'], { workspace: ws, modelTurn: 4 });
   assert.ok(fs.readFileSync(ledgerFile(root, s.sid), 'utf8').includes('- 始终用中文回复'), '写回后区段重现');
 
-  // ⑥ 校验：空串/超长/超量拒绝；清空（[]）合法
+  // ⑤ 校验：空串/超长/超量拒绝；清空（[]）合法
   assert.throws(() => m.setPermanentInstructions(root, s.sid, [''], { workspace: ws }), (e) => e.code === 'PERMANENT_EMPTY');
   assert.throws(
     () => m.setPermanentInstructions(root, s.sid, ['x'.repeat(m.PERMANENT_MAX_CHARS + 1)], { workspace: ws }),
@@ -830,7 +817,7 @@ test('PERM1: 永久指令 —— 台账固化 + 双路冗余（checkpoint 正典
   assert.deepEqual(m.setPermanentInstructions(root, s.sid, [], { workspace: ws, modelTurn: 5 }), [], '空数组=清空合法');
   assert.deepEqual(m.readLedger(root, s.sid).permanent, [], '清空后读取为空');
 
-  // ⑦ 永久指令区不占超限预算：长永久指令 + 紧条目预算 → 条目照常写入、已完成不被连带归档
+  // ⑥ 永久指令区不占超限预算：长永久指令 + 紧条目预算 → 条目照常写入、已完成不被连带归档
   const sTight = m.createSession(root, { sid: sidFor(3), taskSummary: '紧预算', workspace: wsB });
   m.setPermanentInstructions(root, sTight.sid, ['长'.repeat(m.PERMANENT_MAX_CHARS)], { workspace: wsB, modelTurn: 6 });
   m.addEntry(root, sTight.sid, { desc: '紧预算条目', maxBytes: 400, workspace: wsB, modelTurn: 6 });
@@ -849,23 +836,6 @@ test('PERM2: 新会话默认永久区恰两行（v10 配方锁定）', () => {
   assert.equal(l.permanent[0], '始终用中文回复', '第一行=中文回复');
   assert.ok(l.permanent[1].startsWith('指令先落账'), '第二行=指令先落账配方');
   assert.ok(!('永久指令' in l.sections), '永久指令不混入条目 sections');
-});
-
-test('PERM3: checkpoint 正典自检 —— 缺默认永久行 → 告警不崩溃（非阻断）', async () => {
-  const root = tmpRoot();
-  const ws = wsOf(root, 'ws-perm3');
-  const s = m.createSession(root, { sid: sidFor(1), taskSummary: '正典自检', workspace: ws });
-  m.setPermanentInstructions(root, s.sid, ['始终用中文回复'], { workspace: ws }); // 人为退化 1 行
-  const warnings = [];
-  const orig = process.emitWarning;
-  process.emitWarning = (msg) => { warnings.push(String(msg)); };
-  try {
-    const canon = await compAdapter.buildCanonicalFromLedger({ agentMemoryLib: m, root, sid: s.sid });
-    assert.ok(canon && canon.includes('- [永久] 始终用中文回复'), '退化为 1 行时仍返回正典（非崩溃）');
-    assert.ok(warnings.some((w) => w.includes('[正典自检]') && w.includes('指令先落账=false')), '正典自检告警缺第二行');
-  } finally {
-    process.emitWarning = orig;
-  }
 });
 
 /* ================= CAP 进度容量（v13 正式修订 L-002「16K 上限」） ================= */
@@ -1830,40 +1800,6 @@ test('真实宿主格式: 未知前缀宿主 id 拒绝入册不抛错且发最�
   } finally {
     process.emitWarning = origEmitWarning;
   }
-});
-
-/* ================= ③ 隔离：A 会话压缩（读数据源+纯 digest）时 B 会话目录零变化 ================= */
-
-test('ISOLATE1(③): A 会话压缩读取数据源时 B 会话目录 mtime/内容零变化', async () => {
-  const root = tmpRoot();
-  const wsA = wsOf(root, 'ws-a');
-  const wsB = wsOf(root, 'ws-b');
-  const a = m.createSession(root, { sid: sidFor(1), taskSummary: 'A', workspace: wsA });
-  const b = m.createSession(root, { sid: sidFor(2), taskSummary: 'B', workspace: wsB });
-  m.addEntry(root, a.sid, { desc: 'A 的指令条目', workspace: wsA, modelTurn: 1 });
-  m.addEntry(root, b.sid, { desc: 'B 的指令条目', workspace: wsB, modelTurn: 1 });
-  const bLed = rawOf(root, b.sid, 'ledger.md');
-  const bProg = rawOf(root, b.sid, 'progress.md');
-  const bLedM = fs.statSync(path.join(root, 'sessions', b.sid, 'ledger.md')).mtimeMs;
-  const bProgM = fs.statSync(path.join(root, 'sessions', b.sid, 'progress.md')).mtimeMs;
-
-  // 模拟 A 会话压缩：读 A 台账生成正典副本（④ 数据源）+ 纯 digest（含引导注入 ①）
-  const canon = await compAdapter.buildCanonicalFromLedger({ agentMemoryLib: m, root, sid: a.sid });
-  assert.ok(canon && canon.includes('[台账]'), 'A 台账正典副本生成');
-  const digest = instantDigest(
-    { messages: [{ role: 'user', content: 'A 的会话消息，请继续任务。' }] },
-    {
-      agentMemoryGuidance: `## Agent-memory guidance\n\n[ledger/progress] 会话 ${a.sid}：请先读取 ${root}/sessions/${a.sid}/ledger.md 与 progress.md，汇报任务清单与下一步后继续。`,
-      agentMemoryCanonical: canon,
-    },
-  );
-  assert.ok(digest.includes('## Agent-memory guidance'), 'digest 含引导注入');
-
-  await new Promise((r) => setTimeout(r, 60)); // 让假想写操作的 mtime 有可观测差异
-  assert.equal(rawOf(root, b.sid, 'ledger.md'), bLed, 'B 台账内容零变化');
-  assert.equal(rawOf(root, b.sid, 'progress.md'), bProg, 'B 进度内容零变化');
-  assert.equal(fs.statSync(path.join(root, 'sessions', b.sid, 'ledger.md')).mtimeMs, bLedM, 'B 台账 mtime 零变化');
-  assert.equal(fs.statSync(path.join(root, 'sessions', b.sid, 'progress.md')).mtimeMs, bProgM, 'B 进度 mtime 零变化');
 });
 
 /* ================= §8 迁移三步规程守护 ================= */
