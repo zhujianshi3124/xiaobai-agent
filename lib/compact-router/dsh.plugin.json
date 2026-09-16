@@ -8,7 +8,9 @@
     },
     "binaries": [],
     "packages": {
-      "@deepseek-ai/dsh-compaction-basic": { "$from": "package.json#peerDependencies" }
+      "@deepseek-ai/dsh-compaction-basic": {
+        "$from": "package.json#peerDependencies"
+      }
     },
     "registers": {
       "inject": [
@@ -33,5 +35,8 @@
     "exports": {
       ".": "./index.js"
     }
-  }
+  },
+  "optionalDeps": [
+    "@local/dsh-toolkit/agent-memory"
+  ]
 }
