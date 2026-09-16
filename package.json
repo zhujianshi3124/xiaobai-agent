@@ -2,6 +2,9 @@
   "name": "@local/dsh-toolkit",
   "version": "0.1.0",
   "private": true,
+"scripts": {
+    "test": "node scripts/pluggable-lint.mjs && node --test"
+  },
   "type": "module",
   "description": "本地 DSH 套件：rate-throttle / compact-router / agent-memory / search-router / web-search-local 五合一入口；一个版本号管全部。",
   "exports": {

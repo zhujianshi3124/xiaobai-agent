@@ -1,0 +1,10 @@
+# dsh-toolkit 修改约束（任何改动前必读）
+
+本仓库已通过框架级可插拔审计（v2，2026-09-16，5/5）。以下红线任何改动不得破坏：
+
+1. 禁止模块加载期静态 import 兄弟插件代码。兄弟能力只用：运行时惰性探测（try-catch + 动态 import），或 optionalDeps 声明。
+2. 禁止跨插件边界的 eager re-export（export ... from 会重建整条依赖链）。
+3. 跨插件测试用例：存在性门控 + 动态 import；兄弟缺席必须 skip，不得红。
+4. doctor 仓库：新检查知识写进声明文件，engine 零硬编码插件名。
+5. manifest 与实现同步：声明了 optionalDeps 就必须真能降级。
+6. 改动后必跑：本插件全部测试 + 受影响方测试 + doctor dry-run（须 0/0/0）。提交：fix|feat|perf(<插件名>): <主题>，一个主题一个 commit。
