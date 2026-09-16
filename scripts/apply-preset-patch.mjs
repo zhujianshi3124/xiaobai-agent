@@ -163,6 +163,20 @@ function undoOne(entry, marker) {
 }
 
 const arg = process.argv[2] || "";
+const KNOWN_FLAGS = new Set(["--status", "--undo", "--only", "--presets-dir"]);
+const badFlag = process.argv.slice(2).find((a) => a.startsWith("--") && !KNOWN_FLAGS.has(a));
+if (badFlag) {
+  console.log("unknown option: " + badFlag);
+  console.log("usage: node scripts/apply-preset-patch.mjs [--status | --undo] [--only <id>] [--presets-dir <path>]");
+  process.exit(2);
+}
+const onlyIndex = process.argv.indexOf("--only");
+const only = onlyIndex >= 0 ? process.argv[onlyIndex + 1] : null;
+if (onlyIndex >= 0 && (arg !== "--undo" || !only || only.startsWith("--"))) {
+  console.log("--only is only valid with --undo and requires a preset id");
+  console.log("usage: node scripts/apply-preset-patch.mjs --undo --only <id>");
+  process.exit(2);
+}
 const presetsDir = process.argv.includes("--presets-dir")
   ? process.argv[process.argv.indexOf("--presets-dir") + 1]
   : locatePresetsDir();
@@ -177,10 +191,15 @@ console.log("user presets dir: " + USER_PRESETS_DIR);
 if (arg === "--status") {
   for (const e of entries) console.log(e.id + ": " + e.state);
 } else if (arg === "--undo") {
-  const results = entries.map((e) => undoOne(e, marker));
+  const targets = only ? entries.filter((e) => e.id === only) : entries;
+  if (only && targets.length === 0) {
+    console.log("no such preset: " + only);
+    process.exit(2);
+  }
+  const results = targets.map((e) => undoOne(e, marker));
   saveMarker(marker);
   results.forEach((r) => console.log(r));
-  console.log("\nAll kit-patched presets restored.");
+  console.log(only ? "\nPreset '" + only + "' restored." : "\nAll kit-patched presets restored.");
 } else if (arg === "") {
   const results = entries.map((e) => applyOne(e, marker));
   results.forEach((r) => console.log(r));
