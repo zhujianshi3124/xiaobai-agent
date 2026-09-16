@@ -3,7 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const defaultRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const root = process.argv[2] ? path.resolve(process.argv[2]) : defaultRoot;
 const libDir = path.join(root, 'lib');
 const testDir = path.join(root, 'test');
 const plugins = ['agent-memory', 'compact-router', 'rate-throttle', 'search-router', 'web-search-local'];
