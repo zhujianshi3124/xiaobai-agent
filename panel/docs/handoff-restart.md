@@ -280,4 +280,25 @@ const uiHtml = readFileSync(join(panelRoot(), "client", "panel.html"), "utf8");
 
 **因此**：11.4 遗留的「浏览器目视新面板 UI」与 L-024 的「目视人话化新 UI」**合并为同一次** —— 一次 reload 后两者同时可见。
 
+### 11.6 P2 开工后的 reload 节奏（2026-09-17 23:15 用户定）
+
+用户已明确 **两次 reload**，均由用户按 `restart-trigger` 执行：
+
+| # | 触发时机 | 承载内容 | 状态 |
+|---|---|---|---|
+| 1 | **名字恢复后** | L-025「英文原名 + 中文注释」新面板（commit `c1d383e`） | **待执行** |
+| 2 | **P2.2 完成后** | P2 写操作能力上线后的验证 | 未到 |
+
+**注意**：L-026（P2.0 解析器修复）与 L-025 **同批**可见 —— 但两者生效路径不同：
+
+- **L-025 是 client 层** → 受 11.5 的两个冻结点约束，**必须 reload**。
+- **L-026 是服务端 `panel/manager/snapshot.mjs`** → 同样受冻结点 2 约束（模块在 `apply()` 时被 `import`，Node 的 ESM 模块缓存使旧模块常驻），**也必须 reload**。
+
+即：**这两项都靠同一次 reload 生效**，不需要额外一次。
+
+**首次 reload 后的建议验证**（命令行可查，非浏览器）：
+1. 卡片标题应显示英文原名（`agent-memory` 等），中文在第二行。
+2. `/api/toolkit-panel/snapshot` 返回中 `plugins[rate-throttle].patchRow.config.enabled === "false"`（L-026 修复的直接证据）。
+3. 若仍见到 `记忆`/`上下文压缩` 作为标题，说明 reload 未生效（不是强刷问题）。
+
 
