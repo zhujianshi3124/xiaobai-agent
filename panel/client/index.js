@@ -83,7 +83,24 @@ window.__ModuleLoader__.load({
 			issueWarning: { color: "#e8c36c" },
 			issueInfo: { color: "#9aa0a6" },
 			allGood: { padding: "12px 10px", fontSize: 13, color: "#67c48b" },
-			h2: { fontSize: 16, margin: "16px 0 8px" }
+			h2: { fontSize: 16, margin: "16px 0 8px" },
+			// ---- P2.2 启停开关（双层分立）----
+			toggleBox: { marginTop: 10, padding: "8px 10px", borderRadius: 6, background: "#151922", border: "1px solid #2a2f36" },
+			toggleHead: { fontSize: 12, fontWeight: 700, color: "#c8cdd4", marginBottom: 6 },
+			layerRow: { display: "flex", justifyContent: "space-between", gap: 8, fontSize: 11.5, lineHeight: 1.9, marginBottom: 2 },
+			layerLabel: { color: "#8f959d", fontFamily: "ui-monospace, Consolas, monospace" },
+			layerValue: { fontWeight: 600 },
+			toggleRow: { display: "flex", gap: 8, alignItems: "center", marginTop: 8 },
+			confirmBox: { marginTop: 8, padding: "8px 10px", borderRadius: 6, background: "#1b2028", border: "1px solid #3a4048" },
+			confirmHead: { fontSize: 12, fontWeight: 700, color: "#cfd4da", marginBottom: 6 },
+			confirmLine: { fontSize: 11.5, color: "#9aa0a6", lineHeight: 1.8, wordBreak: "break-all" },
+			confirmRow: { display: "flex", gap: 8, marginTop: 8 },
+			diffPre: { whiteSpace: "pre-wrap", background: "#12151a", border: "1px solid #2a2f36", borderRadius: 4, padding: "6px 8px", fontSize: 11.5, margin: "6px 0", fontFamily: "ui-monospace, Consolas, monospace" },
+			crossBox: { marginTop: 6, padding: "6px 8px", borderRadius: 4, background: "#2a2210", border: "1px solid #6b5a1e" },
+			crossHead: { fontSize: 11.5, fontWeight: 700, color: "#fbbf24", marginBottom: 3 },
+			crossLine: { fontSize: 11, color: "#e0d5b7", fontFamily: "ui-monospace, Consolas, monospace", lineHeight: 1.7, wordBreak: "break-all" },
+			crossFoot: { fontSize: 11, color: "#c9bd9a", marginTop: 3 },
+			errorBox: { marginTop: 6, padding: "6px 8px", borderRadius: 4, background: "#2b1719", border: "1px solid #6b2226", fontSize: 11.5, color: "#f2a6a0" }
 		};
 
 		function Badge(props) {
@@ -247,7 +264,164 @@ window.__ModuleLoader__.load({
 				react.createElement("div", { style: styles.desc }, desc),
 				react.createElement(StateRow, { state: state }),
 				react.createElement(DualSwitchNotice, { plugin: plugin, patchText: patchText }),
+				react.createElement(ToggleControls, {
+					plugin: plugin,
+					patchText: patchText,
+					onChanged: props.onChanged
+				}),
 				react.createElement(TechDetails, { plugin: plugin })
+			);
+		}
+
+		// ---- P2.2 双层开关：两层**分立呈现**，绝不合并 ----
+		//
+		// 第一层 `patch-row.disabled`（配置文件里那一行）—— **可写**，走两段式。
+		// 第二层 `config.enabled`（插件自己的内部开关）—— **只读展示**，P2.3 才开放编辑。
+		//
+		// 为什么要分立：两层的语义完全不同（"有没有被加载" vs "加载了但自己关掉功能"），
+		// 合并成一个开关会让用户误以为一次点击能同时改变两件事。
+		function layerRow(label, valueText, tone) {
+			return react.createElement("div", { style: styles.layerRow },
+				react.createElement("span", { style: styles.layerLabel }, label),
+				react.createElement("span", { style: Object.assign({}, styles.layerValue, tone || {}) }, valueText)
+			);
+		}
+
+		function ToggleControls(props) {
+			var plugin = props.plugin;
+			var patchText = props.patchText;
+			var onChanged = props.onChanged;
+			// compact-router 不在 patch 里（由预设脚本管理），没有可写的行
+			var row = plugin.patchRow;
+			if (plugin.dir === "compact-router" || !row) {
+				return null;
+			}
+			var tState = react.useState(null);
+			var pending = tState[0];
+			var setPending = tState[1];
+			var bState = react.useState(false);
+			var busy = bState[0];
+			var setBusy = bState[1];
+			var eState = react.useState("");
+			var error = eState[0];
+			var setError = eState[1];
+
+			var currentEnabled = row.enabled === true;
+			var inner = innerSwitchValue(plugin, patchText);
+
+			// 第一段：向服务端要一个方案（只读，不落盘）
+			var askToggle = react.useCallback(async function (targetEnabled) {
+				setBusy(true);
+				setError("");
+				setPending(null);
+				try {
+					var res = await fetch("/api/toolkit-panel/toggle/plan", {
+						method: "POST",
+						cache: "no-store",
+						headers: { "content-type": "application/json" },
+						body: JSON.stringify({ rowId: row.id, enabled: targetEnabled })
+					});
+					var body = await res.json();
+					if (!body.ok) {
+						setError(body.error || ("HTTP " + res.status));
+						return;
+					}
+					setPending(body.plan);
+				} catch (e) {
+					setError(e && e.message || e);
+				} finally {
+					setBusy(false);
+				}
+			}, [row.id]);
+
+			// 第二段：用户确认后才落盘
+			var confirmToggle = react.useCallback(async function () {
+				if (!pending) return;
+				setBusy(true);
+				setError("");
+				try {
+					var res = await fetch("/api/toolkit-panel/execute", {
+						method: "POST",
+						cache: "no-store",
+						headers: { "content-type": "application/json" },
+						body: JSON.stringify({ token: pending.token })
+					});
+					var body = await res.json();
+					if (!body.ok) {
+						// 409 的来源要说清楚：文件被别人改过，或方案过期
+						setError(body.error || ("HTTP " + res.status));
+						setPending(null);
+						return;
+					}
+					setPending(null);
+					if (onChanged) await onChanged();
+				} catch (e) {
+					setError(e && e.message || e);
+				} finally {
+					setBusy(false);
+				}
+			}, [pending, onChanged]);
+
+			var cancelToggle = function () { setPending(null); setError(""); };
+
+			var btn = function (label, onClick, disabled) {
+				return react.createElement("button", {
+					style: Object.assign({}, styles.button, disabled ? styles.buttonDisabled : {}),
+					onClick: onClick,
+					disabled: !!disabled
+				}, label);
+			};
+
+			var crossRefs = (pending && pending.crossRefs) || [];
+
+			return react.createElement("div", { style: styles.toggleBox },
+				react.createElement("div", { style: styles.toggleHead }, "启停开关（两层分开，改的是第一层）"),
+
+				// 两层分立列明
+				layerRow(
+					"第一层 · 配置文件（patch-row.disabled）",
+					currentEnabled ? "已加载" : "未加载（被配置层停用）",
+					currentEnabled ? styles.stateOn : styles.stateOff
+				),
+				layerRow(
+					"第二层 · 插件内部（config.enabled）",
+					inner === null ? "该插件没有内部开关" : (inner ? "开启" : "关闭"),
+					inner === null ? styles.stateOff : (inner ? styles.stateOn : styles.stateWarn)
+				),
+
+				react.createElement("div", { style: styles.toggleRow },
+					btn(currentEnabled ? "停用（改第一层）" : "启用（改第一层）", function () { askToggle(!currentEnabled); }, busy || !!pending),
+					busy && !pending ? react.createElement("span", { style: styles.muted }, "正在生成改动方案…") : null
+				),
+
+				// 提交前的确认区：diff + 交叉引用 + 明确写出改哪个文件
+				pending ? react.createElement("div", { style: styles.confirmBox },
+					react.createElement("div", { style: styles.confirmHead }, "确认后才会写入，下面是具体改动"),
+					react.createElement("div", { style: styles.confirmLine },
+						"目标文件：", react.createElement("span", { style: styles.dualCode }, pending.file)
+					),
+					react.createElement("div", { style: styles.confirmLine },
+						"改动位置：第 ", String(pending.anchorLine), " 行的 ", react.createElement("span", { style: styles.dualCode }, "- id: " + pending.rowId)
+					),
+					react.createElement("pre", { style: styles.diffPre }, (pending.diff || []).join("\n")),
+					crossRefs.length > 0
+						? react.createElement("div", { style: styles.crossBox },
+							react.createElement("div", { style: styles.crossHead }, "⚠ 有其它配置引用这个插件（共 " + crossRefs.length + " 处）"),
+							crossRefs.map(function (r, i) {
+								return react.createElement("div", { key: i, style: styles.crossLine },
+									"第 " + r.line + " 行：" + r.text
+								);
+							}),
+							react.createElement("div", { style: styles.crossFoot }, "停用后这些引用会指向一个未加载的插件。若你确认要停用，请继续。")
+						)
+						: null,
+					react.createElement("div", { style: styles.confirmRow },
+						btn("确认写入", confirmToggle, busy),
+						btn("取消", cancelToggle, busy)
+					)
+				) : null,
+
+				error ? react.createElement("div", { style: styles.errorBox }, "没能完成：" + error) : null
 			);
 		}
 
@@ -329,7 +503,7 @@ window.__ModuleLoader__.load({
 
 			var cards = snapshot && Array.isArray(snapshot.plugins)
 				? snapshot.plugins.map(function (p) {
-					return react.createElement(PluginCard, { key: p.dir, plugin: p, patchText: patchText });
+					return react.createElement(PluginCard, { key: p.dir, plugin: p, patchText: patchText, onChanged: loadSnapshot });
 				})
 				: [];
 

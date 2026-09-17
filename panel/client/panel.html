@@ -36,6 +36,23 @@
   summary { cursor: pointer; font-size: 12px; color: #8ab4f8; user-select: none; }
   .techRow { font-size: 11.5px; color: #9aa0a6; font-family: ui-monospace, Consolas, monospace; line-height: 1.7; word-break: break-all; }
   .techKey { color: #7f858d; }
+  /* ---- P2.2 启停开关（双层分立）---- */
+  .toggleBox { margin-top: 10px; padding: 8px 10px; border-radius: 6px; background: #151922; border: 1px solid #2a2f36; }
+  .toggleHead { font-size: 12px; font-weight: 700; color: #c8cdd4; margin-bottom: 6px; }
+  .layerRow { display: flex; justify-content: space-between; gap: 8px; font-size: 11.5px; line-height: 1.9; margin-bottom: 2px; }
+  .layerLabel { color: #8f959d; font-family: ui-monospace, Consolas, monospace; }
+  .layerValue { font-weight: 600; }
+  .toggleRow { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+  .confirmBox { margin-top: 8px; padding: 8px 10px; border-radius: 6px; background: #1b2028; border: 1px solid #3a4048; }
+  .confirmHead { font-size: 12px; font-weight: 700; color: #cfd4da; margin-bottom: 6px; }
+  .confirmLine { font-size: 11.5px; color: #9aa0a6; line-height: 1.8; word-break: break-all; }
+  .confirmRow { display: flex; gap: 8px; margin-top: 8px; }
+  .diffPre { white-space: pre-wrap; background: #12151a; border: 1px solid #2a2f36; border-radius: 4px; padding: 6px 8px; font-size: 11.5px; margin: 6px 0; font-family: ui-monospace, Consolas, monospace; }
+  .crossBox { margin-top: 6px; padding: 6px 8px; border-radius: 4px; background: #2a2210; border: 1px solid #6b5a1e; }
+  .crossHead { font-size: 11.5px; font-weight: 700; color: #fbbf24; margin-bottom: 3px; }
+  .crossLine { font-size: 11px; color: #e0d5b7; font-family: ui-monospace, Consolas, monospace; line-height: 1.7; word-break: break-all; }
+  .crossFoot { font-size: 11px; color: #c9bd9a; margin-top: 3px; }
+  .errBox { margin-top: 6px; padding: 6px 8px; border-radius: 4px; background: #2b1719; border: 1px solid #6b2226; font-size: 11.5px; color: #f2a6a0; }
   pre { white-space: pre-wrap; background: #12151a; border: 1px solid #2a2f36; border-radius: 6px; padding: 10px; font-size: 12px; max-height: 340px; overflow: auto; }
   .issues { max-height: 320px; overflow: auto; border: 1px solid #2a2f36; border-radius: 6px; }
   .issue { border-bottom: 1px solid #23272d; padding: 8px; font-size: 12px; line-height: 1.6; }
@@ -196,9 +213,115 @@ function renderCards() {
       + '<div class="desc">' + esc(desc) + "</div>"
       + '<div class="stateRow"><span class="dot ' + st.cls + '"></span><span class="state ' + st.cls + '">' + esc(st.label) + "</span></div>"
       + dualSwitchNotice(p)
+      + toggleHtml(p)
       + techDetails(p);
     cards.appendChild(div);
+    wireToggle(div, p);
   }
+}
+
+// ---- P2.2 启停开关：两层**分立呈现**，绝不合并 ----
+// 第一层 patch-row.disabled（可写，走两段式）；第二层 config.enabled（本阶段只读）。
+function layerRowHtml(label, valueText, cls) {
+  return '<div class="layerRow"><span class="layerLabel">' + esc(label) + '</span>'
+    + '<span class="layerValue state ' + cls + '">' + esc(valueText) + "</span></div>";
+}
+function toggleHtml(p) {
+  var row = p.patchRow;
+  if (p.dir === "compact-router" || !row) return "";
+  var currentEnabled = row.enabled === true;
+  var inner = innerSwitchValue(p, PATCH_TEXT);
+  return '<div class="toggleBox" data-toggle-for="' + esc(row.id) + '">'
+    + '<div class="toggleHead">启停开关（两层分开，改的是第一层）</div>'
+    + layerRowHtml("第一层 · 配置文件（patch-row.disabled）",
+        currentEnabled ? "已加载" : "未加载（被配置层停用）", currentEnabled ? "on" : "off")
+    + layerRowHtml("第二层 · 插件内部（config.enabled）",
+        inner === null ? "该插件没有内部开关" : (inner ? "开启" : "关闭"),
+        inner === null ? "off" : (inner ? "on" : "warn"))
+    + '<div class="toggleRow"><button class="tglAsk" data-row="' + esc(row.id) + '" data-next="' + (currentEnabled ? "0" : "1") + '">'
+    + (currentEnabled ? "停用（改第一层）" : "启用（改第一层）")
+    + "</button><span class=\"muted tglMsg\"></span></div>"
+    + '<div class="tglConfirm"></div>'
+    + "</div>";
+}
+function wireToggle(cardEl, p) {
+  var box = cardEl.querySelector('[data-toggle-for]');
+  if (!box) return;
+  var ask = box.querySelector(".tglAsk");
+  var msg = box.querySelector(".tglMsg");
+  var confirmHost = box.querySelector(".tglConfirm");
+  if (!ask) return;
+  ask.onclick = async function () {
+    var targetEnabled = ask.getAttribute("data-next") === "1";
+    ask.disabled = true;
+    msg.textContent = "正在生成改动方案…";
+    confirmHost.innerHTML = "";
+    try {
+      var res = await fetch("/api/toolkit-panel/toggle/plan", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ rowId: p.patchRow.id, enabled: targetEnabled })
+      });
+      var body = await res.json();
+      msg.textContent = "";
+      if (!body.ok) { msg.innerHTML = '<span class="error">没能生成方案：' + esc(body.error || res.status) + "</span>"; ask.disabled = false; return; }
+      p._plan = body.plan;
+      renderConfirm(confirmHost, ask, p);
+    } catch (e) {
+      msg.innerHTML = '<span class="error">没能生成方案：' + esc(String(e && e.message || e)) + "</span>";
+    } finally {
+      ask.disabled = false;
+    }
+  };
+}
+function renderConfirm(host, askBtn, p) {
+  var plan = p._plan;
+  if (!plan) return;
+  var refs = plan.crossRefs || [];
+  var crossHtml = "";
+  if (refs.length > 0) {
+    crossHtml = '<div class="crossBox"><div class="crossHead">⚠ 有其它配置引用这个插件（共 ' + refs.length + ' 处）</div>';
+    for (var i = 0; i < refs.length; i++) {
+      crossHtml += '<div class="crossLine">第 ' + refs[i].line + " 行：" + esc(refs[i].text) + "</div>";
+    }
+    crossHtml += '<div class="crossFoot">停用后这些引用会指向一个未加载的插件。若你确认要停用，请继续。</div></div>';
+  }
+  host.innerHTML = '<div class="confirmBox">'
+    + '<div class="confirmHead">确认后才会写入，下面是具体改动</div>'
+    + '<div class="confirmLine">目标文件：<span class="dualCode">' + esc(plan.file) + "</span></div>"
+    + '<div class="confirmLine">改动位置：第 ' + esc(String(plan.anchorLine)) + " 行的 <span class=\"dualCode\">- id: " + esc(plan.rowId) + "</span></div>"
+    + '<pre class="diffPre">' + esc((plan.diff || []).join("\n")) + "</pre>"
+    + crossHtml
+    + '<div class="confirmRow"><button class="tglGo">确认写入</button><button class="tglNo">取消</button></div>'
+    + "</div>";
+  var go = host.querySelector(".tglGo");
+  var no = host.querySelector(".tglNo");
+  no.onclick = function () { p._plan = null; host.innerHTML = ""; };
+  go.onclick = async function () {
+    go.disabled = true;
+    try {
+      var res = await fetch("/api/toolkit-panel/execute", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: plan.token })
+      });
+      var body = await res.json();
+      if (!body.ok) {
+        host.innerHTML = '<div class="errBox">没能完成：' + esc(body.error || ("HTTP " + res.status)) + "</div>";
+        p._plan = null;
+        return;
+      }
+      p._plan = null;
+      host.innerHTML = "";
+      await loadSnapshot();
+    } catch (e) {
+      host.innerHTML = '<div class="errBox">没能完成：' + esc(String(e && e.message || e)) + "</div>";
+    } finally {
+      go.disabled = false;
+    }
+  };
 }
 function renderSnapshot(snap) {
   state = snap;
