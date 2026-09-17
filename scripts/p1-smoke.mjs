@@ -99,6 +99,7 @@ if (doctor.report && doctor.report.summary) {
 // 验收标准：用户不读任何说明，就能说出每个插件是干嘛的、当前是否在工作。
 const clientSrc = readFileSync(join(panelDir, "client", "index.js"), "utf8");
 const htmlSrc = readFileSync(join(panelDir, "client", "panel.html"), "utf8");
+const snapshotSrc = readFileSync(join(panelDir, "manager", "snapshot.mjs"), "utf8");
 
 // ① 每卡片一句中文功能描述：五个插件全覆盖
 const descBlock = /var DESCRIPTIONS = \{([\s\S]*?)\n\t\t\};/.exec(clientSrc);
@@ -164,31 +165,46 @@ check("no issue -> not shown as '0 issue'", !clientSrc.includes("0 issue") && !h
 // ⑤ 纯 client 层：服务端路由与 guard 未引入任何人话化文案
 check("server routes untouched (no UI copy)", !/必须修|一键体检|运行中/.test(readFileSync(join(panelDir, "index.js"), "utf8")));
 
-// ⑥ 缩进感知：内部开关必须避开嵌套 enabled 的覆盖（服务端 parser 缺陷的 client 侧规避）
-// 服务端 parseRootRows() 不区分缩进，rate-throttle 自身 enabled:false 会被嵌套 routing.enabled:true 覆盖。
-// client 侧改为按缩进取键；这里用真实 patch 文本断言该路径存在且生效。
-check("client parses own enabled by indent", clientSrc.includes("rowAnchorFromPatch") && clientSrc.includes("cfgIndent + 2"));
+// ⑥ 缩进感知：服务端 parseRootRows() 必须按缩进收集 config，
+// 避免嵌套同名键覆盖（P2.0 修复）。client 侧保留防御性回退。
+check("server parser is indent-aware (P2.0)", snapshotSrc.includes("ownKeyIndent") && snapshotSrc.includes("configKeyIndent"));
+check("server parser scopes config to direct children", snapshotSrc.includes("if (keyIndent !== ownKeyIndent) continue") || snapshotSrc.includes("keyIndent > ownKeyIndent"));
+check("client keeps defensive fallback", clientSrc.includes("rowAnchorFromPatch") && htmlSrc.includes("rowAnchorFromPatch"));
 {
-  // 用真实 patch 文本验证：rate-throttle 的"自身 enabled"应为 false（缩进 8），而非被覆盖的 true（缩进 10）
+  // 直接执行服务端 parseRootRows，用真实 patch 文本断言 rate-throttle 自身 enabled === false
+  const parserProbe = join(tmpdir(), "toolkit-parser-probe-" + process.pid + ".mjs");
+  writeFileSync(parserProbe, snapshotSrc.replace("function parseRootRows(", "export function parseRootRows("), "utf8");
+  const probe = await import(pathToFileURL(parserProbe).href);
   const patchText = readFileSync(join(root, "cordis.patch.yml"), "utf8");
-  const lines = patchText.split(/\r?\n/);
-  let start = -1;
-  for (let i = 0; i < lines.length; i++) {
-    if (/^\s*- id:\s*rate-throttle\s*$/.test(lines[i])) { start = i; break; }
-  }
-  let cfgIndent = -1;
-  for (let j = start + 1; j < lines.length && start >= 0; j++) {
-    if (/^(\s*)- id:/.test(lines[j])) break;
-    const c = /^(\s+)config:\s*$/.exec(lines[j]);
-    if (c) { cfgIndent = c[1].length; break; }
-  }
-  let ownEnabled = null;
-  for (let k = start + 1; k < lines.length && start >= 0; k++) {
-    if (/^(\s*)- id:/.test(lines[k])) break;
-    const kv = /^(\s+)enabled:\s*(\S+)\s*$/.exec(lines[k]);
-    if (kv && kv[1].length === cfgIndent + 2) { ownEnabled = kv[2]; break; }
-  }
-  check("rate-throttle own enabled resolves to false (not the nested true)", ownEnabled === "false", String(ownEnabled));
+  const rows = probe.parseRootRows(patchText);
+
+  const rt = rows.find((r) => r.id === "rate-throttle");
+  check("rate-throttle row parsed", !!rt);
+  check("rate-throttle own config.enabled === 'false' (nested true no longer wins)",
+    rt && rt.config.enabled === "false", rt ? "config.enabled=" + JSON.stringify(rt.config.enabled) : "");
+  check("nested routing keys not flattened", !(rt && Object.keys(rt.config).some((k) => k.includes("."))));
+  check("rate-throttle config-layer enabled still true", rt && rt.enabled === true);
+
+  const tm = rows.find((r) => r.id === "toolkit-manager");
+  check("toolkit-manager path-like name survives", !!tm && String(tm.name).startsWith("file:"), tm ? tm.name : "");
+
+  // 边界用例（内联，不依赖外部 fixture）
+  const nested = ["- insert:", "    - id: e1", "      config:", "        enabled: false", "        routing:", "          enabled: true"].join("\n");
+  const e1 = probe.parseRootRows(nested).find((r) => r.id === "e1");
+  check("edge: nested same-name does not overwrite", e1 && e1.config.enabled === "false", e1 ? JSON.stringify(e1.config.enabled) : "");
+
+  const sib = ["- insert:", "    - id: e2", "      config:", "        enabled: false", "- insert:", "    - id: e3", "      config:", "        enabled: true"].join("\n");
+  const rows2 = probe.parseRootRows(sib);
+  check("edge: sibling rows isolated (false)", rows2.find((r) => r.id === "e2").config.enabled === "false");
+  check("edge: sibling rows isolated (true)", rows2.find((r) => r.id === "e3").config.enabled === "true");
+
+  const dis = ["- id: e4", "  disabled: true", "  config:", "    enabled: true"].join("\n");
+  const e4 = probe.parseRootRows(dis).find((r) => r.id === "e4");
+  check("edge: row disabled:true still marks disabled", e4 && e4.enabled === false && e4.disabledExplicit === true);
+  check("edge: empty input safe", probe.parseRootRows("").length === 0);
+  check("edge: CRLF input parsed", (probe.parseRootRows("- id: e5\r\n  disabled: true\r\n")[0] || {}).enabled === false);
+
+  try { unlinkSync(parserProbe); } catch {}
 }
 
 if (baseUrl) {
