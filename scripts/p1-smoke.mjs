@@ -125,21 +125,36 @@ check("tech details carries engineer fields", ["managedBy", "inject", "services"
 
 // ③ 去工程黑话：标题与按钮
 check("button renamed to 一键体检", clientSrc.includes("一键体检（只查不改）") && htmlSrc.includes("一键体检（只查不改）"));
-check("no doctor dry-run jargon in UI", !clientSrc.includes("doctor dry-run") && !htmlSrc.includes("doctor dry-run"));
+// doctor dry-run 允许以「英文原名 + 中文注释」形态出现在标题里，但不允许作为按钮文案
+check("no bare doctor dry-run button", !/>\s*doctor dry-run\s*</.test(clientSrc) && !/>\s*doctor dry-run\s*</.test(htmlSrc));
 check("no P1 skeleton subtitle", !clientSrc.includes("P1 只读骨架") && !htmlSrc.includes("P1 只读骨架"));
 check("refresh button humanized", clientSrc.includes("重新读取状态") && htmlSrc.includes("重新读取状态"));
 
-// ③b 标题用中文功能名，不暴露目录名
-const dispBlock = /var DISPLAY_NAMES = \{([\s\S]*?)\n\t\t\};/.exec(clientSrc);
-check("has DISPLAY_NAMES map", !!dispBlock);
+// ③b 标识符「英文原名 + 中文注释」：标题恢复英文原名，中文降为副标题
+const cnBlock = /var CN_NAMES = \{([\s\S]*?)\n\t\t\};/.exec(clientSrc);
+check("has CN_NAMES map", !!cnBlock);
 // 逐行取 "key": "值" —— 末行无逗号，故不依赖逗号。
-const dispVals = dispBlock
-  ? (dispBlock[1].match(/:\s*"([^"]+)"/g) || []).map((s) => s.replace(/^:\s*"/, "").replace(/"$/, ""))
+const cnVals = cnBlock
+  ? (cnBlock[1].match(/:\s*"([^"]+)"/g) || []).map((s) => s.replace(/^:\s*"/, "").replace(/"$/, ""))
   : [];
 for (const label of ["记忆", "上下文压缩", "限流", "搜索路由", "本地网页搜索"]) {
-  check("display name " + label, dispVals.includes(label));
+  check("cn annotation " + label, cnVals.includes(label));
 }
-check("card title uses DISPLAY_NAMES", /DISPLAY_NAMES\[plugin\.dir\]/.test(clientSrc) && /DISPLAY_NAMES\[p\.dir\]/.test(htmlSrc));
+check("no DISPLAY_NAMES map anymore", !clientSrc.includes("DISPLAY_NAMES") && !htmlSrc.includes("DISPLAY_NAMES"));
+check("has originalName helper", clientSrc.includes("function originalName") && htmlSrc.includes("function originalName"));
+check("has annotated helper", clientSrc.includes("function annotated"));
+// 卡片标题必须用英文原名（originalName），中文只作副标题
+check("card title uses originalName", /esc\(originalName\(p\)\)/.test(htmlSrc) && /originalName\(plugin\)/.test(clientSrc));
+check("cn name is subtitle not title", /styles\.subtitle/.test(clientSrc) && /class="subtitle"/.test(htmlSrc));
+// 五个英文原名必须以标识形态出现
+for (const en of ["agent-memory", "compact-router", "rate-throttle", "search-router", "web-search-local"]) {
+  check("english original name " + en, clientSrc.includes(en) && htmlSrc.includes(en));
+}
+// 页面其它标识符位置同样「英文原名 + 中文注释」
+check("tech labels annotated", clientSrc.includes("插件目录（dir）") && clientSrc.includes("managedBy（由谁挂载）") && clientSrc.includes("enabled（配置文件开关）"));
+check("tech labels annotated in html", htmlSrc.includes("插件目录（dir）") && htmlSrc.includes("enabled（配置文件开关）"));
+check("patch heading annotated", clientSrc.includes("cordis.patch.yml · 插件开关所在") && htmlSrc.includes("cordis.patch.yml · 插件开关所在"));
+check("doctor heading annotated", clientSrc.includes("doctor dry-run · 只查不改") && htmlSrc.includes("doctor dry-run · 只查不改"));
 
 // ④ 体检报告人话化
 check("severity humanized", clientSrc.includes("必须修") && clientSrc.includes("建议修"));
