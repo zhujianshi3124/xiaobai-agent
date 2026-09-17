@@ -4,6 +4,13 @@ import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { buildSnapshot } from "./manager/snapshot.mjs";
 import { runDoctorDryRun } from "./manager/doctor-runner.mjs";
+import {
+  createPlan,
+  executePlan,
+  putPlan,
+  getPlan,
+  PlanError,
+} from "./manager/apply-engine.mjs";
 
 export const name = "toolkit-manager";
 export const inject = ["webServer"];
@@ -108,10 +115,61 @@ function sendJson(response, status, payload) {
   response.end(JSON.stringify(payload));
 }
 
+/** 读取请求体并解析 JSON。上限 64 KiB，防大体积注入。 */
+function readJsonBody(request, limit = 64 * 1024) {
+  return new Promise((resolve, reject) => {
+    let size = 0;
+    const chunks = [];
+    request.on("data", (chunk) => {
+      size += chunk.length;
+      if (size > limit) {
+        reject(new PlanError("body-too-large", "请求体过大（上限 64 KiB）"));
+        return;
+      }
+      chunks.push(chunk);
+    });
+    request.on("end", () => {
+      const raw = Buffer.concat(chunks).toString("utf8").trim();
+      if (raw === "") {
+        resolve({});
+        return;
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        resolve(parsed && typeof parsed === "object" ? parsed : {});
+      } catch {
+        reject(new PlanError("body-invalid-json", "请求体不是合法 JSON"));
+      }
+    });
+    request.on("error", (error) => reject(error));
+  });
+}
+
+const PLAN_ERROR_STATUS = {
+  "plan-not-found": 404,
+  "plan-expired": 409,
+  "sha-conflict": 409,
+  "anchor-missing": 400,
+  "anchor-ambiguous": 409,
+  "anchor-invalid": 400,
+  "anchor-moved": 409,
+  "target-missing": 400,
+  "body-too-large": 413,
+  "body-invalid-json": 400,
+  "value-invalid": 400,
+  "value-not-whitelisted": 400,
+};
+
+function planErrorStatus(code) {
+  return PLAN_ERROR_STATUS[code] || 400;
+}
+
 export function apply(ctx, config = {}) {
   const toolkitRoot = resolve(config.toolkitRoot || defaultToolkitRoot());
   const doctorCli = resolve(config.doctorCli || "D:/dsh-test-sandbox/projects/doctor/src/cli.mjs");
   const devicesFile = resolve(config.devicesFile || process.env.TOOLKIT_PANEL_DEVICES_FILE || defaultDevicesFile());
+  // 写前备份根目录（P2.1）。默认放插件仓下的 .panel-backups/ 之外，避免与人工备份混淆。
+  const backupRoot = resolve(config.backupRoot || process.env.TOOLKIT_PANEL_BACKUP_ROOT || join(toolkitRoot, ".panel-write-backups"));
   const uiHtml = readFileSync(join(panelRoot(), "client", "panel.html"), "utf8");
 
   // 只读路径：loopback socket AND (Host loopback OR 配对校验)。
@@ -196,6 +254,107 @@ export function apply(ctx, config = {}) {
         const result = await runDoctorDryRun({ cliPath: doctorCli, scopeRoot: toolkitRoot });
         sendJson(response, result.ok ? 200 : 500, result);
       }, { change: true }),
+    },
+    // ---------- P2.1 两段式框架 ----------
+    // plan 路由：只读计算，返回 diff 预览 / 期望 SHA / 有效期。**不落盘**。
+    {
+      kind: "exact",
+      path: "/api/toolkit-panel/plan",
+      handler: guard(async (request, response) => {
+        if (request.method !== "POST") {
+          response.writeHead(405, { allow: "POST" });
+          response.end();
+          return;
+        }
+        try {
+          const body = await readJsonBody(request);
+          const target = String(body.target || "patch");
+          const file = target === "patch" ? join(toolkitRoot, "cordis.patch.yml") : String(body.file || "");
+          const plan = createPlan({
+            file,
+            rowId: String(body.rowId || ""),
+            key: String(body.key || ""),
+            value: body.value === undefined ? "" : body.value,
+            backupRoot,
+          });
+          putPlan(plan);
+          // plan 的 nextText 不下发（客户端无需持有全文），避免暴露内部实现细节。
+          sendJson(response, 200, {
+            ok: true,
+            plan: {
+              token: plan.token,
+              file: plan.file,
+              rowId: plan.rowId,
+              key: plan.key,
+              value: plan.value,
+              changed: plan.changed,
+              anchorLine: plan.anchorLine,
+              diff: plan.diff,
+              expectedSha: plan.expectedSha,
+              nextSha: plan.nextSha,
+              createdAt: plan.createdAt,
+              expiresAt: plan.expiresAt,
+            },
+          });
+        } catch (error) {
+          const code = error instanceof PlanError ? error.code : "internal";
+          sendJson(response, planErrorStatus(code), { ok: false, code, error: String(error && error.message || error) });
+        }
+      }, { change: true }),
+    },
+    // execute 路由：把已确认的 plan 落盘。写路由 → 走严格配对 + CSRF。
+    {
+      kind: "exact",
+      path: "/api/toolkit-panel/execute",
+      handler: guard(async (request, response) => {
+        if (request.method !== "POST") {
+          response.writeHead(405, { allow: "POST" });
+          response.end();
+          return;
+        }
+        try {
+          const body = await readJsonBody(request);
+          const token = String(body.token || "");
+          const result = executePlan(token);
+          sendJson(response, 200, result);
+        } catch (error) {
+          const code = error instanceof PlanError ? error.code : "internal";
+          sendJson(response, planErrorStatus(code), { ok: false, code, error: String(error && error.message || error) });
+        }
+      }, { change: true }),
+    },
+    // 方案查询（只读）：供 UI 在确认页展示上下文 / 判断是否仍有效。
+    {
+      kind: "exact",
+      path: "/api/toolkit-panel/plan/status",
+      handler: guard(async (request, response) => {
+        if (request.method !== "GET") {
+          response.writeHead(405, { allow: "GET" });
+          response.end();
+          return;
+        }
+        const token = String((request.url || "").split("token=")[1] || "").split("&")[0];
+        const plan = getPlan(token);
+        if (!plan) {
+          sendJson(response, 404, { ok: false, code: "plan-not-found", error: "方案不存在或已失效" });
+          return;
+        }
+        sendJson(response, 200, {
+          ok: true,
+          plan: {
+            token: plan.token,
+            file: plan.file,
+            rowId: plan.rowId,
+            key: plan.key,
+            value: plan.value,
+            diff: plan.diff,
+            expectedSha: plan.expectedSha,
+            createdAt: plan.createdAt,
+            expiresAt: plan.expiresAt,
+            expired: Date.parse(plan.expiresAt) <= Date.now(),
+          },
+        });
+      }),
     },
   ];
 

@@ -43,23 +43,104 @@ const fakeCtx = {
 };
 const panelMod = await import(pathToFileURL(join(panelDir, "index.js")).href);
 panelMod.apply(fakeCtx, { toolkitRoot: root, doctorCli, devicesFile: fixtureFile });
-check("routes count == 3", routes.length === 3, String(routes.length));
+check("routes count == 6", routes.length === 6, String(routes.length));
+check("P2.1 plan route registered", routes.some((r) => r.path === "/api/toolkit-panel/plan"));
+check("P2.1 execute route registered", routes.some((r) => r.path === "/api/toolkit-panel/execute"));
+check("P2.1 plan/status route registered", routes.some((r) => r.path === "/api/toolkit-panel/plan/status"));
 
 const expectedWhenAllowed = {
   "/api/toolkit-panel/ui": ["GET", 200],
   "/api/toolkit-panel/snapshot": ["GET", 200],
   "/api/toolkit-panel/doctor/dry-run": ["GET", 405],
+  "/api/toolkit-panel/plan": ["GET", 405],
+  "/api/toolkit-panel/execute": ["GET", 405],
+  "/api/toolkit-panel/plan/status": ["GET", 404],
 };
+
+// 写路由（options.change === true）：tunneled 无服务一律 403。
+// 写路径（options.change === true）路由集合：tunneled 无服务一律 403。
+const WRITE_ROUTES = new Set([
+  "/api/toolkit-panel/doctor/dry-run",
+  "/api/toolkit-panel/plan",
+  "/api/toolkit-panel/execute",
+]);
+
+// 每个场景独立 apply 一次，通过 ctx.get 注入不同形态的 remoteWebUiPairing。
+// 提到模块作用域，供 P2.0② 与 P2.1 两个测试块共用。
+function applyWith(pairingService) {
+  const collected = [];
+  const ctx = {
+    effect(cb) { cb(); return () => {}; },
+    webServer: { register(r) { collected.push(r); return () => {}; } },
+    get(n) {
+      if (n !== "remoteWebUiPairing") throw new Error("probe: unexpected service " + n);
+      if (pairingService === undefined) throw new Error("probe: service absent");
+      return pairingService;
+    },
+  };
+  panelMod.apply(ctx, { toolkitRoot: root, doctorCli, devicesFile: fixtureFile });
+  return collected;
+}
+const SNAP = "/api/toolkit-panel/snapshot";
+const DOC = "/api/toolkit-panel/doctor/dry-run";
+const NONLOOP = { remote: "127.0.0.1", host: TUNNEL_HOST, cookie: "dsh_pair=" + FIXTURE_DEVICE };
+const WRITE_HEADERS = { site: "same-origin", origin: "https://" + TUNNEL_HOST };
 
 async function send(route, method, opts = {}) {
   let status = null;
-  const res = { writeHead(s) { status = s; }, end() {} };
+  let body = null;
+  const res = {
+    writeHead(s) { status = s; },
+    end(payload) { if (typeof payload === "string") { try { body = JSON.parse(payload); } catch { body = payload; } } },
+  };
   const headers = { host: opts.host || "127.0.0.1:3080" };
   if (opts.origin !== undefined) headers.origin = opts.origin;
   if (opts.cookie !== undefined) headers.cookie = opts.cookie;
   if (opts.site !== undefined) headers["sec-fetch-site"] = opts.site;
-  await route.handler({ method, socket: { remoteAddress: opts.remote }, headers }, res);
+  await route.handler(makeRequest(method, headers, opts.remote, opts.json), res);
   return status || 500;
+}
+
+/**
+ * 构造一个最小可用的请求替身：支持 `on("data")` / `on("end")`，
+ * 以便被测代码里的 readJsonBody 能正常收到请求体。
+ */
+function makeRequest(method, headers, remote, jsonBody) {
+  const listeners = { data: [], end: [], error: [] };
+  const request = {
+    method,
+    headers,
+    socket: { remoteAddress: remote },
+    on(event, cb) {
+      if (listeners[event]) listeners[event].push(cb);
+      return request;
+    },
+  };
+  // 异步投递，模拟真实流：先 data 后 end
+  queueMicrotask(() => {
+    if (jsonBody !== undefined) {
+      const chunk = Buffer.from(typeof jsonBody === "string" ? jsonBody : JSON.stringify(jsonBody), "utf8");
+      for (const cb of listeners.data) cb(chunk);
+    }
+    for (const cb of listeners.end) cb();
+  });
+  return request;
+}
+
+/** 发一个"返回体可读"的请求，用于需要断言响应内容的场景。 */
+async function sendCaptured(route, method, opts = {}) {
+  let status = null;
+  let body = null;
+  const res = {
+    writeHead(s) { status = s; },
+    end(payload) { if (typeof payload === "string") { try { body = JSON.parse(payload); } catch { body = payload; } } },
+  };
+  const headers = { host: opts.host || "127.0.0.1:3080" };
+  if (opts.origin !== undefined) headers.origin = opts.origin;
+  if (opts.cookie !== undefined) headers.cookie = opts.cookie;
+  if (opts.site !== undefined) headers["sec-fetch-site"] = opts.site;
+  await route.handler(makeRequest(method, headers, opts.remote, opts.json), res);
+  return { status: status || 500, body };
 }
 
 for (const route of routes) {
@@ -73,9 +154,8 @@ for (const route of routes) {
   const badcookie = await send(route, allowed[0], { remote: "127.0.0.1", host: TUNNEL_HOST, cookie: "dsh_pair=ffffffffffffffffffffffffffffffff" });
   check("gate blocks tunneled bad-cookie " + route.path, badcookie === 403, "status " + badcookie);
   const goodcookie = await send(route, allowed[0], { remote: "127.0.0.1", host: TUNNEL_HOST, cookie: "dsh_pair=" + FIXTURE_DEVICE });
-  // P2.0② 后写路由（doctor dry-run）在服务缺席时不再接受 cookie 兜底，故此处期望 403；
-  // 只读路由仍走 fallback，期望其正常状态码。方法不匹配的情况（GET→405）不适用于写路由。
-  const expectGood = route.path === "/api/toolkit-panel/doctor/dry-run" ? 403 : allowed[1];
+  // P2.0② 后写路由不再接受 cookie 兜底，故此处期望 403；只读路由仍走 fallback。
+  const expectGood = WRITE_ROUTES.has(route.path) ? 403 : allowed[1];
   check("gate " + (expectGood === 403 ? "blocks" : "allows") + " tunneled paired-cookie " + route.path,
     goodcookie === expectGood, "expected " + expectGood + " got " + goodcookie);
 }
@@ -88,25 +168,7 @@ check("CSRF blocks doctor cross-site POST", csrf === 403, "status " + csrf);
 // 读路径：loopback AND (Host loopback OR 服务校验 OR devicesFile hasOwn 兜底)
 // 写路径：loopback AND (Host loopback OR 服务校验)，**服务缺失一律拒绝，不看 cookie**
 {
-  // 每个场景独立 apply 一次，通过 ctx.get 注入不同形态的 remoteWebUiPairing
-  function applyWith(pairingService) {
-    const collected = [];
-    const ctx = {
-      effect(cb) { cb(); return () => {}; },
-      webServer: { register(r) { collected.push(r); return () => {}; } },
-      get(n) {
-        if (n !== "remoteWebUiPairing") throw new Error("probe: unexpected service " + n);
-        if (pairingService === undefined) throw new Error("probe: service absent");
-        return pairingService;
-      },
-    };
-    panelMod.apply(ctx, { toolkitRoot: root, doctorCli, devicesFile: fixtureFile });
-    return collected;
-  }
-  const SNAP = "/api/toolkit-panel/snapshot";
-  const DOC = "/api/toolkit-panel/doctor/dry-run";
-  const NONLOOP = { remote: "127.0.0.1", host: TUNNEL_HOST, cookie: "dsh_pair=" + FIXTURE_DEVICE };
-  const WRITE_HEADERS = { site: "same-origin", origin: "https://" + TUNNEL_HOST };
+  // applyWith / SNAP / DOC / NONLOOP / WRITE_HEADERS 均在模块作用域定义，此处直接使用。
 
   // A. 服务在场且已配对 → 读放行、写放行
   const svcPaired = applyWith({ isPairedDevice: () => true });
@@ -297,6 +359,72 @@ check("client keeps defensive fallback", clientSrc.includes("rowAnchorFromPatch"
   check("edge: CRLF input parsed", (probe.parseRootRows("- id: e5\r\n  disabled: true\r\n")[0] || {}).enabled === false);
 
   try { unlinkSync(parserProbe); } catch {}
+}
+
+// ---------- P2.1 两段式框架：路由层契约 ----------
+// 说明：apply-engine 的**行为**由 scripts/p21-verify.mjs 深度验收（真实文件读写 +
+// 真实备份产物 + SHA 冲突 409）。这里只断言路由层的接线与守卫语义，避免重复。
+{
+  const engineSrc = readFileSync(join(panelDir, "manager", "apply-engine.mjs"), "utf8");
+  const PLAN = "/api/toolkit-panel/plan";
+  const EXEC = "/api/toolkit-panel/execute";
+
+  // 写路径守卫：服务缺席时 plan / execute 都必须 403（不因"只是生成方案"就放宽）
+  const svcAbsent = applyWith(undefined);
+  const aPlan = svcAbsent.find((r) => r.path === PLAN);
+  const aExec = svcAbsent.find((r) => r.path === EXEC);
+  check("P2.1 plan route is write-guarded (service absent → 403)",
+    (await send(aPlan, "POST", Object.assign({}, NONLOOP, WRITE_HEADERS, { json: {} }))) === 403);
+  check("P2.1 execute route is write-guarded (service absent → 403)",
+    (await send(aExec, "POST", Object.assign({}, NONLOOP, WRITE_HEADERS, { json: {} }))) === 403);
+  check("P2.1 plan/status route is read-only (service absent + fixture cookie → fallback allows)",
+    (await send(svcAbsent.find((r) => r.path === "/api/toolkit-panel/plan/status"), "GET", NONLOOP)) === 404,
+    "预期 404（方案不存在），说明未被写守卫拦下");
+
+  // 配对放行时，plan 返回可用的方案对象（含 diff / expectedSha / expiresAt）
+  const svcPaired = applyWith({ isPairedDevice: () => true });
+  const okPlan = svcPaired.find((r) => r.path === PLAN);
+  const planRes = await sendCaptured(okPlan, "POST", Object.assign({}, NONLOOP, WRITE_HEADERS, {
+    json: { target: "patch", rowId: "rate-throttle", key: "disabled", value: "true" },
+  }));
+  const planBody = planRes.body;
+  check("P2.1 plan returns ok", !!(planBody && planBody.ok), JSON.stringify(planBody && planBody.error));
+  check("P2.1 plan carries diff preview", !!(planBody && planBody.plan && Array.isArray(planBody.plan.diff)), JSON.stringify(planBody));
+  check("P2.1 plan carries expectedSha", !!(planBody && planBody.plan && /^[0-9a-f]{64}$/.test(planBody.plan.expectedSha || "")));
+  check("P2.1 plan carries expiry", !!(planBody && planBody.plan && Date.parse(planBody.plan.expiresAt) > Date.now()));
+  check("P2.1 plan resolves the anchor in the real patch file", !!(planBody && planBody.plan && planBody.plan.anchorLine > 0),
+    "anchorLine=" + (planBody && planBody.plan && planBody.plan.anchorLine));
+  check("P2.1 plan does NOT leak nextText to client", !(planBody && planBody.plan && "nextText" in planBody.plan));
+
+  // execute 用不存在的 token → 404（而不是 500）
+  const okExec = svcPaired.find((r) => r.path === EXEC);
+  const execRes = await sendCaptured(okExec, "POST", Object.assign({}, NONLOOP, WRITE_HEADERS, {
+    json: { token: "deadbeefdeadbeefdeadbeefdeadbeef" },
+  }));
+  check("P2.1 execute with unknown token → 404", execRes.status === 404, "status " + execRes.status);
+  check("P2.1 execute 404 carries plan-not-found code", !!(execRes.body && execRes.body.code === "plan-not-found"), JSON.stringify(execRes.body));
+
+  // 空 body / 缺字段 → 400 且为锚点类错误（不是崩溃）
+  const badPlan = await sendCaptured(okPlan, "POST", Object.assign({}, NONLOOP, WRITE_HEADERS, { json: {} }));
+  check("P2.1 plan with empty body → 400 anchor-invalid", badPlan.status === 400 && badPlan.body && badPlan.body.code === "anchor-invalid",
+    JSON.stringify(badPlan.body));
+
+  // CSRF 对新增写路由同样生效
+  check("P2.1 CSRF blocks cross-site plan POST",
+    (await send(okPlan, "POST", { remote: "127.0.0.1", host: TUNNEL_HOST, site: "cross-site", origin: "https://evil.example", json: {} })) === 403);
+  check("P2.1 CSRF blocks bad-origin execute POST",
+    (await send(okExec, "POST", { remote: "127.0.0.1", host: TUNNEL_HOST, site: "same-site", origin: "https://evil.example", json: {} })) === 403);
+
+  // 引擎源码契约（安全模型硬要求）
+  check("P2.1 engine implements SHA conflict detection", engineSrc.includes("sha-conflict"));
+  check("P2.1 engine re-reads the file before write (no cached text reuse)",
+    /executePlan[\s\S]{0,1200}readFileSync\(plan\.file/.test(engineSrc));
+  check("P2.1 engine backs up before writing",
+    /backupDir = createBackup/.test(engineSrc) &&
+    engineSrc.indexOf("createBackup") < engineSrc.indexOf("writeFileSync(plan.file"));
+  check("P2.1 engine enforces unique anchor", engineSrc.includes("anchor-ambiguous") && engineSrc.includes("anchor-missing"));
+  check("P2.1 engine has a retention policy", engineSrc.includes("pruneBackups") && engineSrc.includes("BACKUP_KEEP_COUNT"));
+  check("P2.1 backup.mjs records a reason on the manifest", readFileSync(join(panelDir, "manager", "backup.mjs"), "utf8").includes("reason"));
 }
 
 if (baseUrl) {
