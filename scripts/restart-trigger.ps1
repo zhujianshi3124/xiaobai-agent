@@ -13,6 +13,17 @@
 #   H4  the whole body is wrapped so an unexpected terminating error is still written to the
 #       log file (so a silent death can never repeat).
 #
+# HARDENING v2.1 (2026-09-17 22:02, condition #3b step 2) - gate semantics made explicit:
+#   H9  THE ONLY GATE into the start branch is "port $Port is free".
+#       A dead root pid is NOT a gate. Commit 054934e had a path where the root was gone
+#       but the port was still held, and it logged a WARN then CONTINUED TO START - that
+#       would double-start dsh web. Every not-released case now aborts with exit 1.
+#       The gate is additionally re-asserted immediately before Start-Process so no future
+#       edit can bypass it.
+#       Rationale: a process error is not itself a reason to start (the old process may
+#       still hold the port), and a dead process is not itself a reason to start either
+#       (something else may hold it). Port freeness is the single necessary condition.
+#
 # HARDENING v2 (2026-09-17 22:00, condition #4b) - replace taskkill with Process.Kill():
 #   H5  ROOT CAUSE of the 21:46 failed restart, established by direct access-mask probing:
 #         taskkill.exe /PID x /F requests
@@ -139,17 +150,24 @@ try {
     }
 
     if (-not $released) {
+      # GATE (v2.1): the ONLY legitimate trigger for the start branch is "port is free".
+      # A dead root pid is NOT sufficient - if anything still listens on $Port, starting a
+      # second dsh web would double-start. Refuse in every not-released case.
       $rootAlive = Test-PidAlive $rootPid
       $still = Get-Listener $Port
       $stillPid = if ($still) { $still.OwningProcess } else { "unknown" }
-      if ($rootAlive) {
-        Log ("ERROR: root pid " + $rootPid + " still alive and port " + $Port + " still held by pid " + $stillPid + " after 60s; refusing to double-start")
-        exit 1
-      }
-      Log ("WARN: root pid gone but port " + $Port + " still shows listener pid " + $stillPid + " (stale/TIME_WAIT); continuing to start")
-    } else {
-      Log "port free; starting dsh web"
+      Log ("ERROR: port " + $Port + " not free after 60s (root pid " + $rootPid + " alive=" + $rootAlive + ", listener pid=" + $stillPid + "); refusing to double-start")
+      exit 1
     }
+    Log "port free; starting dsh web"
+  }
+
+  # GATE (v2.1): re-assert the gate immediately before Start-Process, so no path can slip
+  # through with the port still held (belt-and-braces against future edits).
+  $finalCheck = Get-Listener $Port
+  if ($finalCheck) {
+    Log ("ERROR: gate violated at start time - port " + $Port + " still held by pid " + $finalCheck.OwningProcess + "; aborting before double-start")
+    exit 1
   }
 
   # H2: start phase guarded.
