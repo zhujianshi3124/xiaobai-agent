@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>dsh-toolkit 面板</title>
+<style>
+  body { font-family: system-ui, "Segoe UI", sans-serif; margin: 0; padding: 20px; background: #111318; color: #e6e6e6; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 16px 0 8px; }
+  .muted { color: #9aa0a6; font-size: 12px; }
+  .toolbar { display: flex; gap: 8px; margin: 16px 0; align-items: center; flex-wrap: wrap; }
+  button { padding: 6px 14px; border-radius: 6px; border: 1px solid #3a3f47; background: #1c2027; color: #e6e6e6; cursor: pointer; font-size: 13px; }
+  button:hover { border-color: #5a8dee; }
+  button[disabled] { opacity: 0.6; cursor: default; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+  .card { border: 1px solid #2a2f36; border-radius: 8px; padding: 12px; background: #181b21; }
+  .card h3 { margin: 0 0 8px; font-size: 15px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+  .desc { font-size: 13px; line-height: 1.55; margin: 0 0 10px; color: #d7dae0; }
+  .stateRow { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; font-size: 13px; font-weight: 600; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 9px; }
+  .dot.on { background: #4ade80; box-shadow: 0 0 0 3px rgba(74,222,128,0.18); }
+  .dot.warn { background: #fbbf24; box-shadow: 0 0 0 3px rgba(251,191,36,0.18); }
+  .dot.off { background: #8b9099; }
+  .state.on { color: #4ade80; }
+  .state.warn { color: #fbbf24; }
+  .state.off { color: #9aa0a6; }
+  .dualBox { margin: 0 0 10px; padding: 8px 10px; border-radius: 6px; background: #2a2210; border: 1px solid #6b5a1e; }
+  .dualHead { color: #fbbf24; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+  .dualLine { font-size: 12px; color: #e0d5b7; line-height: 1.6; }
+  .dualCode { font-family: ui-monospace, Consolas, monospace; color: #f0e2b8; }
+  .badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 11px; }
+  .derived { background: #3a2b17; color: #e8c36c; }
+  .local { background: #211f3a; color: #9c96db; }
+  details { margin-top: 10px; border-top: 1px solid #23272d; padding-top: 8px; }
+  summary { cursor: pointer; font-size: 12px; color: #8ab4f8; user-select: none; }
+  .techRow { font-size: 11.5px; color: #9aa0a6; font-family: ui-monospace, Consolas, monospace; line-height: 1.7; word-break: break-all; }
+  .techKey { color: #7f858d; }
+  pre { white-space: pre-wrap; background: #12151a; border: 1px solid #2a2f36; border-radius: 6px; padding: 10px; font-size: 12px; max-height: 340px; overflow: auto; }
+  .issues { max-height: 320px; overflow: auto; border: 1px solid #2a2f36; border-radius: 6px; }
+  .issue { border-bottom: 1px solid #23272d; padding: 8px; font-size: 12px; line-height: 1.6; }
+  .error { color: #f28b82; }
+  .warning { color: #e8c36c; }
+  .info { color: #9aa0a6; }
+  .allGood { padding: 12px 10px; font-size: 13px; color: #67c48b; }
+</style>
+</head>
+<body>
+  <h1>dsh-toolkit 面板</h1>
+  <div class="muted" id="meta"></div>
+  <div class="toolbar">
+    <button id="refresh">重新读取状态</button>
+    <button id="doctor">一键体检（只查不改）</button>
+    <span class="muted" id="doctorStatus"></span>
+  </div>
+  <div id="cards" class="cards"></div>
+  <h2>配置文件原文（cordis.patch.yml）</h2>
+  <pre id="patch"></pre>
+  <h2>体检结果</h2>
+  <div id="doctorOut" class="issues"></div>
+<script>
+var state = null;
+function el(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+
+var DESCRIPTIONS = {
+  "agent-memory": "记住你说过的话和项目里的重要信息，下次对话还能用上。",
+  "compact-router": "对话变长时自动压缩历史内容，省上下文又不断片。",
+  "rate-throttle": "给模型请求限速，避免发得太快被服务方拒绝。",
+  "search-router": "决定每次联网搜索走哪条路：官方搜索还是本地搜索。",
+  "web-search-local": "提供不依赖官方接口的本地搜索引擎，可自选搜索源。"
+};
+var DISPLAY_NAMES = {
+  "agent-memory": "记忆",
+  "compact-router": "上下文压缩",
+  "rate-throttle": "限流",
+  "search-router": "搜索路由",
+  "web-search-local": "本地网页搜索"
+};
+
+function originBadge(p) {
+  if (p.origin === "derived") return '<span class="badge derived">第三方衍生 ' + esc(p.upstream) + "</span>";
+  return '<span class="badge local">本地原创</span>';
+}
+
+// 注意：不能直接用 patchRow.config.enabled —— 服务端 parseRootRows() 用不区分缩进的
+// 正则收集 config，同一行区间内所有 enabled: 会互相覆盖（rate-throttle 自身的
+// enabled:false 会被嵌套 routing.enabled:true 覆盖）。这里从 patch 原文按缩进取键。
+function rowAnchorFromPatch(p, patchText) {
+  if (!patchText || !p.patchRow) return null;
+  var lines = String(patchText).split(/\r?\n/);
+  var wantId = p.patchRow.id;
+  var start = -1;
+  for (var i = 0; i < lines.length; i++) {
+    var m = /^(\s*)- id:\s*([^#\s]+)/.exec(lines[i]);
+    if (m && m[2] === wantId) { start = i; break; }
+  }
+  if (start < 0) return null;
+  var cfgIndent = -1;
+  for (var j = start + 1; j < lines.length; j++) {
+    if (/^(\s*)- id:/.test(lines[j])) break;
+    var c = /^(\s+)config:\s*$/.exec(lines[j]);
+    if (c) { cfgIndent = c[1].length; break; }
+  }
+  if (cfgIndent < 0) return null;
+  for (var k = start + 1; k < lines.length; k++) {
+    if (/^(\s*)- id:/.test(lines[k])) break;
+    var kv = /^(\s+)enabled:\s*(\S+)\s*$/.exec(lines[k]);
+    if (kv && kv[1].length === cfgIndent + 2) return { value: kv[2] === "true", line: k + 1 };
+  }
+  return { value: null, line: null };
+}
+function innerSwitchValue(p, patchText) {
+  var exact = rowAnchorFromPatch(p, patchText);
+  if (exact) return exact.value;
+  var row = p.patchRow;
+  var cfg = (row && row.config) || {};
+  if (Object.prototype.hasOwnProperty.call(cfg, "enabled")) return String(cfg.enabled).trim() === "true";
+  return null;
+}
+var PATCH_TEXT = "";
+function stateOf(p) {
+  if (p.dir === "compact-router") return { label: "运行中 · 正在生效", cls: "on" };
+  if (!p.patchRow) return { label: "配置层停用 · 未加载", cls: "off" };
+  if (p.patchRow.enabled !== true) return { label: "配置层停用 · 未加载", cls: "off" };
+  if (innerSwitchValue(p, PATCH_TEXT) === false) return { label: "已加载 · 功能开关关闭，暂不生效", cls: "warn" };
+  return { label: "运行中 · 正在生效", cls: "on" };
+}
+function dualSwitchNotice(p) {
+  if (p.patchRow && p.patchRow.enabled === true && innerSwitchValue(p, PATCH_TEXT) === false) {
+    return '<div class="dualBox"><div class="dualHead">⚠ 两层开关不一致，所以现在没生效</div>'
+      + '<div class="dualLine">第一层（配置文件）：<span class="dualCode">已启用</span> —— 插件已被加载。<br>'
+      + '第二层（插件内部）：<span class="dualCode">关闭</span> —— 功能被自己关掉了。<br>'
+      + '要让它真正工作，需要把插件配置里的 <span class="dualCode">enabled</span> 改为 <span class="dualCode">true</span>。</div></div>';
+  }
+  if (p.patchRow && p.patchRow.enabled !== true) {
+    return '<div class="dualBox"><div class="dualHead">⚠ 在配置文件中被停用</div>'
+      + '<div class="dualLine">插件当前<span class="dualCode">完全没有被加载</span>，相关功能不会工作。'
+      + '要恢复需把配置行里的 <span class="dualCode">disabled</span> 去掉或设为 <span class="dualCode">false</span>。</div></div>';
+  }
+  return "";
+}
+function techRow(label, value) {
+  return '<div class="techRow"><span class="techKey">' + esc(label) + " : </span>" + esc(value) + "</div>";
+}
+function techDetails(p) {
+  var regs = p.registers || {};
+  var list = function (a) { return (a && a.length > 0) ? a.join(", ") : "（无）"; };
+  return "<details><summary>技术详情</summary>"
+    + techRow("插件目录", p.dir)
+    + techRow("包名", p.name)
+    + techRow("managedBy", String(p.managedBy))
+    + techRow("enabled", String(p.enabled))
+    + techRow("inject", list(p.inject))
+    + techRow("services", list(regs.services))
+    + techRow("commands", list(regs.commands))
+    + techRow("providers", list(regs.providers))
+    + techRow("events", list(regs.events))
+    + "</details>";
+}
+function renderCards() {
+  var cards = el("cards");
+  cards.innerHTML = "";
+  if (!state || !Array.isArray(state.plugins)) return;
+  for (var i = 0; i < state.plugins.length; i++) {
+    var p = state.plugins[i];
+    var st = stateOf(p);
+    var desc = DESCRIPTIONS[p.dir] || p.note || "（暂无功能说明）";
+    var div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = "<h3>" + esc(DISPLAY_NAMES[p.dir] || p.dir) + originBadge(p) + "</h3>"
+      + '<div class="desc">' + esc(desc) + "</div>"
+      + '<div class="stateRow"><span class="dot ' + st.cls + '"></span><span class="state ' + st.cls + '">' + esc(st.label) + "</span></div>"
+      + dualSwitchNotice(p)
+      + techDetails(p);
+    cards.appendChild(div);
+  }
+}
+function renderSnapshot(snap) {
+  state = snap;
+  PATCH_TEXT = (snap.patch && snap.patch.text) || "";
+  el("meta").textContent = snap.toolkitName + " " + snap.toolkitVersion + " · 本面板" + (snap.self && snap.self.enabled ? "已启用" : "未启用");
+  el("patch").textContent = PATCH_TEXT;
+  renderCards();
+}
+async function loadSnapshot() {
+  var res = await fetch("/api/toolkit-panel/snapshot", { cache: "no-store" });
+  if (res.status === 403) { el("meta").textContent = "拒绝访问：本页面只允许在这台电脑上打开。"; return; }
+  var body = await res.json();
+  if (body.ok) renderSnapshot(body.snapshot);
+  else el("meta").textContent = "读取失败：" + (body.error || res.status);
+}
+
+var SEVERITY_TEXT = { error: "必须修", warning: "建议修", info: "提示" };
+function severityText(sev) { return SEVERITY_TEXT[sev] || String(sev); }
+async function runDoctor() {
+  var btn = el("doctor");
+  btn.disabled = true;
+  el("doctorStatus").textContent = "正在体检…";
+  var out = el("doctorOut");
+  out.innerHTML = "";
+  try {
+    var res = await fetch("/api/toolkit-panel/doctor/dry-run", { method: "POST", cache: "no-store" });
+    var body = await res.json();
+    if (!body.ok) {
+      el("doctorStatus").textContent = "体检没能完成";
+      out.innerHTML = '<div class="issue error">' + esc(body.error || res.status) + "</div>";
+      return;
+    }
+    var r = body.report || {};
+    var s = r.summary || {};
+    var nErr = s.error || 0;
+    var nWarn = s.warning || 0;
+    var nInfo = s.info || 0;
+    el("doctorStatus").textContent = (nErr === 0 && nWarn === 0)
+      ? ("体检完成：一切正常" + (nInfo > 0 ? "（另有 " + nInfo + " 条提示）" : ""))
+      : ("体检完成：发现 " + (nErr > 0 ? nErr + " 个必须修的问题" : "") + (nErr > 0 && nWarn > 0 ? "、" : "") + (nWarn > 0 ? nWarn + " 个建议修的问题" : ""));
+    var items = r.issues || [];
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      var div = document.createElement("div");
+      div.className = "issue " + it.severity;
+      div.innerHTML = "<b>" + esc(severityText(it.severity)) + "</b>：" + esc(it.message)
+        + '<div class="techRow">' + esc(it.id) + " · " + esc(it.file) + ":" + esc(it.line) + "</div>";
+      out.appendChild(div);
+    }
+    if (items.length === 0) out.innerHTML = '<div class="allGood">✓ 没有发现任何问题，配置是健康的。</div>';
+  } finally {
+    btn.disabled = false;
+  }
+}
+el("refresh").addEventListener("click", loadSnapshot);
+el("doctor").addEventListener("click", runDoctor);
+loadSnapshot();
+</script>
+</body>
+</html>
