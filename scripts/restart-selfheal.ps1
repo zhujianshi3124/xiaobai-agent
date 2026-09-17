@@ -11,6 +11,11 @@
 #   H3  the start phase records the child pid and verifies the port comes up.
 #   H4  the whole body is wrapped so an unexpected terminating error is still written to the
 #       log file.
+#
+# v2 (2026-09-17 21:55): paired with restart-trigger.ps1 v2. The 21:46 failed restart was
+#   traced to conhost.exe inside the dsh web tree making `taskkill /T /F` exit 128 - the
+#   kill strategy now lives entirely in the trigger (per-pid, leaves-first, conhost skipped).
+#   This script keeps its role: detect "no dsh web process AND port not listening", then start.
 param(
   [int]$Port = 3080,
   [string]$LogDir = "D:\dsh-plugins\dsh-toolkit\.panel-backups\restart-logs"
@@ -29,6 +34,8 @@ function Log([string]$msg) {
 }
 
 # H1: no pipeline; explicit loop over the CIM result.
+# v2 note: a dsh web process is detected by command line. The kill path lives in
+# restart-trigger.ps1; this script only needs to know whether one is alive.
 function Get-DshWebNode {
   $found = $null
   try {
