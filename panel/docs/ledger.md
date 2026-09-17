@@ -17,16 +17,16 @@
 
 ## 进行中
 
-- L-023 [已完成] 面板 UI 迁移重启布防。**2026-09-17 22:08 重启成功，22:10 三验收全绿。**（唯一残留：浏览器端目视确认新 UI，见 L-023-⑤ C 项）
-  - 背景：`panel/package.json` 终版含 `dsh.client.platform=web` + `exports["./client"]`；profile 行 `toolkit-manager` 已改为 path-like `file:///D:/dsh-plugins/dsh-toolkit/panel/index.js`；原运行中的 dsh web（PID 27900，12:48:47 启动）载旧 P1 面板，重启后激活新 client bundle。
-  - 中止记录（第一次）：2026-09-17 21:06 trigger 触发即死；根因 = `taskkill.exe` 经管道接 `ForEach-Object` 报 `CantActivateDocumentInPipeline`，`$ErrorActionPreference=Stop` 在 taskkill 行终止。**无重启发生，P1 态未变，无需回滚**。
-  - 中止记录（第二次）：2026-09-17 21:46 触发**按时发生、管道 bug 已修**，但**杀进程失败**；根因 = `taskkill /F` 申请 `PROCESS_TERMINATE｜PROCESS_QUERY_INFORMATION`，本非提权令牌**持有 TERMINATE 却被拒 QUERY_INFORMATION**，`/T` 遂连根一起放弃。**无重启发生，P1 态未变，无需回滚**。详见 L-023-④b。
-  - 成功记录（第三次）：2026-09-17 22:08 `Process.Kill()` 修复生效，杀树成功 → 端口释放 → 新进程 pid 23932 起来；三验收全绿。详见 L-023-⑤。
-  - 进度：条件① ✅ → 条件④ ✅ → 条件② ✅ → 台账正本化 + 入 git ✅ → 条件③ ⚠️（21:46 失败）→ 条件④b ✅（`054934e`）→ 条件③b ✅（闸门修复 `cdb1fbe`）→ **触发 ✅ 22:08 → 三验收 ✅ 22:10**。
+- **L-023 [已关账 · 迁移任务正式完成]** 面板 UI 迁移（含**设置页 tab**、**直连后备页**、**guard 链**三件套）。
+  - **关账依据（2026-09-17 23:53 用户确认）**：**设置页 tab 可见、界面合格，用户已确认。** 此前命令行侧的全部验证（22:08 重启成功、22:10 三验收全绿、path-like profile 行解析成功、P1 冒烟 27/27）与用户目视确认**合并闭环**，L-023 / L-024 / L-025 三条挂起的「浏览器端目视确认」至此**全部解除**。
+  - **交付三件套**：
+    1. **设置页 tab** —— client bundle 经 `ctx.slots.register({ name: "settings.plugins.tab", id: "toolkit-panel", order: 90 })` 注入设置页，用户目视可见且界面合格。
+    2. **直连后备页** —— `/api/toolkit-panel/ui`（服务端 `uiHtml`，`client/panel.html` 独立渲染器），桌面直连可开，作为 tab 不可用时的兜底入口。
+    3. **guard 链** —— 只读路径（`isAllowedRead`：loopback AND (Host loopback OR 配对服务 OR `devicesFile` hasOwn 兜底)）与写路径（`isAllowedWrite`：loopback AND (Host loopback OR `pairedByServiceStrict`)，**禁 fallback**）双轨，叠加 CSRF（`sec-fetch-site ≠ cross-site` 且 `origin.host == Host`）。所有面板路由统一过 `guard()`。
+  - 三验收（2026-09-17 22:10）：桌面 loopback → `/api/toolkit-panel/ui` **200**；stable host 无 cookie → **403**；`/api/toolkit-panel/snapshot` 桌面 **200**。
+  - 历史过程中止记录（均已闭环，留档）：第一次 21:06 `CantActivateDocumentInPipeline`；第二次 21:46 `taskkill /F` 权限被拒（缺 `PROCESS_QUERY_INFORMATION`）。第三次 22:08 `Process.Kill()` 修复后成功。
   - **【用户点名表扬 2026-09-17 22:00】**：①②④及台账正本化全部验收通过；**「自我证伪行为」点名表扬入台账** —— 21:55 曾假设「conhost 本身不可杀并污染 `/T`」，随即构造专门演练（真实 conhost 落进子树）**主动证伪了自己的假设**，随后改用访问掩码探测精确定位真根因（缺 `PROCESS_QUERY_INFORMATION`）。此工作方式（先证伪再定案，不拿现象当根因）获用户认可，记录在案作为后续同类问题的处理范式。
-  - 本次范围（用户 2026-09-17 21:28 批准）：条件① mtime 穷尽调查 → 条件④ 全量加固 → 条件② 沙箱演练四阶段 → 台账正本化 + trigger 入 git → 条件③ 重新注册 T+2/T+10 → 停手等重启。
-  - 回滚程序（回滚先于排查，已预授权）：还原 `.panel-backups/pre-p2-toolkit-manager-20260917-2026-09-17T12-44-28/cordis.patch.yml` → `scripts/restart-trigger.ps1 -DelaySeconds 0` → 验 P1 态（`scripts/p1-smoke.mjs` 27/27）。
-  - 授权事项：重启授权沿用用户已给的批准；用户若说"推迟"，仅注册时刻顺延，其余不动。**条件③b 重新布防前需用户确认**（因 21:46 出现第二个根因，且 `Process.Kill` 对真实进程尚未实杀验证）。
+  - 授权事项：重启授权沿用用户已给的批准；用户若说"推迟"，仅注册时刻顺延，其余不动。
 
 ### L-023-① mtime + 改动来历穷尽调查（2026-09-17 21:30，✅ 已完成，全程只读）
 
@@ -761,6 +761,81 @@ P1.6 时因服务端有 bug，client 被迫**自己再算一遍**（`rowAnchorFr
 
 **本阶段为纯服务端 + 测试改动，无 client 可见变化，故不触发 reload。**
 
+## L-029 [已完成] P2.2 启停开关（rate-throttle 首用例，2026-09-17 23:50–24:05）
+
+**指令来源**：用户 P2 窄版权威阶段表（handoff 11.7）P2.2 行 + 本轮补充的六条硬约束。
+
+### 交付内容
+
+| 文件 | 角色 | 改动后 sha256 |
+|---|---|---|
+| `panel/manager/apply-engine.mjs` | 新增 `findCrossReferences()` + `createTogglePlan()` | `6814caea5dd963c1307d97b10b4d965d9768149480280f2163b9e5e8768bf808` |
+| `panel/index.js` | 新增写路由 `POST /api/toolkit-panel/toggle/plan` | `31f18f78a4dd295677a889262db52c6d90f6ea150ce7646163311a821bbb2343` |
+| `panel/client/index.js` | `ToggleControls` 组件 + 双层分立行 | `309e775c8872408b1ea2e3138367335983456440709494fde98b71e685f00dcd` |
+| `panel/client/panel.html` | 同形实现（直连后备页） | `b6808a407e15364f45d078998f79bc799782421f30ab291432e040274c218b04` |
+| `scripts/p1-smoke.mjs` | 136 → **167** 条 | `afbed9afdece24a2add588dae5321c275547252de33d95ba8d8bf2eba6010266` |
+| `scripts/p22-verify.mjs` | **新增**，P2.2 专项验收 44 条 | `09d1b0d64122b50f0fb51e6d01c76cab0a2b03b0882bcf41702e7044d395c6dc` |
+
+改动前备份：`.panel-backups/pre-p22-toggle-20260917/`（`apply-engine.mjs` `f39ee91f…`、`panel-index.js` `425aa61b…`、`client-index.js` `d26c3b4b…`、`client-panel.html` `f4d4ea67…`、`p1-smoke.mjs` `3652d9f6…`，均逐字节等于改动前）。
+
+### 六条硬约束逐项落地
+
+| 约束 | 实现 | 锁定断言 |
+|---|---|---|
+| 启停开关，写 patch 行 `disabled` | 新 `createTogglePlan()` 只读产 plan，落盘仍走 `executePlan()` | `REAL cordis.patch.yml sha unchanged by this test` |
+| **锚点唯一断言** | 复用 `planRowFlag` → `locateRowAnchor`，要求 `- id: <rowId>` **恰好 1 次** | `0 次 → anchor-missing` + `≥2 次 → anchor-ambiguous`，两者均拒绝写盘 |
+| **停用交叉检查** | `findCrossReferences(text, { rowId, alsoMatch })`：扫描其它行块是否引用该插件 id / 包名；**整词匹配**、跳过自身块、跳过注释行 | 正例（真实其它块引用 + `alsoMatch` 包名尾）与反例（`rate-throttle-extra` 子串、注释行、自身块）双向覆盖 |
+| **双层开关 UI 分立** | `patch disabled`（第一层·配置文件）与 `config.enabled`（第二层·插件内部）渲染为**两行独立状态**，各有自己的色标 | `no client merges the two layers into one switch value`（两套渲染器各一条） |
+| **apply-engine 唯一通道** | toggle 不新建落盘逻辑，复用 `createPlan → putPlan → executePlan` | `toggle goes through execute (two-phase, not a direct write)` + 结构断言「`createTogglePlan` 内无 `writeFileSync`」 |
+| **写前备份** | `executePlan()` 顺序不变，备份在落盘前，manifest 记 `reason` / `note` | `副本 sha == 写前 sha`（真实产物） |
+
+### CRLF 兼容断言（用户明确要求，本轮未再踩）
+
+真实 `cordis.patch.yml` **100% CRLF**。本轮在**断言层**统一归一化：
+
+```javascript
+const lf = (t) => String(t).replace(/\r\n/g, "\n");   // 断言前置归一
+```
+
+- `p22-verify.mjs` 首条即为 **CRLF 前提守卫**：先断言真实文件确实含 `\r\n` 且无裸 `\n`，把「前提」本身变成可失败断言，避免后续断言建立在错误前提上。
+- 落盘侧另有正向断言 `execute preserved CRLF line endings (no bare LF introduced)` —— 归一化只用于**断言比较**，绝不用于写回内容。
+- `_p22-probe.mjs` 的建立也是这条要求的副产物：此前用 bash `-e` 拼测试串时 `\r\n` 被转义成字面 `/r/n`，导致行未切分、第 1 行假命中。**教训留档：含转义序列的探针一律落成真实 `.mjs` 文件，不用 `node -e`。**
+
+### 首用例 rate-throttle 的双层分歧（验收样本）
+
+`rate-throttle` 现状天然分歧：**第一层 `row.enabled = true`（已加载）** / **第二层 `config.enabled = "false"`（内部关闭）**。这正是「双层不得合并呈现」的强制暴露点——合并显示会得到一个无意义的中间态。
+
+### 验收证据（P2.2 阶段表验收标准逐项）
+
+| 验收项 | 结果 |
+|---|---|
+| 开关 → **文件真变（SHA 变化）** | `ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9` → `3d711ad899d05ac8…` ✅ |
+| **doctor 0/0/0** | `{"error":0,"warning":0,"info":0,…}`，`issues: []` ✅ |
+| **reload 后状态保持且面板如实显示** | 见下方「等价证明」✅ |
+| 备份产物为证 | `.panel-backups/p22-evidence-2026-09-17T15-57-56-541Z/EVIDENCE.txt` + `write-backups/*/manifest.json`，副本 sha == 写前 sha ✅ |
+| `scripts/p22-verify.mjs` | **44/44 PASS** |
+| `scripts/p1-smoke.mjs` | **167/167 PASS**（136 → 167） |
+| `scripts/p21-verify.mjs` | 46/46 PASS（无回归） |
+| `scripts/p2-smoke.mjs` | 16/16 PASS |
+| `pluggable-lint` | 通过 |
+| 真实 `cordis.patch.yml` | **全程 sha 未变**，由测试直接断言 ✅ |
+
+**「reload 后状态保持」的等价证明方式（留档方法论）**：reload 由用户执行，命令行无法代替。改证**落盘内容足以让重新解析得到新状态** —— 对写后副本用**同一份 `parseRootRows` 实现**重新解析，断言：锚点仍唯一命中（第 14 行）、重新解析得到 `disabled:true`。这样把「重启后是否保持」**降维成确定性可验证命题**，不依赖主观判断。
+
+### 落盘位置正确性（上轮踩过的坑，本轮复验）
+
+`disabled: true` 落在**锚点行正下方**、为该行的**直接子级**（与 `name` / `config` 同级），**未写进 `config` 子树**；`config.enabled` 未被触动（仍为 `"false"`）；CRLF 保持。三条断言全绿。
+
+### 端点与守卫
+
+| 路由 | 方法 | 守卫 | 层声明 |
+|---|---|---|---|
+| `/api/toolkit-panel/toggle/plan` | POST | **写守卫** `{ change: true }` | 响应含 `layer: "patch-row.disabled"`，显式声明改的是**哪一层** |
+
+`p1-smoke.mjs` 断言：服务缺席 → **403**（非 405）、坏 origin → 403、非布尔 `enabled` → 400、未知 `rowId` → 400、plan 载荷形状（含 `layer` / `diff` / `crossRefs` / `expiresAt`，**不含 `nextText`**）。
+
+**本阶段为 client 可见改动（新增启停开关 UI），触发 reload。**
+
 ## 待办
 
 - ~~**[L-023 续] 条件④** 全量加固（trigger + selfheal 脚本，先备份，diff 留痕）~~ ✅ 2026-09-17 21:35 完成，见 L-023-④
@@ -772,13 +847,13 @@ P1.6 时因服务端有 bug，client 被迫**自己再算一遍**（`rowAnchorFr
 - ~~**[L-023 续] 停手等重启** → 三验收（桌面 200 / 配对 200 / 无痕 403）→ 删一次性任务 → 关账~~ ✅ 2026-09-17 22:08 重启成功；22:10 三验收全绿；任务已清理。见 L-023-⑤
 - **[L-027 已解除]** P2 阶段表 **2026-09-17 23:31 由用户提供权威版**，已落盘 `handoff-restart.md` **11.7**。待办转为按表执行 P2.0② → P2.1 → P2.2 → P2.3 → P2.4。
 - ~~**【P2 待办】P2.1** 两段式框架（plan→确认→execute，SHA 比对，备份+manifest+保留策略）~~ ✅ 2026-09-17 23:50 完成，见 L-028（commit `a27da81`）
-- **【P2 进行中】P2.2** 启停开关（锚点唯一，交叉引用检查，rate-throttle 首用例）
-- **【P2 待办】P2.3** 配置编辑（白名单 + 范围/枚举校验 + 服务端校验）
+- ~~**【P2 进行中】P2.2** 启停开关（锚点唯一，交叉引用检查，rate-throttle 首用例）~~ ✅ 2026-09-17 24:05 完成，见 L-029
+- **【P2 进行中】P2.3** 配置编辑（白名单 + 范围/枚举校验 + 服务端校验）
 - **【P2 待办】P2.4** doctor 操作台 + 两套回滚
-- **[L-025 待用户]** reload dsh web 后可在浏览器看到「英文原名 + 中文注释」新面板（与 L-023/L-024 的目视确认合并一次）
+- ~~**[L-025 待用户]** reload dsh web 后可在浏览器看到「英文原名 + 中文注释」新面板~~ ✅ **2026-09-17 23:53 用户已确认界面合格**（随 L-023 关账一并闭环）
 - **[L-024 后续]** ~~修 `panel/manager/snapshot.mjs` `parseRootRows()` 缩进无关正则~~ ✅ 2026-09-17 23:40 完成，见 L-026（属 P2.0①）
-- **[L-023 续 + L-024 + L-025 合并·待用户]** 浏览器端目视确认面板新 UI（**需 reload 后看**，见 L-024-⑤；命令行可达范围内已全部验证）
-- **[待用户·每次回报保留]** **设置页 tab 是否可见** —— 用户尚未回报
+- ~~**[L-023 续 + L-024 + L-025 合并·待用户]** 浏览器端目视确认面板新 UI（**需 reload 后看**）~~ ✅ **2026-09-17 23:53 用户已确认**：设置页 tab 可见、界面合格。**L-023 迁移任务正式关账。**
+- **[待用户·每次回报保留]** ~~**设置页 tab 是否可见** —— 用户尚未回报~~ ✅ **2026-09-17 23:53 已回报：可见且界面合格。**（此项自本日起不再挂起）
 - L-008 [待办] 二阶段用户亲查签字与解冻（历史遗留；2026-09-10 状态）
 - L-009 [已完成] 二阶段设计稿 v2 与四条 rider 落地推进（历史进行中项，后随四插件 git 基线完成而收口）
 
@@ -813,4 +888,5 @@ P1.6 时因服务端有 bug，client 被迫**自己再算一遍**（`rowAnchorFr
 - L-026：`p1-smoke.mjs` **84/84** 全绿（含直接执行服务端 `parseRootRows` 的端到端断言 + 7 条边界用例）；`buildSnapshot()` 端到端 `rate-throttle.config.enabled === "false"`；`pluggable-lint` 通过；`p2-smoke` 16/16；改动前备份 `.panel-backups/pre-p20-indentfix-20260917-232032/`。
 - L-027：**已解除** —— 用户 2026-09-17 23:31 提供 P2 窄版权威阶段表，落盘 `handoff-restart.md` 11.7。P2 按表执行。
 - L-028：`scripts/p21-verify.mjs` **46/46** 全绿（含篡改后 `sha-conflict` → 409、备份副本 sha == 写前 sha、回滚后逐字节一致、保留策略三场景）；`p1-smoke.mjs` **136/136**；`p2-smoke.mjs` 16/16；doctor **0/0/0**；`pluggable-lint` 通过；真实 `cordis.patch.yml` 全程 sha 未变（`ce0b0b81…`）；改动前备份 `.panel-backups/pre-p21-twophase-20260917/`；真实写操作证据 `.panel-backups/p21-evidence-*/EVIDENCE.txt`。
-- **P2（进行中）**：P2.0① ✅（`193bdd8`）→ P2.0② ✅（`2b05777`）→ **P2.1 ✅（`a27da81`）** → P2.2 启停（rate-throttle 首用例）→ P2.3 配置编辑 → P2.4 doctor+回滚。**P2.1 起每个写操作须附真实备份产物与 SHA 记录。**
+- L-029：`scripts/p22-verify.mjs` **44/44** 全绿（CRLF 前提守卫 / 锚点唯一三态 / 交叉引用正反例 / 双层分立两套渲染器 / 两段式复用结构断言 / 真实文件未变）；`p1-smoke.mjs` **167/167**；`p21-verify.mjs` 46/46；`p2-smoke.mjs` 16/16；doctor **0/0/0**（`issues: []`）；`pluggable-lint` 通过；真实写操作 SHA 变化 `ce0b0b81…` → `3d711ad899…`；证据 `.panel-backups/p22-evidence-2026-09-17T15-57-56-541Z/EVIDENCE.txt`；改动前备份 `.panel-backups/pre-p22-toggle-20260917/`；真实 `cordis.patch.yml` 全程 sha 未变。
+- **P2（进行中）**：P2.0① ✅（`193bdd8`）→ P2.0② ✅（`2b05777`）→ **P2.1 ✅（`a27da81`）** → **P2.2 ✅（24:05）** → P2.3 配置编辑 → P2.4 doctor+回滚。**P2.1 起每个写操作须附真实备份产物与 SHA 记录。**
