@@ -287,7 +287,7 @@ const uiHtml = readFileSync(join(panelRoot(), "client", "panel.html"), "utf8");
 | # | 触发时机 | 承载内容 | 状态 |
 |---|---|---|---|
 | 1 | **名字恢复后** | L-025「英文原名 + 中文注释」新面板（commit `c1d383e`） | **待执行** |
-| 2 | **P2.2 完成后** | P2 写操作能力上线后的验证 | 未到 |
+| 2 | **P2.2 完成后** | P2.2 启停开关 UI（L-029，双层分立 + 确认页） | **待执行**（原「P2 写操作能力上线后的验证」，范围已确定为 P2.2 启停开关） |
 
 **注意**：L-026（P2.0 解析器修复）与 L-025 **同批**可见 —— 但两者生效路径不同：
 
@@ -326,7 +326,7 @@ P2.0②（写路由 guard 升级）→ P2.1 两段式 → P2.2 启停（rate-thr
 
 **证据要求**：**P2.1 起，每个写操作必须附真实备份产物与 SHA 记录。**
 
-**待用户项（每次回报末尾保留）**：设置页 tab 是否可见 —— 用户尚未回报。
+**待用户项（每次回报末尾保留）**：设置页 tab 是否可见 —— ✅ **2026-09-17 23:53 已回报：可见且界面合格**（L-023 已关账，此项不再挂起）。当前待用户项改为：**reload 后目视确认 P2.2 启停开关 UI**。
 
 ### 11.8 P2.1 两段式写框架 —— 接线与约定（2026-09-17 23:50，commit `a27da81`）
 
@@ -370,5 +370,38 @@ body-too-large                                   → 413
 **验收脚本**：`scripts/p21-verify.mjs`（46 条，真实文件读写 + 真实备份产物）。改 `apply-engine.mjs` 后**必须**跑它 + `p1-smoke.mjs` + `p2-smoke.mjs` + doctor 0/0/0。
 
 **备份根目录**：默认 `<toolkitRoot>/.panel-write-backups`（可用 config `backupRoot` 或环境变量 `TOOLKIT_PANEL_BACKUP_ROOT` 覆盖）。**与人工留档的 `.panel-backups/` 分开**，避免混在一起被保留策略误裁。
+
+### 11.9 P2.2 启停开关 —— 契约与三条新增约定（2026-09-17 24:05）
+
+**这是 P2.2 之后「改一行标志」类操作的唯一形态。** 新增能力（P2.3 配置编辑 / P2.4 doctor 操作台）继续复用同一条两段式通道，只是换 `key` / `value` 与校验器。
+
+**新增一条路由**（`panel/index.js`）：
+
+| 路由 | 方法 | 守卫 | 说明 |
+|---|---|---|---|
+| `/api/toolkit-panel/toggle/plan` | POST | **写守卫** `{ change: true }` | 入参 `{ rowId, enabled, alsoMatch? }`，出参含 `layer: "patch-row.disabled"` / `diff` / `crossRefs` / `expectedSha` / `expiresAt`，**不含 `nextText`** |
+
+落盘仍走既有的 `POST /api/toolkit-panel/execute`（唯一写入口）。**toggle 没有自己的落盘逻辑。**
+
+**新增引擎 API**（`panel/manager/apply-engine.mjs`）：
+
+- `createTogglePlan({ file, rowId, enabled, backupRoot, ttlMs, alsoMatch })` —— 只读。`enabled` 非布尔直接 `value-invalid`。返回 `changed`（幂等：已是目标态则 `changed=false`）。
+- `findCrossReferences(text, { rowId, alsoMatch })` —— **停用交叉检查**。返回 `[{ line, text }]`。
+
+**三条新增约定（P2.2 踩出来的）**：
+
+1. **双层开关在呈现层必须分立，不得合并。** `patch` 行级 `disabled`（第一层·配置文件）与 `config.enabled`（第二层·插件内部）是**两个独立事实**。`rate-throttle` 现状即为二者分歧（`row.enabled=true` / `config.enabled="false"`），合并显示必然得到一个无意义的中间态。两套渲染器（client bundle 与直连后备页）都实现为**两行独立状态 + 各自色标**，并有断言 `no client merges the two layers into one switch value` 锁定。
+
+2. **停用（`enabled=false`）前必须做交叉引用检查；启用（`enabled=true`）不需要。** 方向性理由：停用可能连带打断别人对它的引用，启用只会让被引用的东西回来。检查器三条细节：**整词匹配**（`rate-throttle` 不得命中 `rate-throttle-extra`）、**跳过自身块**（先切出所有 `- id:` 行块的边界）、**跳过注释行**。`alsoMatch` 用于补充包名等其它别名。
+
+3. **CRLF 兼容断言要「把前提本身变成断言」。** `p22-verify.mjs` 第一条即 CRLF 前提守卫：先断言真实文件确实含 `\r\n` 且无裸 `\n`。原因：若前提变了而断言只在比较处归一化，测试会**静默地继续通过但失去意义**。另注意「归一化只用于**断言比较**，绝不用于写回内容」——落盘侧另有正向断言 `execute preserved CRLF line endings (no bare LF introduced)`。
+
+**方法论留档 —— 「reload 后状态保持」的等价证明**：reload 只能由用户执行，命令行无法代替。不要含糊地说「重启后应该没问题」，而要**把命题降维成确定性可验证命题**：对写后副本用**同一份 `parseRootRows` 实现**重新解析，断言锚点仍唯一命中、且解析出的新状态与写入意图一致。见 `EVIDENCE.txt` 的 `[5]` 段。
+
+**探针脚本的教训**：含转义序列（`\r\n` 等）的测试**不要用 `node -e` / bash 单行拼串**，会被 shell 提前转义（本轮 `\r\n` 变成字面 `/r/n`，导致行未切分、第 1 行假命中）。一律落成真实 `.mjs` 文件。
+
+**验收脚本**：`scripts/p22-verify.mjs`（44 条）。改 `apply-engine.mjs` 后**必须**跑它 + `p21-verify.mjs` + `p1-smoke.mjs` + `p2-smoke.mjs` + doctor 0/0/0。
+
+**`.panel-backups/` 已入 `.gitignore`**（人工留档目录，含改动前快照与验收证据，不随仓库入库）。
 
 
