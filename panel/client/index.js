@@ -15,14 +15,32 @@ window.__ModuleLoader__.load({
 			"search-router": "决定每次联网搜索走哪条路：官方搜索还是本地搜索。",
 			"web-search-local": "提供不依赖官方接口的本地搜索引擎，可自选搜索源。"
 		};
-		// ---- 中文显示名：卡片标题不再暴露目录名这种工程标识 ----
-		var DISPLAY_NAMES = {
+		// ---- 标识符一律「英文原名 + 中文注释」形态 ----
+		// 原名来自插件目录名 / 包名本体，是稳定可检索的标识；
+		// 中文只作副标题注释，不替换原名。
+		var CN_NAMES = {
 			"agent-memory": "记忆",
 			"compact-router": "上下文压缩",
 			"rate-throttle": "限流",
 			"search-router": "搜索路由",
 			"web-search-local": "本地网页搜索"
 		};
+		// 英文原名：优先用快照里的真实包名尾部，回退到目录名
+		function originalName(plugin) {
+			var raw = String((plugin && plugin.name) || "").trim();
+			if (raw) {
+				var seg = raw.split("/");
+				var last = seg[seg.length - 1];
+				if (last) return last;
+			}
+			return String((plugin && plugin.dir) || "");
+		}
+		// 「英文原名（中文注释）」单行形态，供标题与标识符位置统一使用
+		function annotated(plugin) {
+			var en = originalName(plugin);
+			var cn = CN_NAMES[(plugin && plugin.dir) || ""];
+			return cn ? en + "（" + cn + "）" : en;
+		}
 
 		var styles = {
 			root: { fontFamily: "system-ui, \"Segoe UI\", sans-serif", color: "#e6e6e6" },
@@ -33,7 +51,9 @@ window.__ModuleLoader__.load({
 			buttonDisabled: { opacity: 0.6, cursor: "default" },
 			cards: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12 },
 			card: { border: "1px solid #2a2f36", borderRadius: 8, padding: 12, background: "#181b21" },
-			cardTitle: { margin: "0 0 8px", fontSize: 15, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6 },
+			cardTitle: { margin: "0 0 2px", fontSize: 15, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, fontFamily: "ui-monospace, Consolas, monospace" },
+			// 中文注释副标题：卡片第二行，弱于英文原名
+			subtitle: { fontSize: 12.5, color: "#9aa0a6", margin: "0 0 8px" },
 			desc: { fontSize: 13, lineHeight: 1.55, margin: "0 0 10px", color: "#d7dae0" },
 			// 状态行：三态里"正在生效"最醒目
 			stateRow: { display: "flex", alignItems: "center", gap: 6, margin: "0 0 8px", fontSize: 13, fontWeight: 600 },
@@ -198,15 +218,15 @@ window.__ModuleLoader__.load({
 			};
 			return react.createElement("details", { style: styles.details },
 				react.createElement("summary", { style: styles.summary }, "技术详情"),
-				react.createElement(TechRow, { label: "插件目录", value: plugin.dir }),
-				react.createElement(TechRow, { label: "包名", value: plugin.name }),
-				react.createElement(TechRow, { label: "managedBy", value: String(plugin.managedBy) }),
-				react.createElement(TechRow, { label: "enabled", value: String(plugin.enabled) }),
-				react.createElement(TechRow, { label: "inject", value: list(plugin.inject) }),
-				react.createElement(TechRow, { label: "services", value: list(regs.services) }),
-				react.createElement(TechRow, { label: "commands", value: list(regs.commands) }),
-				react.createElement(TechRow, { label: "providers", value: list(regs.providers) }),
-				react.createElement(TechRow, { label: "events", value: list(regs.events) })
+				react.createElement(TechRow, { label: "插件目录（dir）", value: plugin.dir }),
+				react.createElement(TechRow, { label: "包名（name）", value: plugin.name }),
+				react.createElement(TechRow, { label: "managedBy（由谁挂载）", value: String(plugin.managedBy) }),
+				react.createElement(TechRow, { label: "enabled（配置文件开关）", value: String(plugin.enabled) }),
+				react.createElement(TechRow, { label: "inject（依赖的服务）", value: list(plugin.inject) }),
+				react.createElement(TechRow, { label: "services（对外提供的服务）", value: list(regs.services) }),
+				react.createElement(TechRow, { label: "commands（注册的命令）", value: list(regs.commands) }),
+				react.createElement(TechRow, { label: "providers（提供的实现）", value: list(regs.providers) }),
+				react.createElement(TechRow, { label: "events（监听的事件）", value: list(regs.events) })
 			);
 		}
 
@@ -214,12 +234,14 @@ window.__ModuleLoader__.load({
 			var plugin = props.plugin;
 			var patchText = props.patchText;
 			var desc = DESCRIPTIONS[plugin.dir] || plugin.note || "（暂无功能说明）";
+			var cn = CN_NAMES[plugin.dir];
 			var state = stateOf(plugin, patchText);
 			return react.createElement("div", { style: styles.card },
 				react.createElement("h3", { style: styles.cardTitle },
-					DISPLAY_NAMES[plugin.dir] || plugin.dir,
+					originalName(plugin),
 					originBadge(plugin)
 				),
+				cn ? react.createElement("div", { style: styles.subtitle }, cn) : null,
 				react.createElement("div", { style: styles.desc }, desc),
 				react.createElement(StateRow, { state: state }),
 				react.createElement(DualSwitchNotice, { plugin: plugin, patchText: patchText }),
@@ -337,7 +359,7 @@ window.__ModuleLoader__.load({
 			}
 
 			return react.createElement("div", { style: styles.root },
-				react.createElement("h1", { style: styles.title }, "dsh-toolkit 面板"),
+				react.createElement("h1", { style: styles.title }, "dsh-toolkit 面板（插件开关与体检）"),
 				react.createElement("div", { style: styles.muted }, meta),
 				react.createElement("div", { style: styles.toolbar },
 					react.createElement("button", { style: styles.button, onClick: loadSnapshot }, "重新读取状态"),
@@ -345,9 +367,9 @@ window.__ModuleLoader__.load({
 					react.createElement("span", { style: styles.muted }, doctorStatus)
 				),
 				react.createElement("div", { style: styles.cards }, cards),
-				react.createElement("h2", { style: styles.h2 }, "配置文件原文（cordis.patch.yml）"),
+				react.createElement("h2", { style: styles.h2 }, "配置文件原文（cordis.patch.yml · 插件开关所在）"),
 				react.createElement("pre", { style: styles.pre }, patchText),
-				react.createElement("h2", { style: styles.h2 }, "体检结果"),
+				react.createElement("h2", { style: styles.h2 }, "体检结果（doctor dry-run · 只查不改）"),
 				react.createElement("div", { style: styles.issues }, doctorIssues)
 			);
 		}
@@ -361,7 +383,7 @@ window.__ModuleLoader__.load({
 							name: "settings.plugins.tab",
 							id: "toolkit-panel",
 							order: 90,
-							label: function () { return "dsh-toolkit 面板"; },
+							label: function () { return "dsh-toolkit 面板（插件开关与体检）"; },
 							inject: function () { return {}; }
 						}, ToolkitPanel);
 					} catch (e) {
