@@ -12,6 +12,13 @@
 #   H4  the whole body is wrapped so an unexpected terminating error is still written to the
 #       log file.
 #
+# v2.1 (2026-09-17 22:02, condition #3b step 2): gate semantics confirmed and documented.
+#   The ONLY gate into the start branch is "no dsh web process AND port not listening".
+#   Both must agree the service is down. A failed check is never a reason to start, and a
+#   held port always wins - so this script can never double-start. (The trigger script had
+#   a "root gone but port still held -> continue to start" path; that has been removed, see
+#   H9 in restart-trigger.ps1. The two scripts now share identical gate semantics.)
+#
 # v2 (2026-09-17 21:55): paired with restart-trigger.ps1 v2. The 21:46 failed restart was
 #   traced to conhost.exe inside the dsh web tree making `taskkill /T /F` exit 128 - the
 #   kill strategy now lives entirely in the trigger (per-pid, leaves-first, conhost skipped).
