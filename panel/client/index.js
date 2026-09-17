@@ -100,14 +100,14 @@ window.__ModuleLoader__.load({
 		// running : 配置层开着，且插件自身的运行开关也开着 —— 现在真的在工作
 		// loaded-off : 配置层开着，但插件内部开关关了 —— 已加载但没在工作
 		// config-off : 配置层就停用了 —— 根本没加载
-		// 依据：patchRow.enabled 是"配置层"开关；config.enabled / config.mode 是插件内部开关。
+		// 依据：patchRow.enabled 是"配置层"开关；config.enabled 是插件内部开关。
 		// 读取插件"内部总开关"。
 		//
-		// 注意：不能直接用 patchRow.config.enabled —— 服务端 snapshot.mjs 的 parseRootRows()
-		// 用不区分缩进的正则收集 config，同一行区间内所有 enabled: 都会互相覆盖。
-		// 例：rate-throttle 自己的 enabled: false（缩进 8）会被嵌套 routing.enabled: true（缩进 10）覆盖，
-		// 导致 config.enabled 变成 "true"。这里是纯 client 层改动，不能修服务端，
-		// 因此改为从 patch 原文按"缩进深度 == 该行 config 子键深度"取键，避开嵌套键的污染。
+		// 首选服务端 patchRow.config.enabled —— P2.0 已修 parseRootRows() 的缩进缺陷
+		// （旧版用不区分缩进的正则收集 config，rate-throttle 自身 enabled:false 会被嵌套
+		// routing.enabled:true 覆盖成 "true"）。修好后服务端值可信。
+		// 下面的 rowAnchorFromPatch 仅作**防御性回退**：万一将来服务端又退回旧解析，
+		// 或快照与 patch 原文不一致，client 仍能从 patch 原文按缩进自算，避免误报。
 		function rowAnchorFromPatch(plugin, patchText) {
 			if (!patchText || !plugin.patchRow) return null;
 			var lines = String(patchText).split(/\r?\n/);
@@ -137,14 +137,16 @@ window.__ModuleLoader__.load({
 			return { value: null, line: null };
 		}
 		function innerSwitchValue(plugin, patchText) {
-			var exact = rowAnchorFromPatch(plugin, patchText);
-			if (exact) return exact.value;
-			// 拿不到 patch 原文时退回扁平 config（可能受嵌套键污染，仅在无法解析时使用）
 			var row = plugin.patchRow;
 			var cfg = (row && row.config) || {};
-			if (Object.prototype.hasOwnProperty.call(cfg, "enabled")) {
+			if (row && Object.prototype.hasOwnProperty.call(cfg, "enabled")
+				&& typeof cfg.enabled === "string") {
+				// 服务端已按缩进解析（P2.0 修复），直接用
 				return String(cfg.enabled).trim() === "true";
 			}
+			// 回退：服务端值缺失时，从 patch 原文按缩进自算
+			var exact = rowAnchorFromPatch(plugin, patchText);
+			if (exact) return exact.value;
 			return null;
 		}
 		function stateOf(plugin, patchText) {
