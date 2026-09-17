@@ -328,4 +328,47 @@ P2.0②（写路由 guard 升级）→ P2.1 两段式 → P2.2 启停（rate-thr
 
 **待用户项（每次回报末尾保留）**：设置页 tab 是否可见 —— 用户尚未回报。
 
+### 11.8 P2.1 两段式写框架 —— 接线与约定（2026-09-17 23:50，commit `a27da81`）
+
+**这是后续 P2.2 / P2.3 / P2.4 所有写操作的唯一通道。** 任何新的写能力都必须走这条路径，不得自建落盘逻辑。
+
+**三条路由**（`panel/index.js`）：
+
+| 路由 | 方法 | 守卫 | 作用 |
+|---|---|---|---|
+| `/api/toolkit-panel/plan` | POST | **写守卫**（`{ change: true }`） | 只读计算，返回 `token` / `diff` / `expectedSha` / `expiresAt`。**不下发 `nextText`** |
+| `/api/toolkit-panel/execute` | POST | **写守卫** | 唯一落盘入口 |
+| `/api/toolkit-panel/plan/status?token=` | GET | 只读 | 供 UI 确认页判断方案是否仍有效 |
+
+**引擎 API**（`panel/manager/apply-engine.mjs`）：
+
+- `createPlan({ file, rowId, key, value, backupRoot, ttlMs })` —— 只读。锚点必须**恰好命中 1 次**。
+- `putPlan(plan)` / `getPlan(token)` —— 内存计划表（**进程重启即清空**，符合"现读不缓存"）。
+- `executePlan(token)` —— 唯一写入口。顺序**不可调换**：取 plan → 过期校验 → **重读文件比 SHA** → 锚点复验 → **写前备份** → 落盘 → 裁剪备份。
+- `locateRowAnchor(text, rowId)` / `readRowOwnKeys(lines, anchor)` / `planRowFlag(text, {...})` —— 文本层工具，P2.2/P2.3 直接复用。
+- `pruneBackups(root, {...})` —— 保留策略。
+
+**错误码 → HTTP 映射**（`panel/index.js` 的 `PLAN_ERROR_STATUS`）：
+
+```
+sha-conflict / plan-expired / anchor-ambiguous   → 409
+anchor-missing / anchor-invalid / value-*        → 400
+plan-not-found                                   → 404
+body-too-large                                   → 413
+```
+
+**三个必须遵守的约定（都是本轮踩过的坑）**：
+
+1. **新写路由必须标 `{ change: true }`。** `/plan` 最初漏标，导致这个**签发写令牌**的路由退化成只读路由（服务缺席时走 `devicesFile` hasOwn 兜底放行），与 P2.0② 的「写操作禁 fallback」直接冲突。**判断标准：只要会签发令牌或改变状态，就是写路由。**
+
+2. **新键插入点是「锚点行正下方」，不是「最后一个直接子级的下一行」。** 因为 `config:` 本身是直接子级且其后跟着更深缩进的 config 子树，按后者插入会把新键写进 `config` **内部**。`planRowFlag` 已按前者实现。
+
+3. **目标文件是 CRLF。** 真实 `cordis.patch.yml` 100% 使用 `\r\n`。`splitLines`/`joinLines` 会保留原风格；写测试断言时**务必先归一化行尾**，否则会被自己的断言误导（本轮有 5 条假失败源于此）。
+
+**保留策略语义**：`keep = (最新 20 份) OR (mtime 在 30 天内)`，另加 `maxTotal = 40` **绝对上限**。加绝对上限的原因：纯 OR 在**密集写入**时一份都不删（时间窗兜住全部），保留策略形同虚设；纯份数又会误删近期备份。
+
+**验收脚本**：`scripts/p21-verify.mjs`（46 条，真实文件读写 + 真实备份产物）。改 `apply-engine.mjs` 后**必须**跑它 + `p1-smoke.mjs` + `p2-smoke.mjs` + doctor 0/0/0。
+
+**备份根目录**：默认 `<toolkitRoot>/.panel-write-backups`（可用 config `backupRoot` 或环境变量 `TOOLKIT_PANEL_BACKUP_ROOT` 覆盖）。**与人工留档的 `.panel-backups/` 分开**，避免混在一起被保留策略误裁。
+
 

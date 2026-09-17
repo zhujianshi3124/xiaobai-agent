@@ -691,6 +691,76 @@ P1.6 时因服务端有 bug，client 被迫**自己再算一遍**（`rowAnchorFr
 
 **reload 时机（用户已定）**：名字恢复后一次（L-025，**待执行**）、P2.2 完成后一次，均由用户按 `restart-trigger` 执行。
 
+## L-028 [已完成] P2.1 两段式写框架（2026-09-17 23:36–23:50，commit `a27da81`）
+
+**指令来源**：用户 P2 窄版权威阶段表（handoff 11.7）+ 执行顺序「P2.0② → **P2.1** → P2.2 → P2.3 → P2.4」。
+
+### 交付内容
+
+| 文件 | 角色 | 改动后 sha256 |
+|---|---|---|
+| `panel/manager/apply-engine.mjs` | **新增**，两段式引擎 | `f39ee91f5dd9f92b85b1aefb3c6704c7cf8515683e8bd321deb9b1c2b6fa57b8` |
+| `panel/index.js` | 新增 3 条路由 + JSON body 读取 + 错误码映射 | `425aa61b18549c10e2ed1622db6fad9afce9a8837f0e9bec6c0e0587f6870adc` |
+| `panel/manager/backup.mjs` | manifest 增 `reason`/`note` | `b1074329e041c0a126ec4d157bde0261349b7f067149a984583d7fbdb9d6b51d` |
+| `scripts/p21-verify.mjs` | **新增**，P2.1 专项验收 | `8e31346b6a05b9ab722b6df4f65c36f12a1e9024eec7c0acc8125dcec59f18cc` |
+| `scripts/p1-smoke.mjs` | 新增 52 条 P2.1 断言 | `3652d9f6353f9a85b3b22d165c0ae134a756c03980f08398836ecb47e0b701fd` |
+
+改动前备份：`.panel-backups/pre-p21-twophase-20260917/`（`panel-index.js` sha `9a3cd169…`、`backup.mjs` sha `476a810e…`，均逐字节等于改动前）。
+
+### 三条路由
+
+- `POST /api/toolkit-panel/plan` —— **写守卫**（`{ change: true }`）。只读计算，返回 `token` / `diff` / `expectedSha` / `expiresAt`。**不下发 `nextText`**。
+- `POST /api/toolkit-panel/execute` —— **写守卫**。唯一落盘入口。
+- `GET /api/toolkit-panel/plan/status` —— 只读，供 UI 确认页判断方案是否仍有效。
+
+错误码 → HTTP：`sha-conflict` / `plan-expired` / `anchor-ambiguous` → **409**；`anchor-missing` / `anchor-invalid` / `value-*` → 400；`plan-not-found` → 404；`body-too-large` → 413。请求体上限 64 KiB。
+
+### 安全模型逐项落地
+
+| 要求 | 实现 |
+|---|---|
+| 两段式 | `createPlan()` 只读（测试断言：生成 plan 后文件 sha 不变）；`executePlan()` 唯一写入口 |
+| SHA 冲突检测 | execute 前**重读**文件比对 `expectedSha`，不一致 → `sha-conflict` → **409**，文件不动 |
+| 锚点唯一 | `locateRowAnchor()` 要求 `- id: <rowId>` **恰好 1 次**；0 → `anchor-missing`，≥2 → `anchor-ambiguous`，均拒绝写盘 |
+| 写前备份 + manifest | `createBackup()` 落盘前调用；manifest 记目标绝对路径、副本名、**写前 sha256** |
+| 保留策略 | `pruneBackups()`：最新 20 份 OR 30 天内，另加 `maxTotal=40` 绝对上限 |
+| 并发防线（快照现读不缓存） | plan 与 execute **各自现读**文件，全程不缓存文本；execute 不信任 plan 期间读到的内容 |
+| 写路由 CSRF + 配对服务校验（禁 fallback） | 三条新路由复用 P2.0② 的 `guard`；`plan`/`execute` 标 `change: true` |
+
+### 自查发现并修复的两处缺陷（重要）
+
+**① 保留策略的「OR 语义陷阱」（设计缺陷，已修）**
+
+第一版按「最新 20 份 **或** 30 天内」写成纯并集。测试造 25 次**同一秒内**的连续写入 → **一份都没删**：时间窗把全部兜住，保留策略形同虚设 —— 而密集写入正是它唯一要防的场景。纯「份数」语义又会误删近期备份，与「30 天」意图冲突。最终采用**并集 + `maxTotal` 绝对上限**：稀疏写入按 30 天宽限，密集写入由绝对上限兜住，任何情况下都不无限增长。
+
+**② `/plan` 路由漏标 `change: true`（安全缺陷，已修）**
+
+`/plan` 会**签发写令牌**，但我最初按只读路由写（漏 `{ change: true }`）。后果：服务缺席时会退到 `devicesFile` hasOwn 兜底而**放行**，与 P2.0② 刚建立的「写操作禁 fallback」原则直接冲突。由 smoke 断言 `P2.1 plan route is write-guarded (service absent → 403)` 抓出（当时报 405 而非 403 —— 405 说明 guard 放行了）。已修复并加断言锁定。
+
+**另修一处实现错误**：`planRowFlag()` 插入新键时原用「块内最后一个直接子级的下一行」作插入点。因 `config:` 本身是直接子级、其后跟着整棵缩进更深的 config 子树，新键被写进了 config **内部**（`disabled: true` 落到了 `config.enabled` 同级位置之下）。改为插入到**锚点行正下方**，永远是合法的同级位置。测试断言 `inserted key is a SIBLING of config:, not nested inside it` 锁定。
+
+### 验收证据
+
+| 项 | 结果 |
+|---|---|
+| `scripts/p21-verify.mjs` | **46/46 PASS** |
+| `scripts/p1-smoke.mjs` | **136/136 PASS**（84 → 136） |
+| `scripts/p2-smoke.mjs` | 16/16 PASS |
+| doctor dry-run | **0/0/0** |
+| `pluggable-lint` | 通过 |
+| 真实 `cordis.patch.yml` | **全程 sha 未变**（`ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9`），由测试直接断言 |
+
+**核心验收项对应**：
+
+- 「篡改文件后 execute 必须拒绝并报 **409**」→ `PASS tampered file → code is sha-conflict` + `PASS tampered file → file left untouched`，且 `sha-conflict` 映射 409。
+- 「每次写操作有**备份产物为证**」→ 真实写操作证据落盘 `.panel-backups/p21-evidence-*/EVIDENCE.txt`，含：备份目录、`manifest.json` 全文、**副本 sha == 写前 sha**、用备份还原后 sha 逐字节一致。
+
+### 一处 CRLF 陷阱（留档）
+
+真实 `cordis.patch.yml` 是 **100% CRLF**（82 个 `\r\n`，0 个裸 `\n`）。引擎的 `splitLines`/`joinLines` **保留原行尾风格**（测试断言 `execute preserved CRLF line endings (no bare LF introduced)`）。首轮测试有 5 条失败实为**我的断言用 `\n` 匹配 CRLF 文本**所致，非引擎缺陷 —— 断言已统一归一化。
+
+**本阶段为纯服务端 + 测试改动，无 client 可见变化，故不触发 reload。**
+
 ## 待办
 
 - ~~**[L-023 续] 条件④** 全量加固（trigger + selfheal 脚本，先备份，diff 留痕）~~ ✅ 2026-09-17 21:35 完成，见 L-023-④
@@ -701,9 +771,8 @@ P1.6 时因服务端有 bug，client 被迫**自己再算一遍**（`rowAnchorFr
 - ~~**[L-023 续] 条件③b 重新布防**（用修好的脚本）~~ ✅ 2026-09-17 22:05 完成，见 L-023-③b（闸门修复 commit `cdb1fbe`；trigger @22:08 / selfheal @22:16，均 Ready）
 - ~~**[L-023 续] 停手等重启** → 三验收（桌面 200 / 配对 200 / 无痕 403）→ 删一次性任务 → 关账~~ ✅ 2026-09-17 22:08 重启成功；22:10 三验收全绿；任务已清理。见 L-023-⑤
 - **[L-027 已解除]** P2 阶段表 **2026-09-17 23:31 由用户提供权威版**，已落盘 `handoff-restart.md` **11.7**。待办转为按表执行 P2.0② → P2.1 → P2.2 → P2.3 → P2.4。
-- **【P2 执行中】P2.0②** 写路由 guard 升级（CSRF + 配对服务校验禁 fallback）
-- **【P2 待办】P2.1** 两段式框架（plan→确认→execute，SHA 比对，备份+manifest+保留策略）
-- **【P2 待办】P2.2** 启停开关（锚点唯一，交叉引用检查，rate-throttle 首用例）
+- ~~**【P2 待办】P2.1** 两段式框架（plan→确认→execute，SHA 比对，备份+manifest+保留策略）~~ ✅ 2026-09-17 23:50 完成，见 L-028（commit `a27da81`）
+- **【P2 进行中】P2.2** 启停开关（锚点唯一，交叉引用检查，rate-throttle 首用例）
 - **【P2 待办】P2.3** 配置编辑（白名单 + 范围/枚举校验 + 服务端校验）
 - **【P2 待办】P2.4** doctor 操作台 + 两套回滚
 - **[L-025 待用户]** reload dsh web 后可在浏览器看到「英文原名 + 中文注释」新面板（与 L-023/L-024 的目视确认合并一次）
@@ -743,4 +812,5 @@ P1.6 时因服务端有 bug，client 被迫**自己再算一遍**（`rowAnchorFr
 - L-025：`p1-smoke.mjs` **72/72** 全绿；五个英文原名 + 五个中文注释 + `originalName`/`annotated` 断言齐备；截图目视确认英文原名在标题、中文在第二行。
 - L-026：`p1-smoke.mjs` **84/84** 全绿（含直接执行服务端 `parseRootRows` 的端到端断言 + 7 条边界用例）；`buildSnapshot()` 端到端 `rate-throttle.config.enabled === "false"`；`pluggable-lint` 通过；`p2-smoke` 16/16；改动前备份 `.panel-backups/pre-p20-indentfix-20260917-232032/`。
 - L-027：**已解除** —— 用户 2026-09-17 23:31 提供 P2 窄版权威阶段表，落盘 `handoff-restart.md` 11.7。P2 按表执行。
-- **P2（进行中）**：P2.0① ✅（`193bdd8`）→ P2.0② 写路由 guard 升级 → P2.1 两段式 → P2.2 启停（rate-throttle 首用例）→ P2.3 配置编辑 → P2.4 doctor+回滚。**P2.1 起每个写操作须附真实备份产物与 SHA 记录。**
+- L-028：`scripts/p21-verify.mjs` **46/46** 全绿（含篡改后 `sha-conflict` → 409、备份副本 sha == 写前 sha、回滚后逐字节一致、保留策略三场景）；`p1-smoke.mjs` **136/136**；`p2-smoke.mjs` 16/16；doctor **0/0/0**；`pluggable-lint` 通过；真实 `cordis.patch.yml` 全程 sha 未变（`ce0b0b81…`）；改动前备份 `.panel-backups/pre-p21-twophase-20260917/`；真实写操作证据 `.panel-backups/p21-evidence-*/EVIDENCE.txt`。
+- **P2（进行中）**：P2.0① ✅（`193bdd8`）→ P2.0② ✅（`2b05777`）→ **P2.1 ✅（`a27da81`）** → P2.2 启停（rate-throttle 首用例）→ P2.3 配置编辑 → P2.4 doctor+回滚。**P2.1 起每个写操作须附真实备份产物与 SHA 记录。**
