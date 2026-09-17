@@ -591,6 +591,106 @@ const uiHtml = readFileSync(join(panelRoot(), "client", "panel.html"), "utf8");
 - **未修的服务端 bug**：`snapshot.mjs` 缩进无关正则应**在后续 P2 里修**（属服务端改动，本次 ⑤ 明令禁止）。当前靠 client 侧缩进解析兜住；**若将来有第二个消费方直接读 `snapshot.config.enabled`，会再次踩坑。**
 - 凭证/沙箱临时件（`_tmp_p16-*`、`_probe-p16-*`、截图等）为一次性验证产物，不构成交付物。
 
+---
+
+## L-025 [已完成] 面板标识符恢复「英文原名 + 中文注释」（2026-09-17 23:15–23:25，commit `c1d383e`）
+
+**指令来源**：用户 2026-09-17 23:15 指令①。**背景**：P1.6 为「人话化」把卡片标题换成了中文功能名（记忆/上下文压缩/…），需回退。
+
+**改动**：
+
+| 文件 | 改动后 sha256 |
+|---|---|
+| `panel/client/index.js` | `35b4dcde13d543275e6e113e49f6a693802b38ea1f47200666cacac4ded7bb4a2b` |
+| `panel/client/panel.html` | `f5afa51b5aef2feeabde0739d9d013a282968073b3ed526530e34cc3b11b388e` |
+| `scripts/p1-smoke.mjs` | `58a1a2ed69643098461543e73f07bd28bbc727a54de8afd828cabe2eaac17d52` |
+
+- 卡片标题恢复英文原名（`agent-memory` / `compact-router` / `rate-throttle` / `search-router` / `web-search-local`），**等宽字体**；中文功能名降为**副标题第二行**（灰色，弱于原名）。
+- 新增 `originalName(plugin)` —— 从 `plugin.name` 包名尾部取原名（回退 `plugin.dir`）。引入原因：快照里 `name` 是完整包名（如 `@local/dsh-toolkit/agent-memory`），直接显示会太长且含命名空间。
+- 中文从 `DISPLAY_NAMES` 改名为 `CN_NAMES`（语义修正：它现在只是注释表，不再是"显示名"），并新增 `annotated()` 供标识符位置生成「原名（中文）」单行形态。
+- **页面其它标识符位置同形**：技术详情字段标签（`插件目录（dir）`、`managedBy（由谁挂载）`、`enabled（配置文件开关）` 等 9 项）、章节标题（`配置文件原文（cordis.patch.yml · 插件开关所在）`、`体检结果（doctor dry-run · 只查不改）`）、页面标题与设置页 tab label。
+- **P1.6 其余改造全部保留**：三态状态、双层开关醒目告警、技术详情折叠、去黑话按钮、doctor 人话化、缩进感知解析。
+
+**smoke 同步（指令⑦）**：60/60 → **72/72 PASS**。新增断言：`CN_NAMES` map、五个中文注释、`no DISPLAY_NAMES map anymore`、`originalName`/`annotated` helper、`card title uses originalName`、`cn name is subtitle not title`、五个英文原名出现、技术详情标签注释化、两处章节标题注释化。**一处断言语义修正**：原 `no doctor dry-run jargon in UI` 与新需求冲突（标题现在**故意**含 `doctor dry-run`），改为 `no bare doctor dry-run button` —— 只禁止它作为按钮文案，允许作为「英文原名 + 中文注释」出现在标题里。
+
+**目视确认**：注入真实 snapshot 渲染 + headless Chrome 截图，五个卡片标题均为英文原名、中文在第二行、限流卡琥珀告警框正常。
+
+**生效方式**：仍需 **reload dsh web**（`client bundle` 激活时快照，见 L-024-⑤ / api-notes P2.1）。**浏览器强刷无效。**
+
+---
+
+## L-026 [已完成] P2.0 修 `parseRootRows()` 缩进缺陷 + 解析链加固（2026-09-17 23:25–23:40，commit `193bdd8`）
+
+**指令来源**：用户 2026-09-17 23:15 指令②「P2.0 优先落地」。
+
+### 根因（P1.6 已发现，本次正式修）
+
+`panel/manager/snapshot.mjs` 旧版收集 `config` 的正则**不含缩进约束**：
+
+```javascript
+const confMatch = /^\s+([A-Za-z][A-Za-z0-9]*):\s*(.+)$/.exec(line);
+```
+
+→ 同一行块内**后出现的同名键覆盖先出现的**。`rate-throttle` 自身 `config.enabled: false`（缩进 8）被嵌套 `config.routing.enabled: true`（缩进 10）覆盖 → `config.enabled === "true"` → **面板误报「运行中」，与页面下方直接展示的 YAML 自相矛盾**。
+
+### 修复
+
+改为**按缩进深度**收集，只接受该行的「直接子级」键：
+
+| 机制 | 说明 |
+|---|---|
+| `ownKeyIndent = indent + 2` | 本行 `- id:` 的键层缩进 |
+| `keyIndent !== ownKeyIndent → continue` | 更深缩进属嵌套分支，**排除**（这是修 bug 的关键一行） |
+| `config:` 子树下钻 | `keyIndent > ownKeyIndent` 时，只在 `inConfig && keyIndent === configKeyIndent + 2` 才收录 —— 因为插件自身设置实际写在 `config:` 之下（如 `config.enabled`） |
+| 嵌套映射只记标记 | `routing:` 这类值是嵌套映射的键记为 `""`，**不展平**其内部键 |
+| 行块结束判据 | 缩进回落到 `<= indent` 即 break（不再只依赖下一个 `- id:`） |
+| `disabled` 语义 | 按值精确置位 `enabled=false` / `disabledExplicit=true` |
+| `name` | 支持单引号、双引号、裸值三种写法 |
+| key 字符集 | 允许 `-` 与 `_` |
+
+### client 侧相应简化（消除双实现漂移）
+
+P1.6 时因服务端有 bug，client 被迫**自己再算一遍**（`rowAnchorFromPatch`）。本次改为**优先信任服务端 `config.enabled`**，`rowAnchorFromPatch` 降级为**防御性回退**（服务端值缺失时启用）。理由：同一个事实两处实现，必然有漂移风险。
+
+### 验证（指令②「每阶段完成报验收证据」）
+
+| 项 | 结果 |
+|---|---|
+| `p1-smoke.mjs` | **84/84 PASS**（60 → 84，含直接执行服务端 `parseRootRows` 的端到端断言） |
+| 端到端 `buildSnapshot()` | `rate-throttle` → `patchRow.config.enabled = "false"` ✅ |
+| 内联边界用例（7 条） | 嵌套同名不覆盖 / 兄弟行隔离 ×2 / `disabled:true` 语义 / 空输入 / CRLF 全覆盖 |
+| `pluggable-lint.mjs` | 通过（无跨插件静态 import / eager re-export） |
+| `p2-smoke.mjs` | 16/16 PASS |
+| 语法 | `node --check` 两 client 文件 + `snapshot.mjs` 全 OK |
+| 目视 | 截图确认限流卡正确显示琥珀告警（服务端修复已驱动） |
+
+**服务端改动留痕**（本次是**首次**服务端 `panel/manager/*` 改动，符合 P2 范围）：
+- 改动前备份 `.panel-backups/pre-p20-indentfix-20260917-232032/snapshot.mjs`（sha `8034a3293a48bda83dbd6a003583bfa3696c7aebfeb9c8511517ef05abe43a38`，逐字节等于改动前）。
+- 改动后 sha `6e53e9dc9e1719b24261cb6dabba5594c463003ed07f295c07bcf865bb9bf38d`。
+
+**解析链加固的关键认知**：插件自身设置**不在**行直接子级，而在 `config:` 之下。任何按缩进解析的实现都必须处理这一层下钻；否则会得到「有键但取不到值」的静默错误（本次第一版修复就踩了这个：`config.enabled` 取成了 `undefined`）。
+
+---
+
+## L-027 [进行中·受阻] P2 窄版正式开工 —— **阶段表缺失，已停手待用户提供**
+
+**用户 2026-09-17 23:15 指令②**：P2 窄版正式开工，范围与阶段「按上表（P2.0 → P2.4）」，安全模型全项适用。
+
+**⚠️ 受阻原因（如实报告，未凭猜测动手）**：该「上表」**不在当前上下文，且在磁盘上不存在**。已做的穷尽查找：
+
+| 查找位置 | 结果 |
+|---|---|
+| 全仓 `grep -rn "P2\.2\|P2\.3\|P2\.4"`（沙箱 + 插件仓，排除 archive/backups/node_modules） | **0 命中** |
+| `panel/docs/{ledger,api-notes,handoff-restart}.md` | 只有 `P2.0`（客户端发现机制）、`P2.1`（改动生效方式）两个**已有编号的核查小节**，无阶段表 |
+| 沙箱 `_api-notes-p2.md` / `_tmp_ledger_p2*.md` / `task_plan.md` / `progress.md` | 均无 P2.2–P2.4 |
+| 历史会话检索 | 两次均为 0 结果 |
+
+**已完成的 P2 相关工作**：指令中点名「优先落地」的 **P2.0（`parseRootRows` 正则修复）已完成**（见 L-026），因为它无需阶段表即可确定范围。**P2.1–P2.4 的范围无法确定，为免做错方向已停手。**
+
+**待用户提供**：P2.0 → P2.4 各阶段的名称 / 交付内容 / 验收标准。已知约束（用户已明确、不依赖阶段表）：两段式、SHA 冲突检测、锚点唯一、值白名单、写路由 CSRF + 配对服务校验（禁 fallback）、写前备份、plugin-manager 并发防线（快照现读不缓存）。
+
+**reload 时机（用户已定）**：名字恢复后一次（L-025，**待执行**）、P2.2 完成后一次，均由用户按 `restart-trigger` 执行。
+
 ## 待办
 
 - ~~**[L-023 续] 条件④** 全量加固（trigger + selfheal 脚本，先备份，diff 留痕）~~ ✅ 2026-09-17 21:35 完成，见 L-023-④
@@ -600,8 +700,10 @@ const uiHtml = readFileSync(join(panelRoot(), "client", "panel.html"), "utf8");
 - ~~**[L-023 续] 条件④b** 杀树策略加固 v2（Process.Kill 替代 taskkill）~~ ✅ 2026-09-17 22:05 完成，见 L-023-④b（trigger sha `e0bdbfb2…`，parser 0，commit `054934e`）
 - ~~**[L-023 续] 条件③b 重新布防**（用修好的脚本）~~ ✅ 2026-09-17 22:05 完成，见 L-023-③b（闸门修复 commit `cdb1fbe`；trigger @22:08 / selfheal @22:16，均 Ready）
 - ~~**[L-023 续] 停手等重启** → 三验收（桌面 200 / 配对 200 / 无痕 403）→ 删一次性任务 → 关账~~ ✅ 2026-09-17 22:08 重启成功；22:10 三验收全绿；任务已清理。见 L-023-⑤
-- **[L-023 续 + L-024 合并·待用户]** 浏览器端目视确认面板新 UI（**需 reload 后看**，见 L-024-⑤；命令行可达范围内已全部验证）
-- **[L-024 后续·待排期]** 修 `panel/manager/snapshot.mjs` `parseRootRows()` 缩进无关正则应（服务端改动，本次 P1.6 ⑤ 明令禁止；当前由 client 侧缩进解析兜住）
+- **[L-027 受阻·待用户]** 提供 **P2.0 → P2.4 阶段表**（各阶段名称 / 交付内容 / 验收标准）。在此之前 P2.1–P2.4 不动手。
+- **[L-025 待用户]** reload dsh web 后可在浏览器看到「英文原名 + 中文注释」新面板（与 L-023/L-024 的目视确认合并一次）
+- **[L-024 后续]** ~~修 `panel/manager/snapshot.mjs` `parseRootRows()` 缩进无关正则~~ ✅ 2026-09-17 23:40 完成，见 L-026（属 P2.0）
+- **[L-023 续 + L-024 + L-025 合并·待用户]** 浏览器端目视确认面板新 UI（**需 reload 后看**，见 L-024-⑤；命令行可达范围内已全部验证）
 - L-008 [待办] 二阶段用户亲查签字与解冻（历史遗留；2026-09-10 状态）
 - L-009 [已完成] 二阶段设计稿 v2 与四条 rider 落地推进（历史进行中项，后随四插件 git 基线完成而收口）
 
@@ -632,3 +734,6 @@ const uiHtml = readFileSync(join(panelRoot(), "client", "panel.html"), "utf8");
 - L-010：本会话第 3 步验收（apply/rollback/fixture 演示/影子验证/退出码/commit tag）。
 - L-023：条件①~④ 全部完成 + 条件③b 重新布防（22:08/22:16）+ 三验收（桌面 200 / 配对 200 / 无痕 403）全绿。
 - L-024：① `scripts/p1-smoke.mjs` 60/60 全绿（含约 35 条 P1.6 断言）；② 服务端 `panel/index.js` / `manager/snapshot.mjs` sha 与 mtime 均未变（⑤ 零改动）；③ 三态分支 6/6 + 双实现对拍 22/22；④ ⑥ 生效方式结论有源码行号与实测证据支撑（必须 reload）。**验收新标准：用户不读任何说明能说出每个插件是干嘛的、当前是否在工作。**
+- L-025：`p1-smoke.mjs` **72/72** 全绿；五个英文原名 + 五个中文注释 + `originalName`/`annotated` 断言齐备；截图目视确认英文原名在标题、中文在第二行。
+- L-026：`p1-smoke.mjs` **84/84** 全绿（含直接执行服务端 `parseRootRows` 的端到端断言 + 7 条边界用例）；`buildSnapshot()` 端到端 `rate-throttle.config.enabled === "false"`；`pluggable-lint` 通过；`p2-smoke` 16/16；改动前备份 `.panel-backups/pre-p20-indentfix-20260917-232032/`。
+- L-027：**阶段表到位后开工**；每阶段完成须报验收证据，P2.2 起每个写操作须有**真实备份产物**为证。
