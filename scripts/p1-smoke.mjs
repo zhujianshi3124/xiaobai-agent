@@ -33,6 +33,8 @@ for (const abs of syntaxFiles) {
   check("syntax " + abs.slice(root.length + 1), r.status === 0, r.stderr.trim().slice(0, 200));
 }
 
+const panelSrc = readFileSync(join(panelDir, "index.js"), "utf8");
+
 const routes = [];
 const fakeCtx = {
   effect(cb) { cb(); return () => {}; },
@@ -71,12 +73,102 @@ for (const route of routes) {
   const badcookie = await send(route, allowed[0], { remote: "127.0.0.1", host: TUNNEL_HOST, cookie: "dsh_pair=ffffffffffffffffffffffffffffffff" });
   check("gate blocks tunneled bad-cookie " + route.path, badcookie === 403, "status " + badcookie);
   const goodcookie = await send(route, allowed[0], { remote: "127.0.0.1", host: TUNNEL_HOST, cookie: "dsh_pair=" + FIXTURE_DEVICE });
-  check("gate allows tunneled paired-cookie " + route.path, goodcookie === allowed[1], "expected " + allowed[1] + " got " + goodcookie);
+  // P2.0② 后写路由（doctor dry-run）在服务缺席时不再接受 cookie 兜底，故此处期望 403；
+  // 只读路由仍走 fallback，期望其正常状态码。方法不匹配的情况（GET→405）不适用于写路由。
+  const expectGood = route.path === "/api/toolkit-panel/doctor/dry-run" ? 403 : allowed[1];
+  check("gate " + (expectGood === 403 ? "blocks" : "allows") + " tunneled paired-cookie " + route.path,
+    goodcookie === expectGood, "expected " + expectGood + " got " + goodcookie);
 }
 
 const doctorRoute = routes.find((r) => r.path === "/api/toolkit-panel/doctor/dry-run");
 const csrf = await send(doctorRoute, "POST", { remote: "127.0.0.1", host: "127.0.0.1:3080", origin: "https://evil.example", site: "cross-site" });
 check("CSRF blocks doctor cross-site POST", csrf === 403, "status " + csrf);
+
+// ---------- P2.0② 写路由 guard 升级：配对必须走服务，写操作禁 fallback ----------
+// 读路径：loopback AND (Host loopback OR 服务校验 OR devicesFile hasOwn 兜底)
+// 写路径：loopback AND (Host loopback OR 服务校验)，**服务缺失一律拒绝，不看 cookie**
+{
+  // 每个场景独立 apply 一次，通过 ctx.get 注入不同形态的 remoteWebUiPairing
+  function applyWith(pairingService) {
+    const collected = [];
+    const ctx = {
+      effect(cb) { cb(); return () => {}; },
+      webServer: { register(r) { collected.push(r); return () => {}; } },
+      get(n) {
+        if (n !== "remoteWebUiPairing") throw new Error("probe: unexpected service " + n);
+        if (pairingService === undefined) throw new Error("probe: service absent");
+        return pairingService;
+      },
+    };
+    panelMod.apply(ctx, { toolkitRoot: root, doctorCli, devicesFile: fixtureFile });
+    return collected;
+  }
+  const SNAP = "/api/toolkit-panel/snapshot";
+  const DOC = "/api/toolkit-panel/doctor/dry-run";
+  const NONLOOP = { remote: "127.0.0.1", host: TUNNEL_HOST, cookie: "dsh_pair=" + FIXTURE_DEVICE };
+  const WRITE_HEADERS = { site: "same-origin", origin: "https://" + TUNNEL_HOST };
+
+  // A. 服务在场且已配对 → 读放行、写放行
+  const svcPaired = applyWith({ isPairedDevice: () => true });
+  const aSnap = svcPaired.find((r) => r.path === SNAP);
+  const aDoc = svcPaired.find((r) => r.path === DOC);
+  check("P2.0② paired service: read allowed", (await send(aSnap, "GET", NONLOOP)) === 200);
+  check("P2.0② paired service: write allowed",
+    (await send(aDoc, "POST", Object.assign({}, NONLOOP, WRITE_HEADERS))) === 200);
+
+  // B. 服务在场但未配对 → 读 403、写 403
+  const svcUnpaired = applyWith({ isPairedDevice: () => false });
+  const bSnap = svcUnpaired.find((r) => r.path === SNAP);
+  const bDoc = svcUnpaired.find((r) => r.path === DOC);
+  check("P2.0② unpaired service: read 403", (await send(bSnap, "GET", NONLOOP)) === 403);
+  check("P2.0② unpaired service: write 403",
+    (await send(bDoc, "POST", Object.assign({}, NONLOOP, WRITE_HEADERS))) === 403);
+
+  // C. 服务缺席 + devicesFile 中**存在**该 key：
+  //    读 → 允许 fallback（200）；写 → **必须 403**（禁 fallback，这是本阶段的核心断言）
+  const svcAbsent = applyWith(undefined);
+  const cSnap = svcAbsent.find((r) => r.path === SNAP);
+  const cDoc = svcAbsent.find((r) => r.path === DOC);
+  const cRead = await send(cSnap, "GET", NONLOOP);
+  const cWrite = await send(cDoc, "POST", Object.assign({}, NONLOOP, WRITE_HEADERS));
+  check("P2.0② service absent: read allowed via devicesFile fallback", cRead === 200, "status " + cRead);
+  check("P2.0② service absent: write 403 (fallback disabled)", cWrite === 403, "status " + cWrite);
+
+  // D. 写路由 CSRF：坏 origin / cross-site → 403；正确 origin → 非 403
+  const dDoc = svcPaired.find((r) => r.path === DOC);
+  check("P2.0② write CSRF: cross-site 403",
+    (await send(dDoc, "POST", Object.assign({}, NONLOOP, { site: "cross-site", origin: "https://evil.example" }))) === 403);
+  check("P2.0② write CSRF: bad origin 403",
+    (await send(dDoc, "POST", Object.assign({}, NONLOOP, { site: "same-site", origin: "https://evil.example" }))) === 403);
+  check("P2.0② write CSRF: good origin passes",
+    (await send(dDoc, "POST", Object.assign({}, NONLOOP, WRITE_HEADERS))) !== 403);
+
+  // E. 非 loopback socket 一律拒绝（读与写）
+  check("P2.0② non-loopback socket: read 403",
+    (await send(dDoc, "GET", { remote: "8.8.8.8" })) === 403);
+  check("P2.0② non-loopback socket: write 403",
+    (await send(dDoc, "POST", { remote: "8.8.8.8" })) === 403);
+
+  // F. 源码契约：写路径必须调用严格版，且严格版函数体内不引用 devicesFile
+  check("P2.0② source has pairedByServiceStrict", panelSrc.includes("function pairedByServiceStrict"));
+  check("P2.0② write path uses strict pairing", /isAllowedWrite[\s\S]{0,200}pairedByServiceStrict/.test(panelSrc));
+  {
+    // 精确截取 pairedByServiceStrict 的函数体（花括号配对），断言体内无 devicesFile
+    const start = panelSrc.indexOf("function pairedByServiceStrict");
+    let body = "";
+    if (start >= 0) {
+      const open = panelSrc.indexOf("{", start);
+      let depth = 0;
+      for (let i = open; i < panelSrc.length; i++) {
+        if (panelSrc[i] === "{") depth++;
+        else if (panelSrc[i] === "}") { depth--; if (depth === 0) { body = panelSrc.slice(open, i + 1); break; } }
+      }
+    }
+    check("P2.0② strict pairing body is device-file free",
+      body.length > 0 && !body.includes("devicesFile"),
+      body.length ? "body " + body.length + " chars" : "body not extracted");
+  }
+}
 
 const snapMod = await import(pathToFileURL(join(panelDir, "manager", "snapshot.mjs")).href);
 const snap = await snapMod.buildSnapshot({ toolkitRoot: root });
