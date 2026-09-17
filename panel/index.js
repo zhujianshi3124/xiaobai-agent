@@ -6,6 +6,7 @@ import { buildSnapshot } from "./manager/snapshot.mjs";
 import { runDoctorDryRun } from "./manager/doctor-runner.mjs";
 import {
   createPlan,
+  createTogglePlan,
   executePlan,
   putPlan,
   getPlan,
@@ -290,6 +291,60 @@ export function apply(ctx, config = {}) {
               changed: plan.changed,
               anchorLine: plan.anchorLine,
               diff: plan.diff,
+              expectedSha: plan.expectedSha,
+              nextSha: plan.nextSha,
+              createdAt: plan.createdAt,
+              expiresAt: plan.expiresAt,
+            },
+          });
+        } catch (error) {
+          const code = error instanceof PlanError ? error.code : "internal";
+          sendJson(response, planErrorStatus(code), { ok: false, code, error: String(error && error.message || error) });
+        }
+      }, { change: true }),
+    },
+    // ---------- P2.2 启停开关 ----------
+    // 与通用 plan 分开的原因：启停有**额外前置检查**（停用前交叉引用扫描），
+    // 且需要把「双层开关」中的哪一层被改明确告诉客户端，避免与插件内部
+    // config.enabled 混淆。底层仍复用同一套 plan/execute 两段式与备份机制。
+    {
+      kind: "exact",
+      path: "/api/toolkit-panel/toggle/plan",
+      handler: guard(async (request, response) => {
+        if (request.method !== "POST") {
+          response.writeHead(405, { allow: "POST" });
+          response.end();
+          return;
+        }
+        try {
+          const body = await readJsonBody(request);
+          const rowId = String(body.rowId || "");
+          if (typeof body.enabled !== "boolean") {
+            throw new PlanError("value-invalid", "启停值必须是布尔（true / false）");
+          }
+          const plan = createTogglePlan({
+            file: join(toolkitRoot, "cordis.patch.yml"),
+            rowId,
+            enabled: body.enabled,
+            backupRoot,
+            alsoMatch: Array.isArray(body.alsoMatch) ? body.alsoMatch : [],
+          });
+          putPlan(plan);
+          sendJson(response, 200, {
+            ok: true,
+            plan: {
+              token: plan.token,
+              kind: plan.kind,
+              file: plan.file,
+              rowId: plan.rowId,
+              // 明确告知改的是**哪一层**：patch 行的 disabled（配置层），
+              // 不是插件内部 config.enabled。双层不得混淆呈现。
+              layer: "patch-row.disabled",
+              targetEnabled: plan.targetEnabled,
+              changed: plan.changed,
+              anchorLine: plan.anchorLine,
+              diff: plan.diff,
+              crossRefs: plan.crossRefs,
               expectedSha: plan.expectedSha,
               nextSha: plan.nextSha,
               createdAt: plan.createdAt,

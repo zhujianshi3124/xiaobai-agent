@@ -160,6 +160,101 @@ export function renderDiff({ before, after, changed }) {
   return out;
 }
 
+// ---------------- P2.2 启停开关专用 ----------------
+
+/**
+ * 交叉引用检查：停用某个插件行之前，扫描 patch 全文，看**其它行块**是否引用了
+ * 该插件的 id 或包名。
+ *
+ * 动机：cordis 的 patch 行之间可能存在引用（例如某行以 `name:` / `inject:` /
+ * 字符串值指向另一个插件）。若被引用方被停用，引用方会指向一个不存在/未加载的
+ * 目标。停用前必须把这种关系摆到台面上，**由用户决定**，而不是默默写盘。
+ *
+ * 检查口径（宽松但可解释）：逐行扫描，命中即记；跳过该 id 自己所在的那个行块。
+ * 命中项里若同时出现该插件的**包名尾部**（如 `rate-throttle`）也算引用。
+ *
+ * @returns {Array<{ line: number, text: string }>} 命中列表（可能为空）
+ */
+export function findCrossReferences(text, { rowId, alsoMatch = [] }) {
+  const { lines } = splitLines(text);
+  const needles = [rowId].concat(alsoMatch.filter((s) => typeof s === "string" && s !== "")).filter(Boolean);
+  if (needles.length === 0) return [];
+
+  // 先定位所有行块的边界，用于排除「自己所在块」
+  const blocks = [];
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^(\s*)- id:\s*([^#\s]+)/.exec(lines[i]);
+    if (m) blocks.push({ start: i, id: m[2] });
+  }
+  for (let b = 0; b < blocks.length; b++) {
+    blocks[b].end = b + 1 < blocks.length ? blocks[b + 1].start - 1 : lines.length - 1;
+  }
+  const own = blocks.find((b) => b.id === rowId);
+  const isSelf = (lineIndex) => own && lineIndex >= own.start && lineIndex <= own.end;
+
+  const hits = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (isSelf(i)) continue;
+    const line = lines[i];
+    if (/^\s*#/.test(line)) continue; // 注释行不算引用
+    for (const needle of needles) {
+      // 整词匹配：避免 `rate-throttle` 命中 `rate-throttle-x`
+      const re = new RegExp("(^|[^A-Za-z0-9_-])" + needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "([^A-Za-z0-9_-]|$)");
+      if (re.test(line)) {
+        hits.push({ line: i + 1, text: line.trim() });
+        break;
+      }
+    }
+  }
+  return hits;
+}
+
+/**
+ * 生成「启停某插件行」的 plan（**只读**）。
+ *
+ * `enabled = true`  → 写 `disabled: false`（显式声明为启用；不删键，语义更明确）
+ * `enabled = false` → 写 `disabled: true`
+ *
+ * 停用（`enabled = false`）时会附带交叉引用报告；**报告非空不自动阻止**，
+ * 而是把决定权交给调用方（UI 需展示并要求用户确认）。
+ */
+export function createTogglePlan({ file, rowId, enabled, backupRoot, ttlMs = DEFAULT_PLAN_TTL_MS, alsoMatch = [] }) {
+  if (typeof enabled !== "boolean") {
+    throw new PlanError("value-invalid", "启停值必须是布尔（true / false）");
+  }
+  if (!existsSync(file)) {
+    throw new PlanError("target-missing", "目标文件不存在：" + file);
+  }
+  const text = readFileSync(file, "utf8");
+  // 锚点唯一性由 planRowFlag → locateRowAnchor 保证（0 或 ≥2 都会抛）
+  const result = planRowFlag(text, { rowId, key: "disabled", value: enabled ? "false" : "true" });
+  const crossRefs = enabled ? [] : findCrossReferences(text, { rowId, alsoMatch });
+  const now = Date.now();
+
+  return {
+    token: createHash("sha256")
+      .update(file + "|toggle|" + rowId + "|" + String(enabled) + "|" + sha256Of(text) + "|" + now)
+      .digest("hex")
+      .slice(0, 32),
+    kind: "toggle",
+    file,
+    rowId,
+    key: "disabled",
+    value: enabled ? "false" : "true",
+    targetEnabled: enabled,
+    backupRoot: backupRoot || null,
+    expectedSha: sha256Of(text),
+    nextSha: sha256Of(result.nextText),
+    changed: result.changed,
+    anchorLine: result.anchor.lineIndex + 1,
+    diff: renderDiff(result),
+    crossRefs,
+    createdAt: new Date(now).toISOString(),
+    expiresAt: new Date(now + ttlMs).toISOString(),
+    nextText: result.nextText,
+  };
+}
+
 // ---------------- 备份保留策略 ----------------
 
 /**

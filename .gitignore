@@ -7,3 +7,6 @@ node_modules/*
 !node_modules/@deepseek-ai
 
 .doctor-link-backup*/
+
+# 人工留档备份目录（改动前快照 / 验收证据），不入库
+.panel-backups/

@@ -43,10 +43,11 @@ const fakeCtx = {
 };
 const panelMod = await import(pathToFileURL(join(panelDir, "index.js")).href);
 panelMod.apply(fakeCtx, { toolkitRoot: root, doctorCli, devicesFile: fixtureFile });
-check("routes count == 6", routes.length === 6, String(routes.length));
+check("routes count == 7", routes.length === 7, String(routes.length));
 check("P2.1 plan route registered", routes.some((r) => r.path === "/api/toolkit-panel/plan"));
 check("P2.1 execute route registered", routes.some((r) => r.path === "/api/toolkit-panel/execute"));
 check("P2.1 plan/status route registered", routes.some((r) => r.path === "/api/toolkit-panel/plan/status"));
+check("P2.2 toggle plan route registered", routes.some((r) => r.path === "/api/toolkit-panel/toggle/plan"));
 
 const expectedWhenAllowed = {
   "/api/toolkit-panel/ui": ["GET", 200],
@@ -55,14 +56,15 @@ const expectedWhenAllowed = {
   "/api/toolkit-panel/plan": ["GET", 405],
   "/api/toolkit-panel/execute": ["GET", 405],
   "/api/toolkit-panel/plan/status": ["GET", 404],
+  "/api/toolkit-panel/toggle/plan": ["GET", 405],
 };
 
-// 写路由（options.change === true）：tunneled 无服务一律 403。
 // 写路径（options.change === true）路由集合：tunneled 无服务一律 403。
 const WRITE_ROUTES = new Set([
   "/api/toolkit-panel/doctor/dry-run",
   "/api/toolkit-panel/plan",
   "/api/toolkit-panel/execute",
+  "/api/toolkit-panel/toggle/plan",
 ]);
 
 // 每个场景独立 apply 一次，通过 ctx.get 注入不同形态的 remoteWebUiPairing。
@@ -425,6 +427,87 @@ check("client keeps defensive fallback", clientSrc.includes("rowAnchorFromPatch"
   check("P2.1 engine enforces unique anchor", engineSrc.includes("anchor-ambiguous") && engineSrc.includes("anchor-missing"));
   check("P2.1 engine has a retention policy", engineSrc.includes("pruneBackups") && engineSrc.includes("BACKUP_KEEP_COUNT"));
   check("P2.1 backup.mjs records a reason on the manifest", readFileSync(join(panelDir, "manager", "backup.mjs"), "utf8").includes("reason"));
+}
+
+// ---------- P2.2 启停开关：路由层契约 ----------
+// 行为由 scripts/p22-verify.mjs 深度验收（真实文件 + 真实备份 + CRLF 兼容）。
+{
+  const engineSrc = readFileSync(join(panelDir, "manager", "apply-engine.mjs"), "utf8");
+  const clientSrc2 = readFileSync(join(panelDir, "client", "index.js"), "utf8");
+  const htmlSrc2 = readFileSync(join(panelDir, "client", "panel.html"), "utf8");
+  const TGL = "/api/toolkit-panel/toggle/plan";
+  const EXEC2 = "/api/toolkit-panel/execute";
+
+  // 写守卫：服务缺席时 toggle/plan 必须 403（它签发写令牌）
+  const svcAbsent2 = applyWith(undefined);
+  const tglAbsent = svcAbsent2.find((r) => r.path === TGL);
+  check("P2.2 toggle route is write-guarded (service absent → 403)",
+    (await send(tglAbsent, "POST", Object.assign({}, NONLOOP, WRITE_HEADERS, { json: { rowId: "rate-throttle", enabled: false } }))) === 403);
+
+  // CSRF 同样生效
+  const svcPaired2 = applyWith({ isPairedDevice: () => true });
+  const tglOk = svcPaired2.find((r) => r.path === TGL);
+  check("P2.2 CSRF blocks cross-site toggle POST",
+    (await send(tglOk, "POST", { remote: "127.0.0.1", host: TUNNEL_HOST, site: "cross-site", origin: "https://evil.example", json: {} })) === 403);
+  check("P2.2 CSRF blocks bad-origin toggle POST",
+    (await send(tglOk, "POST", { remote: "127.0.0.1", host: TUNNEL_HOST, site: "same-site", origin: "https://evil.example", json: {} })) === 403);
+
+  // 非法值：enabled 非布尔 → 400 value-invalid（不信任前端）
+  const badValue = await sendCaptured(tglOk, "POST", Object.assign({}, NONLOOP, WRITE_HEADERS, {
+    json: { rowId: "rate-throttle", enabled: "yes" },
+  }));
+  check("P2.2 non-boolean enabled → 400 value-invalid",
+    badValue.status === 400 && badValue.body && badValue.body.code === "value-invalid", JSON.stringify(badValue.body));
+
+  // 未知 rowId → 400 anchor-missing
+  const badRow = await sendCaptured(tglOk, "POST", Object.assign({}, NONLOOP, WRITE_HEADERS, {
+    json: { rowId: "no-such-row", enabled: false },
+  }));
+  check("P2.2 unknown rowId → 400 anchor-missing",
+    badRow.status === 400 && badRow.body && badRow.body.code === "anchor-missing", JSON.stringify(badRow.body));
+
+  // 正常 plan：返回 token / layer / diff / crossRefs / 有效期，且不含 nextText
+  const okToggle = await sendCaptured(tglOk, "POST", Object.assign({}, NONLOOP, WRITE_HEADERS, {
+    json: { rowId: "rate-throttle", enabled: false },
+  }));
+  const tp = okToggle.body && okToggle.body.plan;
+  check("P2.2 toggle plan returns ok", !!(okToggle.body && okToggle.body.ok), JSON.stringify(okToggle.body && okToggle.body.error));
+  check("P2.2 toggle plan declares layer = patch-row.disabled", !!(tp && tp.layer === "patch-row.disabled"), tp && tp.layer);
+  check("P2.2 toggle plan carries diff preview", !!(tp && Array.isArray(tp.diff) && tp.diff.length > 0));
+  check("P2.2 toggle plan carries crossRefs array", !!(tp && Array.isArray(tp.crossRefs)));
+  check("P2.2 toggle plan carries expiry", !!(tp && Date.parse(tp.expiresAt) > Date.now()));
+  check("P2.2 toggle plan resolves the anchor", !!(tp && tp.anchorLine > 0), "anchorLine=" + (tp && tp.anchorLine));
+  check("P2.2 toggle plan does NOT leak nextText", !(tp && "nextText" in tp));
+
+  // 交叉引用的**真实正例**：构造一份含引用的临时 patch，确认服务端能报出来
+  // （走引擎层直接调用，避免改动真实文件）
+  const eng2 = await import(pathToFileURL(join(panelDir, "manager", "apply-engine.mjs")).href);
+  const refText = readFileSync(join(root, "cordis.patch.yml"), "utf8").replace(
+    /(\r?\n)(- insert:\r?\n    - id: web-search-local)/,
+    "$1- id: other-row$1  config:$1    uses: rate-throttle$1$1$2",
+  );
+  const refHits = eng2.findCrossReferences(refText, { rowId: "rate-throttle" });
+  check("P2.2 cross-reference detection has a real positive case", refHits.length >= 1, JSON.stringify(refHits));
+
+  // 引擎源码契约
+  check("P2.2 engine exports createTogglePlan", engineSrc.includes("export function createTogglePlan"));
+  check("P2.2 engine exports findCrossReferences", engineSrc.includes("export function findCrossReferences"));
+  check("P2.2 toggle reuses the two-phase plan/execute path (no direct writeFileSync)",
+    !/export function createTogglePlan[\s\S]{0,2000}writeFileSync/.test(engineSrc));
+  check("P2.2 toggle refuses non-boolean enabled", engineSrc.includes("启停值必须是布尔"));
+  // 锚点唯一由既有 locateRowAnchor 保证
+  check("P2.2 toggle relies on unique-anchor enforcement",
+    engineSrc.includes("anchor-missing") && engineSrc.includes("anchor-ambiguous"));
+
+  // 双层分立：两个渲染器都不得把两层合并成一个值
+  check("P2.2 client renders layer 1 as patch-row.disabled", clientSrc2.includes("patch-row.disabled"));
+  check("P2.2 client renders layer 2 as config.enabled", clientSrc2.includes("config.enabled"));
+  check("P2.2 fallback page renders both layers too",
+    htmlSrc2.includes("patch-row.disabled") && htmlSrc2.includes("config.enabled"));
+  check("P2.2 client shows a confirm step before writing", clientSrc2.includes("confirmBox") && clientSrc2.includes("确认写入"));
+  check("P2.2 fallback page shows a confirm step before writing", htmlSrc2.includes("confirmBox") && htmlSrc2.includes("确认写入"));
+  check("P2.2 client surfaces cross-reference warnings", clientSrc2.includes("有其它配置引用这个插件"));
+  check("P2.2 fallback page surfaces cross-reference warnings", htmlSrc2.includes("有其它配置引用这个插件"));
 }
 
 if (baseUrl) {
