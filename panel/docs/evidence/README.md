@@ -40,6 +40,9 @@
 | `P24-EVIDENCE.md` | 本侧撰写 —— **P2.4 扩容 · 证据批（扩展版七项）**；结论：限流/压缩/记忆联动成立，**新发现搜索插件参与联动**（search-router × web-search-local × web.config）；软/真卸载与恢复联动机制 + compact-router 特案 + DSH 安装/重装机制 + doctor 信号源 + 双回滚路径 | 10185 | `45b8eab7885624e1dd168c88d905649067c3e49db9e9c79cd957274b72a20dc6` |
 | `P24-BATCH1-UI-CLOSURE.md` | 本侧撰写 —— **P2.4 施工批 1【引擎+UI】收尾 · 全绿报判**（新会话第 5 轮，L-056）：UI 交付（两渲染器组件 + §2 全稿文案）+ 面板级矩阵 **623/0** + **D-UI-01..08 八处面板级缺陷**与修法 + 回归/doctor/基线证据 + 呈验请求与用户目视清单 | 10563 | `611ce9b71f80833496f82504d7e93fbb2b8b78b6c30e924b5b3172864f9d40e6` |
 | `P24-BATCH1-UI-REGRESSION.txt` | 由 `scripts/regression-all.mjs` 生成（可重放）—— 报判时点**全套回归 14 项 + node --test 93 全绿原文** | 1414 | `9a7824386cabc3b6d0c28eea8254e3c8218c72f20c0946f0fad9d86c00f8f3a2` |
+| `P24-BATCH1-SOFT-ROUNDTRIP-FORENSICS.md` | 本侧撰写（**只读取证**）—— **账 b**：用户面板手操 **web-search-local 软卸载→软恢复** 事后取证：两笔 `.panel-write-backups` manifest 原文（reason/note 如实）+ 摘行 **diff（删 7 行/增 0 行）**+ **LCS 严格重建校验**+ 当前 sha **回 ce0b0b81＝完整往返 ✓** + 本体保留 + 台账清账 + 邻接留痕 + doctor 0/0/0 | 7452 | `c36652985eb772a1ef507c5eee5fa58dfaeb5f0fbfbc2309f8b687becf1e4bed` |
+| `P24-BATCH1-CLOSURE-PREFLIGHT.md` | 本侧撰写 —— **账 a ＋关账前置核验**：销毁式 v2 **未开工**（受 Q1 闸门，零代码）＋完成时点依赖 Q1 之如实说明＋**回归 622/623（1 项测试守卫假阳性，非产品缺陷）**＋**关账前置未满足 ⇒ 未执行关账**＋待裁决 Q1/Q1'/Q2'＋关账包 6 项待启封清单 | 7689 | `8f72a42b762c631e2c571d6c51f90ec53efff93ede0aec2607f4a2dd43c58ed3` |
+| `P24-BATCH1-REGRESSION-PREFLIGHT.txt` | 由 `scripts/regression-all.mjs` 生成（可重放）—— 关账前置核验时点回归原文：**13 项绿 + p24-ui-matrix 622/623（1 FAIL）**，如实留档（**未为凑绿而改测试**） | 1437 | `23115ca108d17280187bc71315e23dc0167b0c856e548f186d115081981ccfa1` |
 
 前三份为**逐字节复制**（复制后比对 sha256 一致才落盘），未经改写。
 
@@ -190,6 +193,8 @@ node scripts/p22b-retention-scope.mjs > panel/docs/evidence/RETENTION-SCOPE.txt 
 | 2026-09-18 18:11（新会话第 2 轮） | 三项取证全绿 + 目视通过补记 + **P2.3 终验放行并完成**：两段式真实写入 `tpmCooldownMs` 45000→46000→45000 往返闭环；最终 sha==`ce0b0b81`（字节复原硬判据达标）+ 两段 doctor 0/0/0 | 新增 `P23-FINAL-ACCEPTANCE.txt`（2881 B） |
 | 2026-09-18 19:21（新会话第 3 轮） | 需求定案 + 顺序裁定 → **P2.4 扩容证据批完成**：七项证据；联动分类（限流/压缩/记忆成立；**搜索插件参与联动呈判**）；软/真卸载 + 重装/恢复 + doctor 信号 + 双回滚路径落档 | 新增 `P24-EVIDENCE.md`（10185 B） |
 | 2026-09-18 23:05（新会话第 5 轮） | **P2.4 施工批 1【引擎+UI】收尾 → 全绿报判**（L-056）：两渲染器 UI 交付（卸载/恢复入口 + §2 全稿确认弹窗 + 六态缺席横幅）；新增**面板级完整矩阵 623/0**（真实四 API + 两渲染器）；矩阵暴露并修补 **D-UI-01..08** 八处；回归 14 项 + node --test 93 全绿；doctor 0/0/0；真实 patch 零写入 | 新增 `P24-BATCH1-UI-CLOSURE.md`（10563 B）、`P24-BATCH1-UI-REGRESSION.txt`（1414 B） |
+| 2026-09-18 23:20（新会话第 5 轮续） | **需求变更受理：真卸载改销毁式 → 设计修订稿 v2**（L-057，零代码）：`p24-design-v2-destroy.md` 落档（收据口径/重装挂载/文案 v2 含空窗期警告/矩阵改造/不可逆风险 R1–R5/待裁决 Q1–Q8） | 无本目录新增（设计稿在 `panel/docs/`） |
+| 2026-09-19 00:20（新会话第 5 轮续 · 判定补账） | **账 b 取证 + 账 a/关账前置核验**（L-058）：用户软卸载**往返字节级复原 ✓**；复跑暴露 **1 项测试守卫假阳性**（白名单漏 `row-adjacency.json`）⇒ **622/623 如实留档**；**关账前置未满足 ⇒ 未执行关账**（销毁式 v2 受 Q1 闸门未开工） | 新增 `P24-BATCH1-SOFT-ROUNDTRIP-FORENSICS.md`（7452 B）、`P24-BATCH1-CLOSURE-PREFLIGHT.md`（7689 B）、`P24-BATCH1-REGRESSION-PREFLIGHT.txt`（1437 B） |
 
 > **本目录的两条硬约定**：① **只增不改** —— 已入库的归档文件**永不覆盖**；与脚本产生时序差时，**加注记、以脚本重放为准**。
 > ② **每份证据必须可重放** —— 上表所有「由 `scripts/*.mjs` 生成」者，重放命令即其生成命令。
