@@ -18,6 +18,7 @@ import {
   createTrueUninstallPlan,
   createSoftRestorePlan,
   createTrueRestorePlan,
+  createPresetRestorePlan,
   executeSoftUninstall,
   executeTrueUninstall,
   executePresetSoftUninstall,

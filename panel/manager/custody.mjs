@@ -250,6 +250,58 @@ export function getSoftRecord(toolkitRoot, key) {
   return loadSoftState(toolkitRoot)[key] || null;
 }
 
+/** 全量软卸载台账条目（D-UI-03：宿主键插回位换算需扫同段兄弟键的留痕）。 */
+export function listSoftRecords(toolkitRoot) {
+  const state = loadSoftState(toolkitRoot);
+  return Object.keys(state).map((k) => state[k]);
+}
+
+// ---------------- 行块邻接留痕（D-UI-05） ----------------
+
+function rowAdjacencyPath(toolkitRoot) {
+  return join(custodyRoot(toolkitRoot), "row-adjacency.json");
+}
+
+/**
+ * 追加「行块邻接事实」：`{ before, after }` = 该块原本紧跟在 before 行锚之后、紧邻 after 行锚之前。
+ * 为什么不复用软卸载台账：软恢复成功即清账（p24-verify ③ 断言），而邻接事实是恢复定位的
+ * 长期依据（乱序恢复也要复原原布局）——故单独落一份只增不减的留痕，与清账解耦。
+ */
+export function recordRowAdjacency(toolkitRoot, edges) {
+  const p = rowAdjacencyPath(toolkitRoot);
+  let state = { schemaVersion: 1, edges: [] };
+  if (existsSync(p)) {
+    try {
+      const parsed = JSON.parse(readFileSync(p, "utf8"));
+      if (parsed && Array.isArray(parsed.edges)) state = parsed;
+    } catch {
+      /* 证据文件损坏 ⇒ 从空重建，不阻断主流程 */
+    }
+  }
+  const key = (e) => String(e.before) + "\u0000" + String(e.after);
+  const seen = new Set(state.edges.map(key));
+  for (const e of edges || []) {
+    if (!e || !e.before || !e.after) continue;
+    const k = key(e);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    state.edges.push({ before: e.before, after: e.after });
+  }
+  mkdirSync(custodyRoot(toolkitRoot), { recursive: true });
+  writeFileSync(p, JSON.stringify(state, null, 2), "utf8");
+}
+
+export function listRowAdjacencies(toolkitRoot) {
+  const p = rowAdjacencyPath(toolkitRoot);
+  if (!existsSync(p)) return [];
+  try {
+    const parsed = JSON.parse(readFileSync(p, "utf8"));
+    return parsed && Array.isArray(parsed.edges) ? parsed.edges : [];
+  } catch {
+    return [];
+  }
+}
+
 export function hasSoftRecord(toolkitRoot, key) {
   return !!loadSoftState(toolkitRoot)[key];
 }
