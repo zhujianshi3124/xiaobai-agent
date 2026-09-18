@@ -34,9 +34,7 @@ import {
 import { createBackup } from "./backup.mjs";
 import { PLUGINS, assertUninstallable } from "./plugin-registry.mjs";
 import {
-  archiveForTrueUninstall,
-  verifyCustodyBody,
-  restoreBody,
+  writeDestroyReceipt,
   recordSoftUninstall,
   clearSoftRecord,
   getSoftRecord,
@@ -182,9 +180,15 @@ function recordedHostKeyEntries(toolkitRoot) {
     } catch {
       continue;
     }
-    push(manifest && manifest.restore && manifest.restore.hostKey);
+    push(rebuildOf(manifest) && rebuildOf(manifest).hostKey);
   }
   return out;
+}
+
+/** 收据里的「重装/挂载事实」：v2 = `rebuild`；v1 存档式遗留 = `restore`（兼容读取）。 */
+function rebuildOf(manifest) {
+  if (!manifest) return null;
+  return manifest.rebuild || manifest.restore || null;
 }
 
 /**
@@ -263,7 +267,7 @@ function panelRowAdjacencies(toolkitRoot) {
     } catch {
       continue;
     }
-    const r = manifest && manifest.restore;
+    const r = rebuildOf(manifest);
     if (r) add(r.rowBlock, r.prevTopRaw, r.nextTopRaw);
   }
   return edges;
@@ -576,19 +580,17 @@ function hostKeyFromRecord(record) {
   };
 }
 
-function latestTrueCustody(toolkitRoot, plugin, custodyId) {
-  const entries = listCustody(toolkitRoot).filter((e) => e.plugin === plugin && e.kind === "true-uninstall");
-  if (entries.length === 0) {
-    const err = new Error(plugin + " 没有真卸载保管档，无法从保管区恢复");
-    err.code = "custody-not-found";
-    throw err;
-  }
+/**
+ * 取该插件最新的真卸载**收据**（销毁式 v2：收据 = 对账账本 + 重装挂载的行块事实来源）。
+ * 无收据返回 null（不再抛错——挂载路径据此给出明确拒绝，见 createMountPlan）。
+ */
+function latestReceipt(toolkitRoot, plugin, custodyId) {
+  const entries = listCustody(toolkitRoot).filter(
+    (e) => e.plugin === plugin && e.kind === "true-uninstall-receipt",
+  );
+  if (entries.length === 0) return null;
   const chosen = custodyId ? entries.find((e) => e.custodyId === custodyId) : entries[0];
-  if (!chosen) {
-    const err = new Error("保管区条目不存在：" + custodyId);
-    err.code = "custody-not-found";
-    throw err;
-  }
+  if (!chosen) return null;
   return { manifest: readCustodyManifest(toolkitRoot, chosen.custodyId), custodyId: chosen.custodyId };
 }
 
@@ -601,9 +603,17 @@ export function createSoftRestorePlan({ toolkitRoot, plugin, hostKeyChoice, ttlM
   if (meta.managedBy === "preset") {
     return createPresetRestorePlan({ toolkitRoot, plugin, ttlMs, reason, note });
   }
+  // 销毁式 v2 守卫（先于台账检查）：本体不在（已真卸载）⇒ 无面板恢复路径
+  if (!existsSync(join(toolkitRoot, "lib", plugin))) {
+    const err = new Error(
+      plugin + " 本体不存在（已真卸载，面板不留副本）——恢复途径 = 开源后重新下载安装，再由面板「挂载」",
+    );
+    err.code = "body-missing";
+    throw err;
+  }
   const record = getSoftRecord(toolkitRoot, meta.rowId);
   if (!record) {
-    const err = new Error(plugin + " 没有面板软卸载台账（可能是在面板外手动摘除的），请用维护程序或确认后手工恢复");
+    const err = new Error(plugin + " 没有面板软卸载台账（可能是在面板外手动摘除的）；若是重装后的情形，请用「挂载」");
     err.code = "soft-record-missing";
     throw err;
   }
@@ -642,72 +652,111 @@ export function createSoftRestorePlan({ toolkitRoot, plugin, hostKeyChoice, ttlM
 }
 
 /**
- * 真恢复 plan（patch 行插件）：保管区 manifest 提供行块与宿主键事实；
- * 流程 = 还原 body（恢复前再备份）→ executePlan 插回行块/宿主键 → 保管档保留（不清）。
+ * compact-router 恢复 plan（预设 apply）。
+ * 销毁式 v2 守卫：本体不存在（已真卸载，无副本）⇒ **拒绝**——真卸载无面板恢复路径，
+ * 须「开源后重新下载安装 → 面板检测已安装未挂载 → 挂载」。
  */
-export function createTrueRestorePlan({ toolkitRoot, plugin, custodyId, hostKeyChoice, ttlMs, reason, note }) {
-  const meta = assertUninstallable(plugin);
-  if (meta.managedBy === "preset") {
-    return createPresetRestorePlan({ toolkitRoot, plugin, custodyId, ttlMs, reason, note });
-  }
-  const resolved = latestTrueCustody(toolkitRoot, plugin, custodyId);
-  const manifest = resolved.manifest;
-  custodyId = resolved.custodyId; // 未显式指定时 = 最新档；执行器按此还原
-  const text = readPatch(toolkitRoot);
-  let composed = { nextText: text, insertAt: null, conflict: null };
-  if (manifest.restore && manifest.restore.rowBlock) {
-    composed = composeRestore({
-      toolkitRoot,
-      text,
-      block: manifest.restore.rowBlock,
-      prevTopRaw: manifest.restore.prevTopRaw,
-      nextTopRaw: manifest.restore.nextTopRaw,
-      hostKey: hostKeyFromRecord(manifest.restore),
-      hostKeyChoice,
-    });
-  }
-  const now = Date.now();
-  const plan = {
-    token: makeToken("restore-true-patch", plugin, text, now),
-    kind: "restore-true-patch",
-    skipAnchorCheck: true,
-    plugin,
-    custodyId,
-    file: join(toolkitRoot, "cordis.patch.yml"),
-    rowId: meta.rowId,
-    reason: reason || "panel-restore-true",
-    note: note || plugin + " 真恢复（保管区还原本体 → 行块插回" + (manifest.restore && manifest.restore.hostKey ? " + 宿主键写回" : "") + "）",
-    backupRoot: null,
-    expectedSha: sha256Of(text),
-    nextSha: sha256Of(composed.nextText),
-    conflict: composed.conflict,
-    insertAt: composed.insertAt,
-    manifestFileCount: (manifest.body || []).length,
-    changed: true,
-    createdAt: new Date(now).toISOString(),
-    expiresAt: new Date(now + (ttlMs || DEFAULT_PLAN_TTL_MS)).toISOString(),
-    nextText: composed.nextText,
-  };
-  putPlan(plan);
-  return plan;
-}
-
-/** compact-router 恢复 plan（预设 apply；若存在真卸载保管档则先还原 body）。 */
-export function createPresetRestorePlan({ toolkitRoot, plugin, custodyId, ttlMs, reason, note }) {
+export function createPresetRestorePlan({ toolkitRoot, plugin, ttlMs, reason, note }) {
   assertUninstallable(plugin);
+  if (!existsSync(join(toolkitRoot, "lib", plugin))) {
+    const err = new Error(
+      plugin + " 本体不存在（已真卸载，面板不留副本）——恢复途径 = 开源后重新下载安装，再由面板「挂载」",
+    );
+    err.code = "body-missing";
+    throw err;
+  }
   presetBridgePrecheck(toolkitRoot);
   const now = Date.now();
   const plan = {
     token: makeToken("restore-preset", plugin, readPatch(toolkitRoot), now),
     kind: "restore-preset",
     plugin,
-    custodyId: custodyId || null,
     managedBy: "preset",
     reason: reason || "panel-restore-preset",
-    note: note || plugin + " 恢复（重新执行预设补丁" + (existsSync(join(toolkitRoot, "lib", plugin)) ? "" : " + 保管区本体还原") + "）",
+    note: note || plugin + " 恢复（重新执行预设补丁）",
     backupRoot: null,
     createdAt: new Date(now).toISOString(),
     expiresAt: new Date(now + (ttlMs || DEFAULT_PLAN_TTL_MS)).toISOString(),
+  };
+  putPlan(plan);
+  return plan;
+}
+
+/**
+ * 「挂载」plan（**重装后**，p24-design-v2-destroy.md §5）：把插件行块插回挂载面，
+ * **复用插回算子** planInsertRow（锚点唯一 + SHA + 写前备份，走 executePlan 唯一通道）。
+ *
+ * 行块来源：
+ *   ① **有真卸载收据**（`rebuild.rowBlock`）→ 用之，并回写收据里的宿主键事实（最保真）；
+ *   ② **无收据** → **拒绝**（`mount-no-receipt`）：面板**不臆造插件 config**（零硬编码纪律）。
+ *      此时 doctor 会以「已安装未挂载」warning 提示，用户可手工处置。
+ */
+export function createMountPlan({ toolkitRoot, plugin, hostKeyChoice, ttlMs, reason, note }) {
+  const meta = assertUninstallable(plugin);
+  const libDir = join(toolkitRoot, "lib", plugin);
+  if (!existsSync(libDir)) {
+    const err = new Error(plugin + " 本体不存在，无法挂载（请先重新安装）");
+    err.code = "body-missing";
+    throw err;
+  }
+  const receipt = latestReceipt(toolkitRoot, plugin);
+  const now = Date.now();
+
+  // 预设管理插件（compact-router）：挂载 = 重新执行预设补丁，**无需行块事实**。
+  if (meta.managedBy === "preset") {
+    const plan = {
+      token: makeToken("mount-preset", plugin, readPatch(toolkitRoot), now),
+      kind: "mount-preset",
+      plugin,
+      managedBy: "preset",
+      reason: reason || "panel-mount-preset",
+      note: note || plugin + " 挂载（重装后：重新执行预设补丁）",
+      backupRoot: null,
+      createdAt: new Date(now).toISOString(),
+      expiresAt: new Date(now + (ttlMs || DEFAULT_PLAN_TTL_MS)).toISOString(),
+    };
+    putPlan(plan);
+    return plan;
+  }
+
+  if (!receipt || !receipt.manifest.rebuild || !receipt.manifest.rebuild.rowBlock) {
+    const err = new Error(
+      plugin + " 没有可用的卸载收据（缺行块事实），面板无法安全重建挂载行；请手工挂载或重走一次安装流程",
+    );
+    err.code = "mount-no-receipt";
+    throw err;
+  }
+  const rb = receipt.manifest.rebuild;
+
+  const text = readPatch(toolkitRoot);
+  const composed = composeRestore({
+    toolkitRoot,
+    text,
+    block: rb.rowBlock,
+    prevTopRaw: rb.prevTopRaw,
+    nextTopRaw: rb.nextTopRaw,
+    hostKey: hostKeyFromRecord(rb),
+    hostKeyChoice,
+  });
+  const plan = {
+    token: makeToken("mount-patch", plugin, text, now),
+    kind: "mount-patch",
+    skipAnchorCheck: true, // 挂载向：目标行不在文件中，无锚可验（SHA 闸 + 现读插回锚保证正确性）
+    plugin,
+    custodyId: receipt.custodyId,
+    file: join(toolkitRoot, "cordis.patch.yml"),
+    rowId: meta.rowId,
+    reason: reason || "panel-mount",
+    note: note || plugin + " 挂载（重装后：行块插回" + (rb.hostKey ? " + 宿主键写回" : "") + "）",
+    backupRoot: null,
+    expectedSha: sha256Of(text),
+    nextSha: sha256Of(composed.nextText),
+    conflict: composed.conflict, // 非空 ⇒ 路由返回冲突三态（不自动覆盖）
+    insertAt: composed.insertAt,
+    changed: true,
+    createdAt: new Date(now).toISOString(),
+    expiresAt: new Date(now + (ttlMs || DEFAULT_PLAN_TTL_MS)).toISOString(),
+    nextText: composed.nextText,
   };
   putPlan(plan);
   return plan;
@@ -764,17 +813,24 @@ export function executeSoftUninstall({ plan, toolkitRoot, backupRoot }) {
   return result;
 }
 
-/** 真卸载执行（patch 行插件）：确认后存档 → 复验 → 写 patch（唯一通道）→ 复验 → 删本体。 */
+/**
+ * 真卸载执行（patch 行插件 · **销毁式 v2**，p24-design-v2-destroy.md §1）：
+ *  ① **收据先行**（删除前；只读枚举 + 逐文件 sha，**不复制任何文件内容**）——写收据失败即中止（fail-closed）；
+ *  ② patch 写入走 executePlan 唯一通道（摘行 + 宿主键 unset）；
+ *  ③ **彻底删除** lib/<plugin>（rmSync **绕过回收站**）；
+ *  ④ 复验：目录不存在 + 收据在案。
+ * **不可逆**：面板侧零副本，无恢复路径；恢复途径 = 开源后重新下载 → 面板检测「已安装未挂载」→ 挂载。
+ */
 export function executeTrueUninstall({ plan, toolkitRoot, backupRoot }) {
   assertPlanFresh(plan);
   assertPatchUnchanged(plan, toolkitRoot);
   plan.backupRoot = backupRoot || plan.backupRoot; // executePlan 的备份链读 plan.backupRoot
   const patchText = readPatch(toolkitRoot);
 
-  // ① 确认后存档（删除前），逐文件 sha
+  // ① 收据先行（删除前；只读枚举 + sha，不复制内容）
   const located = locateRowBlock(patchText, plan.rowId);
   const neighbors = captureTopNeighbors(patchText, located.start, located.end);
-  const { custodyDir, manifest } = archiveForTrueUninstall({
+  const { receiptDir, manifest } = writeDestroyReceipt({
     toolkitRoot,
     plugin: plan.plugin,
     pkg: (PLUGINS[plan.plugin] || {}).pkg,
@@ -786,26 +842,14 @@ export function executeTrueUninstall({ plan, toolkitRoot, backupRoot }) {
     presetStateSnapshot: null,
     userReason: plan.userReason,
     confirmCopy: plan.confirmCopy,
-    patchText,
   });
-  const custodyId = custodyDir.split(/[\\/]/).pop();
+  const custodyId = receiptDir.split(/[\\/]/).pop();
 
-  // ② 复验存档与源逐文件一致（复验不过 ⇒ 中止，不删源）
-  verifyCustodyBody(toolkitRoot, custodyId, manifest);
-  for (const f of manifest.body) {
-    const srcSha = sha256Of(readFileSync(join(plan.libDir, f.rel)));
-    if (srcSha !== f.sha256) {
-      const err = new Error("存档与源不一致：" + f.rel + "，已中止删除（源文件未动）");
-      err.code = "custody-verify-failed";
-      throw err;
-    }
-  }
-
-  // ③ patch 写入仍走 executePlan 唯一通道（SHA/锚点/备份闸全数生效）
+  // ② patch 写入仍走 executePlan 唯一通道（SHA/锚点/备份闸全数生效）
   const result = executePlan(plan.token, {});
   recordAdjacencyForPlan(toolkitRoot, plan);
 
-  // ④ 删除本体（存档校验已通过；此处是用户确认页知情确认的删除动作）
+  // ③ 彻底删除本体（用户确认页知情确认的删除动作；rmSync 不经回收站）
   rmSync(plan.libDir, { recursive: true, force: true });
   if (existsSync(plan.libDir)) {
     const err = new Error("lib/" + plan.plugin + " 删除失败（目录仍在）；patch 已摘行，本体保留。请回报维护者。");
@@ -813,7 +857,19 @@ export function executeTrueUninstall({ plan, toolkitRoot, backupRoot }) {
     throw err;
   }
 
-  return { ...result, custodyId, archivedFiles: manifest.body.length };
+  // ④ 复验：收据在案（对账依据不丢）
+  if (!existsSync(join(receiptDir, "manifest.json"))) {
+    const err = new Error("收据丢失：" + custodyId + "（本体已删，请回报维护者）");
+    err.code = "receipt-missing-after-delete";
+    throw err;
+  }
+
+  return {
+    ...result,
+    custodyId,
+    deletedFiles: manifest.deleted.totals.files,
+    deletedBytes: manifest.deleted.totals.bytes,
+  };
 }
 
 /** compact-router 软卸载执行：--undo + 双层留痕。 */
@@ -843,7 +899,10 @@ export function executePresetSoftUninstall({ plan, toolkitRoot, backupRoot }) {
   };
 }
 
-/** compact-router 真卸载执行：--undo → 存档（确认后）→ 复验 → 删本体。 */
+/**
+ * compact-router 真卸载执行（**销毁式 v2**）：--undo 回写预设 → **收据先行** → **彻底删除**本体。
+ * 预设回写仍只调既有脚本（`preset-backups/` + `preset-patch-state.json` 双层留痕）。
+ */
 export function executePresetTrueUninstall({ plan, toolkitRoot, backupRoot }) {
   assertPlanFresh(plan);
   presetBridgePrecheck(toolkitRoot);
@@ -852,55 +911,48 @@ export function executePresetTrueUninstall({ plan, toolkitRoot, backupRoot }) {
   const afterShas = presetShas(toolkitRoot);
   const evidence = presetUndoEvidence(toolkitRoot, backupRoot, beforeShas, afterShas, stdout);
 
-  const { custodyDir, manifest } = archiveForTrueUninstall({
+  // 收据先行（删除前；只读枚举 + sha，不复制内容）
+  const { receiptDir, manifest } = writeDestroyReceipt({
     toolkitRoot,
     plugin: plan.plugin,
     pkg: (PLUGINS[plan.plugin] || {}).pkg,
     rowBlock: null,
     insertAt: null,
-    hostKeyRaw: null,
-    hostKeyLineIndex: null,
+    hostKey: null,
+    prevTopRaw: null,
+    nextTopRaw: null,
     presetStateSnapshot: readPresetState(toolkitRoot),
     userReason: plan.userReason,
     confirmCopy: plan.confirmCopy,
-    patchText: undefined,
   });
-  const presetCustodyId = custodyDir.split(/[\\/]/).pop();
-  verifyCustodyBody(toolkitRoot, presetCustodyId, manifest);
-  for (const f of manifest.body) {
-    const srcSha = sha256Of(readFileSync(join(plan.libDir, f.rel)));
-    if (srcSha !== f.sha256) {
-      const err = new Error("存档与源不一致：" + f.rel + "，已中止删除（源文件未动）");
-      err.code = "custody-verify-failed";
-      throw err;
-    }
-  }
+  const presetCustodyId = receiptDir.split(/[\\/]/).pop();
+
+  // 彻底删除本体（rmSync 不经回收站）
   rmSync(plan.libDir, { recursive: true, force: true });
+  if (existsSync(plan.libDir)) {
+    const err = new Error("lib/" + plan.plugin + " 删除失败（目录仍在）；预设已回写，本体保留。请回报维护者。");
+    err.code = "body-delete-failed";
+    throw err;
+  }
   dropPlan(plan.token);
   return {
     ok: true,
     plugin: plan.plugin,
     mode: "true",
     custodyId: presetCustodyId,
-    archivedFiles: manifest.body.length,
+    deletedFiles: manifest.deleted.totals.files,
+    deletedBytes: manifest.deleted.totals.bytes,
     presetEvidence: evidence.perPreset,
     backupDir: evidence.backupDir,
     stdoutTail: stdout.slice(-400),
   };
 }
 
-/** compact-router 恢复执行：保管区还原 body（如有）→ 重新 apply 预设 → afterReapply 留痕。 */
-export function executePresetRestore({ plan, toolkitRoot, backupRoot, custodyId }) {
+/** compact-router 软恢复执行：重新 apply 预设 → 清台账条目（销毁式 v2：**无 body 还原路径**）。 */
+export function executePresetRestore({ plan, toolkitRoot }) {
   assertPlanFresh(plan);
   presetBridgePrecheck(toolkitRoot);
   const beforeShas = presetShas(toolkitRoot);
-  let restored = null;
-  if (custodyId) {
-    const manifest = JSON.parse(
-      readFileSync(join(toolkitRoot, ".panel-custody", custodyId, "manifest.json"), "utf8"),
-    );
-    restored = restoreBody(toolkitRoot, custodyId, manifest, { backupRoot });
-  }
   const stdout = runPresetScript(toolkitRoot, []);
   const afterShas = presetShas(toolkitRoot);
   clearSoftRecord(toolkitRoot, plan.plugin);
@@ -908,8 +960,6 @@ export function executePresetRestore({ plan, toolkitRoot, backupRoot, custodyId 
   return {
     ok: true,
     plugin: plan.plugin,
-    restoredBody: restored ? restored.restored : 0,
-    restoreBackupDir: restored ? restored.backupDir : null,
     beforeShas,
     afterShas,
     stdoutTail: stdout.slice(-400),
@@ -932,10 +982,10 @@ export function executeSoftRestore({ plan, toolkitRoot, backupRoot }) {
 }
 
 /**
- * 真恢复执行（patch 行插件）：还原本体（恢复前再备份）→ executePlan 插回行块/宿主键。
- * 保管档保留不清（§4.2），便于复核。
+ * 挂载执行（patch 行插件 · 销毁式 v2 §5）：executePlan 落盘（行块插回 + 宿主键写回）。
+ * 冲突未决 ⇒ 拒绝（须先三选一）。挂载后该插件回到 mounted；重启后生效。
  */
-export function executeTrueRestore({ plan, toolkitRoot, backupRoot, custodyId }) {
+export function executeMount({ plan, toolkitRoot, backupRoot }) {
   assertPlanFresh(plan);
   if (plan.conflict) {
     const err = new Error("存在宿主键冲突，须先由用户三选一");
@@ -944,10 +994,27 @@ export function executeTrueRestore({ plan, toolkitRoot, backupRoot, custodyId })
   }
   assertPatchUnchanged(plan, toolkitRoot);
   plan.backupRoot = backupRoot || plan.backupRoot; // executePlan 的备份链读 plan.backupRoot
-  const manifest = readCustodyManifest(toolkitRoot, custodyId || plan.custodyId);
-  const restored = restoreBody(toolkitRoot, custodyId || plan.custodyId, manifest, { backupRoot });
   const result = executePlan(plan.token, {});
-  return { ...result, restoredFiles: restored.restored, restoreBackupDir: restored.backupDir, custodyId: custodyId || plan.custodyId };
+  dropPlan(plan.token);
+  return { ...result, mounted: true, plugin: plan.plugin, custodyId: plan.custodyId || null };
+}
+
+/** 挂载执行（预设管理插件）：重新执行预设补丁（只调既有脚本，双层留痕不变）。 */
+export function executeMountPreset({ plan, toolkitRoot }) {
+  assertPlanFresh(plan);
+  presetBridgePrecheck(toolkitRoot);
+  const beforeShas = presetShas(toolkitRoot);
+  const stdout = runPresetScript(toolkitRoot, []);
+  const afterShas = presetShas(toolkitRoot);
+  dropPlan(plan.token);
+  return {
+    ok: true,
+    mounted: true,
+    plugin: plan.plugin,
+    beforeShas,
+    afterShas,
+    stdoutTail: stdout.slice(-400),
+  };
 }
 
 export { getPlan, putPlan, dropPlan };

@@ -3,7 +3,7 @@
 // 用法：node scripts/p24-verify.mjs
 // 预设桥测试用假脚本/假预设（A2⑥ sha 留痕逻辑全链路，不触碰真实 shipped presets）。
 
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, mkdtempSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { join, dirname } from "node:path";
@@ -69,9 +69,9 @@ function makeCopy(name, { patchText, withPlugins = true } = {}) {
 }
 
 const managerUrl = (m) => "file:///" + join(root, "panel", "manager", m).replace(/\\/g, "/");
-const { createSoftUninstallPlan, createTrueUninstallPlan, createSoftRestorePlan, createTrueRestorePlan, executeSoftUninstall, executeTrueUninstall, executeSoftRestore, executeTrueRestore, createPresetSoftUninstallPlan, createPresetRestorePlan, executePresetSoftUninstall, executePresetRestore } = await import(managerUrl("uninstall.mjs"));
+const { createSoftUninstallPlan, createTrueUninstallPlan, createSoftRestorePlan, createMountPlan, executeSoftUninstall, executeTrueUninstall, executeSoftRestore, executeMount, executeMountPreset, createPresetSoftUninstallPlan, createPresetRestorePlan, executePresetSoftUninstall, executePresetRestore } = await import(managerUrl("uninstall.mjs"));
 const { locateRowBlock, planRemoveRow, planWebConfigRemove, planWebConfigRestore, putPlan } = await import(managerUrl("apply-engine.mjs"));
-const { archiveForTrueUninstall, pruneCustody, readCustodyManifest, verifyCustodyBody } = await import(managerUrl("custody.mjs"));
+const { writeDestroyReceipt, pruneCustody, readCustodyManifest, listCustody } = await import(managerUrl("custody.mjs"));
 const { buildSnapshot } = await import(managerUrl("snapshot.mjs"));
 
 const backupRootFor = (dir) => join(dir, ".panel-write-backups");
@@ -142,51 +142,93 @@ async function snapshotOf(dir) {
   check("③ 恢复 A（保留当前值）：行块插回但宿主键未被覆盖", !/^    searchProvider: auto-search/m.test(readFileSync(join(dir, "cordis.patch.yml"), "utf8")) && re3.ok);
 }
 
-// ---------- ④⑤ custody-archive / custody-restore.test（真卸载 web-search-local 全链路）----------
+// ---------- ④⑤ 销毁式真卸载全链路（web-search-local）+ 重装 → 挂载 ----------
 {
   const dir = makeCopy("true-wsl");
   const before = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
+  const libDir = join(dir, "lib", "web-search-local");
+  const stash = join(work, "true-wsl-reinstall-stash"); // 暂存放副本仓之外（避免被 doctor 当作在案本体）
+  cpSync(libDir, stash, { recursive: true }); // 模拟「开源后重新下载」的源码来源（测试内自建）
+  const countFiles = (d) => {
+    let n = 0;
+    for (const e of readdirSync(d, { withFileTypes: true })) n += e.isDirectory() ? countFiles(join(d, e.name)) : 1;
+    return n;
+  };
+  const fileCount = countFiles(libDir);
+
   const plan = createTrueUninstallPlan({ toolkitRoot: dir, plugin: "web-search-local", userReason: "删旧换新测试", confirmCopy: "{}" });
   const exec = executeTrueUninstall({ plan, toolkitRoot: dir, backupRoot: backupRootFor(dir) });
-  check("④ 真卸载：lib 目录已删", !existsSync(join(dir, "lib", "web-search-local")));
-  check("④ 真卸载：行块摘除 + 宿主键 fetchProvider unset", !readFileSync(join(dir, "cordis.patch.yml"), "utf8").includes("- id: web-search-local") && !/^    fetchProvider:/m.test(readFileSync(join(dir, "cordis.patch.yml"), "utf8")));
+  check("④ 销毁式：lib 目录已删", !existsSync(libDir));
+  check("④ 销毁式：行块摘除 + 宿主键 fetchProvider unset", !readFileSync(join(dir, "cordis.patch.yml"), "utf8").includes("- id: web-search-local") && !/^    fetchProvider:/m.test(readFileSync(join(dir, "cordis.patch.yml"), "utf8")));
+
   const manifest = readCustodyManifest(dir, exec.custodyId);
-  check("④ 保管区 manifest：4 文件清单 + sha + 恢复事实", manifest.body.length === 4 && manifest.body.every((f) => f.sha256) && manifest.restore.hostKey && manifest.restore.hostKey.raw.includes("fetchProvider") && manifest.restore.prevTopRaw !== undefined);
-  verifyCustodyBody(dir, exec.custodyId, manifest);
-  check("④ 保管区逐文件校验通过", true);
+  check("④ 收据：kind = true-uninstall-receipt", manifest.kind === "true-uninstall-receipt" && manifest.schemaVersion === 2);
+  check("④ 收据：逐文件清单含 sha/bytes，且与删除前文件数一致", manifest.deleted.body.length === fileCount && manifest.deleted.body.every((f) => f.sha256 && typeof f.bytes === "number"), JSON.stringify({ listed: manifest.deleted.body.length, fileCount }));
+  check("④ 收据：totals 与清单自洽", manifest.deleted.totals.files === fileCount && manifest.deleted.totals.bytes === manifest.deleted.body.reduce((s, f) => s + f.bytes, 0));
+  check("④ 收据：userReason 如实入账", manifest.userReason === "删旧换新测试");
+
+  // —— 销毁式硬判据 ——
+  const anySourceCopy = (d) => {
+    if (!existsSync(d)) return false;
+    for (const e of readdirSync(d, { withFileTypes: true })) {
+      const p = join(d, e.name);
+      if (e.isDirectory()) { if (anySourceCopy(p)) return true; }
+      else if (/\.(js|mjs|cjs|ts)$/.test(e.name)) return true;
+    }
+    return false;
+  };
+  check("⑤ 硬判据：收据目录**无 body/**（不留副本）", !existsSync(join(dir, ".panel-custody", exec.custodyId, "body")) && manifest.bodyStored === false);
+  check("⑤ 硬判据：收据不含恢复用字段（body / restore）", manifest.body === undefined && manifest.restore === undefined);
+  check("⑤ 硬判据：.panel-custody 全域无任何源码副本", !anySourceCopy(join(dir, ".panel-custody")));
+  check("⑤ 收据：rebuild 行块 + 宿主键事实齐（重装挂载依据）", !!manifest.rebuild.rowBlock && !!manifest.rebuild.hostKey && String(manifest.rebuild.hostKey.raw).includes("fetchProvider"));
+  check("⑤ 收据：listCustody 标注 mountable", listCustody(dir).some((e) => e.custodyId === exec.custodyId && e.mountable === true));
+
   const snap = await snapshotOf(dir);
   const wsl = snap.plugins.find((p) => p.dir === "web-search-local");
   const sr = snap.plugins.find((p) => p.dir === "search-router");
   check("⑥ 快照：web-search-local=true-uninstalled（5 卡仍渲染）", wsl.status === "true-uninstalled" && snap.plugins.length === 5);
+  check("⑥ 快照：「无副本」文案逐字命中", wsl.statusCopy === "已卸载（无副本）· 重新安装后面板可挂载", wsl.statusCopy);
+  check("⑥ 快照：restoreAvailable=false（无恢复路径）", wsl.restoreAvailable === false && wsl.canMount === false);
   check("⑥ 快照：search-router=dependency-broken 文案命中", sr.status === "dependency-broken" && sr.mounted === true && sr.statusCopy.includes("依赖的本地搜索未安装"));
-  // ⑤ 恢复
-  const rp = createTrueRestorePlan({ toolkitRoot: dir, plugin: "web-search-local" });
-  const re = executeTrueRestore({ plan: rp, toolkitRoot: dir, backupRoot: backupRootFor(dir) });
-  check("⑤ 真恢复：本体还原 + patch sha 回基线", existsSync(join(dir, "lib", "web-search-local", "body.js")) && sha(readFileSync(join(dir, "cordis.patch.yml"), "utf8")) === sha(before));
-  check("⑤ 真恢复：还原文件数=4（本体不在场 ⇒ 无再备份对象）", re.restoredFiles === 4, JSON.stringify({ restored: re.restoredFiles, backup: !!re.restoreBackupDir }));
+
+  // —— 重装（外部副本放回 lib）→ 面板检测「已安装未挂载」→ 挂载 ——
+  cpSync(stash, libDir, { recursive: true });
   const snap2 = await snapshotOf(dir);
-  check("⑤ 真恢复：两搜索卡回 mounted 无 dependency-broken", snap2.plugins.every((p) => p.status === "mounted"));
-  // 篡改保管区 → fail-closed
-  const dir2 = makeCopy("true-tamper");
-  const plan2 = createTrueUninstallPlan({ toolkitRoot: dir2, plugin: "web-search-local" });
-  const exec2 = executeTrueUninstall({ plan: plan2, toolkitRoot: dir2, backupRoot: backupRootFor(dir2) });
-  writeFileSync(join(dir2, ".panel-custody", exec2.custodyId, "body", "body.js"), "tampered", "utf8");
-  const m2 = readCustodyManifest(dir2, exec2.custodyId);
-  let threw = null;
-  try { verifyCustodyBody(dir2, exec2.custodyId, m2); } catch (e) { threw = e.code; }
-  check("④ 保管区被篡改 → custody-verify-failed 拒绝恢复", threw === "custody-verify-failed", String(threw));
+  const wsl2 = snap2.plugins.find((p) => p.dir === "web-search-local");
+  check("⑤ 重装后：installed-unmounted + canMount=true（可挂载）", wsl2.status === "installed-unmounted" && wsl2.canMount === true, wsl2.status + "/" + wsl2.canMount);
+  check("⑤ 重装后：restoreAvailable 仍 false（恢复只属软卸载）", wsl2.restoreAvailable === false);
+
+  const mp = createMountPlan({ toolkitRoot: dir, plugin: "web-search-local" });
+  const me = executeMount({ plan: mp, toolkitRoot: dir, backupRoot: backupRootFor(dir) });
+  check("⑤ 挂载：patch sha 回基线（字节级）", sha(readFileSync(join(dir, "cordis.patch.yml"), "utf8")) === sha(before));
+  check("⑤ 挂载：宿主键回原值 fetchProvider: local-fetch", /^    fetchProvider: local-fetch/m.test(readFileSync(join(dir, "cordis.patch.yml"), "utf8")));
+  check("⑤ 挂载：executeMount 回传 mounted=true", me.mounted === true);
+  const snap3 = await snapshotOf(dir);
+  check("⑤ 挂载后：5 卡全 mounted 且无 dependency-broken", snap3.plugins.every((p) => p.status === "mounted"));
+
+  // —— 无收据 ⇒ 拒绝挂载（面板不臆造 config）——
+  const dir3 = makeCopy("mount-no-receipt");
+  let nc = null;
+  try { createMountPlan({ toolkitRoot: dir3, plugin: "web-search-local" }); } catch (e) { nc = e.code; }
+  check("⑤ 无收据 → mount-no-receipt 拒绝（零硬编码，不臆造 config）", nc === "mount-no-receipt", String(nc));
+
+  // —— 恢复 API 对真卸载一律拒绝 ——
+  const dir4 = makeCopy("true-restore-refused");
+  const p4 = createTrueUninstallPlan({ toolkitRoot: dir4, plugin: "web-search-local" });
+  executeTrueUninstall({ plan: p4, toolkitRoot: dir4, backupRoot: backupRootFor(dir4) });
+  let rr = null;
+  try { createSoftRestorePlan({ toolkitRoot: dir4, plugin: "web-search-local" }); } catch (e) { rr = e.code; }
+  check("⑤ 真卸载后恢复被拒（body-missing：无副本可恢复）", rr === "body-missing", String(rr));
 }
 
-// ---------- 滚动窗口 ----------
+// ---------- 收据滚动窗口 ----------
 {
   const dir = makeCopy("prune");
   for (let i = 0; i < 7; i++) {
-    archiveForTrueUninstall({ toolkitRoot: dir, plugin: "rate-throttle", pkg: "x", rowBlock: "b" + i, insertAt: 0, userReason: null, confirmCopy: null, patchText: undefined });
+    writeDestroyReceipt({ toolkitRoot: dir, plugin: "rate-throttle", pkg: "x", rowBlock: "b" + i, insertAt: 0, userReason: null, confirmCopy: null });
   }
-  const kept = readFileSync; // noop
-  const { readdirSync } = await import("node:fs");
   const count = readdirSync(join(dir, ".panel-custody")).filter((n) => n.startsWith("rate-throttle-")).length;
-  check("④ 滚动窗口：7 次存档后保留 5 份", count === 5, String(count));
+  check("④ 收据滚动窗口：7 次后保留 5 份", count === 5, String(count));
 }
 
 // ---------- compact-router 预设桥（假脚本全链路，A2⑥ sha 留痕）----------

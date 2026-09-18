@@ -1,23 +1,23 @@
-// P2.4 保管区三件套（p24-design.md §4）：真卸载的存档式恢复事实 + 软卸载状态台账。
+// P2.4 保管区（p24-design-v2-destroy.md §2/§3）：真卸载**收据** + 软卸载状态台账 + 行块邻接留痕。
 //
 // 结构：<repoRoot>/.panel-custody/
-//   <plugin>-<UTCstamp>/manifest.json   —— 恢复所需最小事实（插件/原因/文件清单+sha）
-//   <plugin>-<UTCstamp>/body/...        —— lib/<plugin> 全量镜像
-//   <plugin>-<UTCstamp>/patch/          —— cordis.patch.yml.pre + 行块原文 + 宿主行原值
-//                                          （compact-router 另存 preset-patch-state 快照）
+//   <plugin>-<UTCstamp>/manifest.json   —— 真卸载**收据**（kind = true-uninstall-receipt）
+//                                           deleted.body[]（逐文件 rel/origAbs/sha256/bytes）+ totals
+//                                           rebuild.{rowBlock,hostKey,presetStateSnapshot}（重装挂载用）
+//                                          **无 body/**（销毁式硬约束：不保留任何源码副本）
 //   soft-uninstalls.json                —— 软卸载状态台账（行块原文/插回位置/宿主键，
 //                                          支撑六态区分与软恢复，恢复成功后移除条目）
+//   row-adjacency.json                  —— 行块邻接留痕（D-UI-05，只增不减，与清账解耦）
 //
-// 纪律：
-//   - 真卸载存档时态 = **确认后存档**（预审判定 #3 定案）：确认执行后、删除前完成
-//     存档与逐文件 sha 校验；校验失败则中止删除（fail-closed）。
-//   - 本模块自身不做任何 lib/ 删除；删除由 uninstall 执行器在校验通过后单独执行。
-//   - 滚动窗口：每插件最多 5 份（含恢复档），超出物理删除最旧，无 TTL（§4.2）。
-//   - 恢复成功不自动清档（保留复核），恢复执行器负责移除 soft 台账条目。
+// 纪律（销毁式 v2）：
+//   - 真卸载**不留副本**：收据只记「清单 + 逐文件 sha + 配置元数据」，不复制文件内容；
+//     恢复途径 = 开源后重新下载 → 面板检测「已安装未挂载」→ 挂载。
+//   - **收据先行**：调用方必须在删除之前写收据并令其成功（fail-closed）；本模块自身不删任何东西。
+//   - 滚动窗口：每插件最多 5 份收据（纯 JSON，体积极小），超出物理删除最旧，无 TTL（§3.3）。
+//   - 恢复成功不自动清档（软台账由恢复执行器移除）；真卸载已无「恢复档」概念。
 
 import { createHash } from "node:crypto";
 import {
-  copyFileSync,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -26,8 +26,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { join, relative } from "node:path";
-import { createBackup } from "./backup.mjs";
+import { join } from "node:path";
 
 export const CUSTODY_KEEP_PER_PLUGIN = 5;
 
@@ -57,11 +56,19 @@ export function walkFiles(root, rel = "") {
 }
 
 /**
- * 真卸载存档：把 lib/<plugin> 全量镜像到保管区 body/，逐文件 sha256 记录进 manifest，
- * 并保存 patch 恢复事实（行块原文 / 插回位置 / 宿主行原值 / patch 预写副本 / 预设状态快照）。
- * 返回 { custodyDir, manifest }。**不删除任何源文件**（删除在存档校验通过后由执行器做）。
+ * 真卸载**收据**（销毁式 v2，p24-design-v2-destroy.md §1/§2）：
+ * 枚举 lib/<plugin> 文件清单并**就地计算逐个 sha256 / 字节数**（只读，**不复制任何文件内容**），
+ * 写入 .panel-custody/<plugin>-<stamp>/manifest.json（kind = true-uninstall-receipt，**无 body/**）。
+ *
+ * 收据 = **删除的账**，不是**恢复的档**：
+ *   - `deleted.body[]` + `deleted.totals` 供事后**对账**（删了什么、指纹是什么）；
+ *   - `rebuild.*` 携带**配置元数据**（行块原文 / 宿主键 / 预设状态快照）——非源码内容，
+ *     用于「重装后从面板挂载」（§5）；**不含任何源代码文件内容，不能用于恢复**。
+ *
+ * 纪律：调用方必须在**删除之前**调用本函数且令其成功（fail-closed）；本模块自身不删除任何东西。
+ * 返回 { receiptDir, manifest }。
  */
-export function archiveForTrueUninstall({
+export function writeDestroyReceipt({
   toolkitRoot,
   plugin,
   pkg,
@@ -73,41 +80,42 @@ export function archiveForTrueUninstall({
   presetStateSnapshot,
   userReason,
   confirmCopy,
-  patchText,
 }) {
   const libDir = join(toolkitRoot, "lib", plugin);
   if (!existsSync(libDir)) {
-    const err = new Error("lib/" + plugin + " 不存在，无需存档");
+    const err = new Error("lib/" + plugin + " 不存在，无需真卸载");
     err.code = "body-missing";
     throw err;
   }
-  const root = custodyRoot(toolkitRoot);
-  const dir = join(root, stampName(plugin));
-  mkdirSync(join(dir, "body"), { recursive: true });
-  mkdirSync(join(dir, "patch"), { recursive: true });
-
-  const files = [];
+  const deleted = [];
+  let totalBytes = 0;
   for (const rel of walkFiles(libDir)) {
     const srcAbs = join(libDir, rel);
     const buf = readFileSync(srcAbs);
-    copyFileSync(srcAbs, join(dir, "body", rel));
-    files.push({ rel, origAbs: srcAbs, sha256: sha256Buf(buf), bytes: buf.length });
+    deleted.push({ rel, origAbs: srcAbs, sha256: sha256Buf(buf), bytes: buf.length });
+    totalBytes += buf.length;
   }
 
-  if (patchText !== undefined) writeFileSync(join(dir, "patch", "cordis.patch.yml.pre"), patchText, "utf8");
-  if (rowBlock != null) writeFileSync(join(dir, "patch", "row-block.txt"), rowBlock, "utf8");
+  const root = custodyRoot(toolkitRoot);
+  const dir = join(root, stampName(plugin));
+  mkdirSync(dir, { recursive: true }); // 只建收据目录，**不建 body/**
 
   const manifest = {
-    schemaVersion: 1,
-    kind: "true-uninstall",
+    schemaVersion: 2,
+    kind: "true-uninstall-receipt",
     plugin,
     pkg: pkg || null,
     createdAt: new Date().toISOString(),
     userReason: userReason || null,
     confirmCopy: confirmCopy || null,
     libDir,
-    body: files,
-    restore: {
+    /** 销毁式硬约束：本目录下**不得**出现 body/（持久化前显式声明，便于断言与审计）。 */
+    bodyStored: false,
+    deleted: {
+      body: deleted,
+      totals: { files: deleted.length, bytes: totalBytes },
+    },
+    rebuild: {
       rowBlock: rowBlock || null,
       insertAt: typeof insertAt === "number" ? insertAt : null,
       prevTopRaw: prevTopRaw || null,
@@ -118,7 +126,45 @@ export function archiveForTrueUninstall({
   };
   writeFileSync(join(dir, "manifest.json"), JSON.stringify(manifest, null, 2), "utf8");
   pruneCustody(toolkitRoot, plugin);
-  return { custodyDir: dir, manifest };
+  return { receiptDir: dir, manifest };
+}
+
+/**
+ * 迁移工具（p24-design-v2-destroy.md §3.2，Q6 默认**不自动执行**）：
+ * 把改造前遗留的**存档式**档位（含 body/ 副本）就地转为**收据**——删 body 目录、kind 改收据、
+ * 记 bodyPurgedAt/purgeReason，**保留 `deleted.body[]` 对账能力**。仅在有既有存档时使用（实测当前无）。
+ */
+export function purgeCustodyBodies(toolkitRoot) {
+  const root = custodyRoot(toolkitRoot);
+  const purged = [];
+  if (!existsSync(root)) return { purged };
+  for (const name of readdirSync(root)) {
+    const dir = join(root, name);
+    const mpath = join(dir, "manifest.json");
+    if (!existsSync(mpath)) continue;
+    let m;
+    try {
+      m = JSON.parse(readFileSync(mpath, "utf8"));
+    } catch {
+      continue;
+    }
+    const hadBody = existsSync(join(dir, "body"));
+    const legacyBody = Array.isArray(m.body) ? m.body : null; // v1 存档式字段名
+    if (!hadBody && !legacyBody) continue;
+    if (hadBody) rmSync(join(dir, "body"), { recursive: true, force: true });
+    m.schemaVersion = 2;
+    m.kind = "true-uninstall-receipt";
+    m.bodyStored = false;
+    if (legacyBody) {
+      m.deleted = { body: legacyBody, totals: { files: legacyBody.length, bytes: legacyBody.reduce((s, f) => s + (f.bytes || 0), 0) } };
+      delete m.body;
+    }
+    m.bodyPurgedAt = new Date().toISOString();
+    m.purgeReason = "destroy-mode-migration";
+    writeFileSync(mpath, JSON.stringify(m, null, 2), "utf8");
+    purged.push(name);
+  }
+  return { purged };
 }
 
 /** 每插件滚动窗口：保留最新 CUSTODY_KEEP_PER_PLUGIN 份，超出删最旧（无 TTL）。 */
@@ -145,7 +191,7 @@ export function pruneCustody(toolkitRoot, plugin) {
   return { kept, removed };
 }
 
-/** 列出保管区条目（真卸载恢复档 + 软卸载台账摘要），供 GET /custody 与卡片恢复入口。 */
+/** 列出保管区**收据**条目（真卸载对账用），供 GET /custody 与卡片「已卸载（无副本）」态。 */
 export function listCustody(toolkitRoot) {
   const root = custodyRoot(toolkitRoot);
   const entries = [];
@@ -155,15 +201,20 @@ export function listCustody(toolkitRoot) {
       if (!existsSync(mpath)) continue;
       try {
         const m = JSON.parse(readFileSync(mpath, "utf8"));
+        // v2 收据：deleted.body[]；v1 存档式遗留：body[]（迁移后被 purgeCustodyBodies 归一）
+        const files = (m.deleted && Array.isArray(m.deleted.body) ? m.deleted.body : null)
+          || (Array.isArray(m.body) ? m.body : []);
         entries.push({
           custodyId: name,
           plugin: m.plugin,
           pkg: m.pkg || null,
-          kind: m.kind || "true-uninstall",
+          kind: m.kind || "true-uninstall-receipt",
           createdAt: m.createdAt,
           userReason: m.userReason || null,
-          fileCount: Array.isArray(m.body) ? m.body.length : 0,
-          totalBytes: Array.isArray(m.body) ? m.body.reduce((s, f) => s + (f.bytes || 0), 0) : 0,
+          fileCount: files.length,
+          totalBytes: files.reduce((s, f) => s + (f.bytes || 0), 0),
+          /** 收据可供「重装后挂载」复用行块与宿主键事实。 */
+          mountable: !!(m.rebuild && m.rebuild.rowBlock),
         });
       } catch {
         // 单条 manifest 损坏不拖垮整表（如实标注）
@@ -187,31 +238,6 @@ export function readCustodyManifest(toolkitRoot, custodyId) {
     throw err;
   }
   return JSON.parse(readFileSync(mpath, "utf8"));
-}
-
-/**
- * 恢复前再校验：保管区 body 逐文件 sha 与 manifest 一致。
- * 任一不符即抛（fail-closed：校验不过不写回、不删档）。
- */
-export function verifyCustodyBody(toolkitRoot, custodyId, manifest) {
-  const bodyRoot = join(custodyRoot(toolkitRoot), custodyId, "body");
-  const mismatches = [];
-  for (const f of manifest.body || []) {
-    const abs = join(bodyRoot, f.rel);
-    if (!existsSync(abs)) {
-      mismatches.push({ rel: f.rel, reason: "missing" });
-      continue;
-    }
-    const got = sha256Buf(readFileSync(abs));
-    if (got !== f.sha256) mismatches.push({ rel: f.rel, reason: "sha-mismatch", got });
-  }
-  if (mismatches.length > 0) {
-    const err = new Error("保管区校验不通过（" + mismatches.length + " 个文件）：恢复中止");
-    err.code = "custody-verify-failed";
-    err.detail = mismatches;
-    throw err;
-  }
-  return { ok: true, fileCount: (manifest.body || []).length };
 }
 
 // ---------------- 软卸载状态台账 ----------------
@@ -315,41 +341,5 @@ export function clearSoftRecord(toolkitRoot, key) {
   }
 }
 
-/**
- * 真卸载执行器的恢复写回：从保管区还原 body 至原位。
- * 写回前对每个目标位置再备份一层（恢复亦有痕，L-036 ④ 先例）。
- */
-export function restoreBody(toolkitRoot, custodyId, manifest, { backupRoot }) {
-  verifyCustodyBody(toolkitRoot, custodyId, manifest);
-  const bodyRoot = join(custodyRoot(toolkitRoot), custodyId, "body");
-  const targets = [];
-  for (const f of manifest.body || []) {
-    const dest = join(toolkitRoot, "lib", manifest.plugin, f.rel);
-    targets.push(dest);
-  }
-  let backupDir = null;
-  if (backupRoot && existsSync(join(toolkitRoot, "lib", manifest.plugin))) {
-    backupDir = createBackup({
-      backupRoot,
-      files: targets.filter((t) => existsSync(t)),
-      reason: "panel-restore-pre-write",
-      note: "恢复 " + manifest.plugin + " 前对现存同名文件的再备份（custody=" + custodyId + "）",
-    });
-  }
-  for (const f of manifest.body || []) {
-    const dest = join(toolkitRoot, "lib", manifest.plugin, f.rel);
-    mkdirSync(join(dest, ".."), { recursive: true });
-    copyFileSync(join(bodyRoot, f.rel), dest);
-  }
-  // 复验：写回后逐文件 sha 与保管区一致
-  for (const f of manifest.body || []) {
-    const dest = join(toolkitRoot, "lib", manifest.plugin, f.rel);
-    const got = sha256Buf(readFileSync(dest));
-    if (got !== f.sha256) {
-      const err = new Error("恢复复验失败：" + relative(toolkitRoot, dest));
-      err.code = "restore-verify-failed";
-      throw err;
-    }
-  }
-  return { restored: (manifest.body || []).length, backupDir };
-}
+// 注（销毁式 v2，L-060）：原 `restoreBody()` 与 `verifyCustodyBody()` 随「存档式恢复」一并**移除**
+// —— 真卸载不再保留文件副本，面板侧**不存在**任何真卸载恢复写回路径（恢复 = 开源后重装 → 挂载）。

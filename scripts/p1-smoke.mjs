@@ -43,7 +43,7 @@ const fakeCtx = {
 };
 const panelMod = await import(pathToFileURL(join(panelDir, "index.js")).href);
 panelMod.apply(fakeCtx, { toolkitRoot: root, doctorCli, devicesFile: fixtureFile });
-check("routes count == 13 (P2.4 +5 卸载/恢复路由)", routes.length === 13, String(routes.length));
+check("routes count == 15 (P2.4 +7 卸载/恢复/挂载路由)", routes.length === 15, String(routes.length));
 check("P2.1 plan route registered", routes.some((r) => r.path === "/api/toolkit-panel/plan"));
 check("P2.1 execute route registered", routes.some((r) => r.path === "/api/toolkit-panel/execute"));
 check("P2.1 plan/status route registered", routes.some((r) => r.path === "/api/toolkit-panel/plan/status"));
@@ -63,6 +63,9 @@ const expectedWhenAllowed = {
   "/api/toolkit-panel/custody": ["GET", 200],
   "/api/toolkit-panel/restore/plan": ["GET", 405],
   "/api/toolkit-panel/restore/execute": ["GET", 405],
+  // 销毁式 v2（L-060）：挂载路由（重装后）
+  "/api/toolkit-panel/mount/plan": ["GET", 405],
+  "/api/toolkit-panel/mount/execute": ["GET", 405],
 };
 
 // 写路径（options.change === true）路由集合：tunneled 无服务一律 403。
@@ -76,6 +79,9 @@ const WRITE_ROUTES = new Set([
   "/api/toolkit-panel/uninstall/execute",
   "/api/toolkit-panel/restore/plan",
   "/api/toolkit-panel/restore/execute",
+  // 销毁式 v2（L-060）：挂载是写路由
+  "/api/toolkit-panel/mount/plan",
+  "/api/toolkit-panel/mount/execute",
 ]);
 
 // 每个场景独立 apply 一次，通过 ctx.get 注入不同形态的 remoteWebUiPairing。

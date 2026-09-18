@@ -17,15 +17,16 @@ import {
   createSoftUninstallPlan,
   createTrueUninstallPlan,
   createSoftRestorePlan,
-  createTrueRestorePlan,
   createPresetRestorePlan,
+  createMountPlan,
   executeSoftUninstall,
   executeTrueUninstall,
   executePresetSoftUninstall,
   executePresetTrueUninstall,
   executeSoftRestore,
-  executeTrueRestore,
   executePresetRestore,
+  executeMount,
+  executeMountPreset,
 } from "./manager/uninstall.mjs";
 import { listCustody, getSoftRecord } from "./manager/custody.mjs";
 import { PLUGINS, assertUninstallable } from "./manager/plugin-registry.mjs";
@@ -508,31 +509,26 @@ export function apply(ctx, config = {}) {
           const body = await readJsonBody(request);
           const plugin = String(body.plugin || "");
           const mode = String(body.mode || "");
-          // Q2'-a 下架（L-059）：存档式真卸载为**已推翻设计**，不得留产品面 —— 入口在此拒绝。
-          // 设计改「销毁式」（p24-design-v2-destroy.md），待 v2 施工＋判定侧验收＋用户目视文案后重新上架。
-          if (mode === "true") {
-            throw new PlanError(
-              "true-uninstall-withdrawn",
-              "真卸载已下架：该路径设计已改为「销毁式」，待新版上架后开放。当前仅提供软卸载。",
-            );
-          }
-          if (mode !== "soft") {
-            throw new PlanError("mode-invalid", "mode 必须是 soft（软卸载）；真卸载已下架，待销毁式新版上架");
+          // 销毁式 v2（L-060）：真卸载重新上架，语义 = **彻底删除、不留副本**（不可逆）。
+          if (mode !== "soft" && mode !== "true") {
+            throw new PlanError("mode-invalid", "mode 必须是 soft（软卸载）或 true（真卸载·销毁式）");
           }
           const meta = assertUninstallable(plugin);
-          // 知情确认复核：确认页要求手动输入插件名（软一次），服务端不信任前端状态。
+          // 知情确认复核：确认页要求手动输入插件名（软一次 / 真**两次**——销毁式不可逆，服务端不信任前端状态）。
           const typed = Array.isArray(body.confirm) ? body.confirm.map(String) : [String(body.confirm || "")];
-          const expectedCount = 1;
+          const expectedCount = mode === "true" ? 2 : 1;
           if (typed.length !== expectedCount || typed.some((t) => t !== plugin)) {
             throw new PlanError(
               "confirm-missing",
-              "知情确认未完成：请输入插件名 " + plugin + " 后再执行",
+              "知情确认未完成：请" + (mode === "true" ? "两次输入" : "输入") + "插件名 " + plugin + " 后再执行",
             );
           }
           const userReason = body.reason ? String(body.reason).slice(0, 200) : null;
           const confirmCopy = JSON.stringify({ plugin, mode, typedCount: typed.length, at: new Date().toISOString() });
           const planArgs = { toolkitRoot, plugin, userReason, confirmCopy };
-          const plan = createSoftUninstallPlan(planArgs);
+          const plan = mode === "soft"
+            ? createSoftUninstallPlan(planArgs)
+            : createTrueUninstallPlan(planArgs);
           const isTextPlan = !!plan.file;
           sendJson(response, 200, {
             ok: true,
@@ -577,14 +573,6 @@ export function apply(ctx, config = {}) {
           const plan = getPlan(token);
           if (!plan) throw new PlanError("plan-not-found", "方案不存在或已失效，请重新生成");
           let result;
-          // Q2'-a 下架（L-059）：存档式真卸载 plan 一律拒绝执行（防御纵深——即便存在历史 token，
-          // 也不得走通「存档→摘行→删本体」这条已推翻路径）。
-          if (plan.kind === "uninstall-true-patch" || plan.kind === "uninstall-true-preset") {
-            throw new PlanError(
-              "true-uninstall-withdrawn",
-              "真卸载已下架：该路径设计已改为「销毁式」，待新版上架后开放。当前仅提供软卸载。",
-            );
-          }
           if (plan.kind === "uninstall-soft-patch") {
             result = await executeSoftUninstall({ plan: getPlan(token), toolkitRoot, backupRoot });
           } else if (plan.kind === "uninstall-true-patch") {
@@ -634,12 +622,20 @@ export function apply(ctx, config = {}) {
           const plugin = String(body.plugin || "");
           const meta = assertUninstallable(plugin);
           const hostKeyChoice = body.hostKeyChoice === "keep-current" ? "keep-current" : "restore-backup";
-          const planArgs = { toolkitRoot, plugin, custodyId: body.custodyId ? String(body.custodyId) : undefined, hostKeyChoice };
-          const plan = meta.managedBy === "preset"
-            ? createPresetRestorePlan(planArgs)
-            : getSoftRecord(toolkitRoot, meta.rowId || plugin)
-              ? createSoftRestorePlan(planArgs)
-              : createTrueRestorePlan(planArgs);
+          const planArgs = { toolkitRoot, plugin, hostKeyChoice };
+          // 销毁式 v2（L-060）：真卸载**无恢复路径**（面板零副本）。仅有「软卸载台账」或
+          // 「预设管理插件」可恢复；其余一律拒绝——重装后的情形由 /mount 承接。
+          let plan;
+          if (meta.managedBy === "preset") {
+            plan = createPresetRestorePlan(planArgs);
+          } else if (getSoftRecord(toolkitRoot, meta.rowId || plugin)) {
+            plan = createSoftRestorePlan(planArgs);
+          } else {
+            throw new PlanError(
+              "restore-not-available",
+              plugin + " 没有可恢复的软卸载记录；真卸载为销毁式（不留副本），恢复途径 = 开源后重新下载安装，再由面板「挂载」",
+            );
+          }
           if (plan.conflict) {
             sendJson(response, 200, {
               ok: false,
@@ -693,14 +689,93 @@ export function apply(ctx, config = {}) {
           let result;
           if (plan.kind === "restore-soft-patch") {
             result = await executeSoftRestore({ plan: getPlan(token), toolkitRoot, backupRoot });
-          } else if (plan.kind === "restore-true-patch") {
-            result = await executeTrueRestore({ plan: getPlan(token), toolkitRoot, backupRoot, custodyId: body.custodyId ? String(body.custodyId) : undefined });
           } else if (plan.kind === "restore-preset") {
-            result = await executePresetRestore({ plan: getPlan(token), toolkitRoot, backupRoot, custodyId: body.custodyId ? String(body.custodyId) : undefined });
+            result = await executePresetRestore({ plan: getPlan(token), toolkitRoot });
           } else {
             throw new PlanError("plan-not-found", "token 不是恢复方案（kind=" + plan.kind + "），请走 /execute");
           }
           sendJson(response, 200, { ok: true, effectNote: "恢复完成，重启后生效", ...result });
+        } catch (error) {
+          const code = error instanceof PlanError || (error && error.code) ? error.code : "internal";
+          sendJson(response, planErrorStatus(code), { ok: false, code, error: String(error && error.message || error) });
+        }
+      }, { change: true }),
+    },
+    // ---------- 挂载（销毁式 v2 §5）：重装后把插件行块插回挂载面 ----------
+    // 与恢复的区别：恢复面向「本体仍在」的软卸载；挂载面向「本体已由重装放回」的已安装未挂载态。
+    // 行块事实取自真卸载**收据**（rebuild.rowBlock）——无收据则拒绝，面板不臆造插件 config。
+    {
+      kind: "exact",
+      path: "/api/toolkit-panel/mount/plan",
+      handler: guard(async (request, response) => {
+        if (request.method !== "POST") {
+          response.writeHead(405, { allow: "POST" });
+          response.end();
+          return;
+        }
+        try {
+          const body = await readJsonBody(request);
+          const plugin = String(body.plugin || "");
+          const hostKeyChoice = body.hostKeyChoice === "keep-current" ? "keep-current" : "restore-backup";
+          const plan = createMountPlan({ toolkitRoot, plugin, hostKeyChoice });
+          if (plan.conflict) {
+            sendJson(response, 200, {
+              ok: false,
+              code: "host-key-conflict",
+              conflict: plan.conflict,
+              choices: [
+                { id: "A", label: "保留当前值（不覆盖）", hostKeyChoice: "keep-current" },
+                { id: "B", label: "恢复成卸载前的值", hostKeyChoice: "restore-backup" },
+                { id: "C", label: "取消本次挂载" },
+              ],
+              note: "面板不会自动覆盖。",
+            });
+            return;
+          }
+          sendJson(response, 200, {
+            ok: true,
+            plan: {
+              token: plan.token,
+              kind: plan.kind,
+              plugin: plan.plugin,
+              file: plan.file || null,
+              note: plan.note,
+              expectedSha: plan.expectedSha || null,
+              nextSha: plan.nextSha || null,
+              effectNote: "挂载完成后需要重启才生效。",
+              createdAt: plan.createdAt,
+              expiresAt: plan.expiresAt,
+            },
+          });
+        } catch (error) {
+          const code = error instanceof PlanError || (error && error.code) ? error.code : "internal";
+          sendJson(response, planErrorStatus(code), { ok: false, code, error: String(error && error.message || error) });
+        }
+      }, { change: true }),
+    },
+    {
+      kind: "exact",
+      path: "/api/toolkit-panel/mount/execute",
+      handler: guard(async (request, response) => {
+        if (request.method !== "POST") {
+          response.writeHead(405, { allow: "POST" });
+          response.end();
+          return;
+        }
+        try {
+          const body = await readJsonBody(request);
+          const token = String(body.token || "");
+          const plan = getPlan(token);
+          if (!plan) throw new PlanError("plan-not-found", "方案不存在或已失效，请重新生成");
+          let result;
+          if (plan.kind === "mount-patch") {
+            result = await executeMount({ plan: getPlan(token), toolkitRoot, backupRoot });
+          } else if (plan.kind === "mount-preset") {
+            result = await executeMountPreset({ plan: getPlan(token), toolkitRoot });
+          } else {
+            throw new PlanError("plan-not-found", "token 不是挂载方案（kind=" + plan.kind + "），请走 /execute");
+          }
+          sendJson(response, 200, { ok: true, effectNote: "挂载完成，重启后生效", ...result });
         } catch (error) {
           const code = error instanceof PlanError || (error && error.code) ? error.code : "internal";
           sendJson(response, planErrorStatus(code), { ok: false, code, error: String(error && error.message || error) });
