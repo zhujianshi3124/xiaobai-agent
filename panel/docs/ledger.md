@@ -904,6 +904,108 @@ const lf = (t) => String(t).replace(/\r\n/g, "\n");   // 断言前置归一
 
 **本轮为 client 可见改动（确认页 + 条件开关呈现），触发 reload；但按用户指示「攒着合并 reload」，不单独追加一次。**
 
+## L-031 [已完成] 「故障」警报解除 + 3 新事实 + 转述失真教训 + Q4–Q7 收口（2026-09-18 08:53）
+
+**指令来源**：用户 2026-09-18 指令。五部分：①「故障」警报解除 ②三条新事实入账 ③转述失真教训留档 ④催收 Q2–Q7 ⑤文案确认。
+
+### 一、「故障」警报解除（**撤销**上轮的故障排查二选一问题）
+
+上轮判定者侧把 `rate-throttle` 的**黄色双层不一致状态**概括成「**故障**」。用户口述确认：**UI 上无「故障」字样**。
+实际 = 设计内展示（两层取值相反的样本卡，见 L-029 / 11.9 约定 1）。**结论：面板无故障，该问题撤销，不答复。**
+口径记入 `HANDOFF-MASTER.md` §7。
+
+### 二、三条新事实入账
+
+| # | 事实 | 意义 |
+|---|---|---|
+| a | 黄色状态自 P2.2 reload 后持续存在，跨日复看一致（用户称今日有过重启） | 「**reload 后状态保持**」再添旁证 —— P2.2 验收中唯一命令行无法自证的一项 |
+| b | doctor UI「没有发现任何问题」与服务端 `0/0/0`（`issues: []`）一致 | **读侧对账通过**，无口径漂移 |
+| c | P2.2 落库后经用户侧重启，系统整体健康（面板可用、5 卡正常、体检干净） | P2.2 真实环境终态成立 |
+
+### 三、教训留档：**图片转述链路两次失真**
+
+1. **「compact-memory」串读**（5 卡中无此名，实为 `agent-memory` + `compact-router` 两个插件）。
+2. **「故障」误读**（设计内黄色状态被读成故障）。
+
+两次都不是面板问题，而是**转述环节丢了字面**。即刻生效的规矩：
+
+> **验收关键状态词一律要用户念原文或放大截图逐字读，不得以图片转述内容判定。**
+> 转述只能用于**定位问题区域**，不能用于**确认状态字符串**。
+
+**这条规矩是本任务自己立下的，本轮由判定者自己踩破，一并记录在案。**
+
+### 四、Q4 证据正本入库 + 裁剪排除证据
+
+- **正本入库**：新建 `panel/docs/evidence/`，三份证据**逐字节复制**入仓（复制后比对 sha256 一致才落盘）：
+  `P2.1-EVIDENCE.txt`(`e9cdaa74…`) · `P2.2-EVIDENCE.txt`(`166162917b…`) · `P2.2b-EVIDENCE.txt`(`b802c99b…`)，另附 `README.md` 索引与解读。
+  原因：证据此前只在 `.panel-backups/`（`.gitignore` 排除）⇒ **仓库无法自证**。
+- **裁剪排除证据**：新增 `scripts/p22b-retention-scope.mjs`（**15/15 PASS**），输出存档 `panel/docs/evidence/RETENTION-SCOPE.txt`。
+  四路证据：**E1 目录不同源**（引擎默认 `.panel-write-backups` vs 人工留档 `.panel-backups`，同级非父子；后者在 `.gitignore`）·
+  **E2 清单过滤**（`listBackups` 只认含 `manifest.json` 的子目录；根不存在→`[]` 不抛错）·
+  **E3 运行时隔离**（同父目录并排，对引擎根跑裁剪 45→40，`manual-archive/` **逐字节不变**，**差异集合 ⊆ 引擎根**）·
+  **E4 生产实况**（默认根**不存在** ⇒ 生产从未跑过裁剪）。
+  E3 刻意在人工归档里放 `manifest.json` 作诱饵，证明**不依赖"没有 manifest 所以看不见"这个脆前提**。
+- **一条生产事实**：默认 `backupRoot` 从未创建 ⇒ **用户尚未通过面板真实执行过任何落盘**；生产 `cordis.patch.yml` 至今未被面板改过（sha `ce0b0b81…`）。
+
+### 五、Q5 `change: true` 一致性
+
+**会改状态/签发令牌的 3 条路由全部正确标了 `{ change: true }`；3 条只读路由全部未标。一致性成立。**
+
+| 路由 | `path:` 行 | 守卫 | 性质 |
+|---|---|---|---|
+| ui · snapshot | 225 · 238 | 只读 | 读 |
+| doctor/dry-run | 250 | **`{change:true}` @259** | ⚠️ 过度收口（见下） |
+| plan · toggle/plan · execute | 265 · 314 · 365 | **`{change:true}` @306 · @360 · @381** | 写 |
+| plan/status | 386 | 只读 | 读 |
+
+**guard 代码行**：`isAllowedRead` @180 · `isAllowedWrite` @191（禁 fallback）· `guard()` @200 · `isWrite = options.change === true` @201。
+**⚠️ 如实标注**：`doctor/dry-run` 不改状态也不签发令牌，按 11.8 判据本可标只读，却标了写 —— **fail-closed 方向的偏差**（更严）。
+桌面 loopback 无功能影响。**建议保留，本轮不擅改。**
+
+### 六、Q6 `git status` 全量 + 两提交 diff 摘要
+
+`git status --porcelain=v1 -uall` 全量输出**仅一行**：` M cordis.patch.yml`（= 运行配置那 4 行 `toolkit-manager` insert，
+L-023-① 结论 2 已对账，待重启验收后单独处置）。**除它之外工作区干净，无 untracked。**
+
+| commit | 变更 |
+|---|---|
+| `558e62f` | 8 文件 **+719/−8**（含新增 `scripts/p22-cards-ui.mjs` +343） |
+| `f6d99eb` | 2 文件 **+169/−3**（handoff 11.10 +94 / ledger L-030 +78) |
+
+HEAD = `f6d99eb`。
+
+### 七、Q7 实际文案字符串
+
+**`⚠ 两层开关不一致，所以现在没生效`** —— 用词是「两层**开关**」，不是「两层**数据**」。
+`client/index.js:210` 与 `client/panel.html:178` **逐字一致**。设计意图：分歧发生在**开关**上。**用词正确，不改。**
+
+### 八、用户第 5 点：文案确认（设计内 + 逐字一致）
+
+`启停开关（两层分开，改的是第一层）`（`index.js:390` / `panel.html:245`）· `停用（改第一层）`（`414` / `258`）
+—— 用户截图所见**确为设计内，4 张开放卡一致**。已并入 `HANDOFF-MASTER.md` §7 目视清单（C1/C2/C3）。
+
+### 九、Q2 / Q3（未闭环）
+
+- **Q2 四层 patch 栈扫描**：①②③层（`cordis.patch.yml` / `lib/*/dsh.plugin.json` ×5 / `panel/dsh.plugin.json`）**全在仓内、本轮已扫**；
+  第④层 `scripts/apply-preset-patch.mjs` **会触达 `~/.dsh`**（`USER_PRESETS_DIR = ~/.dsh/.agent-presets`，脚本第 31 行；
+  另 `panel/index.js:96` 只读兜底读 `~/.dsh/remote-web-ui-devices.json`）。**按「涉 ~/.dsh 先申请只读授权」，未擅自读取，待授权。**
+  旁证：`preset-backups/` 与 `preset-patch-state.json` **已存在** ⇒ 该脚本曾被执行过。
+- **Q3 `HANDOFF-MASTER.md`**：**磁盘上此前不存在**（正本仓 + 沙箱 0 命中）。本轮**按用户点名三要素新建** `panel/docs/HANDOFF-MASTER.md`
+  （头部时间戳 / §3「5 行 / 5 卡」口径 / §4 常驻进度行）+ §7 文案口径。**若所指另有其文，请指出即迁。**
+
+### 十、本轮复跑计数（全绿）
+
+| 脚本 | 结果 |
+|---|---|
+| `p22-verify.mjs` / `p22-cards-ui.mjs` | **98/98** / **71/71** |
+| `p1-smoke.mjs` / `p21-verify.mjs` / `p2-smoke.mjs` | **185/185** / **46/46** / **16/16** |
+| `node --test` | **92/92** |
+| `p22b-retention-scope.mjs` | **15/15**（新增） |
+| `pluggable-lint` / doctor | 通过 / **0/0/0** |
+| 真实 `cordis.patch.yml` | **sha 未变** `ce0b0b81…`（size 3097） |
+
+**本轮含新增文档与脚本，无 client 可见改动 ⇒ 不额外触发 reload**（P2.2 的 reload 仍按用户「攒着合并」执行）。
+
 ## 待办
 
 - ~~**[L-023 续] 条件④** 全量加固（trigger + selfheal 脚本，先备份，diff 留痕）~~ ✅ 2026-09-17 21:35 完成，见 L-023-④
@@ -918,9 +1020,12 @@ const lf = (t) => String(t).replace(/\r\n/g, "\n");   // 断言前置归一
 - ~~**【P2 进行中】P2.2** 启停开关（锚点唯一，交叉引用检查，rate-throttle 首用例）~~ ✅ 2026-09-17 24:05 完成，见 L-029；全卡覆盖缺口 2026-09-18 闭合，见 L-030
 - **【P2 待办】P2.3** 配置编辑（白名单 + 范围/枚举校验 + 服务端校验）
 - **【P2 待办】P2.4** doctor 操作台 + 两套回滚
-- **[待用户·常驻]** **reload 后目视确认 P2.2**（4 张卡有开关/compact-router 无、双层分立、确认页人话）。用户已指示**攒着合并 reload**，不单独追加。
-- **[待用户·待澄清]** 所见 4 卡中的 **「compact-memory」在 5 张卡里不存在**（应为 `agent-memory` 与 `compact-router` 串读）。未据猜测改口径，待确认。
-- **[待用户·前置条件]** **Q1 层间/平台证据已补（L-030 四、五）**；用户此前要求的 Q1/Q2 若指别的事项请指出。真实终验前置条件不变。
+- **[待用户·常驻]** **reload 后目视确认 P2.2**（4 张卡有开关 / `compact-router` 无、双层分立、确认页人话）。用户已指示**攒着合并 reload**，不单独追加。**逐项清单已落 `HANDOFF-MASTER.md` §7**（含「黄色双层不一致 = 设计内展示，非故障」与 C1/C2/C3 文案项）。
+- **[已澄清]** 所见 4 卡中的 **「compact-memory」在 5 张卡里不存在** —— 口径定为 `agent-memory` 与 `compact-router` **串读**（L-031 三、`HANDOFF-MASTER.md` §3.3）。判据：5 卡清单来自 `lib/` 目录，无该名。
+- ~~**[待用户·前置条件]** Q1 层间/平台证据已补（L-030 四、五）~~ → **Q1/Q2 已于 L-030 / L-031 收口**；**Q5/Q6/Q7 于 L-031 五、六、七 给出**。
+- **[待用户·授权]** **Q2 第④层扫描需 `~/.dsh` 只读授权**（`scripts/apply-preset-patch.mjs` 触及 `~/.dsh/.agent-presets`；`panel/index.js:96` 只读兜底读 `~/.dsh/remote-web-ui-devices.json`）。①②③层已在仓内扫完（L-031 九）。**未授权不读。**
+- **[待用户·确认]** **`panel/docs/HANDOFF-MASTER.md` 为本轮新建**（此前磁盘上不存在）。若用户所指「总文档」另有其文，请指出即迁（L-031 九）。
+- **[待用户·确认]** **`doctor/dry-run` 路由当前标了 `{change:true}`（过度收口，fail-closed 方向）**：不改状态也不签发令牌，按 11.8 判据本可只读。建议保留；若要严格对齐判据请示意（L-031 五）。
 - ~~**[L-025 待用户]** reload dsh web 后可在浏览器看到「英文原名 + 中文注释」新面板~~ ✅ **2026-09-17 23:53 用户已确认界面合格**（随 L-023 关账一并闭环）
 - **[L-024 后续]** ~~修 `panel/manager/snapshot.mjs` `parseRootRows()` 缩进无关正则~~ ✅ 2026-09-17 23:40 完成，见 L-026（属 P2.0①）
 - ~~**[L-023 续 + L-024 + L-025 合并·待用户]** 浏览器端目视确认面板新 UI（**需 reload 后看**）~~ ✅ **2026-09-17 23:53 用户已确认**：设置页 tab 可见、界面合格。**L-023 迁移任务正式关账。**
@@ -961,4 +1066,5 @@ const lf = (t) => String(t).replace(/\r\n/g, "\n");   // 断言前置归一
 - L-028：`scripts/p21-verify.mjs` **46/46** 全绿（含篡改后 `sha-conflict` → 409、备份副本 sha == 写前 sha、回滚后逐字节一致、保留策略三场景）；`p1-smoke.mjs` **136/136**；`p2-smoke.mjs` 16/16；doctor **0/0/0**；`pluggable-lint` 通过；真实 `cordis.patch.yml` 全程 sha 未变（`ce0b0b81…`）；改动前备份 `.panel-backups/pre-p21-twophase-20260917/`；真实写操作证据 `.panel-backups/p21-evidence-*/EVIDENCE.txt`。
 - L-029：`scripts/p22-verify.mjs` **44/44** 全绿（CRLF 前提守卫 / 锚点唯一三态 / 交叉引用正反例 / 双层分立两套渲染器 / 两段式复用结构断言 / 真实文件未变）；`p1-smoke.mjs` **167/167**；`p21-verify.mjs` 46/46；`p2-smoke.mjs` 16/16；doctor **0/0/0**（`issues: []`）；`pluggable-lint` 通过；真实写操作 SHA 变化 `ce0b0b81…` → `3d711ad899…`；证据 `.panel-backups/p22-evidence-2026-09-17T15-57-56-541Z/EVIDENCE.txt`；改动前备份 `.panel-backups/pre-p22-toggle-20260917/`；真实 `cordis.patch.yml` 全程 sha 未变。
 - L-030：`scripts/p22-verify.mjs` **98/98**；`scripts/p22-cards-ui.mjs` **71/71**（新增，5 卡 × 两套真实渲染器）；`p1-smoke.mjs` **185/185**；`p21-verify.mjs` 46/46；`p2-smoke.mjs` 16/16；`node --test` 92/92；doctor **0/0/0**；`pluggable-lint` 通过；真实 `cordis.patch.yml` 全程 sha 未变（`ce0b0b81…`）；证据 `.panel-backups/p22b-evidence-*/EVIDENCE.txt`；改动前备份 `.panel-backups/pre-p22b-fullcard-20260918/`。
-- **P2（进行中）**：P2.0① ✅（`193bdd8`）→ P2.0② ✅（`2b05777`）→ **P2.1 ✅（`a27da81`）** → **P2.2 ✅（24:05，覆盖缺口 09-18 闭合）** → P2.3 配置编辑 → P2.4 doctor+回滚。**P2.1 起每个写操作须附真实备份产物与 SHA 记录。**
+- L-031：全六脚本复跑 **98/98 · 71/71 · 185/185 · 46/46 · 16/16 · 92/92**（`node --test`）+ **`p22b-retention-scope.mjs` 15/15**（新增）+ `pluggable-lint` 通过 + doctor **0/0/0**；**证据正本入库** `panel/docs/evidence/`（3 份逐字节复制 + README + RETENTION-SCOPE.txt）；真实 `cordis.patch.yml` sha 未变（`ce0b0b81…`，size 3097）；**新建 `panel/docs/HANDOFF-MASTER.md`**（头部时间戳 + §3 5 行/5 卡口径 + §4 进度行 + §7 文案口径）。
+- **P2（进行中）**：P2.0① ✅（`193bdd8`）→ P2.0② ✅（`2b05777`）→ **P2.1 ✅（`a27da81`）** → **P2.2 ✅（L-029/L-030/L-031，`c91de92`+`558e62f`；覆盖缺口 09-18 闭合；待用户 reload 目视验收）** → P2.3 配置编辑 → P2.4 doctor+回滚。**P2.1 起每个写操作须附真实备份产物与 SHA 记录。**
