@@ -1,0 +1,86 @@
+════════════════════════════════════════════════════════════════════════════
+P2.2 真实终验取证报告（第 10 轮）  生成时刻(本地) 2026/9/18 12:27:22
+只读取证：本报告不修改任何被取证文件。工具：scripts/terminal-acceptance-*.mjs
+════════════════════════════════════════════════════════════════════════════
+
+【身份】
+  当前 cordis.patch.yml : sha256=c03e2c812663f20c67e93788f0a56edd29b5b8689a54508cf2cda7ba3c523ae1  size=3143  CRLF=true  bareLF=false
+  判据基准 ce0b0b81…    : 重建=ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9  size=3097
+  基准可重建性           : ✓ HEAD blob + toolkit-manager 4 行，逐字节命中判据基准
+
+【a】两段写入记录 + manifest  +  唯一通道
+  写前备份 4 份，链式 shaBefore 精确对接（每一份的 shaBefore == 上一份写后的 sha）
+    ── 2026-09-18T04-16-18-119Z
+       createdAt=2026-09-18T04:16:18.120Z   reason=null   note=null
+       shaBefore=ce0b0b81c91ca4c4   备份副本字节=3097 (读回成功)
+       目录可见副本项=[{"name":"D","visibleBytes":0}]
+    ── 2026-09-18T04-18-41-769Z
+       createdAt=2026-09-18T04:18:41.773Z   reason=null   note=null
+       shaBefore=77279ccbb15b8c85   备份副本字节=3119 (读回成功)
+       目录可见副本项=[{"name":"D","visibleBytes":0}]
+    ── 2026-09-18T04-18-45-209Z
+       createdAt=2026-09-18T04:18:45.213Z   reason=null   note=null
+       shaBefore=54345b4fb01c9406   备份副本字节=3120 (读回成功)
+       目录可见副本项=[{"name":"D","visibleBytes":0}]
+    ── 2026-09-18T04-21-58-848Z
+       createdAt=2026-09-18T04:21:58.848Z   reason=null   note=null
+       shaBefore=2620280b431e2d5e   备份副本字节=3142 (读回成功)
+       目录可见副本项=[{"name":"D","visibleBytes":0}]
+
+  ▸ 唯一落盘通道（源码）：全仓写 plan.file 的位置仅 1 处
+       panel/manager/apply-engine.mjs:462  writeFileSync(plan.file, plan.nextText, "utf8")  ← executePlan 内
+       路由 /api/toolkit-panel/toggle/plan → createTogglePlan(:327) → executePlan(:375)
+  ▸ 判定：通道唯一 ✓ ；**manifest 的 reason / note 恒为 null**（toggle 路径未传参，createTogglePlan 无 reason/note 形参）⇒ (a) 部分不达标 ✗
+
+【b】停用段 diff（逐段重建，来自备份链 payload）
+    ◆ 写#1  3097B(ce0b0b81c91c) → 3119B(77279ccbb15b)
+        + "      disabled: true"
+        CRLF=true bareLF=false   写后带 disabled 的卡=["web-search-deepseek→disabled: false","agent-memory-runtime→disabled: true"]
+    ◆ 写#2  3119B(77279ccbb15b) → 3120B(54345b4fb01c)
+        - "      disabled: true"
+        + "      disabled: false"
+        CRLF=true bareLF=false   写后带 disabled 的卡=["web-search-deepseek→disabled: false","agent-memory-runtime→disabled: false"]
+    ◆ 写#3  3120B(54345b4fb01c) → 3142B(2620280b431e)
+        + "      disabled: true"
+        CRLF=true bareLF=false   写后带 disabled 的卡=["web-search-deepseek→disabled: false","rate-throttle→disabled: true","agent-memory-runtime→disabled: false"]
+    ◆ 写#4  3142B(2620280b431e) → 3143B(c03e2c812663)
+        - "      disabled: true"
+        + "      disabled: false"
+        CRLF=true bareLF=false   写后带 disabled 的卡=["web-search-deepseek→disabled: false","rate-throttle→disabled: false","agent-memory-runtime→disabled: false"]
+
+  ▸ 停用段命中卡（由写后 disabled 归属反推）：写#1 = agent-memory-runtime，写#3 = rate-throttle
+  ▸ 判据(b) 所指的 rate-throttle 停用段 = 写#3：diff 恰 1 处（+ `      disabled: true`），
+     落在 rate-throttle 锚点(第14行)正下方第15行，与 name(第16行)/config(第17行) 同级；CRLF 保持；0 删除 ⇒ 其余字节不变 ✓
+  ▸ ⚠ 但本会话实际发生 **2 个停用段**（写#1=agent-memory-runtime 与 写#3=rate-throttle），非 1 个；
+     两个复原段（写#2/写#4）均写 `disabled: false` 且**不删键**。
+
+【c】硬判据：复原后是否字节级回到基准
+    基准 sha = ce0b0b81…（3097 B）
+    当前 sha = c03e2c812663f20c…（3143 B）
+    相符? NO ✗
+    基准→当前 diff 处数 = 2
+        + "      disabled: false"
+        + "      disabled: false"
+  ▸ 判定：**不成立 ✗** —— sha 未复原（c03e2c81 ≠ ce0b0b81），size 3143 ≠ 3097，
+     diff 非「仅删该行」而是 0 删 / 2 增（两处 `disabled: false` 残留）。
+  ▸ 结构性根因（源码级）：apply-engine.mjs planRowFlag —— 键存在则**原地替换**，不存在则**插入**，
+     **从不删除键**；且 createTogglePlan 的 JSDoc 明写「enabled=true → 写 disabled: false（显式声明为启用；不删键）」。
+     ⇒ 「复原」在设计上就是**写 false**，不是删除键 ⇒ **字节级复原在现有引擎下不可达**（判据与设计不相容）。
+
+【d】快照对比：哪些卡变化
+    基准无 disabled 键的行；当前新增 disabled 行的归属：
+      L11  [web-search-deepseek]  "  disabled: false"
+      L15  [rate-throttle]  "      disabled: false"
+      L76  [agent-memory-runtime]  "      disabled: false"
+    基准→当前「新增行」归属 = rate-throttle + agent-memory-runtime（2 张卡）
+  ▸ 判定：**与「仅 rate-throttle 变化」不符 ✗**（实际 2 张卡变化；恒定卡 = 3 张，非 4 张）。
+     注：两处残留均为 `disabled: false`（= 启用），**运行语义与基准等价**，仅字节不同。
+
+【e】doctor dry-run
+    ok=true  exit=0  summary={"error":0,"warning":0,"info":0,"safe":0,"rewrite":0,"destructive":0,"manual":0,"fixable":0}
+  ▸ 判定：0/0/0 ✓
+
+════════════════════════════════════════════════════════════════════════════
+【总判】a 部分不达标（reason/note=null）｜b ✓（停用段单点插入，但实际有 2 个停用段）｜c ✗｜d ✗｜e ✓
+  ⇒ 存在不绿项 ⇒ 按第 10 轮指令：**停下回报、不进关账**。
+════════════════════════════════════════════════════════════════════════════
