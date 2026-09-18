@@ -1,0 +1,20 @@
+══════════════════════════════════════════════════════════
+回归全跑  2026-09-18T16:08:14.973Z
+══════════════════════════════════════════════════════════
+  ✓ p1-smoke              passed=215 failed=0
+  ✓ p2-smoke              passed=16 failed=0
+  ✓ p21-verify            53/53 PASS
+  ✓ p22-verify            104/104 PASS
+  ✓ p22-cards-ui          79/79 PASS
+  ✓ p22b-retention-scope  17/17 PASS
+  ✓ p24-verify            passed=40 failed=0
+  ✗ p24-ui-matrix         passed=622 failed=1  FAILs=1  exit=1
+  ✓ q2-layer-scan         14/14 PASS
+  ✓ q2-shipped-scan       RESULT: 21/21 PASS
+  ✓ master-merge-fidelity RESULT: 38/38 PASS
+  ✓ backup-write-test     23/23 PASS
+  ✓ pluggable-lint        通过：lib/ 与 test/ 无跨插件静态 import / eager re-export。
+  ✓ node --test           pass=93 fail=0
+══════════════════════════════════════════════════════════
+存在 1 项异常
+══════════════════════════════════════════════════════════
