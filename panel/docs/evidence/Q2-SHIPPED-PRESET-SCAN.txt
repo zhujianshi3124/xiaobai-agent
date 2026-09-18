@@ -1,0 +1,212 @@
+══════════════════════════════════════════════════════════════════════════
+Q2 尾①  shipped presets 补扫（只读）
+══════════════════════════════════════════════════════════════════════════
+
+presets 根: C:\Users\LENOVO\AppData\Roaming\npm\node_modules\@deepseek-ai\dsh\node_modules\@deepseek-ai\dsh-agent-presets\presets
+存在? YES
+
+presets/ 下的 preset id:
+  [dir ] cordis
+  [dir ] minimal
+  [dir ] ptc
+  [dir ] standard
+
+──────────────────────────────────────────────────────────────────────────
+preset = standard
+──────────────────────────────────────────────────────────────────────────
+  路径 : C:\Users\LENOVO\AppData\Roaming\npm\node_modules\@deepseek-ai\dsh\node_modules\@deepseek-ai\dsh-agent-presets\presets\standard\agent.cordis.yml
+  字节 : 13070   行数: 261   EOL: LF
+  sha256: a5e4d87112f094d1714b8889f3fe94fbd20eb42d65b351f79b9ace5bdb139cb5
+  marker.patchedSha : a5e4d87112f094d1714b8889f3fe94fbd20eb42d65b351f79b9ace5bdb139cb5
+  marker.originalSha: 08a029c64fdeaabe415a5627ef73ce6f6c6bc61dadaf9989d11f9e15608907f6
+  sha == patchedSha ? YES
+  patchedAt         : 2026-09-14T05:13:13.000Z
+  -id: 行 (31):
+      - id: persona
+      - id: agent-instructions
+      - id: tool-bash
+      - id: tool-pwsh
+      - id: tool-fs
+      - id: tool-fs-search
+      - id: tool-jobs
+      - id: skill-filesystem
+      - id: tool-skill
+      - id: command-goal
+      - id: tool-goal
+      - id: planning
+      - id: plan-mode
+      - id: compaction
+      - id: compact-router
+      - id: command-compact
+      - id: tool-result-pruner
+      - id: delegation
+      - id: tool-subagent-control
+      - id: tool-subagent-list-agents
+      - id: tool-subagent
+      - id: tool-subagent-fork
+      - id: tool-subagent-codex
+      - id: tool-subagent-claude-code
+      - id: workflow-worker-thread
+      - id: tool-workflow
+      - id: tool-ralph
+      - id: tool-ask-user
+      - id: tool-todo
+      - id: tool-web
+      - id: present
+
+  ▸ toolkit 五 insert-id 命中 : 无
+  ▸ compact-router 行         : 1 处  L145
+  ▸ compact-router name 行    : 1 处  L146
+  ▸ 残留 @deepseek-ai/dsh-compaction-basic : 无
+  ▸ 残留 @local/dsh-compact-router(旧名)   : 无
+
+──────────────────────────────────────────────────────────────────────────
+preset = ptc
+──────────────────────────────────────────────────────────────────────────
+  路径 : C:\Users\LENOVO\AppData\Roaming\npm\node_modules\@deepseek-ai\dsh\node_modules\@deepseek-ai\dsh-agent-presets\presets\ptc\agent.cordis.yml
+  字节 : 14145   行数: 281   EOL: LF
+  sha256: 7d9aff861cd61c851877d5943008945e12a7ecfef41d72290a53253eb3fe04ff
+  marker.patchedSha : 7d9aff861cd61c851877d5943008945e12a7ecfef41d72290a53253eb3fe04ff
+  marker.originalSha: 2a62e2dd692e65b86c792519a6d6f617404be59d9878acf0727c6b92dd077134
+  sha == patchedSha ? YES
+  patchedAt         : 2026-09-14T05:13:13.003Z
+  -id: 行 (32):
+      - id: persona
+      - id: agent-instructions
+      - id: tool-bash
+      - id: tool-pwsh
+      - id: tool-fs
+      - id: tool-fs-search
+      - id: tool-jobs
+      - id: skill-filesystem
+      - id: tool-skill
+      - id: command-goal
+      - id: tool-goal
+      - id: planning
+      - id: plan-mode
+      - id: compaction
+      - id: compact-router
+      - id: command-compact
+      - id: tool-result-pruner
+      - id: delegation
+      - id: tool-subagent-control
+      - id: tool-subagent-list-agents
+      - id: tool-subagent
+      - id: tool-subagent-fork
+      - id: tool-subagent-codex
+      - id: tool-subagent-claude-code
+      - id: workflow-worker-thread
+      - id: tool-workflow
+      - id: tool-ralph
+      - id: tool-ask-user
+      - id: tool-todo
+      - id: tool-web
+      - id: tool-presentation
+      - id: present
+
+  ▸ toolkit 五 insert-id 命中 : 无
+  ▸ compact-router 行         : 1 处  L152
+  ▸ compact-router name 行    : 1 处  L153
+  ▸ 残留 @deepseek-ai/dsh-compaction-basic : 无
+  ▸ 残留 @local/dsh-compact-router(旧名)   : 无
+
+──────────────────────────────────────────────────────────────────────────
+preset = cordis
+──────────────────────────────────────────────────────────────────────────
+  路径 : C:\Users\LENOVO\AppData\Roaming\npm\node_modules\@deepseek-ai\dsh\node_modules\@deepseek-ai\dsh-agent-presets\presets\cordis\agent.cordis.yml
+  字节 : 14152   行数: 272   EOL: LF
+  sha256: 9525c9a6ca4076d569494da9e97ef1ac2c9316061728bf828f9e062761275efd
+  marker.patchedSha : 9525c9a6ca4076d569494da9e97ef1ac2c9316061728bf828f9e062761275efd
+  marker.originalSha: 2b8d89c3137ce685f3d97f65aea5bd1c5099e08bba6c16815768245f8fb61d2d
+  sha == patchedSha ? YES
+  patchedAt         : 2026-09-14T05:13:13.015Z
+  -id: 行 (32):
+      - id: persona
+      - id: agent-instructions
+      - id: tool-bash
+      - id: tool-pwsh
+      - id: tool-fs
+      - id: tool-fs-search
+      - id: tool-jobs
+      - id: command-goal
+      - id: tool-goal
+      - id: planning
+      - id: plan-mode
+      - id: compaction
+      - id: compact-router
+      - id: command-compact
+      - id: tool-result-pruner
+      - id: delegation
+      - id: tool-subagent-control
+      - id: tool-subagent-list-agents
+      - id: tool-subagent
+      - id: tool-subagent-fork
+      - id: tool-subagent-codex
+      - id: tool-subagent-claude-code
+      - id: workflow-worker-thread
+      - id: tool-workflow
+      - id: tool-ralph
+      - id: tool-ask-user
+      - id: tool-todo
+      - id: tool-web
+      - id: tool-cordis
+      - id: skill-filesystem
+      - id: tool-skill
+      - id: present
+
+  ▸ toolkit 五 insert-id 命中 : 无
+  ▸ compact-router 行         : 1 处  L133
+  ▸ compact-router name 行    : 1 处  L134
+  ▸ 残留 @deepseek-ai/dsh-compaction-basic : 无
+  ▸ 残留 @local/dsh-compact-router(旧名)   : 无
+
+──────────────────────────────────────────────────────────────────────────
+preset = minimal
+──────────────────────────────────────────────────────────────────────────
+  路径 : C:\Users\LENOVO\AppData\Roaming\npm\node_modules\@deepseek-ai\dsh\node_modules\@deepseek-ai\dsh-agent-presets\presets\minimal\agent.cordis.yml
+  字节 : 3119   行数: 70   EOL: LF
+  sha256: e75af996ab8c4cc966f8c5b54cd8dc354d7ac71bfcedbe07c8896f63bb7f073b
+  marker: （无记录）
+  -id: 行 (7):
+      - id: persona
+      - id: persistent-shell
+      - id: pty
+      - id: terminal-bash
+      - id: persistent-bash
+      - id: terminal-pwsh
+      - id: persistent-pwsh
+
+  ▸ toolkit 五 insert-id 命中 : 无
+  ▸ compact-router 行         : 0 处  
+  ▸ compact-router name 行    : 0 处  
+  ▸ 残留 @deepseek-ai/dsh-compaction-basic : 无
+  ▸ 残留 @local/dsh-compact-router(旧名)   : 无
+
+──────────────────────────────────────────────────────────────────────────
+断言
+──────────────────────────────────────────────────────────────────────────
+  PASS  shipped[standard] 存在
+  PASS  shipped[standard] 无 toolkit 五 insert-id 行
+  PASS  shipped[standard] 恰有 1 处 compact-router 行（文档化预设改写路径）
+  PASS  shipped[standard] 原 upstream compaction-basic 行已被原位替换（无残留）
+  PASS  shipped[standard] 无旧名 @local/dsh-compact-router 残留
+  PASS  shipped[standard] sha == preset-patch-state.json.patchedSha
+  PASS  shipped[ptc] 存在
+  PASS  shipped[ptc] 无 toolkit 五 insert-id 行
+  PASS  shipped[ptc] 恰有 1 处 compact-router 行（文档化预设改写路径）
+  PASS  shipped[ptc] 原 upstream compaction-basic 行已被原位替换（无残留）
+  PASS  shipped[ptc] 无旧名 @local/dsh-compact-router 残留
+  PASS  shipped[ptc] sha == preset-patch-state.json.patchedSha
+  PASS  shipped[cordis] 存在
+  PASS  shipped[cordis] 无 toolkit 五 insert-id 行
+  PASS  shipped[cordis] 恰有 1 处 compact-router 行（文档化预设改写路径）
+  PASS  shipped[cordis] 原 upstream compaction-basic 行已被原位替换（无残留）
+  PASS  shipped[cordis] 无旧名 @local/dsh-compact-router 残留
+  PASS  shipped[cordis] sha == preset-patch-state.json.patchedSha
+  PASS  shipped[minimal] 存在
+  PASS  shipped[minimal] 无 toolkit 五 insert-id 行
+  PASS  shipped[minimal] 无 compact-router 行（脚本明文：minimal 设计上不动）
+
+══════════════════════════════════════════════════════════════════════════
+RESULT: 21/21 PASS
+══════════════════════════════════════════════════════════════════════════

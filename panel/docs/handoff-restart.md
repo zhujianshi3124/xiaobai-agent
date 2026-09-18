@@ -760,4 +760,78 @@ body-too-large                                   → 413
 
 `q2-layer-scan.mjs`（新增）**20/20** ｜ `p22-verify` 98/98 ｜ `p22-cards-ui` 71/71 ｜ `p1-smoke` 185/185 ｜ `p21-verify` 46/46 ｜ `p2-smoke` 16/16 ｜ `p22b-retention-scope` 15/15 ｜ `node --test` 92/92 ｜ `pluggable-lint` 通过 ｜ doctor 0/0/0 ｜ 真实 `cordis.patch.yml` sha 未变 `ce0b0b81…`。
 
+---
+
+## 11.13 第 7 轮交付：Q2 两尾闭合 + 源码定案 + 总文档合并受阻申报（2026-09-18 10:22 本地）
+
+**本轮定位**：判定侧第 6 轮把 Q2 穷尽标准修正为「**不以任何一侧的层定义为准，以 loader 源码定案为准**」，并留下**两尾**（均纯读），与用户 reload 并行。末尾三件已办。
+
+### 一、Q2 尾①：shipped presets 补扫（**21/21 PASS**）
+
+**依据纠偏（重要）**：上一轮把 `AppData/…/npm/…` 也当成需要授权的路径，**这是过度收窄**。红线只有三处
+（`~/.dsh`、cloudflared 进程、五子插件源码目录）；`AppData/Roaming/npm/…` 是 **DSH 安装目录**，**不在红线内** ⇒ 本轮**无需新增授权**即可读。
+
+- 复现：`node scripts/q2-shipped-scan.mjs`；改名前后逐行 diff：`node scripts/q2-shipped-diff.mjs`。
+- 证据：`panel/docs/evidence/Q2-SHIPPED-PRESET-SCAN.txt`（21/21 PASS）、`Q2-SHIPPED-PRESET-DIFF.txt`（55 KB 全量 diff）。
+- **两问结论**：① **toolkit 五 id 行 = 无**（`rate-throttle` / `web-search-local` / `web-search-router` / `agent-memory-runtime` / `toolkit-manager` 一处都没有）；
+  ② **覆盖声明 = 无**（`disabled` / `override` / `merge` 的命中**全部是 upstream 自己的内容**，详见 HANDOFF-MASTER §8.5）。
+- **必须点名的第三件事（纠正）**：三份 preset **各含 1 行** `- id: compact-router` / `name: '@local/dsh-toolkit/compact-router'`。
+  它是 `apply-preset-patch.mjs` 把 upstream 的 `- id: compaction-basic` / `@deepseek-ai/dsh-compaction-basic` **原位替换**的结果（Δ = +5 行 / +142 B，三份一致），
+  `cordis.patch.yml:3` 注释自陈此事 ⇒ **是文档化的注入路径，不是泄漏；也再次证明 ④ 不是 patch 层，而是直接改预设源文件的路径**。
+- 三份 sha256 **逐份 == `preset-patch-state.json` 的 `patchedSha`**（110 % 对账）；`minimal` 设计上不动（脚本明文），实测 0 处 `compact-router`。
+- 残留：`@deepseek-ai/dsh-compaction-basic` **0 处**、旧名 `@local/dsh-compact-router` **0 处**。
+
+### 二、Q2 尾②：loader 源码定案（注入点 + 合并语义），已落 `api-notes.md` 新节「P2.0③」
+
+**注入点全集**（源码 + 行号逐条给据，见 `api-notes.md` §③.1）：base `[]` → **bundle patch ×N** → **profile `cordis.patch.yml`** → **home `cordis.patch.yml`** → **`--patch` ×N** → telemetry 合成补丁；
+另有三个**非 patch** 注入面：env `.env`、`!!js` 表达式、**agent-preset 独立平面**，以及 toolkit 自带的**预设改写路径**。
+唯一权威顺序出处 = `dsh/lib/profile-boot-Dk-7KqJc.js:212-220`（`allPatches()`：`bundlePatches → profile.patches → homePatches → overlays`）。
+
+**「同 id 究竟什么行为」——分平面（这是本轮最有价值的定案）**：
+
+| 平面 | 行为 | 锚点 |
+|---|---|---|
+| patch 层之间 | **后者覆盖**；**顶层 key 赋值 / `config` 整块替换**，**非深合并**；patch 写 `name` 且不符 → 警告跳过 | `dsh-app-boot/lib/index.js:98-105`；`README.zh.md:144` |
+| insert | **纯追加**，不去重不合并；目标须 `group:true` | `:72-86` |
+| loader 运行时 | 同 id **复用同一个 `Entry`**，`options` 被整体替换 ⇒ **不出现两个运行实例** | `cordis-plugin-loader/src/config/group.ts:20-40` |
+| `disabled` | 沿父链继承；`!!js` 启动时求值 | `cordis-plugin-loader/src/config/entry.ts:84-108` |
+| **agent-preset** | ⚠️ **首根胜（与 patch 层相反）**；shipped(`system`) 遮蔽 `$DSH_HOME/.agent-presets`(`user`) | `dsh-agent-presets/lib/invariant.js:426-432,1277-1287` |
+
+**裁决**：「**同 id 后者覆盖**」= **真**（限定：patch 平面；语义是替换/顶层赋值）。「**四层 patch 栈：bundle（启动时固化）→ profile → home → overlay**」= **转述失真候选（第四例）**，三条理由：
+① **overlay 是通名不是专名**（`loadOverlayPatches` 同时服务 bundle patch 与 `--patch`；`renderConfigDump` 注释 *"overlay layers in application order (later wins)"*）；
+② **未覆盖注入面全集**（漏 base / env 两个非 patch 面 + preset 平面）；
+③ 「bundle 层（启动时固化）」措辞有害歧义（若指「不热重载」则与源码一致；若指「内容固定」则不成立 —— **本 toolkit 的 `cordis.patch.yml` 就是一个 bundle patch**）。
+
+### 三、转述失真第四例 + 授权链核实（入档）
+
+- **第四例登记**：命题「四层 patch 栈」，**正本查无实据**（全仓 `grep 四层` 只命中本任务自己写的 L-031 / L-032 / 本文件 / 11.11）。**与 11.11 同族** ⇒ 记入 **L-033**，与 11.11 并列成「转述链」清单。
+  **处置**：**不删除、不悄悄改写**原表述；在 HANDOFF-MASTER §8.0 / §8.4 **加批注**并给出源码实测结论（符合用户「原文保真 + 批注 + 不悄悄改写」的对账原则）。
+- **授权链核实（如实申报）**：
+  - ④层扫描（`~/.dsh/.agent-presets`）的授权 = **用户在本轮会话中给出的一次性只读授权**（并复述确认）。**授权时刻只能锚到「用户当轮消息」，无独立时间戳留档** —— 会话时钟锚点见 `evidence/README.md` 时钟锚点节。**据实申报，不补造时间。**
+  - 本轮 AppData 扫描**不依赖该授权**（红线定义本身即可）。
+  - **新增缺口 U8**：注入点 3（`$DSH_HOME/cordis.patch.yml`）**未读**（在红线内，授权只到 `.agent-presets`）；它**优先级高于 profile 层**，理论上可携带 toolkit 任意 id 行。若求穷尽需**单次授权**补扫。
+- **新增缺口 U9**：`apply-preset-patch.mjs --status` 报 `liangshen: unknown`。查明原因：该文件**含**新名行，但其 sha **≠** marker 里的 `patchedSha` ⇒ **改写后被后续改动过**（marker 陈旧）。**不构成功能问题**，但 marker 与磁盘不再逐字节对账；是否刷新 marker 待用户定。
+
+### 四、Q3 总文档合并：**如实申报阻塞**（不伪造正本）
+
+用户本轮已把**总文档全文（九大节）**发来（一、项目是什么；二、五份正本文档；三、系统架构速览；四、当前进度；五、P2 阶段表；六、项目铁律；七、运维手册；八、关键历史教训索引；九、与用户的沟通约定）。
+**但**：会话已压缩 ⇒ **全文在当前上下文中不可取回**。取证穷尽：
+
+| 取证动作 | 结果 |
+|---|---|
+| `conversation_search`（跨会话检索总文档原文） | **0 条命中** |
+| 全仓 `grep`（`沟通约定` / `项目铁律` / `关键历史教训` / `系统架构速览` / `五份正本`） | 仅命中 `HANDOFF-MASTER.md`（骨架自身）与 `ledger.md` 的**待办描述**，**无原文** |
+| 目录遍历（正本仓 + `panel/docs/`） | **无任何文件承载该九节** |
+
+**处置决定（关键）**：用户的对账原则是「**原文落盘保真、存疑条目加批注、不得悄悄改写**」。
+⇒ **凭记忆重建九大节 = 伪造正本**，直接违反该原则。**故本轮不做合并，改为如实申报 + 请求重发。**
+合并所需的一切**已就位**：九节结构已知、叠加点（头部时间戳 / §3 五卡口径 / §4 进度行 / §5 安全模型 / §6 待用户项 / §7 目视清单 / §8 定案 / §9 回滚保险）已全部写好在 `HANDOFF-MASTER.md`，**全文一到即为纯机械动作**。
+**后果（必须让用户知道）**：真实终验的**第二个前置（总文档合并）处于阻塞态** ⇒ **在全文重达前，终验无法启动**（另两个前置：Q2 两尾 ✅ 已完成；目视 ⏳ 待 reload）。
+
+### 五、本轮复跑计数
+
+`q2-shipped-scan.mjs`（新增）**21/21** ｜ `q2-shipped-diff.mjs`（新增，输出 diff）**无断言** ｜ `apply-preset-patch.mjs --status`（只读）**standard/ptc/cordis = patched、liangshen = unknown** ｜
+上一轮基线全部保持：`q2-layer-scan` 20/20 ｜ `p22-verify` 98/98 ｜ `p1-smoke` 185/185 ｜ `node --test` 92/92 ｜ doctor 0/0/0 ｜ 真实 `cordis.patch.yml` sha **仍为 `ce0b0b81…`（未变）**。
+
+
 

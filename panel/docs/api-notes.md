@@ -196,3 +196,110 @@
 - 反面代价若发生（误降为只读）：它会退化成「服务缺席时走 `devicesFile` hasOwn 兜底放行」——而 doctor dry-run 会**执行外部 CLI 进程**（`panel/manager/doctor-runner.mjs`），把「起进程」这种有副作用的动作放在兜底放行的只读路径上，是整个 P2.0②「写操作禁 fallback」原则的破口。
 
 **结论：保留现状。** 若将来要严格对齐判据，必须先为 doctor dry-run 定义一套「只读但可起进程」的第三类守卫，而不是简单地把 `{ change: true }` 删掉。
+
+## P2.0③ DSH 启动的全部 patch / 配置注入点 + 合并语义（2026-09-18 loader 源码定案）
+
+**命题来源**：Q2 穷尽标准修正 —— **不以任何一侧的层定义为准，以 loader 源码定案为准**。本节的每一行都给出源码文件 + 行号，可复核。
+
+**读取范围声明**：以下全部为**只读**。物理载体位于 DSH 安装目录
+`C:\Users\LENOVO\AppData\Roaming\npm\node_modules\@deepseek-ai\dsh\…`（**不在红线内** —— 红线仅 `~/.dsh`、cloudflared、五子插件源码目录）。
+**未读**：`$DSH_HOME/cordis.patch.yml`（home 层文件，超出本轮授权范围；见文末「未覆盖项」）。
+
+### ③.1 注入点总表（按应用顺序）
+
+| # | 注入点 | 物理载体 | 源码锚点 |
+|---|---|---|---|
+| 0 | **profile 根配置**（每次启动被**重写为 `[]`**） | `$DSH_HOME/profiles/<name>/cordis.yml` | `dsh/lib/profile-boot-Dk-7KqJc.js:124-130`（`PROFILE_ROOT_CONFIG`）、`:209`（`writeFileSync` 无条件重写） |
+| 1 | **bundle patch 层**（可 N 个，按 `dsh.profile.bundles` 顺序） | 各 bundle 包 `package.json#dsh.bundle.patch` 指向的文件；**本 toolkit 即 `D:\dsh-plugins\dsh-toolkit\cordis.patch.yml`** | `dsh-app-boot/lib/index.js:849-860`、`dsh/lib/profile-boot-Dk-7KqJc.js:240` |
+| 2 | **profile 用户 patch 层** | `$DSH_HOME/profiles/<name>/cordis.patch.yml` | `dsh-app-boot/lib/index.js:861-862`；`README.zh.md:50,55,57` |
+| 3 | **home 用户 patch 层** | `$DSH_HOME/cordis.patch.yml` | `dsh/lib/profile-boot-Dk-7KqJc.js:116-118,238`；`README.zh.md:55,57` |
+| 4 | **`--patch <file>` overlay 层**（**可重复**，argv 顺序） | CLI 参数 | `dsh/lib/profile-boot-Dk-7KqJc.js:239`；`dsh/lib/bin.js:24-25,53-54` |
+| 5 | **telemetry 合成补丁**（追加在最后） | 环境变量 `DSH_TELEMETRY_DISABLED` | `dsh/lib/profile-boot-Dk-7KqJc.js:184-190,249-250` |
+| E1 | **环境层 `.env`**（**非 patch**） | 继承环境 > 调用目录 `.env` > `$DSH_HOME/.env` | `dsh-app-boot/lib/index.js:1064-1078`（`loadLayeredEnv`）、`:1040-1055`（`readEnvLayer`）；`README.zh.md:54` |
+| E2 | **`!!js` 表达式**（配置值内嵌 JS，启动时求值 —— 配置面的代码执行） | patch / config 任意位置 | `dsh-app-boot/lib/index.js:30`（`JsExpr` schema）、`:362`；`cordis-plugin-loader/src/config/entry.ts:104-108` |
+| E3 | **agent-preset 组合面**（**独立平面**，非 patch 层） | shipped `dsh-agent-presets/presets/<id>/agent.cordis.yml` + 用户 `$DSH_HOME/.agent-presets/<id>/agent.cordis.yml` | `dsh-agent-presets/lib/invariant.js:181`（`COMPOSITION_FILE`）、`:194`（`USER_PRESET_DIR`）、`:202`（`SHIPPED_PRESET_ROOT`）、`:1277-1287`（根顺序）；由 `dsh-web-app/cordis.patch.yml:474-482` 以只读 `system` 根挂载 |
+| E4 | **toolkit 自带的「预设改写」路径**（**非 patch 层**，直接改源文件） | `D:\dsh-plugins\dsh-toolkit\scripts\apply-preset-patch.mjs` 就地把 preset 的 compaction 行改名 | `scripts/apply-preset-patch.mjs:33-46`（原行/新行字面量）、`:127-153`（`applyOne`）；设计声明见 `cordis.patch.yml:3` 注释 |
+
+**应用顺序的源码依据（唯一权威处）** —— `allPatches()` @ `dsh/lib/profile-boot-Dk-7KqJc.js:212-220`：
+
+```
+bundlePatches  →  profile.patches  →  homePatches  →  overlays
+```
+
+`README.zh.md:55` 的措辞与之一致：「你的 tweak 层，应用在所有组合包层之后（先应用逐 profile 的文件，再应用 home 级文件，因此后者优先级更高）」。
+
+### ③.2 合并语义（「同 id 究竟什么行为」——分平面给答案）
+
+源码里 `EntryTree.sep = ':'` 支持 `parent:child` 复合 id（`cordis-plugin-loader/src/config/tree.ts:76-87`），但**三层语义不同，必须分开说**：
+
+**(a) patch 层之间（注入点 1–5）：后者覆盖；顶层 key 赋值 / `config` 整体替换，不做深合并。**
+
+唯一权威实现 `applyEntryPatches(data, patches, warn)` @ `dsh-app-boot/lib/index.js:44-108`，其 doc 自称 *"THE patch semantics of this include, shared by mounting (`applyPatches`) and offline config tooling (`dsh --dump-config`) so a dump can never drift from what boots"*（`:44-48`）。要点：
+
+- `data = structuredClone(data)` —— **永不改动入参**，每次应用都是全新副本（`:60`；理由见 `:48-52`：共享对象会把早期值烤进解析缓存，热重载就再也回不去）。
+- `buildMap` 建 `Map<id, entry>`，仅在 `entry.group && Array.isArray(entry.config)` 时**递归进子行**（`:63-68`）。`entryMap.set(entry.id, entry)` = Map 覆盖 ⇒ **同 id 时后出现者成为 patch 目标**。
+- **非 insert** patch：`id` 必填；`entryMap.get(id)` 未命中 → `warn` 并**跳过**（`:89-97`）；**`name` 防呆断言** —— patch 若写了 `name` 且与目标当前 `name` 不等，警告并跳过（`:98-101`）；随后 `for ([key,value] of Object.entries(overrides)) target[key] = value`（`:102-105`）——**顶层 key 直接赋值**，没有递归合并，写 `config:` 就是整块替换。
+- **insert** patch：带 `id` 时目标必须是 `group: true`，否则警告跳过，然后 `target.config.push(...insert)`；不带 `id` 时 `data.push(...insert)`；随后 `buildMap(insert)` 让**同列表内后续 patch 能命中刚插入的行**（`:72-86`，注释 `:51-53`）。**insert 是纯追加：不去重、不替换、不合并。**
+- `name` 还可做「插入插件的路径锚定」：`anchorInsertedPluginNames` 把 `insert` 里绝对路径及相对 patch 文件的 `./`/`../` 名转成 file URL（`dsh-app-boot/lib/index.js:1169-1178`；`README.zh.md:59`）。
+
+**文本凭据（官方文档明文）**：
+- `README.zh.md:144` ——「**用户 patch 会替换匹配到的整个配置** —— 按 id 定位的 patch 不做深度合并，因此 profile 覆盖必须重述需要保留的组合包字段。」
+- `README.zh.md:55` ——「替换某个条目的整个 config（重述你要保留的字段）、插入新条目，或在启动时插值 `!!js` 表达式。」
+
+**(b) loader 运行时（同一棵树内）：同 id **复用同一个 `Entry`**，后到者整体替换其 `options`。**
+
+`EntryGroup.create()` @ `cordis-plugin-loader/src/config/group.ts:20-40`：
+
+```ts
+const existing = this.tree.store[id]
+const entry: Entry = existing ?? (this.tree.store[id] = new Entry(this.ctx.loader))
+entry.parent = this
+// Use `create: true` to replace existing entry.options.
+await entry.update(options, true, true)
+```
+
+⇒ **同 id 不会产生两个运行实例**：`store`（`tree.ts:13` `Object.create(null)`）以 id 为键，命中即复用，`options` 被整体替换。另注 `ensureId`（`tree.ts:66-73`）**只在 id 缺失时**随机生成并避碰；**显式给出的 id 不做避碰检查**。
+
+**(c) `disabled` 沿父链继承**（承 Q5 / 11.9 / 11.10）：`entry.ts:84-98` `_disabled` 上溯父链；`disabledOf` @ `:104-108` = `isJsExpr(options.disabled.__jsExpr) ? evaluate(...) : Boolean(options.disabled)`。⇒ 父组 `disabled: true` 会罩住子行；`!!js` 表达式在启动时求值。
+
+**(d) ⚠️ agent-preset 面：同 id 是「首根胜」，与 patch 层方向**相反**。**
+
+`discoverPresets()` @ `dsh-agent-presets/lib/invariant.js:426-432`：
+
+```js
+for (const root of roots) for (const preset of await scanRoot(root, harnessBase)) {
+  if (byId.has(preset.id)) continue;
+  byId.set(preset.id, preset);
+}
+```
+
+doc 明写 *"roots in precedence order; an earlier root wins a duplicate id"*、*"first-root-wins per id"*（`:422,424`）。根顺序 @ `:1277-1287`：
+
+```
+SHIPPED_PRESET_ROOT (trust: system)  →  config.roots  →  $DSH_HOME/.agent-presets (trust: user)
+```
+
+⇒ **同名 preset，shipped 根遮蔽用户根**。运维含义：把改动写进 `~/.dsh/.agent-presets/standard/`（或 `ptc`/`cordis`）**不会生效**，因为 shipped 的 `standard` 先胜出；只有**唯一名**（如 `liangshen`）的用户 preset 才真正生效。这也解释了 toolkit 为何必须**同时**改写 shipped 与 user 两侧的 preset（`apply-preset-patch.mjs:30-31,213-216`）。
+
+### ③.3 对「四层栈 / 同 id 后者覆盖」的裁决
+
+| 待裁命题 | 裁决 | 依据 |
+|---|---|---|
+| 「**同 id 后者覆盖**」 | **真**，但必须限定平面与语义 | patch 平面：`applyEntryPatches` `:102-105` + `composeProfile` `rows.set(row.id,row)` @ `profile-boot:247`；loader 平面：`group.ts:20-40`。语义是**替换/顶层赋值，非深合并**（`README.zh.md:144`） |
+| agent-preset 平面同 id | **首根胜（与 patch 层相反）** | `invariant.js:426-432` |
+| 「**四层 patch 栈：bundle 层（启动时固化）→ profile 层 → home 层 → overlay，同 id 后者覆盖前者**」 | **转述失真候选（第四例，与 11.11 同族）** | 见下三条 |
+
+**为何判「转述失真候选」**（逐条对源码）：
+
+1. **「overlay」在源码里是通名，不是第 4 层的专名。** `loadOverlayPatches` 同时用于 **bundle patch 与 `--patch` 文件**（`dsh-app-boot/lib/index.js:1152-1168`）；`renderConfigDump` 的形参注释就是 *"overlay layers in application order (later wins)"*（`:1231`），即**所有 patch 层都叫 overlay**。把「第 4 层」命名为 overlay、同时又不承认 bundle/profile/home 也是 overlay，是**通名当专名**。
+2. **数目巧合但分法不符。** 源码的 patch 层实际是 **bundle → profile → home → `--patch` overlays**（4 类）+ 合成 telemetry 补丁；此外还有**两个非 patch 的注入面**（base `[]`、env `.env`），以及 E3 的 agent-preset **独立平面**。总文档只数 4 层且未声称为非全集，故数字本身不算错，但**它没覆盖真实注入面全集**，不能作为穷尽性依据。
+3. **「bundle 层（启动时固化）」措辞有害歧义。** 若原意是「只在启动时应用、不随热重载变化」——与源码一致：`patchReload: live` 只监视**两份用户 patch 文件**（profile + home），bundle 层不参与热重载（`README.zh.md:57`）。若原意是「内容固定不可改」——**不成立**：bundle 层由 `dsh.profile.bundles` 声明、启动时逐包读取 `dsh.bundle.patch` 并在 compose 阶段应用（`dsh-app-boot/lib/index.js:849-860`）；**本 toolkit 的 `cordis.patch.yml` 就是一个 bundle patch**，其行随版本自由变化。建议改写为「bundle 层（仅启动时应用，不热重载）」。
+
+**实测结论（替代「四层栈」的准确表述）**：
+> DSH 启动时把 patch 层按 **bundle（可 N 个，`dsh.profile.bundles` 顺序）→ profile `cordis.patch.yml` → home `cordis.patch.yml` → `--patch` overlays（可 N 个）** 的顺序**拍平成一个列表**，对 base 配置做**同一次** `applyEntryPatches`（`profile-boot:242-247` 用 `composeEntries`；`renderConfigDump:1253` 用 `layers.slice(0,count).flatMap(l=>l.patches)`）——**后者按 id 覆盖前者，且是浅层赋值/整块替换而非深合并**。另有 base(`[]`) 与 env(`.env`) 两个非 patch 面，以及 agent-preset 独立平面（该平面同 id 为**首根胜**）。
+
+### ③.4 未覆盖项（如实申报，不猜测）
+
+- **`$DSH_HOME/cordis.patch.yml`（注入点 3）未读取**。它落在红线目录 `~/.dsh` 内，本轮授权只到 `~/.dsh/.agent-presets`（只读）。若该文件存在，它就是一个**能覆盖 profile 层、且优先级高于 profile 层**的 patch 层 —— 理论上可携带 toolkit 任意 id 行。**建议**：若要穷尽，「home 层文件是否存在 + 是否含 toolkit 行」需单独授权后补扫。
+- **注入点 4（`--patch`）在本次运行中未使用**（`dsh` 以默认参数启动），无法从磁盘取证；其语义已由源码定案。
+- **注入点 5（telemetry 补丁）** 仅在 `DSH_TELEMETRY_DISABLED` 非空且组合含 `session-telemetry-otel` 行时生成（`profile-boot:184-190`），本环境未验证实际取值。
