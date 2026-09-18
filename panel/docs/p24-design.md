@@ -97,7 +97,7 @@
 - 真卸载清理 = 移除对应键（unset），不是硬编码任何平台缺省名（避免写死用户环境，呼应开源源泛化）。
 
 ### 5.3 缺席态渲染（面板）
-- snapshot 增加逐插件状态字段：mounted / soft-unmounted / true-uninstalled / installed-unmounted / dangling-mount。
+- snapshot 增加逐插件状态字段：mounted / soft-unmounted / true-uninstalled / installed-unmounted / dangling-mount / dependency-broken（已加载，但依赖的本地搜索未安装——搜索功能不可用；doctor 以 missing-provider warning 标注）。
 - true-uninstalled 卡片显示「已卸载（真）· 本体已移入保管区 · 可一键恢复」。
 - soft-unmounted 卡片显示「已软卸载 · 本体保留 · 可一键恢复」。
 - 面板配置编辑对卸载态隐藏该插件多余操作，但列表与状态照常渲染；面板自身任何时刻正常。
