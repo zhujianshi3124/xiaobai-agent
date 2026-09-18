@@ -76,3 +76,7 @@
       config:
         dataRoot: <USER_HOME>\.agent-memory
         defaultWorkspace: null
+
+- insert:
+    - id: toolkit-manager
+      name: 'file:///<TOOLKIT_ROOT>/panel/index.js'
