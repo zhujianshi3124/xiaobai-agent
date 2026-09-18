@@ -833,5 +833,20 @@ body-too-large                                   → 413
 `q2-shipped-scan.mjs`（新增）**21/21** ｜ `q2-shipped-diff.mjs`（新增，输出 diff）**无断言** ｜ `apply-preset-patch.mjs --status`（只读）**standard/ptc/cordis = patched、liangshen = unknown** ｜
 上一轮基线全部保持：`q2-layer-scan` 20/20 ｜ `p22-verify` 98/98 ｜ `p1-smoke` 185/185 ｜ `node --test` 92/92 ｜ doctor 0/0/0 ｜ 真实 `cordis.patch.yml` sha **仍为 `ce0b0b81…`（未变）**。
 
+---
+
+## 12. 会话交接卡（10 行 · 关账硬前置，2026-09-18 第 11 轮）
+
+1. **当前状态**：P2.2 已关账（功能层用户侧终验通过；字节层由授权恢复达成基准）；P2.3 未开工。
+2. **基准事实**：`cordis.patch.yml` = `ce0b0b81c91ca4c4…`（3097 B / CRLF），内容 = 既有 4 卡行 + `toolkit-manager` 4 行 insert，提交于 `22fde85`。
+3. **下一步**：P2.3 配置编辑 —— 开工前置 = `config.enabled` **五插件源码消费点证据**（谁读、读了做什么），与 Q1 同标准，**先证后写**。
+4. **P2.3 范围白名单**：`enabled` 布尔 / 限流数值范围 / 路由模式枚举；**服务端校验，不信任前端**；含换行或 YAML 结构字符一律拒绝。
+5. **暂缓（明确不做）**：引擎「复原删键」能力 —— apply-engine 是安全核心，关账前不加能力；P2.3 后有真实需求再立项（见 ledger L-036）。
+6. **待用户**：reload 一次 + 目视「黄警告恢复指引」文案（本轮已优化，标注**待 P2.3 前合并 reload**）。
+7. **正本索引 ①**：`HANDOFF-MASTER.md`（总索引 + 项目史；§一~§九 原文保真 + 附录 A 运行配置 / B 待用户项 U1–U9 / C 变更记录）。
+8. **正本索引 ②**：`handoff-restart.md`（本文；重启 / 回滚 / 阶段表 / 契约）、`ledger.md`（唯一台账 L-0xx）、`api-notes.md`（平台事实 + 源码行号）。
+9. **正本索引 ③**：`evidence/`（终验 / 裁剪 / 保真 / D-01 证据）；`scripts/regression-all.mjs`（回归一键全跑）。
+10. **红线**：不 import 兄弟插件、写前必备份、`~/.dsh` 与 cloudflared 与五子插件源码目录受保护；写盘 / 重启**先授权**，异常带证据回报不在线上调试，回滚先于排查。
+
 
 

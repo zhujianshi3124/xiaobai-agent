@@ -26,6 +26,10 @@
 | `Q2-LAYER-SCAN.txt` | 由 `scripts/q2-layer-scan.mjs --agent-presets` 生成（可重放，**20/20 PASS**） | 13447 | `e03c409fe998b5662b6d3453631b8ae5527551a83ef895e3008a614bf3cf15bd` |
 | `Q2-SHIPPED-PRESET-SCAN.txt` | 由 `scripts/q2-shipped-scan.mjs` 生成（可重放，**21/21 PASS**） | 10400 | `d38ab769f87dfeadedc2e91de7cdd8e71e5b077668521c234053b1db7613b615` |
 | `Q2-SHIPPED-PRESET-DIFF.txt` | 由 `scripts/q2-shipped-diff.mjs` 生成（可重放，逐行 diff 原版↔现版） | 55314 | `c24cabd61f492ee26a8a7fc3c152b9f646f15910fe7faf500451589016c8bf66` |
+| `MASTER-MERGE-FIDELITY.txt` | 由 `scripts/master-merge-fidelity.mjs` 生成（可重放，**38/38 PASS**）—— 总文档九大节保真抽检 | 4253 | `cc75c5b4d27e4d28133ed664013ae1f54ed1c67afcf9adaa817b5c7e40a115e4` |
+| `MASTER-MERGE-NORMALIZATION.txt` | 本侧撰写 —— 总文档合并的**3 项排版归一枚举 + 保真说明**（含「字面全文 diff 不可构造」的如实申报） | 4707 | `7da72b053b9a110514b855b121ccdbbbbfe25794baced153af689da25db8eae2` |
+| `TERMINAL-ACCEPTANCE-ROUND10.txt` | 由 `scripts/terminal-acceptance-report.mjs` 生成（第 10 轮终验取证 a–e；**只读**，重建 4 次写链 LCS） | 6689 | `49ef62a02e6d5d0379de1597fc5566c673b26684f55a56cef1e0001464ef2e55` |
+| `D01-MANIFEST-FIX.diff` | 第 11 轮 D-01（ADS 备份）+ manifest `reason`/`note` 修复的 **diff 留痕** | 16579 | `17fa692cb59ded4e7dcbcac1c865ad950540211b3802f4da12e80248a37a6b07` |
 
 前三份为**逐字节复制**（复制后比对 sha256 一致才落盘），未经改写。
 
@@ -39,6 +43,10 @@
   用户实际点击的 `agent-memory`（第 74 行）+ Q1（`!!js` 条件 `disabled` 的读写两侧危害与安全闸）
   + Q2（层间正交、锚点位移 74→75、陈旧 plan 被 SHA 拦下）+ doctor 0/0/0 + 测试全绿计数。
 - **`RETENTION-SCOPE.txt`** —— 见下节。
+- **`MASTER-MERGE-FIDELITY.txt`** —— 总文档九大节合并进 `HANDOFF-MASTER.md` 后的**保真抽检 38/38**（逐节锚点 / 原文行核对）。
+- **`MASTER-MERGE-NORMALIZATION.txt`** —— 3 项**排版归一**（合并时唯一的非保真动作）的逐项枚举 + 依据；并**如实申报**「字面级全文 diff 不可构造」（原文以会话消息形态送达、未落过盘，压缩后不可取回）。
+- **`TERMINAL-ACCEPTANCE-ROUND10.txt`** —— 第 10 轮终验取证 **a–e** 正本（**只读**）：以 4 份写前备份的载荷做 **LCS 重建**，还原出 `ce0b0b81`(3097) →写#1→ `77279ccb`(3119) →写#2→ `54345b4f`(3120) →写#3→ `2620280b`(3142) →写#4→ `c03e2c81`(3143) 的完整链（**链式 `shaBefore` 互证** ⇒ 均走 `executePlan` 唯一通道）。**该报告结论为 (c)✗ / (d)✗ / (a) 部分✗** —— 正是据此**喊停、未进关账**；第 11 轮裁决后以**授权恢复**达成基准。
+- **`D01-MANIFEST-FIX.diff`** —— D-01（备份副本落 NTFS **ADS**、目录只留 0 字节 `D` 载体）修复 + `manifest.reason`/`note` 恒 null 修复的 diff 留痕（**安全关键脚本 `backup.mjs` 的改动须留痕**）。
 
 ## 裁剪（保留策略）排除证据 —— 对应用户 Q4
 
@@ -52,7 +60,7 @@
 | **E1 目录不同源** | 引擎默认 `backupRoot = <toolkitRoot>/.panel-write-backups`（`panel/index.js:175`）；人工留档 = `<toolkitRoot>/.panel-backups` | 二者**同级**，非同一目录、非父子；且 `.panel-backups/` 在 `.gitignore` 中 |
 | **E2 清单过滤** | `listBackups()` 只认「子目录内含 `manifest.json`」的条目（`backup.mjs:25-31`）；根目录不存在时返回 `[]` | 人工塞进归档的裸目录/裸文件天然不在裁剪视野内；根不存在时裁剪是**空操作** |
 | **E3 运行时隔离** | 同一父目录下并排 `write-backups/`（45 份）与 `manual-archive/`，对前者跑 `pruneBackups` | 引擎根 45→40（`removed=5`）；`manual-archive/` **3 个文件逐字节不变**、条目数不变；**差异集合 ⊆ `write-backups/`**，根外零增删 |
-| **E4 生产实况** | 默认 `backupRoot` `.panel-write-backups` 当前**不存在** | 生产环境**从未执行过裁剪**，故不可能裁掉任何东西；人工留档 17 个条目完好 |
+| **E4 生产实况** | 默认 `backupRoot` `.panel-write-backups` —— **原为「不存在」**；第 11 轮用户真实写入 4 次后**已存在** | **原断言**：生产从未裁剪 ⇒ 不可能裁掉任何东西。**第 11 轮改写为**：引擎根内备份数 **≤ 保留上限**（未被密度裁剪丢过）＋ 人工留档条目完好（见下方「第 11 轮更新」） |
 
 **为什么 E3 里要在人工归档里也放一个 `manifest.json`**：若只靠「没有 manifest 所以看不见」，
 那证据是脆的 —— 一旦有人往归档里放了 manifest，就只剩「目录不同」这一道防线。
@@ -60,18 +68,29 @@ E3 刻意放了这个诱饵，证明**即便有 manifest，也因「不在 backu
 
 **重放方法**：
 ```bash
-node scripts/p22b-retention-scope.mjs            # 15/15 PASS
+node scripts/p22b-retention-scope.mjs            # 17/17 PASS（第 11 轮起；此前为 15/15）
 node scripts/p22b-retention-scope.mjs > panel/docs/evidence/RETENTION-SCOPE.txt   # 重生成证据
 ```
 
+> **📌 第 11 轮修订**：E4 原断言依赖「生产 `backupRoot` 不存在」这一事实，P2.2 用户侧终验真实写入 4 次后**该前提失效**，故 E4 已重写为「**引擎根备份数 ≤ 保留上限 ⇒ 未因密度裁剪丢失**」＋「人工留档完好」；总计数 **15 → 17**。归档的 `RETENTION-SCOPE.txt`（2039 B）为**生成当时**快照，按「只增不改」**不覆盖**；重放以脚本为准（实测 **17/17 PASS**）。
+
 ## 一条必须知道的生产事实
 
-`<toolkitRoot>/.panel-write-backups` **当前不存在**（`exists=false`）。含义：
-- 面板的**默认**写前备份根从未被创建 ⇒ **用户尚未通过面板真实执行过任何 toggle / plan 落盘**。
+> ⚠️ **本节写于 2026-09-18 上午（P2.2 终验前）。2026-09-18 第 11 轮已发生实质变化 —— 请先读下方「第 11 轮更新」，再回看本节的历史结论。**
+
+`<toolkitRoot>/.panel-write-backups` **当时不存在**（`exists=false`）。含义：
+- 面板的**默认**写前备份根从未被创建 ⇒ 用户尚未通过面板真实执行过任何 toggle / plan 落盘。
 - P2.1 / P2.2 / P2.2b 的「真实写操作」证据都是在**证据脚本显式指定 `backupRoot`**
   （指向证据目录内的 `write-backups/`）的条件下产生的，**不是**落在生产默认根上。
-- 换句话说：**生产文件 `cordis.patch.yml` 至今未被面板改过**，其 sha
+- 换句话说：**生产文件 `cordis.patch.yml` 当时未被面板改过**，其 sha
   `ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9` 自 P2 起点未变。
+
+### 第 11 轮更新（2026-09-18，**以本段为现行口径**）
+
+- **用户已通过面板真实写入 4 次**（P2.2 用户侧终验：`rate-throttle` + `agent-memory-runtime` 各「停用→复原」一次）⇒ 生产默认根 `.panel-write-backups` **已被创建**、内含 4 份备份。上节「从未被创建」的前提**已失效**。
+- **4 次写入均走 `executePlan` 唯一通道**（链式 `shaBefore` 互证），文件从 `ce0b0b81`(3097) 变到 `c03e2c81`(3143，两卡各留一条显式 `disabled: false`)。
+- **第 11 轮裁决：授权恢复**。`scripts/restore-cordis-baseline.mjs --apply`（fail-closed）已把磁盘**逐字节复原**到 `ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9`（**3097 B / CRLF**），并**语义化提交**（`22fde85`，内容纯净：仅 toolkit-manager 4 行）。写前备份留档于 `.panel-backups/restore-baseline-2026-09-18T04-40-47-135Z/`（其副本 sha = `c03e2c81…`）。
+- **现行事实**：`cordis.patch.yml` sha = **`ce0b0b81…`**（3097 B / CRLF，含 4 行 `toolkit-manager`），**已入库**；doctor **0/0/0**。
 
 ## ⏱ 时钟锚点（防未来对账困惑）
 
@@ -110,6 +129,14 @@ node scripts/p22b-retention-scope.mjs > panel/docs/evidence/RETENTION-SCOPE.txt 
 **另含一条本轮查出的溯源缺口**：`toolkit-manager` 行的**首次落盘时刻与操作者未留档**（该字符串从未进入该文件的 git 历史；
 可归因最早证据 = `.panel-backups/arm-manifest-20260917-105930/`，已含该行、旧名）。详见 `HANDOFF-MASTER.md` §9.2。
 
+> **📌 2026-09-18 第 11 轮修订（重要，两处）**
+>
+> **① 计数（勿混淆）**：本节的 **20/20** 指**带 `--agent-presets`** 的调用（§5 会读 `~/.dsh/.agent-presets`，多 6 条断言）；**不带 flag 时为 14/14**（§5 跳过），`scripts/regression-all.mjs` 用的即后者。**两者都对，视调用方式而定。**
+>
+> **② 归档文件与脚本的时序差**：`Q2-LAYER-SCAN.txt`（13447 B，`e03c409f…`）是**生成当时（提交前）**的快照 —— 其 §4 断言原文为「`toolkit-manager` **从未**出现在 git 历史中」。第 11 轮已**语义化提交**该行（`22fde85`），故脚本 §4 断言已**按新现实重写**（「已进入 git 历史 + 磁盘(LF 归一)==HEAD + 字节账 3015+82=3097」）。
+> **本目录遵守「只增不改」**：故**不覆盖**该归档文件。**现行事实以脚本重放为准** —— 当场重放（只读）实测：`--agent-presets` **20/20 PASS**。重放：`node scripts/q2-layer-scan.mjs --agent-presets`。
+> 同理，上文的「溯源缺口」**已由 `22fde85` 封闭**（该行现已在 git 历史内）。
+
 ## shipped presets 补扫（`Q2-SHIPPED-PRESET-SCAN.txt` + `Q2-SHIPPED-PRESET-DIFF.txt`）
 
 `node scripts/q2-shipped-scan.mjs` → **21/21 PASS**；`node scripts/q2-shipped-diff.mjs` → 逐行 diff（原版 `.bak` ↔ 现版磁盘）。
@@ -132,3 +159,17 @@ node scripts/p22b-retention-scope.mjs > panel/docs/evidence/RETENTION-SCOPE.txt 
 （bundle → profile → home → `--patch` → telemetry；非 patch 面：env / `!!js` / agent-preset / 预设改写路径；
 **同 id**：patch 平面「后者覆盖、顶层赋值、非深合并」，loader 平面「复用同一 Entry」，**agent-preset 平面「首根胜」**）。
 据此裁决：**「同 id 后者覆盖」= 真**；**「四层 patch 栈」= 转述失真候选（第四例，与 11.11 同族）** —— 原文不删，`HANDOFF-MASTER.md` §8.0 / §8.4 加批注。
+
+---
+
+## 修订记录（索引 · 只增不改，故各处均以「新增注记」方式更新）
+
+| 时刻（GMT+8） | 变动 | 影响的本目录文件 |
+|---|---|---|
+| 2026-09-18 10:46 | 总文档九大节保真合并落盘（38/38） | 新增 `MASTER-MERGE-FIDELITY.txt`、`MASTER-MERGE-NORMALIZATION.txt` |
+| 2026-09-18 11:2x（第 10 轮） | 终验取证 a–e 出结论 **(c)✗ / (d)✗ / (a) 部分✗** ⇒ **喊停不进关账** | 新增 `TERMINAL-ACCEPTANCE-ROUND10.txt` |
+| 2026-09-18 12:1x（第 11 轮） | D-01（ADS）+ manifest `reason`/`note` 修复；`p21/p22-verify` 备份断言升级为**独立路径取证**；`p22b` E4 重写（15→17）；新增 `backup-write-test`（23/23） | 新增 `D01-MANIFEST-FIX.diff`；上表 `RETENTION-SCOPE.txt` 条目加注 |
+| 2026-09-18 12:40–12:48（第 11 轮） | 授权**恢复** `cordis.patch.yml` → `ce0b0b81…`（3097 B / CRLF）+ **语义化提交** `22fde85` | `Q2-LAYER-SCAN.txt` 条目加注（§4 断言按新现实修订，**计数不变** 20/20；默认 14/14）；「生产实况」一条加注（前提失效） |
+
+> **本目录的两条硬约定**：① **只增不改** —— 已入库的归档文件**永不覆盖**；与脚本产生时序差时，**加注记、以脚本重放为准**。
+> ② **每份证据必须可重放** —— 上表所有「由 `scripts/*.mjs` 生成」者，重放命令即其生成命令。
