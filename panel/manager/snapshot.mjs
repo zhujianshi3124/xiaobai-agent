@@ -307,14 +307,19 @@ export async function buildSnapshot({ toolkitRoot, hotRouterPath = join(homedir(
     const mounted = status === "mounted";
 
     // 联动感知：依赖插件本体缺席 ⇒ dependency-broken（本体挂载事实保留在 mounted 字段）
+    // 守卫（D-UI-02）：dependency-broken 是 **mounted 的修饰态**——本体自己已缺席
+    // （soft-unmounted / true-uninstalled / installed-unmounted / dangling-mount）时
+    // 不得被依赖缺席覆盖，否则「可一键恢复」的真卸载态会被误报成「已加载」。
     let dependency = null;
-    for (const dep of DEPENDENCIES) {
-      if (dep.plugin !== dir) continue;
-      const requires = dep.requires;
-      const depRaw = rawByDir[requires];
-      if (depRaw && !depRaw.bodyPresent) {
-        status = "dependency-broken";
-        dependency = { requires, note: dep.note, requiresState: statusByDir[requires] };
+    if (mounted) {
+      for (const dep of DEPENDENCIES) {
+        if (dep.plugin !== dir) continue;
+        const requires = dep.requires;
+        const depRaw = rawByDir[requires];
+        if (depRaw && !depRaw.bodyPresent) {
+          status = "dependency-broken";
+          dependency = { requires, note: dep.note, requiresState: statusByDir[requires] };
+        }
       }
     }
 
