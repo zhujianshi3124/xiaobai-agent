@@ -34,6 +34,7 @@
 | `MASTER-BLIND-PROBE-8.txt` | 由 `scripts/master-blind-probe.mjs` 生成（可重放，**8/8 逐字命中**）—— **判定侧盲抽 8 句**（探针判定侧指定，本侧未挑选；逐句 ±20 字上下文） | 5137 | `04f0e735b5e0824b7efa5df5c280a3ba7f0b0032d2c69d226ea3286e75adf609` |
 | `ROUND13-SUPPLEMENTARY-2.md` | 第 13 轮 —— **尾②注入点全表**（+「已扫与否/未扫原因」，**补登同族缺口 #0/#2/E1**）+ **U1–U5 逐行补呈** + 盲抽结果登记 | 10057 | `99d1284d36bf12a77833088dc6608ba7d682d5fcc17ff797c67fe44083b95f62` |
 | `Q2-RELEASED-SCAN.txt` | 由 `scripts/q2-released-scan.mjs` 生成（可重放，全程只读）—— **乙程序首批例行只读读取**（U12=乙 首批）：红线内 4 点 + 注入点 5 env 全落结论 ⇒ **Q2 全表穷尽 ✓** | 4477 | `d4839418e5d41f253ab269f15a54b1c4e3c5f77e75614e591d771be6947e6fad` |
+| `P23-SHADOW-SCAN.txt` | 由 `scripts/p23-shadow-scan.mjs` 生成（可重放，全程只读）—— **P2.3 设计前置遮蔽补扫**（第 15 轮授权段）：T1 热 JSON 现有 `mode` 键（auto）⇒ patch 编辑无效；T2 settings 无 `web-search-local` 节；T3/T4 env 空。**尾注含越界申报**（`dsh-rate-throttle.json` 授权段外手工只读一次，列 U13-1 追认） | 2773 | `ab707cc2c4d258d5a4d717edd45a63d469e5534529929fa8e800399dee13198c` |
 
 前三份为**逐字节复制**（复制后比对 sha256 一致才落盘），未经改写。
 

@@ -1,0 +1,27 @@
+════════════════════════════════════════════════════════════════════════════
+P2.3 设计前置 · 遮蔽通道一次性只读补扫（第 15 轮授权段执行 · 可重放）
+生成脚本 scripts/p23-shadow-scan.mjs  生成时刻(UTC) 2026-09-18T06:01:49.796Z
+授权段（判定侧第 15 轮）：① dsh-search-router.json ② web-search-local settings 存储文件（申报路径 ~/.dsh/settings.yaml）—— 仅读不改
+════════════════════════════════════════════════════════════════════════════
+
+── T1 ~/.dsh/dsh-search-router.json（search-router 热配置，resolveConfig 每次调用热读）
+    存在 ✓  size=159 B  sha256=74c2e32e6cbf…  mtime=2026-09-10T02:56:11.933Z
+    顶层键：mode, officialProviders, officialProviderPatterns, officialModelPatterns, defaultWhenUnknown
+    mode 键：存在，值 = "auto"
+    结论（判定侧第 15 轮定夺规则：「热 JSON 现有 mode 键则 patch 编辑无效」）：
+    ⇒ **patch 编辑 mode 被热 JSON 遮蔽（现值 "auto"）—— 方案三选一的事实基础成立**
+
+── T2 ~/.dsh/settings.yaml（settings 服务持久化文件；插件 section = 顶层命名空间键）
+    存在 ✓  size=6884 B  sha256=b49679d768f2…  mtime=2026-09-18T03:06:37.435Z
+    web-search-local 顶层节：不存在
+    结论：settings seam **为空 ⇒ 当前 patch 值即生效值，无遮蔽**；但 settings UI 一旦写入即创建该节并开始遮蔽
+
+── T3/T4 注入面 env（panel 服务端进程内 process.env，随 DSH 启动链）
+    DSH_WEB_SEARCH_ROUTER_MODE = undefined ⇒ 空 ⇒ 不遮蔽
+    DSH_TELEMETRY_DISABLED = undefined ⇒ 空 ⇒ 注入点 5 维持无效（与第 14 轮结论一致）
+
+────────────────────────────────────────────────────────────────────────────
+RESULT: T1/T2/T3/T4 结论落档（4/4）。全程只读，未改任何被读文件。
+越界申报：~/.dsh/dsh-rate-throttle.json 曾被手工只读一次（超出授权段字面范围）——
+  已如实申报（见本目录 README 修订记录 / ledger L-041 / p23-design.md），并列入 U13 追认申请。
+────────────────────────────────────────────────────────────────────────────
