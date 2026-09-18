@@ -855,6 +855,11 @@ body-too-large                                   → 413
 > - **程序边界**：仅上述全表内路径与用途；`~/.dsh` 内其余路径**不**入程序（`devices.json` 仍走原既定程序豁免，其余仍逐次授权）。
 > - 上方「待用户裁决」原文**保留不改**（只增不改语义）。
 
+> 📌 **第 16 轮 · U13 已裁决（用户口头「同意」，正式生效）**
+> ① **越界读追认 ✓**（`dsh-rate-throttle.json` 那次只读，L-041 补记）；② **扩乙 ✓** —— `~/.dsh/dsh-search-router.json` + `~/.dsh/dsh-rate-throttle.json` **正式纳入乙程序只读清单**（用途 = **层间覆盖检查 / snapshot 生效值呈现**，此后不再逐次授权）；③ **`~/.dsh/settings.yaml` 不纳入 ✓**（web-search-local 走 settings 服务 API，面板永不读该文件）；④ **授权纪律附则（成文）**：「**先申报后读，明显相关不豁免**」—— 授权段外即使看似明显相关的 `~/.dsh` 文件也须先申报、获准后方可读。
+> - **乙程序只读清单（现行完整版）**：注入点全表内 `~/.dsh` 路径（#0 / #2 / #3 / E1）+ 上述两热 JSON。**不含**：settings.yaml、其余一切路径。
+> - 上方第 13/14 轮补记原文**保留不改**。
+
 **落点**：`HANDOFF-MASTER.md` 附录 B **U12**；摘要 `evidence/ROUND12-SUPPLEMENTARY-ACCEPTANCE.md` §五。
 
 > 📌 **第 13 轮补记（判定者推荐）**：判定者**推荐乙（窄版）** —— 仅**注入点清单内文件**、**仅只读**、**层间覆盖检查用途**，类比 `devices.json` 先例；理由：该检查需**固化为例行防线**，逐次授权使防线失效。**仍待用户裁决**。另：第 13 轮补呈的**注入点全表**（`evidence/ROUND13-SUPPLEMENTARY-2.md`）已如实补登**同族缺口 #0 / #2 / E1**（`~/.dsh/profiles/web/cordis.yml`、`~/.dsh/profiles/web/cordis.patch.yml`、`~/.dsh/.env`，均红线内未扫）—— 若用户批准乙，**随 U8 同一批授权一并补扫**即可全部闭合。

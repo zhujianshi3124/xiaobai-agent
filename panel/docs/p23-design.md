@@ -32,8 +32,8 @@
 | `minIntervalMs` | int | `0–3600000` | `:159`（缺省 20000） | **无**（`Number()` 直转，NaN 可进运行时 ⇒ 面板范围校验是唯一安全网） |
 | `maxRequestsPerMinute` | int | `1–600` | `:160`（缺省 3） | **无** |
 | `adaptive` | bool | `true / false` | `:161` | 有 |
-| `maxIntervalMs` | int | `0–86400000` | `:162`（缺省 120000） | **无** |
-| `backoffFactor` | number | `>0 且 ≤10`（作除数，0 → Infinity） | `:163`（缺省 2）、`:234`（`intervalMs / cfg.backoffFactor`） | **无** |
+| `maxIntervalMs` | int | `1–86400000`，**且 ≥ `minIntervalMs`（服务端跨字段校验）** | `:162`（缺省 120000） | **无**（依据见 §九） |
+| `backoffFactor` | number | `1–10` | `:163`（缺省 2）、`:234` / `:280`（作乘数） | **无**（依据见 §九） |
 
 ### `routing:` 子块
 
@@ -125,3 +125,63 @@
 - `evidence/P23-SHADOW-SCAN.txt`（2773 B，`scripts/p23-shadow-scan.mjs` 可重放）：T1 热 JSON 有 `mode` 键（auto）· T2 `settings.yaml` 无 `web-search-local` 节 · T3/T4 env 均空。
 - **越界申报**：`~/.dsh/dsh-rate-throttle.json` 授权段外手工只读一次（只读、未改），已列 U13-1 追认。
 - 本稿**零写盘**；批准后动代码（首个写盘批次含 U9 marker 刷新）。
+
+---
+
+## 八、字段 × 通道对照表（第 16 轮钉子 ① · 18 字段全量）
+
+**通道图例**：
+- **A = 激活快照**：`cfg` 对象 `:156-190`，插件激活时构建一次、此后只读快照；
+- **B = 热 JSON**：`~/.dsh/dsh-rate-throttle.json`，`hotConfig()` `:403-414`（mtime 缓存，每次使用重读）；
+- **C = settings API**；**D = env**（进程环境）。
+
+| # | 字段 | A 激活快照 | B 热 JSON | C settings | D env | 消费点（生效路径） |
+|---|---|---|---|---|---|---|
+| 1 | `enabled` | ✓ `:157` | — | — | — | 主闸 `:224` |
+| 2 | `minIntervalMs` | ✓ `:159` | — | — | — | `:220`（初值）· `:234`（恢复下限）· `:280`（退避下限） |
+| 3 | `maxRequestsPerMinute` | ✓ `:160` | — | — | — | `:240`（RPM 窗口判定） |
+| 4 | `adaptive` | ✓ `:161` | — | — | — | `:273`（退避总闸） |
+| 5 | `maxIntervalMs` | ✓ `:162` | — | — | — | `:279`（退避上限） |
+| 6 | `backoffFactor` | ✓ `:163` | — | — | — | `:234`（恢复缩减）· `:280`（退避放大） |
+| 7 | `routing.enabled` | ✓ `:167` | — | — | — | `:656` · `:781`（路由短路） |
+| 8 | `routing.autoGroups` | ✓ `:168` | — | — | — | `:524` · `:583` |
+| 9 | `routing.autoGroupTtlMs` | ✓ `:169` | — | — | — | `:587` |
+| 10 | `routing.cooldownMs` | ✓ `:174` | — | — | — | `:606`（RPM 冷却恢复） |
+| 11 | `routing.tpmTurnSkip` | ✓ `:175` | — | — | — | `:621` · `:656` |
+| 12 | `routing.tpmCooldownMs` | ✓ `:152-158` | — | — | — | TPM 短除名时长（`:31` 语义注释） |
+| 13 | `routing.downgradeContextMargin` | ✓ `:177` | — | — | — | `:839`（降级阈值） |
+| 14 | `routing.maxDowngradeCompactsPerTurn` | ✓ `:178` | — | — | — | `:855` |
+| 15 | `routing.metricsWindowMs` | ✓ `:179` | — | — | — | `:327` · `:355` · `:373` |
+| 16 | `routing.metricsLogIntervalMs` | ✓ `:180` | — | — | — | `:368` |
+| 17 | `routing.clearCooldownOnUserSwitch` | ✓ `:181` | — | — | — | `:1047` |
+| 18 | `routing.syncSelectionOnFailover` | ✓ `:182` | — | — | — | `:948` |
+
+> **计数口径订正**：设计稿 §二 原表 17 行（`clearCooldownOnUserSwitch` 与 `syncSelectionOnFailover` 合并一行）⇒ 拆开后实为 **18 字段**。本表为全量口径，白名单实现按 18 字段。
+
+### 热通道三键与白名单的关系（钉死 —— 防最后一道假开关的验收点）
+
+| 热键 | 消费点 | 与白名单字段的关系 |
+|---|---|---|
+| `declaredLimits` | `limitData()` `:478-489`（quality 2）→ **仅用于候选排序**（declared > learned > none） | **不参与、不聚合、不覆盖** `minIntervalMs` / `maxRequestsPerMinute` / `maxIntervalMs` / `backoffFactor` 的生效值 —— interval 计算只读 `cfg` 快照（`:220/:234/:279-280`）。两套数值是**不同维度**：declared/learned = 厂商公开限速（**选谁**），cfg = 本插件节流参数（**怎么等**） |
+| `excludeProviders` | `excludeSet()` `:424-429` = **patch ∪ 热 JSON** | **唯一热合并字段**，遮蔽 patch 值 ⇒ **不在白名单**（本就不开放，§二） |
+| `aliases` | `aliasOf()` `:431-435`（模型 id 归族） | 与白名单无交集 |
+
+- **C 通道**：全 lib `installSection` 仅 **web-search-local** 一处 ⇒ rate-throttle **无 settings 面**。
+- **D 通道**：rate-throttle 的 env 仅 `DSH_HOME`（`:70`，默认路径定位，**非配置覆盖**）；`DSH_WEB_SEARCH_ROUTER_MODE` 只作用于 search-router `mode`（不在本白名单）。
+
+**结论：18/18 字段生效值 = patch 值（激活快照），唯一生效方式 = 重启 dsh web；无任何通道聚合或盖住白名单字段 ⇒ 无假开关残留。**
+
+---
+
+## 九、无源码校验字段的合法域依据（第 16 轮钉子 ② · 4 顶层 + 1 routing = 5 处）
+
+| 字段 | 面板合法域 | 范围选择理由（保守 + 覆盖实际用例） |
+|---|---|---|
+| `minIntervalMs` | int `0–3600000` | 下限 **0 = 合法关闭语义**（只留 RPM 节流，不留最小间隔）；上限 1h 已对最保守免费档冗余（`declaredLimits` 实测最高 60 RPM ⇒ 间隔为秒级）；**实际用例**：patch 在用值 `3000`、源缺省 `20000` 均在域内 |
+| `maxRequestsPerMinute` | int `1–600` | 下限 **1 而非 0**：0 语义歧义（想关节流应走 `enabled:false`，避免双键打架、UI 出现「开着却不动」）；上限 600 = 10 QPS，为 declaredLimits 实测最高档（60 RPM）的 **10 倍冗余** |
+| `maxIntervalMs` | int `1–86400000` **且 ≥ `minIntervalMs`（跨字段）** | 下限 1：**0 会让 `Math.min(:279)` 把退避间隔压成 0 ⇒ 变相关闭退避**（反语义 footgun）；跨字段约束保证 `max ≥ min`（否则退避区间倒挂）；上限 24h 为保守天花板 |
+| `backoffFactor` | number `1–10` | 下限 **1 而非 >0**：`<1` 时 `:280` 退避「越退越短」、`:234` 恢复反向放大，均反语义；`1` = 不放大（合法，仅线性 RPM 节流）；上限 10 防单次 429 后间隔爆表；源缺省 `2` 在域内；**`0` 另有除零风险（`:234`）** |
+| `routing.maxDowngradeCompactsPerTurn` | int `0–10` | 下限 **0 = 合法关闭语义**（禁止降级压缩，对齐 `tpmCooldownMs=0` 先例）；上限 10 防单 turn 压缩风暴；源缺省 `1` 在域内；消费点 `:855` |
+
+- 跨字段校验（`maxIntervalMs ≥ minIntervalMs`）为服务端 plan 校验**新增项**，进测试计划 §六-1。
+- 插件自身的容错层（`posNum` / `!== false` / `Number()`）继续作为第二道防线；面板白名单是**第一道**（写前拒绝），两层独立。
