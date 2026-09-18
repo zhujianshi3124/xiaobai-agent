@@ -151,6 +151,17 @@
 | 确认操作 | 点「确认恢复」，或点「取消」。 |
 | 完成后 | 页面横幅提示：**「恢复完成，重启后生效」**。 |
 
+### 2.9b 软卸载恢复确认页（通用，无文件回写）
+
+| 项目 | 文案（一字不落） |
+|---|---|
+| 标题 | 恢复「<插件名>」（软卸载恢复） |
+| 正文 | 将重新打开面板到「<插件名>」的启动入口，源代码文件一直在本地，不涉及文件恢复；若卸载时改动了系统设置项，将一并恢复。 |
+| 冲突三态 | 若恢复时发现某项系统设置已被其他程序改掉（当前值是 <cur>，卸载前是 <backup>），弹窗三选一：A. 保留当前值（不覆盖）；B. 恢复成卸载前的值；C. 取消本次恢复。面板不会自动覆盖。 |
+| 重启 | **恢复完成后需要重启才生效。** |
+| 确认操作 | 点「确认恢复」，或点「取消」。 |
+| 完成后 | 页面横幅提示：**「恢复完成，重启后生效」**。 |
+
 ### 2.10 失败提示（通用）
 
 | 项目 | 文案（一字不落） |
@@ -172,7 +183,7 @@
 | 用例 | 前置 | 操作 | 硬断言（每一条都必须为真） |
 |---|---|---|---|
 | A1 单删 rate-throttle（软） | 基线 sha=ce0b0b81；doctor error=0；5 卡 mounted | 面板执行「软卸载 rate-throttle」 | ① GET /api/toolkit-panel/snapshot 返回 HTTP 200；② 页面渲染 5 张卡且面板自身可交互；③ rate-throttle 卡显示「已软卸载/未安装」文案；④ lib/rate-throttle 目录存在且总 sha 与操作前一致；⑤ cordis.patch.yml 中不存在 rate-throttle 插入块，文件仍是合法 YAML；⑥ .panel-write-backups/ 新增一条 manifest（字段 reason/note 非空，savedAs 无盘符冒号）；⑦ doctor error=0 且输出含 rate-throttle 缺席提示（severity=info 或 warning，不含 error）；⑧ 恢复后 cordis.patch.yml sha 回 ce0b0b81。 |
-| A2 单删 compact-router（软） | 同上；apply-preset-patch --status 四预设均 patched | 面板执行「软卸载 compact-router」 | ① snapshot 返回 200、5 卡渲染；② compact-router 卡显示「已软卸载/未安装」；③ lib/compact-router 目录存在且 sha 不变；④ apply-preset-patch --status 输出 standard/ptc/cordis/liangshen 均不含 patched；⑤ doctor error=0 且输出含 compact-router 缺席提示（severity≠error）；⑥ 回写前后 sha 留痕：对 liangshen/standard/ptc/cordis 各自记录 beforeUndo=sha 与 afterUndo=sha，afterUndo == preset-backups/<id>.agent.cordis.yml.bak 的 sha；恢复后 afterReapply == beforeUndo；⑦ 恢复后 --status 四预设重新显示 patched，doctor 回 0/0/0。 |
+| A2 单删 compact-router（软） | 同上；apply-preset-patch --status 四预设均 patched | 面板执行「软卸载 compact-router」 | ① snapshot 返回 200、5 卡渲染；② compact-router 卡显示「已软卸载/未安装」；③ lib/compact-router 目录存在且 sha 不变；④ apply-preset-patch --status 输出 standard/ptc/cordis/liangshen 均不含 patched；⑤ doctor error=0 且输出含 compact-router 缺席提示（severity≠error）；⑥ 回写前后 sha 留痕（manifest 落 .panel-write-backups，reason/note 非空）：对 liangshen/standard/ptc/cordis 各自记录 beforeUndo=sha 与 afterUndo=sha，afterUndo == preset-backups/<id>.agent.cordis.yml.bak 的 sha；恢复后 afterReapply == beforeUndo；⑦ 恢复后 --status 四预设重新显示 patched，doctor 回 0/0/0。 |
 | A3 单删 agent-memory（软） | 同上 | 面板执行「软卸载 agent-memory」 | ① snapshot 返回 200、5 卡渲染；② agent-memory 卡显示「已软卸载/未安装」；③ lib/agent-memory 目录存在且 sha 不变；④ cordis.patch.yml 不含 agent-memory 插入块且为合法 YAML；⑤ .panel-write-backups/ 新增 manifest；⑥ doctor error=0 且输出含 agent-memory 缺席提示；⑦ 恢复后 sha 回 ce0b0b81。 |
 | A4 单删 search-router（真） | 同上；cordis.patch.yml:7 为 searchProvider: auto-search | 面板执行「真卸载 search-router」 | ① panel/custody/search-router-*/manifest.json 存在且 body 文件数、逐文件 sha 与源目录一致；② lib/search-router 目录不存在；③ cordis.patch.yml 不含 search-router 插入块；④ cordis.patch.yml:7 不存在 searchProvider=auto-search（键已回到系统默认）；⑤ snapshot 返回 200、5 卡渲染，search-router 卡显示「已卸载（已存档/可恢复）」，web-search-local 仍 mounted；⑥ .panel-write-backups/ 新增 manifest；⑦ doctor error=0 且输出含 search-router 缺席提示（severity≠error），无 dangling provider 警告；⑧ 恢复后：lib/search-router 恢复、sha 回 ce0b0b81、:7 回 auto-search。 |
 | A5 单删 web-search-local（真） | 同上；cordis.patch.yml:8 为 fetchProvider: local-fetch | 面板执行「真卸载 web-search-local」 | ① panel/custody/web-search-local-*/manifest.json 存在且 sha 清单与源一致；② lib/web-search-local 目录不存在；③ cordis.patch.yml 不含 web-search-local 插入块；④ :8 不存在 fetchProvider=local-fetch（键已回缺省）；⑤ snapshot 返回 200、5 卡渲染，search-router 仍 mounted 且状态=dependency-broken、文案含「已加载，但依赖的本地搜索未安装——搜索功能不可用」；⑥ doctor error=0 且输出含 web-search-local 缺席提示（severity≠error）+ 含 missing-provider warning（severity=warning）；⑦ 无 dangling provider 警告；⑧ 恢复后：lib/web-search-local 恢复、sha 回 ce0b0b81、:8 回 local-fetch、search-router 状态回 mounted。 |
