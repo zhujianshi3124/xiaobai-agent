@@ -43,7 +43,7 @@ const fakeCtx = {
 };
 const panelMod = await import(pathToFileURL(join(panelDir, "index.js")).href);
 panelMod.apply(fakeCtx, { toolkitRoot: root, doctorCli, devicesFile: fixtureFile });
-check("routes count == 8", routes.length === 8, String(routes.length));
+check("routes count == 13 (P2.4 +5 卸载/恢复路由)", routes.length === 13, String(routes.length));
 check("P2.1 plan route registered", routes.some((r) => r.path === "/api/toolkit-panel/plan"));
 check("P2.1 execute route registered", routes.some((r) => r.path === "/api/toolkit-panel/execute"));
 check("P2.1 plan/status route registered", routes.some((r) => r.path === "/api/toolkit-panel/plan/status"));
@@ -58,6 +58,11 @@ const expectedWhenAllowed = {
   "/api/toolkit-panel/plan/status": ["GET", 404],
   "/api/toolkit-panel/toggle/plan": ["GET", 405],
   "/api/toolkit-panel/config/plan": ["GET", 405],
+  "/api/toolkit-panel/uninstall/plan": ["GET", 405],
+  "/api/toolkit-panel/uninstall/execute": ["GET", 405],
+  "/api/toolkit-panel/custody": ["GET", 200],
+  "/api/toolkit-panel/restore/plan": ["GET", 405],
+  "/api/toolkit-panel/restore/execute": ["GET", 405],
 };
 
 // 写路径（options.change === true）路由集合：tunneled 无服务一律 403。
@@ -67,6 +72,10 @@ const WRITE_ROUTES = new Set([
   "/api/toolkit-panel/execute",
   "/api/toolkit-panel/toggle/plan",
   "/api/toolkit-panel/config/plan",
+  "/api/toolkit-panel/uninstall/plan",
+  "/api/toolkit-panel/uninstall/execute",
+  "/api/toolkit-panel/restore/plan",
+  "/api/toolkit-panel/restore/execute",
 ]);
 
 // 每个场景独立 apply 一次，通过 ctx.get 注入不同形态的 remoteWebUiPairing。
@@ -330,9 +339,9 @@ check("server parser scopes config to direct children", snapshotSrc.includes("if
 check("client keeps defensive fallback", clientSrc.includes("rowAnchorFromPatch") && htmlSrc.includes("rowAnchorFromPatch"));
 {
   // 直接执行服务端 parseRootRows，用真实 patch 文本断言 rate-throttle 自身 enabled === false
-  const parserProbe = join(tmpdir(), "toolkit-parser-probe-" + process.pid + ".mjs");
-  writeFileSync(parserProbe, snapshotSrc.replace("function parseRootRows(", "export function parseRootRows("), "utf8");
-  const probe = await import(pathToFileURL(parserProbe).href);
+  // P2.4 起 snapshot.mjs 引入兄弟模块（plugin-registry/custody），tmpdir 拷贝法会断链；
+  // parseRootRows 已正式 export，直接 import 真实模块。
+  const probe = snapMod;
   const patchText = readFileSync(join(root, "cordis.patch.yml"), "utf8");
   const rows = probe.parseRootRows(patchText);
 

@@ -14,6 +14,21 @@ import {
   PlanError,
 } from "./manager/apply-engine.mjs";
 import {
+  createSoftUninstallPlan,
+  createTrueUninstallPlan,
+  createSoftRestorePlan,
+  createTrueRestorePlan,
+  executeSoftUninstall,
+  executeTrueUninstall,
+  executePresetSoftUninstall,
+  executePresetTrueUninstall,
+  executeSoftRestore,
+  executeTrueRestore,
+  executePresetRestore,
+} from "./manager/uninstall.mjs";
+import { listCustody, getSoftRecord } from "./manager/custody.mjs";
+import { PLUGINS, assertUninstallable } from "./manager/plugin-registry.mjs";
+import {
   CONFIG_WHITELIST,
   CONFIG_EDITABLE_ROW,
   validateConfigValue,
@@ -168,10 +183,37 @@ const PLAN_ERROR_STATUS = {
   "value-not-whitelisted": 400,
   // Q1 安全闸：现有 disabled 是条件表达式（如 `!!js ...`），不予改写 → 400
   "value-not-literal": 400,
+  // ---------- P2.4 卸载/恢复 ----------
+  "plugin-unknown": 400,
+  "self-uninstall-forbidden": 400,
+  "row-block-not-found": 400,
+  "row-block-multiple": 409,
+  "host-key-occupied": 409,
+  "host-key-conflict": 409,
+  "custody-id-invalid": 400,
+  "custody-not-found": 404,
+  "custody-verify-failed": 409,
+  "restore-verify-failed": 409,
+  "soft-record-missing": 400,
+  "confirm-missing": 400,
+  "mode-invalid": 400,
+  "preset-state-missing": 409,
+  "preset-backup-missing": 409,
+  "preset-script-missing": 500,
+  "body-missing": 400,
+  "body-delete-failed": 500,
 };
 
 function planErrorStatus(code) {
   return PLAN_ERROR_STATUS[code] || 400;
+}
+
+function loadJsonSafe(abs) {
+  try {
+    return JSON.parse(readFileSync(abs, "utf8"));
+  } catch {
+    return null;
+  }
 }
 
 export function apply(ctx, config = {}) {
@@ -444,6 +486,208 @@ export function apply(ctx, config = {}) {
           });
         } catch (error) {
           const code = error instanceof PlanError ? error.code : "internal";
+          sendJson(response, planErrorStatus(code), { ok: false, code, error: String(error && error.message || error) });
+        }
+      }, { change: true }),
+    },
+    // ---------- P2.4 卸载/恢复（施工批 1，p24-design.md §7.2 API 草案）----------
+    // 四条路由全部走既有 guard：写路由 = {change:true} + 严格配对 + CSRF（isSafeStateChange）。
+    // cordis.patch.yml 的一切写入仍由 executePlan 唯一落盘；保管区/本体删除/预设脚本是
+    // 独立受控步骤（各自 sha 校验 + fail-closed，见 manager/uninstall.mjs 头注）。
+    {
+      kind: "exact",
+      path: "/api/toolkit-panel/uninstall/plan",
+      handler: guard(async (request, response) => {
+        if (request.method !== "POST") {
+          response.writeHead(405, { allow: "POST" });
+          response.end();
+          return;
+        }
+        try {
+          const body = await readJsonBody(request);
+          const plugin = String(body.plugin || "");
+          const mode = String(body.mode || "");
+          if (mode !== "soft" && mode !== "true") {
+            throw new PlanError("mode-invalid", "mode 必须是 soft（软卸载）或 true（真卸载）");
+          }
+          const meta = assertUninstallable(plugin);
+          // 知情确认复核：确认页要求手动输入插件名（软一次 / 真两次），服务端不信任前端状态。
+          const typed = Array.isArray(body.confirm) ? body.confirm.map(String) : [String(body.confirm || "")];
+          const expectedCount = mode === "true" ? 2 : 1;
+          if (typed.length !== expectedCount || typed.some((t) => t !== plugin)) {
+            throw new PlanError(
+              "confirm-missing",
+              "知情确认未完成：请" + (mode === "true" ? "两次输入" : "输入") + "插件名 " + plugin + " 后再执行",
+            );
+          }
+          const userReason = body.reason ? String(body.reason).slice(0, 200) : null;
+          const confirmCopy = JSON.stringify({ plugin, mode, typedCount: typed.length, at: new Date().toISOString() });
+          const planArgs = { toolkitRoot, plugin, userReason, confirmCopy };
+          const plan = mode === "soft"
+            ? createSoftUninstallPlan(planArgs)
+            : createTrueUninstallPlan(planArgs);
+          const isTextPlan = !!plan.file;
+          sendJson(response, 200, {
+            ok: true,
+            plan: {
+              token: plan.token,
+              kind: plan.kind,
+              plugin: plan.plugin,
+              mode: plan.mode,
+              file: plan.file || null,
+              rowId: plan.rowId || null,
+              note: plan.note,
+              changed: plan.changed !== false,
+              expectedSha: plan.expectedSha || null,
+              nextSha: plan.nextSha || null,
+              removedLines: plan.removedLines || null,
+              hostKey: plan.hostKey ? plan.hostKey.key : null,
+              archivedExpected: mode === "true",
+              effectNote: "本次执行后，将于下次重启时" + (mode === "true" ? "停止使用（删除立即完成）" : "停用") + "；重启前仍按当前状态运行。",
+              createdAt: plan.createdAt,
+              expiresAt: plan.expiresAt,
+              ...(isTextPlan ? {} : {}),
+            },
+          });
+        } catch (error) {
+          const code = error instanceof PlanError || (error && error.code) ? error.code : "internal";
+          sendJson(response, planErrorStatus(code), { ok: false, code, error: String(error && error.message || error) });
+        }
+      }, { change: true }),
+    },
+    {
+      kind: "exact",
+      path: "/api/toolkit-panel/uninstall/execute",
+      handler: guard(async (request, response) => {
+        if (request.method !== "POST") {
+          response.writeHead(405, { allow: "POST" });
+          response.end();
+          return;
+        }
+        try {
+          const body = await readJsonBody(request);
+          const token = String(body.token || "");
+          const plan = getPlan(token);
+          if (!plan) throw new PlanError("plan-not-found", "方案不存在或已失效，请重新生成");
+          let result;
+          if (plan.kind === "uninstall-soft-patch") {
+            result = await executeSoftUninstall({ plan: getPlan(token), toolkitRoot, backupRoot });
+          } else if (plan.kind === "uninstall-true-patch") {
+            result = await executeTrueUninstall({ plan: getPlan(token), toolkitRoot, backupRoot });
+          } else if (plan.kind === "uninstall-soft-preset") {
+            result = await executePresetSoftUninstall({ plan: getPlan(token), toolkitRoot, backupRoot });
+          } else if (plan.kind === "uninstall-true-preset") {
+            result = await executePresetTrueUninstall({ plan: getPlan(token), toolkitRoot, backupRoot });
+          } else {
+            throw new PlanError("plan-not-found", "token 不是卸载方案（kind=" + plan.kind + "），请走 /execute");
+          }
+          sendJson(response, 200, { ok: true, ...result });
+        } catch (error) {
+          const code = error instanceof PlanError || (error && error.code) ? error.code : "internal";
+          sendJson(response, planErrorStatus(code), { ok: false, code, error: String(error && error.message || error) });
+        }
+      }, { change: true }),
+    },
+    // 保管区清单（只读）：真卸载恢复档 + 预设 patched 状态，供恢复入口与卡片状态。
+    {
+      kind: "exact",
+      path: "/api/toolkit-panel/custody",
+      handler: guard(async (request, response) => {
+        if (request.method !== "GET") {
+          response.writeHead(405, { allow: "GET" });
+          response.end();
+          return;
+        }
+        const entries = listCustody(toolkitRoot);
+        const presetState = JSON.parse(JSON.stringify(loadJsonSafe(join(toolkitRoot, "preset-patch-state.json"))));
+        sendJson(response, 200, { ok: true, custody: { entries, presetState: presetState || null } });
+      }),
+    },
+    // 恢复 plan：软（台账）/ 真（保管区）/ 预设（compact-router）。
+    // 宿主键被占用 ⇒ 返回 2.9 冲突三态（A 保留当前值 / B 恢复卸载前 / C 取消），不自动覆盖。
+    {
+      kind: "exact",
+      path: "/api/toolkit-panel/restore/plan",
+      handler: guard(async (request, response) => {
+        if (request.method !== "POST") {
+          response.writeHead(405, { allow: "POST" });
+          response.end();
+          return;
+        }
+        try {
+          const body = await readJsonBody(request);
+          const plugin = String(body.plugin || "");
+          const meta = assertUninstallable(plugin);
+          const hostKeyChoice = body.hostKeyChoice === "keep-current" ? "keep-current" : "restore-backup";
+          const planArgs = { toolkitRoot, plugin, custodyId: body.custodyId ? String(body.custodyId) : undefined, hostKeyChoice };
+          const plan = meta.managedBy === "preset"
+            ? createPresetRestorePlan(planArgs)
+            : getSoftRecord(toolkitRoot, meta.rowId || plugin)
+              ? createSoftRestorePlan(planArgs)
+              : createTrueRestorePlan(planArgs);
+          if (plan.conflict) {
+            sendJson(response, 200, {
+              ok: false,
+              code: "host-key-conflict",
+              conflict: plan.conflict,
+              choices: [
+                { id: "A", label: "保留当前值（不覆盖）", hostKeyChoice: "keep-current" },
+                { id: "B", label: "恢复成卸载前的值", hostKeyChoice: "restore-backup" },
+                { id: "C", label: "取消本次恢复" },
+              ],
+              note: "面板不会自动覆盖。",
+            });
+            return;
+          }
+          sendJson(response, 200, {
+            ok: true,
+            plan: {
+              token: plan.token,
+              kind: plan.kind,
+              plugin: plan.plugin,
+              file: plan.file || null,
+              note: plan.note,
+              expectedSha: plan.expectedSha || null,
+              nextSha: plan.nextSha || null,
+              manifestFileCount: plan.manifestFileCount || null,
+              effectNote: "恢复完成后需要重启才生效。",
+              createdAt: plan.createdAt,
+              expiresAt: plan.expiresAt,
+            },
+          });
+        } catch (error) {
+          const code = error instanceof PlanError || (error && error.code) ? error.code : "internal";
+          sendJson(response, planErrorStatus(code), { ok: false, code, error: String(error && error.message || error) });
+        }
+      }, { change: true }),
+    },
+    {
+      kind: "exact",
+      path: "/api/toolkit-panel/restore/execute",
+      handler: guard(async (request, response) => {
+        if (request.method !== "POST") {
+          response.writeHead(405, { allow: "POST" });
+          response.end();
+          return;
+        }
+        try {
+          const body = await readJsonBody(request);
+          const token = String(body.token || "");
+          const plan = getPlan(token);
+          if (!plan) throw new PlanError("plan-not-found", "方案不存在或已失效，请重新生成");
+          let result;
+          if (plan.kind === "restore-soft-patch") {
+            result = await executeSoftRestore({ plan: getPlan(token), toolkitRoot });
+          } else if (plan.kind === "restore-true-patch") {
+            result = await executeTrueRestore({ plan: getPlan(token), toolkitRoot, backupRoot, custodyId: body.custodyId ? String(body.custodyId) : undefined });
+          } else if (plan.kind === "restore-preset") {
+            result = await executePresetRestore({ plan: getPlan(token), toolkitRoot, backupRoot, custodyId: body.custodyId ? String(body.custodyId) : undefined });
+          } else {
+            throw new PlanError("plan-not-found", "token 不是恢复方案（kind=" + plan.kind + "），请走 /execute");
+          }
+          sendJson(response, 200, { ok: true, effectNote: "恢复完成，重启后生效", ...result });
+        } catch (error) {
+          const code = error instanceof PlanError || (error && error.code) ? error.code : "internal";
           sendJson(response, planErrorStatus(code), { ok: false, code, error: String(error && error.message || error) });
         }
       }, { change: true }),
