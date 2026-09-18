@@ -31,6 +31,8 @@
 | `TERMINAL-ACCEPTANCE-ROUND10.txt` | 由 `scripts/terminal-acceptance-report.mjs` 生成（第 10 轮终验取证 a–e；**只读**，重建 4 次写链 LCS） | 6689 | `49ef62a02e6d5d0379de1597fc5566c673b26684f55a56cef1e0001464ef2e55` |
 | `D01-MANIFEST-FIX.diff` | 第 11 轮 D-01（ADS 备份）+ manifest `reason`/`note` 修复的 **diff 留痕** | 16579 | `17fa692cb59ded4e7dcbcac1c865ad950540211b3802f4da12e80248a37a6b07` |
 | `ROUND12-SUPPLEMENTARY-ACCEPTANCE.md` | 第 12 轮 —— 催收**三项补验收正文摘要**（A：`api-notes` 两新节 / B：附录 B U1–U11 / C：3 项归一枚举 + 「全文 diff 不可构造」）+ U8/U9 呈报 + 新增 U12（授权语义澄清） | 10848 | `84c69d88f56152419a97a535a1396b10f06127cf819a490051371368ecfef2ab` |
+| `MASTER-BLIND-PROBE-8.txt` | 由 `scripts/master-blind-probe.mjs` 生成（可重放，**8/8 逐字命中**）—— **判定侧盲抽 8 句**（探针判定侧指定，本侧未挑选；逐句 ±20 字上下文） | 5137 | `04f0e735b5e0824b7efa5df5c280a3ba7f0b0032d2c69d226ea3286e75adf609` |
+| `ROUND13-SUPPLEMENTARY-2.md` | 第 13 轮 —— **尾②注入点全表**（+「已扫与否/未扫原因」，**补登同族缺口 #0/#2/E1**）+ **U1–U5 逐行补呈** + 盲抽结果登记 | 10057 | `99d1284d36bf12a77833088dc6608ba7d682d5fcc17ff797c67fe44083b95f62` |
 
 前三份为**逐字节复制**（复制后比对 sha256 一致才落盘），未经改写。
 
@@ -173,6 +175,7 @@ node scripts/p22b-retention-scope.mjs > panel/docs/evidence/RETENTION-SCOPE.txt 
 | 2026-09-18 12:1x（第 11 轮） | D-01（ADS）+ manifest `reason`/`note` 修复；`p21/p22-verify` 备份断言升级为**独立路径取证**；`p22b` E4 重写（15→17）；新增 `backup-write-test`（23/23） | 新增 `D01-MANIFEST-FIX.diff`；上表 `RETENTION-SCOPE.txt` 条目加注 |
 | 2026-09-18 12:40–12:48（第 11 轮） | 授权**恢复** `cordis.patch.yml` → `ce0b0b81…`（3097 B / CRLF）+ **语义化提交** `22fde85` | `Q2-LAYER-SCAN.txt` 条目加注（§4 断言按新现实修订，**计数不变** 20/20；默认 14/14）；「生产实况」一条加注（前提失效） |
 | 2026-09-18 13:07（第 12 轮） | 关账被判定侧接受（「关账成立 ✓」）；执行保留事项 —— **催收三项补验收呈报** + **U6/U7 销项** + **新增 U12 授权语义澄清**；**零磁盘动作**（`cordis.patch.yml` sha 未变 `ce0b0b81…`） | 新增 `ROUND12-SUPPLEMENTARY-ACCEPTANCE.md`（10848 B） |
+| 2026-09-18 13:25（第 13 轮） | 补验收判定（第 12 轮四块 ✓ + 全文 diff 申报接受）；**判定侧盲抽 8 句 8/8 逐字命中**（代偿自选探针偏选风险）；**尾②注入点全表**补呈并**补登同族缺口 #0/#2/E1**（红线内未扫，随 U8 一并补扫）；U9 已批准（随下个写盘批次刷新 marker） | 新增 `MASTER-BLIND-PROBE-8.txt`（5137 B）、`ROUND13-SUPPLEMENTARY-2.md`（10057 B） |
 
 > **本目录的两条硬约定**：① **只增不改** —— 已入库的归档文件**永不覆盖**；与脚本产生时序差时，**加注记、以脚本重放为准**。
 > ② **每份证据必须可重放** —— 上表所有「由 `scripts/*.mjs` 生成」者，重放命令即其生成命令。
