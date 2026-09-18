@@ -7,11 +7,18 @@ import { runDoctorDryRun } from "./manager/doctor-runner.mjs";
 import {
   createPlan,
   createTogglePlan,
+  createConfigPlan,
   executePlan,
   putPlan,
   getPlan,
   PlanError,
 } from "./manager/apply-engine.mjs";
+import {
+  CONFIG_WHITELIST,
+  CONFIG_EDITABLE_ROW,
+  validateConfigValue,
+  checkCrossField,
+} from "./manager/config-whitelist.mjs";
 
 export const name = "toolkit-manager";
 export const inject = ["webServer"];
@@ -358,6 +365,81 @@ export function apply(ctx, config = {}) {
               nextSha: plan.nextSha,
               createdAt: plan.createdAt,
               expiresAt: plan.expiresAt,
+            },
+          });
+        } catch (error) {
+          const code = error instanceof PlanError ? error.code : "internal";
+          sendJson(response, planErrorStatus(code), { ok: false, code, error: String(error && error.message || error) });
+        }
+      }, { change: true }),
+    },
+    // ---------- P2.3 配置编辑（判定侧第 19 轮批准的设计稿 p23-design.md）----------
+    // 白名单标量编辑：仅 rate-throttle（CONFIG_EDITABLE_ROW）、仅 18 个白名单字段、
+    // 仅标量（布尔/数值）。服务端权威校验（不信任前端）：类型 / 范围 / 跨字段
+    // （maxIntervalMs ≥ minIntervalMs，读当前 patch 值）/ 拒绝换行与 YAML 结构字符。
+    // 生效路径已钉死（设计稿 §八）：18/18 = patch 激活快照 ⇒ 重启 dsh web 生效，无遮蔽。
+    {
+      kind: "exact",
+      path: "/api/toolkit-panel/config/plan",
+      handler: guard(async (request, response) => {
+        if (request.method !== "POST") {
+          response.writeHead(405, { allow: "POST" });
+          response.end();
+          return;
+        }
+        try {
+          const body = await readJsonBody(request);
+          const rowId = String(body.rowId || "");
+          const path = String(body.path || "");
+          if (rowId !== CONFIG_EDITABLE_ROW) {
+            throw new PlanError("row-not-editable", "该插件没有开放参数编辑（可编辑仅限 " + CONFIG_EDITABLE_ROW + "）");
+          }
+          const check = validateConfigValue(path, body.value);
+          if (!check.ok) {
+            throw new PlanError("value-invalid", check.error);
+          }
+          // 跨字段校验：需要当前 patch 里的 minIntervalMs（现读，不缓存）
+          if (path === "maxIntervalMs") {
+            const { readFileSync: rf } = await import("node:fs");
+            const patchText = rf(join(toolkitRoot, "cordis.patch.yml"), "utf8");
+            const { parseConfigScalars } = await import("./manager/snapshot.mjs");
+            const scalars = parseConfigScalars(patchText, rowId);
+            const raw = scalars.top.minIntervalMs;
+            const currentMin = raw !== undefined && Number.isFinite(Number(raw)) ? Number(raw) : null;
+            const cross = checkCrossField(check.value, currentMin);
+            if (!cross.ok) {
+              throw new PlanError("value-invalid", cross.error);
+            }
+          }
+          const plan = createConfigPlan({
+            file: join(toolkitRoot, "cordis.patch.yml"),
+            rowId,
+            path,
+            value: check.value,
+            backupRoot,
+            reason: "panel-config-edit",
+            note: rowId + "." + path + " = " + String(check.value) + "（P2.3 配置编辑）",
+          });
+          putPlan(plan);
+          sendJson(response, 200, {
+            ok: true,
+            plan: {
+              token: plan.token,
+              kind: plan.kind,
+              file: plan.file,
+              rowId: plan.rowId,
+              path: plan.key,
+              value: plan.value,
+              changed: plan.changed,
+              anchorLine: plan.anchorLine,
+              targetLine: plan.targetLine,
+              diff: plan.diff,
+              expectedSha: plan.expectedSha,
+              nextSha: plan.nextSha,
+              createdAt: plan.createdAt,
+              expiresAt: plan.expiresAt,
+              // 生效时机（人话，按插件分述 —— 设计稿 §四）：
+              effectNote: "改的是配置文件里的值：重启 DSH 后生效；当前没有别的配置来源会盖住它。",
             },
           });
         } catch (error) {

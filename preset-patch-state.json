@@ -24,7 +24,8 @@
     "file": "C:/Users/LENOVO/.dsh/.agent-presets/liangshen/agent.cordis.yml",
     "backup": "D:/dsh-plugins/dsh-toolkit/preset-backups/liangshen.agent.cordis.yml.bak",
     "originalSha": "0c9d4015838cdf0c06b1d8f3e5bc9c8911976ecdce84acb8e5c2f1d3796c2ada",
-    "patchedSha": "1d6e3210705c8b7e6574e1bc9804c9679ff700f976e47a8c10fa2878b536f968",
-    "patchedAt": "2026-09-14T08:02:55.268Z"
+    "patchedSha": "acf1888929763b4f4f0f2616877458a1d9a67974818c3e1d2c97f2ff992145ff",
+    "patchedAt": "2026-09-18T07:58:55.761Z",
+    "note": "第 19 轮 U9 刷新：marker 与磁盘重新对账（内容自 2026-09-14 改写后未再变化，仅 hash 补账）"
   }
 }

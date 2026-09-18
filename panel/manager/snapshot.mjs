@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { homedir } from "node:os";
 
 const ORIGINS = {
   "agent-memory": { origin: "local" },
@@ -107,7 +108,92 @@ function loadJson(abs) {
   }
 }
 
-export async function buildSnapshot({ toolkitRoot }) {
+/**
+ * P2.3：解析某行 `config:` 子树里的**标量值**（config 直下 + routing 直下），
+ * 供卡片「参数编辑」呈现当前值。只收标量；嵌套数组/对象（如 staticGroups）跳过。
+ * 返回 { top: {k:v}, routing: {k:v} }，值均为原始字符串（UI 侧再转类型）。
+ */
+export function parseConfigScalars(patchText, rowId) {
+  const lines = patchText.split(/\r?\n/);
+  const out = { top: {}, routing: {} };
+  let start = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^(\s*)- id:\s*([^#\s]+)/.exec(lines[i]);
+    if (m && m[2] === rowId) { start = i; break; }
+  }
+  if (start < 0) return out;
+  const rowIndent = /^(\s*)/.exec(lines[start])[1].length;
+  let cfgIndent = -1;
+  let routingIndent = -1;
+  for (let j = start + 1; j < lines.length; j++) {
+    const line = lines[j];
+    if (/^(\s*)- id:/.test(line)) break;
+    const km = /^(\s+)([A-Za-z][A-Za-z0-9_-]*):\s*(.*)$/.exec(line);
+    if (!km) continue;
+    const ki = km[1].length;
+    if (ki <= rowIndent) break;
+    if (ki === rowIndent + 2) {
+      if (km[2] === "config") { cfgIndent = ki; continue; }
+    }
+    if (cfgIndent >= 0 && ki === cfgIndent + 2) {
+      if (km[3] === "" && km[2] === "routing") { routingIndent = ki; continue; }
+      out.top[km[2]] = km[3].trim();
+      continue;
+    }
+    if (routingIndent >= 0 && ki === routingIndent + 2) {
+      out.routing[km[2]] = km[3].trim();
+    }
+  }
+  return out;
+}
+
+/**
+ * P2.3（第 15 轮方案 1）：search-router `mode` 的**当前实际生效值 + 来源**。
+ * 优先级 = env（DSH_WEB_SEARCH_ROUTER_MODE，仅接受合法枚举）> 热 JSON（热改即生效）> patch。
+ * 读路径 = ~/.dsh/dsh-search-router.json —— 已列入乙程序只读清单（U13-②，第 16/17 轮落账）。
+ */
+const MODES = ["auto", "official", "local"];
+export function searchRouterModeShadow({ envMode, hot }) {
+  if (typeof envMode === "string" && MODES.includes(envMode)) {
+    return { value: envMode, source: "环境变量 DSH_WEB_SEARCH_ROUTER_MODE（重启前固定）" };
+  }
+  if (hot && typeof hot === "object" && typeof hot.mode === "string" && MODES.includes(hot.mode)) {
+    return { value: hot.mode, source: "热 JSON ~/.dsh/dsh-search-router.json（热改即生效，无需重启）" };
+  }
+  return { value: null, source: "patch cordis.patch.yml（重启生效）" };
+}
+
+/**
+ * P2.3 每卡配置面板元数据（设计稿 p23-design.md §一范围收敛）：
+ *   - rate-throttle：唯一可写（18 白名单字段，§八）；生效值 = patch（§八已钉死无遮蔽）。
+ *   - search-router：mode 只读展示「生效值 + 来源」（第 15 轮方案 1 —— 热 JSON 现有
+ *     mode 键，patch 编辑无效；写热 JSON 属红线，列 P2.5 候选）。
+ *   - agent-memory / compact-router / web-search-local：插件 config 无 enabled 键且
+ *     源码不读 ⇒ 「无内部开关」，无可写入口。
+ */
+function buildConfigPanel(dir, rowId, patchText, { hotRouterPath, envMode }) {
+  if (dir === "rate-throttle") {
+    const scalars = rowId ? parseConfigScalars(patchText, rowId) : { top: {}, routing: {} };
+    return {
+      editable: true,
+      rowId,
+      values: { ...scalars.top, routing: scalars.routing },
+      effectNote: "改的是配置文件里的值：重启 DSH 后生效；当前没有别的配置来源会盖住这些值（§八已逐字段钉死）。",
+    };
+  }
+  if (dir === "search-router") {
+    const hot = loadJson(hotRouterPath);
+    return {
+      editable: false,
+      rowId,
+      mode: searchRouterModeShadow({ envMode, hot }),
+      note: "本面板不提供 mode 编辑（判定侧第 15 轮方案 1：热 JSON 已有 mode 键，patch 编辑会被它盖住）。需调整请编辑 ~/.dsh/dsh-search-router.json（热改即生效）。",
+    };
+  }
+  return { editable: false, noInternalSwitch: true };
+}
+
+export async function buildSnapshot({ toolkitRoot, hotRouterPath = join(homedir(), ".dsh", "dsh-search-router.json"), envMode = process.env.DSH_WEB_SEARCH_ROUTER_MODE } = {}) {
   const pkg = loadJson(join(toolkitRoot, "package.json")) || {};
   const suiteManifest = loadJson(join(toolkitRoot, "dsh.plugin.json")) || {};
   const patchPath = join(toolkitRoot, "cordis.patch.yml");
@@ -143,6 +229,8 @@ export async function buildSnapshot({ toolkitRoot }) {
       managedBy: patchRow ? "patch" : dir === "compact-router" ? "preset-script" : "none",
       enabled: patchRow ? patchRow.enabled : dir === "compact-router" ? "compact-router 由 scripts/apply-preset-patch.mjs 管理，不在 cordis.patch.yml" : false,
       patchRow: patchRow || null,
+      // ---- P2.3 配置编辑（判定侧第 19 轮批准的设计稿 p23-design.md）----
+      configPanel: buildConfigPanel(dir, patchRow ? patchRow.id : null, patchText, { hotRouterPath, envMode }),
     });
   }
 
