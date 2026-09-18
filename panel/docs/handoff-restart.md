@@ -866,7 +866,18 @@ body-too-large                                   → 413
 
 ---
 
-## 12. 会话交接卡（10 行 · 关账硬前置，2026-09-18 新会话第 3 轮 · 施工批 1 开工版）
+## 12. 会话交接卡（10 行 · 关账硬前置，2026-09-18 新会话第 4 轮 · 施工批 1 完成报判版）
+
+1. **当前状态**：P2.4 施工批 1 **完成、全绿报判**——引擎/保管区/四 API/快照六态/doctor 三检查全部就绪；待判定侧验收 → 用户 reload 目视 → 施工批 2（doctor 操作台+双回滚 UI）。
+2. **基准事实**：cordis.patch.yml = ce0b0b81…（3097 B / CRLF / 82 行，全程零写入）；p24-verify 40/40；全套回归全绿（p1 215 因 +5 路由 gate 断言 190→215）；doctor 0/0/0。
+3. **下一步**：判定侧验收施工批 1（台账 L-055＋2.9b 文案呈验附）→ 用户 reload 目视（缺席态渲染/dependency-broken 文案/恢复入口）→ 施工批 2 开工前先证后写。
+4. **已定案**：软/真卸载语义＋宿主键方案 A＋冲突三态；真卸载确认后存档式；compact-router 预设桥只调既有脚本＋双层留痕；半成品三处偏差重写（行级 id 缩进计数/宿主键 config 相对偏移/恢复向 skipAnchorCheck）。
+5. **硬验收口径**：p24-verify 40 断言；doctor 缺席/缺依赖仅 info/warning；面板 5 卡恒渲染；恢复后 sha 回 ce0b0b81。
+6. **待用户/判定侧**：UI 渲染层（两渲染器卸载/恢复按钮与确认页）归属待裁——快照/引擎/doctor 就绪，UI 未动。
+7. **正本索引 ①**：HANDOFF-MASTER.md（总索引 + 附录 C）。
+8. **正本索引 ②**：handoff-restart.md（本文）、ledger.md（最新 L-055）、api-notes.md；**doctor 仓**（D:/dsh-test-sandbox/projects/doctor，提交 20a38fe+3a03138，engine 三检查＋signals 驱动）。
+9. **正本索引 ③**：panel/manager/{plugin-registry,custody,uninstall}.mjs；panel/index.js 13 路由；doctor-signals.json（仓根信号声明）；scripts/p24-verify.mjs（40 断言可重放）。
+10. **红线（现行为）**：五子插件源码目录可知情确认删除；~/.dsh 与 cloudflared 不变；预设写入仅 §4 口径（只调脚本＋双层备份＋缺 .bak fail-closed）；写前必备份；写盘/重启先授权；「先申报后读」；每批次同步本卡。
 
 1. **当前状态**：P2.3 已关账；P2.4 证据/设计/预审全部通过；用户已批准并授权（含 compact-router 预设写授权）；**施工批 1 开工中**。
 2. **基准事实**：cordis.patch.yml = ce0b0b81c91ca4c4…（3097 B / CRLF / 82 行）；开工前 git 干净；施工批 1 每个写操作须走安全链。
