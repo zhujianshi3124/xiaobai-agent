@@ -677,7 +677,7 @@ export function apply(ctx, config = {}) {
           if (!plan) throw new PlanError("plan-not-found", "方案不存在或已失效，请重新生成");
           let result;
           if (plan.kind === "restore-soft-patch") {
-            result = await executeSoftRestore({ plan: getPlan(token), toolkitRoot });
+            result = await executeSoftRestore({ plan: getPlan(token), toolkitRoot, backupRoot });
           } else if (plan.kind === "restore-true-patch") {
             result = await executeTrueRestore({ plan: getPlan(token), toolkitRoot, backupRoot, custodyId: body.custodyId ? String(body.custodyId) : undefined });
           } else if (plan.kind === "restore-preset") {

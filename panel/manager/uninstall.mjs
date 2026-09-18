@@ -22,6 +22,7 @@ import {
   planWebConfigRemove,
   planWebConfigRestore,
   locateWebConfigKey,
+  locateConfigKeyLine,
   sha256Of,
   executePlan,
   putPlan,
@@ -149,8 +150,10 @@ function makeToken(kind, plugin, text, now) {
 
 /**
  * 校验插回位置的现读锚（review 注记 ①：防陈旧 lineIndex）。
- * 软卸载台账记录被摘块的前/后两个顶层行原文；恢复 plan 时以它们现读定位：
- *   nextTop 命中 → insertAt = 其现读行号；否则 prevTop 命中 → insertAt = +1；
+ * 软卸载/真卸载台账记录被摘块的前/后两个**行级 `- id:` 锚**（id 全文件唯一）。
+ * 恢复 plan 时现读定位：
+ *   nextTop 命中 → 自该行向上回溯越过空行到下一块的结构行（`- insert:` 等），插在其前；
+ *   否则 prevTop 命中 → 自该行向下越过其块内容（更深缩进/空行）到块界，插在其后；
  *   两者都命中不到 ⇒ 结构漂移过大，拒绝（fail-closed）。
  * 返回 { insertAt, via }。
  */
@@ -162,29 +165,51 @@ function revalidateInsertAt(text, record) {
     for (let i = 0; i < lines.length; i++) if (lines[i] === raw) hits.push(i);
     return hits.length === 1 ? hits[0] : -1;
   };
-  const viaNext = findUnique(record.nextTopRaw);
-  if (viaNext >= 0) return { insertAt: viaNext, via: "next-top-line" };
-  const viaPrev = findUnique(record.prevTopRaw);
-  if (viaPrev >= 0) return { insertAt: viaPrev + 1, via: "prev-top-line" };
+  const nextIdx = findUnique(record.nextTopRaw);
+  if (nextIdx >= 0) {
+    // 向上越过空行，落在下一块的结构行（首列非空白）之前
+    let at = nextIdx;
+    while (at > 0 && /^\s*$/.test(lines[at - 1])) at--;
+    if (at > 0 && /^\S/.test(lines[at - 1])) at--;
+    else if (at > 0 && /^\S/.test(lines[at])) at = at; // 结构行即当前行
+    return { insertAt: at, via: "next-top-line" };
+  }
+  const prevIdx = findUnique(record.prevTopRaw);
+  if (prevIdx >= 0) {
+    // 自前行锚向下：越过其块内容（更深缩进或空行），到首个缩进 ≤ 前行锚缩进的非空行之前
+    const pm = /^(\s*)- id:/.exec(lines[prevIdx]);
+    const prevIndent = pm ? pm[1].length : 0;
+    let at = lines.length;
+    for (let k = prevIdx + 1; k < lines.length; k++) {
+      const line = lines[k];
+      if (/^\s*$/.test(line)) continue;
+      if (/^\S/.test(line) || (/^(\s*)- id:/.test(line) && /^(\s*)/.exec(line)[1].length <= prevIndent)) {
+        at = k;
+        break;
+      }
+    }
+    return { insertAt: at, via: "prev-top-line" };
+  }
   throw new PlanError(
     "anchor-moved",
     "软恢复插回位置无法在当前文件里唯一锚定（结构漂移过大），拒绝恢复。请用维护程序处理。",
   );
 }
 
-/** 记录摘块位置的前后顶层行原文（软卸载时采集，供恢复现读锚定）。 */
+/** 记录摘块位置的前后行级锚（软卸载时采集，供恢复现读锚定）。
+ *  用 `- id:` 行（row id 全文件唯一）而非任意顶层行——`- insert:` 行彼此相同，不唯一。 */
 function captureTopNeighbors(text, start, end) {
   const lines = text.split(/\r?\n/);
   let prev = null;
   for (let i = start - 1; i >= 0; i--) {
-    if (/^\S/.test(lines[i])) {
+    if (/^(\s*)- id:/.test(lines[i])) {
       prev = lines[i];
       break;
     }
   }
   let next = null;
   for (let i = end + 1; i < lines.length; i++) {
-    if (/^\S/.test(lines[i])) {
+    if (/^(\s*)- id:/.test(lines[i])) {
       next = lines[i];
       break;
     }
@@ -210,10 +235,13 @@ export function createSoftUninstallPlan({ toolkitRoot, plugin, ttlMs, reason, no
   let nextText = removed.nextText;
   let hostKeyRaw = null;
   let hostKeyLineIndex = null;
+  let hostKeyRelOffset = null;
   if (meta.hostKey) {
     const unset = planWebConfigRemove(removed.nextText, meta.hostKey);
     hostKeyRaw = unset.removedRaw;
     hostKeyLineIndex = unset.removedLineIndex;
+    const webCfg = locateConfigKeyLine(removed.nextText, "web", "config");
+    hostKeyRelOffset = hostKeyLineIndex - webCfg.sectionLine.lineIndex; // 相对 config: 的稳定偏移
     nextText = unset.nextText;
   }
   const now = Date.now();
@@ -237,7 +265,7 @@ export function createSoftUninstallPlan({ toolkitRoot, plugin, ttlMs, reason, no
     removedLines: located.end - located.start + 1,
     prevTopRaw: neighbors.prevTopRaw,
     nextTopRaw: neighbors.nextTopRaw,
-    hostKey: meta.hostKey ? { key: meta.hostKey, raw: hostKeyRaw, lineIndex: hostKeyLineIndex } : null,
+    hostKey: meta.hostKey ? { key: meta.hostKey, raw: hostKeyRaw, relOffsetWithinConfig: hostKeyRelOffset } : null,
     changed: true,
     createdAt: new Date(now).toISOString(),
     expiresAt: new Date(now + (ttlMs || DEFAULT_PLAN_TTL_MS)).toISOString(),
@@ -262,11 +290,12 @@ export function createTrueUninstallPlan({ toolkitRoot, plugin, ttlMs, reason, no
   const removed = planRemoveRow(text, meta.rowId);
   let nextText = removed.nextText;
   let hostKeyRaw = null;
-  let hostKeyLineIndex = null;
+  let hostKeyRelOffset = null;
   if (meta.hostKey) {
     const unset = planWebConfigRemove(removed.nextText, meta.hostKey);
     hostKeyRaw = unset.removedRaw;
-    hostKeyLineIndex = unset.removedLineIndex;
+    const webCfg = locateConfigKeyLine(removed.nextText, "web", "config");
+    hostKeyRelOffset = unset.removedLineIndex - webCfg.sectionLine.lineIndex;
     nextText = unset.nextText;
   }
   const now = Date.now();
@@ -287,7 +316,7 @@ export function createTrueUninstallPlan({ toolkitRoot, plugin, ttlMs, reason, no
     anchorLine: located.anchor.lineIndex + 1,
     block: located.block,
     insertAt: located.start,
-    hostKey: meta.hostKey ? { key: meta.hostKey, raw: hostKeyRaw, lineIndex: hostKeyLineIndex } : null,
+    hostKey: meta.hostKey ? { key: meta.hostKey, raw: hostKeyRaw, relOffsetWithinConfig: hostKeyRelOffset } : null,
     libDir: join(toolkitRoot, "lib", plugin),
     createdAt: new Date(now).toISOString(),
     expiresAt: new Date(now + (ttlMs || DEFAULT_PLAN_TTL_MS)).toISOString(),
@@ -376,11 +405,10 @@ function composeRestore({ text, block, prevTopRaw, nextTopRaw, hostKey, hostKeyC
         const lines = nextText.split(/\r?\n/);
         const hasCrlf = /\r\n/.test(nextText);
         const cleanRaw = String(hostKey.raw).replace(/\r?\n$/, "");
-        // 插回宿主键：按卸载时记录的相对位置（原行号 - 摘块起点）现读换算
-        const relOffset = typeof hostKey.relOffsetWithinPreBlock === "number"
-          ? hostKey.relOffsetWithinPreBlock
-          : null;
-        let at = relOffset != null ? Math.max(0, insertAt + relOffset) : -1;
+        // 插回宿主键：相对 web 行 config: 的稳定偏移（卸载时采集；config: 行先于一切 insert 块，索引稳定）
+        const relOffset = typeof hostKey.relOffsetWithinConfig === "number" ? hostKey.relOffsetWithinConfig : null;
+        const webCfg = locateConfigKeyLine(nextText, "web", "config");
+        let at = relOffset != null && webCfg ? webCfg.sectionLine.lineIndex + relOffset : -1;
         if (at < 0 || at > lines.length) {
           throw new PlanError("anchor-moved", "宿主键插回位置无法换算，拒绝恢复");
         }
@@ -397,12 +425,7 @@ function hostKeyFromRecord(record) {
   return {
     key: record.hostKey.key,
     raw: record.hostKey.raw,
-    relOffsetWithinPreBlock:
-      typeof record.hostKey.relOffsetWithinPreBlock === "number"
-        ? record.hostKey.relOffsetWithinPreBlock
-        : typeof record.hostKey.lineIndex === "number" && typeof record.insertAt === "number"
-          ? record.hostKey.lineIndex - record.insertAt
-          : null,
+    relOffsetWithinConfig: typeof record.hostKey.relOffsetWithinConfig === "number" ? record.hostKey.relOffsetWithinConfig : null,
   };
 }
 
@@ -419,7 +442,7 @@ function latestTrueCustody(toolkitRoot, plugin, custodyId) {
     err.code = "custody-not-found";
     throw err;
   }
-  return readCustodyManifest(toolkitRoot, chosen.custodyId);
+  return { manifest: readCustodyManifest(toolkitRoot, chosen.custodyId), custodyId: chosen.custodyId };
 }
 
 /**
@@ -450,6 +473,7 @@ export function createSoftRestorePlan({ toolkitRoot, plugin, hostKeyChoice, ttlM
   const plan = {
     token: makeToken("restore-soft-patch", plugin, text, now),
     kind: "restore-soft-patch",
+    skipAnchorCheck: true, // 恢复向计划：目标行不在文件中，无锚可验（SHA 闸 + 现读插回锚保证正确性）
     plugin,
     file: join(toolkitRoot, "cordis.patch.yml"),
     rowId: meta.rowId,
@@ -478,7 +502,9 @@ export function createTrueRestorePlan({ toolkitRoot, plugin, custodyId, hostKeyC
   if (meta.managedBy === "preset") {
     return createPresetRestorePlan({ toolkitRoot, plugin, custodyId, ttlMs, reason, note });
   }
-  const manifest = latestTrueCustody(toolkitRoot, plugin, custodyId);
+  const resolved = latestTrueCustody(toolkitRoot, plugin, custodyId);
+  const manifest = resolved.manifest;
+  custodyId = resolved.custodyId; // 未显式指定时 = 最新档；执行器按此还原
   const text = readPatch(toolkitRoot);
   let composed = { nextText: text, insertAt: null, conflict: null };
   if (manifest.restore && manifest.restore.rowBlock) {
@@ -495,6 +521,7 @@ export function createTrueRestorePlan({ toolkitRoot, plugin, custodyId, hostKeyC
   const plan = {
     token: makeToken("restore-true-patch", plugin, text, now),
     kind: "restore-true-patch",
+    skipAnchorCheck: true,
     plugin,
     custodyId,
     file: join(toolkitRoot, "cordis.patch.yml"),
@@ -563,6 +590,7 @@ function assertPatchUnchanged(plan, toolkitRoot) {
 export function executeSoftUninstall({ plan, toolkitRoot, backupRoot }) {
   assertPlanFresh(plan);
   assertPatchUnchanged(plan, toolkitRoot);
+  plan.backupRoot = backupRoot || plan.backupRoot; // executePlan 的备份链读 plan.backupRoot
   const result = executePlan(plan.token, {});
   recordSoftUninstall(toolkitRoot, plan.rowId, {
     plugin: plan.plugin,
@@ -571,12 +599,7 @@ export function executeSoftUninstall({ plan, toolkitRoot, backupRoot }) {
     prevTopRaw: plan.prevTopRaw,
     nextTopRaw: plan.nextTopRaw,
     hostKey: plan.hostKey
-      ? {
-          key: plan.hostKey.key,
-          raw: plan.hostKey.raw,
-          relOffsetWithinPreBlock:
-            plan.hostKey.lineIndex != null && plan.insertAt != null ? plan.hostKey.lineIndex - plan.insertAt : null,
-        }
+      ? { key: plan.hostKey.key, raw: plan.hostKey.raw, relOffsetWithinConfig: plan.hostKey.relOffsetWithinConfig }
       : null,
     shaBefore: result.shaBefore,
     shaAfter: result.shaAfter,
@@ -590,6 +613,7 @@ export function executeSoftUninstall({ plan, toolkitRoot, backupRoot }) {
 export function executeTrueUninstall({ plan, toolkitRoot, backupRoot }) {
   assertPlanFresh(plan);
   assertPatchUnchanged(plan, toolkitRoot);
+  plan.backupRoot = backupRoot || plan.backupRoot; // executePlan 的备份链读 plan.backupRoot
   const patchText = readPatch(toolkitRoot);
 
   // ① 确认后存档（删除前），逐文件 sha
@@ -601,8 +625,7 @@ export function executeTrueUninstall({ plan, toolkitRoot, backupRoot }) {
     pkg: (PLUGINS[plan.plugin] || {}).pkg,
     rowBlock: plan.block,
     insertAt: plan.insertAt,
-    hostKeyRaw: plan.hostKey ? plan.hostKey.raw : null,
-    hostKeyLineIndex: plan.hostKey ? plan.hostKey.lineIndex : null,
+    hostKey: plan.hostKey || null,
     prevTopRaw: neighbors.prevTopRaw,
     nextTopRaw: neighbors.nextTopRaw,
     presetStateSnapshot: null,
@@ -610,9 +633,10 @@ export function executeTrueUninstall({ plan, toolkitRoot, backupRoot }) {
     confirmCopy: plan.confirmCopy,
     patchText,
   });
+  const custodyId = custodyDir.split(/[\\/]/).pop();
 
   // ② 复验存档与源逐文件一致（复验不过 ⇒ 中止，不删源）
-  verifyCustodyBody(toolkitRoot, custodyDir, manifest);
+  verifyCustodyBody(toolkitRoot, custodyId, manifest);
   for (const f of manifest.body) {
     const srcSha = sha256Of(readFileSync(join(plan.libDir, f.rel)));
     if (srcSha !== f.sha256) {
@@ -633,7 +657,7 @@ export function executeTrueUninstall({ plan, toolkitRoot, backupRoot }) {
     throw err;
   }
 
-  return { ...result, custodyId: custodyDir.split(/[\\/]/).pop(), archivedFiles: manifest.body.length };
+  return { ...result, custodyId, archivedFiles: manifest.body.length };
 }
 
 /** compact-router 软卸载执行：--undo + 双层留痕。 */
@@ -685,7 +709,8 @@ export function executePresetTrueUninstall({ plan, toolkitRoot, backupRoot }) {
     confirmCopy: plan.confirmCopy,
     patchText: undefined,
   });
-  verifyCustodyBody(toolkitRoot, custodyDir, manifest);
+  const presetCustodyId = custodyDir.split(/[\\/]/).pop();
+  verifyCustodyBody(toolkitRoot, presetCustodyId, manifest);
   for (const f of manifest.body) {
     const srcSha = sha256Of(readFileSync(join(plan.libDir, f.rel)));
     if (srcSha !== f.sha256) {
@@ -700,7 +725,7 @@ export function executePresetTrueUninstall({ plan, toolkitRoot, backupRoot }) {
     ok: true,
     plugin: plan.plugin,
     mode: "true",
-    custodyId: custodyDir.split(/[\\/]/).pop(),
+    custodyId: presetCustodyId,
     archivedFiles: manifest.body.length,
     presetEvidence: evidence.perPreset,
     backupDir: evidence.backupDir,
@@ -736,7 +761,7 @@ export function executePresetRestore({ plan, toolkitRoot, backupRoot, custodyId 
 }
 
 /** 软恢复执行：executePlan 落盘 → 清台账条目。 */
-export function executeSoftRestore({ plan, toolkitRoot }) {
+export function executeSoftRestore({ plan, toolkitRoot, backupRoot }) {
   assertPlanFresh(plan);
   if (plan.conflict) {
     const err = new Error("存在宿主键冲突，须先由用户三选一");
@@ -744,6 +769,7 @@ export function executeSoftRestore({ plan, toolkitRoot }) {
     throw err;
   }
   assertPatchUnchanged(plan, toolkitRoot);
+  plan.backupRoot = backupRoot || plan.backupRoot; // executePlan 的备份链读 plan.backupRoot
   const result = executePlan(plan.token, {});
   clearSoftRecord(toolkitRoot, plan.rowId);
   return result;
@@ -761,6 +787,7 @@ export function executeTrueRestore({ plan, toolkitRoot, backupRoot, custodyId })
     throw err;
   }
   assertPatchUnchanged(plan, toolkitRoot);
+  plan.backupRoot = backupRoot || plan.backupRoot; // executePlan 的备份链读 plan.backupRoot
   const manifest = readCustodyManifest(toolkitRoot, custodyId || plan.custodyId);
   const restored = restoreBody(toolkitRoot, custodyId || plan.custodyId, manifest, { backupRoot });
   const result = executePlan(plan.token, {});
