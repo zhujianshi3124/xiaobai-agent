@@ -1,0 +1,187 @@
+=== §0 四层 patch 栈 -> 物理载体映射（本侧定义）===
+
+  第 ① 层  顶层 bundle patch（决定挂哪些插件、行级 disabled）
+        载体 : cordis.patch.yml（仓根）
+        路径 : D:\dsh-plugins\dsh-toolkit\cordis.patch.yml  (exists=true)
+        出处 : package.json:28  dsh.bundle.patch = ./cordis.patch.yml
+        出处 : package.json:19-25 files[] 含 cordis.patch.yml（随包发布）
+        出处 : 面板落盘目标亦为此文件：panel/index.js:275（plan）/ :328（toggle）
+        出处 : 默认 backupRoot 由 panel/index.js:171+175 从其所在仓根推导
+
+  第 ② 层  五插件清单（声明 requirements/exports，不含挂载行）
+        载体 : lib/{rate-throttle,compact-router,agent-memory,search-router,web-search-local}/dsh.plugin.json
+        路径 : D:\dsh-plugins\dsh-toolkit\lib  (exists=true)
+        出处 : 面板卡片判据：panel/manager/snapshot.mjs:112 readdirSync(libRoot) + 清单存在性
+        出处 : glob 命中 5 份（本脚本 §2 逐个复核）
+
+  第 ③ 层  面板子插件清单（面板自身的注册声明）
+        载体 : panel/dsh.plugin.json
+        路径 : D:\dsh-plugins\dsh-toolkit\panel\dsh.plugin.json  (exists=true)
+        出处 : panel/dsh.plugin.json:9 inject=["webServer"]
+        出处 : panel/index.js:16-17 name="toolkit-manager" / inject=["webServer"]
+        出处 : panel/package.json 由 P2 新建以让 locatePkgJson 走 nearestPackage（api-notes.md:137）
+
+  第 ④ 层  预设改写器（把预设里的 compaction 行换成 toolkit 的 compact-router）
+        载体 : scripts/apply-preset-patch.mjs -> 写 ~/.dsh/.agent-presets/<id>/agent.cordis.yml 与 shipped presets
+        路径 : D:\dsh-plugins\dsh-toolkit\scripts\apply-preset-patch.mjs  (exists=true)
+        出处 : apply-preset-patch.mjs:31  USER_PRESETS_DIR = homedir()/.dsh/.agent-presets
+        出处 : apply-preset-patch.mjs:64-78 locatePresetsDir()（shipped presets）
+        出处 : apply-preset-patch.mjs:33-46 ROW_UPSTREAM/ROW_NEW（改写对）
+        出处 : cordis.patch.yml:3 注释自陈「compact-router 不在此：由 scripts/apply-preset-patch.mjs 改写预设 compaction 行名」
+
+  ⚠ 本侧定义无仓内先例：全仓 grep「四层」只命中本任务自己写的 L-031 / handoff 11.11 / HANDOFF-MASTER（见 §6）。
+    总文档的四层定义到达后，须与本表逐层对账；对不上则扫描不算穷尽。
+
+=== §1 第①层 cordis.patch.yml：行清单 + 同 id + 覆盖声明 ===
+
+  顶层行（indent=0）与非顶层行：
+     5 | [top ] web
+    10 | [top ] web-search-deepseek
+    14 | [nest] rate-throttle
+    41 | [nest] v4-pro
+    48 | [nest] v4-flash
+    58 | [nest] web-search-local
+    64 | [nest] web-search-router
+    74 | [nest] agent-memory-runtime
+    81 | [nest] toolkit-manager
+
+  统计：顶层行 2 个（web, web-search-deepseek）
+        嵌套行 7 个（rate-throttle, v4-pro, v4-flash, web-search-local, web-search-router, agent-memory-runtime, toolkit-manager）
+  PASS ① 层内无重复 id 行（含五个 toolkit id） -- 全部 id 恰好出现 1 次（共 9 个）
+  五个 toolkit id 在本层命中：rate-throttle×1  web-search-local×1  web-search-router×1  agent-memory-runtime×1  toolkit-manager×1
+  PASS ① 五个 toolkit id 中仅 compact-router 无对应行（toolkit 侧预期如此） -- 缺行: 无
+  注：嵌套 id 中 v4-pro/v4-flash 是 rate-throttle.routing.staticGroups 的组 id，不是插件挂载行；
+      真正的 5 个插件挂载行 = rate-throttle / web-search-local / web-search-router / agent-memory-runtime / toolkit-manager。
+  PASS ① 无任何覆盖/遮蔽声明（override/shadow/replace/覆盖…） -- 0 命中
+  PASS ① 文件为 CRLF（与 P2 写路径前提一致） -- CRLF 前提成立
+
+=== §2 第②层 lib/*/dsh.plugin.json ×5 ===
+
+  agent-memory
+      name=@local/dsh-toolkit/agent-memory  manifestVersion=1
+      top-level keys: manifestVersion, name, requirements
+  compact-router
+      name=@local/dsh-toolkit/compact-router  manifestVersion=1
+      top-level keys: manifestVersion, name, requirements, optionalDeps
+  rate-throttle
+      name=@local/dsh-toolkit/rate-throttle  manifestVersion=1
+      top-level keys: manifestVersion, name, requirements
+  search-router
+      name=@local/dsh-toolkit/search-router  manifestVersion=1
+      top-level keys: manifestVersion, name, requirements
+  web-search-local
+      name=@local/dsh-toolkit/web-search-local  manifestVersion=1
+      top-level keys: manifestVersion, name, requirements
+
+  PASS ② 成卡目录数 = 5 -- 实测 5：agent-memory, compact-router, rate-throttle, search-router, web-search-local
+  PASS ② 五清单里无 id / patch / override / bundle 类字段（不能增删或遮蔽挂载行） -- 0 命中（只有 manifestVersion/name/requirements）
+  PASS ② 五清单的 id 维度：dsh.plugin.json 无 id 字段 ⇒ 层②不产生任何 patch 行 -- 五份均无 id
+
+=== §3 第③层 panel/dsh.plugin.json ===
+
+    {
+    "manifestVersion": 1,
+    "name": "@local/dsh-toolkit/panel",
+    "requirements": {
+      "runtime": {
+        "node": ">=22",
+        "dsh": ">=0.1.2-rc.1 <0.2.0"
+      },
+      "binaries": [],
+      "packages": {},
+      "registers": {
+        "inject": [
+          "webServer"
+        ],
+        "events": [],
+        "services": [],
+        "commands": [],
+        "providers": []
+      },
+      "exports": {
+        ".": "./index.js",
+        "./client": "./client/panel.html"
+      }
+    }
+  }
+  PASS ③ 面板清单无 id / patch / override 类字段 -- 0 命中（只有 manifestVersion/name/requirements）
+  panel/package.json name=@local/dsh-toolkit/panel  version=0.1.0
+  PASS ③ panel/package.json 不声明 patch 文件（dsh.client 只声明 client 面） -- dsh/client 相关键: dsh
+
+=== §4 toolkit-manager 行溯源：git 与快照 ===
+
+  git log -- cordis.patch.yml ：
+      37819e9 fix(P2-2): correct Sogou engine key sougou -> sogou in cordis.patch.yml
+      e50bb00 总装: 四行合并 cordis.patch.yml
+  PASS ④ toolkit-manager 从未出现在该文件的 git 历史中（即该行从未被提交） -- pickaxe 无命中
+
+  HEAD blob  sha256=7541c05aaaec808f8e6500356bed3b25550998ef7a1bcf560b0c167bcb351b97  size=2914
+  disk(工作区) sha256=ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9  size=3097
+  PASS ④ HEAD 版本完全不含 toolkit-manager 行 -- HEAD 末尾行: "        defaultWorkspace: null"
+  PASS ④ 磁盘去掉追加块后与 HEAD 逐字节一致（⇒ 除该行外无任何其它漂移） -- HEAD 是磁盘的前缀
+
+  追加块（git diff 的 4 个 + 行）：
+      + ""
+      + "- insert:"
+      + "    - id: toolkit-manager"
+      + "      name: 'file:///D:/dsh-plugins/dsh-toolkit/panel/index.js'"
+
+  字节账（解释 3097 − 2914 = 183）：
+      HEAD blob（git 库内存 LF）        : 2914
+      追加块（LF）                      : 101
+      磁盘 CRLF 行数（每行 +1 字节）    : 82
+  PASS ④ 字节账完全闭合：HEAD + 追加块 + CRLF 增量 = 磁盘 size -- 2914 + 101 + 82 = 3097  vs 磁盘 3097
+  PASS ④ 回滚陷阱：pre-p2-toolkit-manager 快照 == git HEAD（LF、**不含** toolkit-manager 行） -- size=2914  sha256=7541c05aaaec…  含 toolkit-manager=false
+      ⇒ 恢复它不仅会**删掉 4 行**（面板入口消失），还会把行尾从 CRLF 变成 LF。
+      ⇒ 该快照**不是**「保留面板」的回滚目标，而是「P2 之前」的目标。回滚必须按目标语义选快照。
+
+  .panel-backups/ 内各 cordis.patch.yml 快照对该行的记录：
+      arm-manifest-20260917-105930                   size= 3072  toolkit-manager=有  name=@local/dsh-toolkit/panel
+      p21-evidence-2026-09-17T15-43-18-742Z          size= 3113  toolkit-manager=有  name=file:///D:/dsh-plugins/dsh-toolkit/panel/index.js
+      p22-evidence-2026-09-17T15-57-56-541Z          size= 3120  toolkit-manager=有  name=file:///D:/dsh-plugins/dsh-toolkit/panel/index.js
+      pre-disabled-proof                             size= 3072  toolkit-manager=有  name=@local/dsh-toolkit/panel
+      pre-p2-toolkit-manager-20260917-2026-09-17T12-44-28 size= 2914  toolkit-manager=无 
+      pre-restore-disabled-20260917-114750           size= 3094  toolkit-manager=有  name=@local/dsh-toolkit/panel
+
+  结论：该行的**首次创建时刻未留档**；可归因的最早证据是 10:59 arm-manifest 快照（已含该行、旧名 @local/dsh-toolkit/panel），
+        19:55:50 被改写为 path-like（ledger 逐版对账表 :72）。
+
+=== §5 第④层 ~/.dsh/.agent-presets ===
+  扫描根（只读）：C:\Users\LENOVO\.dsh\.agent-presets  (exists=true)
+
+  目录清单（2 个）：
+    liangshen                      agent.cordis.yml=有 size=21780  compact-router=✓  compaction-basic=-  旧名行=-
+                                   行 id: persona, minimal-prompt, tool-catalog, agent-instructions, persistent-shell, pty, terminal-bash, persistent-bash, custom-bash, str-replace-editor, tool-fs, tool-fs-search, tool-jobs, skill-filesystem, tool-skill, tool-goal, planning, plan-mode, compaction, compact-router, command-compact, tool-result-pruner, delegation, tool-subagent-control, tool-subagent-list-agents, tool-subagent, tool-subagent-fork, tool-subagent-codex, tool-subagent-claude-code, workflow-worker-thread, tool-workflow, tool-ralph, tool-ask-user, tool-todo, tool-web
+    liangshen.bak-20260914         agent.cordis.yml=有 size=19792  compact-router=✓  compaction-basic=-  旧名行=-
+                                   行 id: persona, tool-bootstrap, agent-instructions, persistent-shell, pty, terminal-bash, persistent-bash, custom-bash, str-replace-editor, tool-fs, tool-fs-search, tool-jobs, skill-filesystem, tool-skill, tool-goal, planning, plan-mode, compaction, compact-router, command-compact, tool-result-pruner, delegation, tool-subagent-control, tool-subagent-list-agents, tool-subagent, tool-subagent-fork, tool-subagent-codex, tool-subagent-claude-code, workflow-worker-thread, tool-workflow, tool-ralph, tool-ask-user, tool-todo, tool-web
+
+  PASS ⑤ 活动预设（排除 .bak 目录）与 upstream 划分完备 -- active=liangshen upstream=
+  PASS ⑤ 含 compact-router 的目录里没有残留 upstream 行（改写或复制干净） -- patched=liangshen,liangshen.bak-20260914
+  PASS ⑤ 无残留旧插件名行 @local/dsh-compact-router -- 0 命中
+  PASS ⑤ 四个 toolkit 插件行（非 compact-router）不出现在预设里（它们只由第①层挂载） -- 预设行 id 只含 compaction 相关（compact-router / compaction / command-compact / tool-result-pruner 等）
+  注：`liangshen.bak-20260914` 是**人工备份目录**，脚本 discoverUserPresetIds()
+      显式排除名字含 ".bak" 的目录（apply-preset-patch.mjs:84），故它不会被重复改写；
+      但它同样含 agent.cordis.yml + compact-router 行，**是否会被 dsh 当预设列出属于 dsh 侧行为，本轮未验证**。
+
+  preset-patch-state.json 记录（4 条）：
+      standard         patchedAt=2026-09-14T05:13:13.000Z  file=C:/Users/LENOVO/AppData/Roaming/npm/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-agent-presets/presets/standard/agent.cordis.yml
+      ptc              patchedAt=2026-09-14T05:13:13.003Z  file=C:/Users/LENOVO/AppData/Roaming/npm/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-agent-presets/presets/ptc/agent.cordis.yml
+      cordis           patchedAt=2026-09-14T05:13:13.015Z  file=C:/Users/LENOVO/AppData/Roaming/npm/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-agent-presets/presets/cordis/agent.cordis.yml
+      liangshen        patchedAt=2026-09-14T08:02:55.268Z  file=C:/Users/LENOVO/.dsh/.agent-presets/liangshen/agent.cordis.yml
+  PASS ⑤ marker 里每个被改写的预设都有对应 .bak 备份可回滚 -- marker=standard,ptc,cordis,liangshen backups=4
+      marker 中不在本授权目录内的条目（= shipped presets，位于 npm 全局目录，**未读**）：standard, ptc, cordis ⇒ 其内容验证需另给授权（在 AppData，不在 ~/.dsh）
+  preset-backups/（仓内，改写前原始备份）逐份分析：
+      cordis.agent.cordis.yml.bak            size= 14010  compaction-basic=✓  compact-router=-  旧名=-
+      liangshen.agent.cordis.yml.bak         size= 19784  compaction-basic=-  compact-router=-  旧名=✓
+      ptc.agent.cordis.yml.bak               size= 14003  compaction-basic=✓  compact-router=-  旧名=-
+      standard.agent.cordis.yml.bak          size= 12928  compaction-basic=✓  compact-router=-  旧名=-
+  PASS ⑤ 每个 .bak 都是**真正的改写前状态**（upstream 行 或 旧插件行；且**不含**新名行） -- cordis[upstream]  liangshen[旧插件名]  ptc[upstream]  standard[upstream]
+      ⇒ ④层有**两种历史来源**：upstream 行（standard/ptc/cordis）与**旧独立插件**行（liangshen）。
+         旧插件来源的预设，其 `.bak` 记录的是 `@local/dsh-compact-router` 时代，
+         迁移到新名是一步**独立的历史动作**（marker 时间戳亦晚于 shipped 三个：08:02:55Z vs 05:13:13Z）。
+
+=== §6 汇总 ===
+  四层中：第①层 = 仓根 cordis.patch.yml；第②层 = lib/*/dsh.plugin.json ×5；
+          第③层 = panel/dsh.plugin.json；第④层 = scripts/apply-preset-patch.mjs -> ~/.dsh/.agent-presets。
+
+  20/20 PASS

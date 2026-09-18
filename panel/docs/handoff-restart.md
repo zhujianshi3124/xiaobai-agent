@@ -120,6 +120,34 @@
   2. 运行 scripts/restart-trigger.ps1 -DelaySeconds 0 重启 dsh web；
   3. 确认 P1 态：p1-smoke 27/27 全绿 + 面板恢复 P1 行为；
   4. 任何一条验收异常即按上述回滚，带证据回报，不在线上调试。
+
+> ### ⛔ 回滚保险（2026-09-18 加注，Q6③）—— **回滚此文件前必读**
+>
+> **本节的回滚程序语义是「回到 P1 态」，它**故意**移除 toolkit-manager 挂载行 ⇒ 面板入口消失（面板失联）。**
+> 这在本节写作时（P2 尚未实施、面板还没挂载）是**正确**的目标；
+> **但它不是「保留面板、只撤销某次改动」的回滚。** 用之前先问一句：**我要回到哪个语义态？**
+>
+> **两条被实测证实的危险路径（都会让面板失联）：**
+>
+> | 路径 | 后果 |
+> |---|---|
+> | `git checkout -- cordis.patch.yml` / `git restore cordis.patch.yml` | 回退到 HEAD blob（**2914 B、LF、不含 toolkit-manager 行**）⇒ **删掉 4 行**（面板入口消失）**且行尾 CRLF→LF**（双重副作用） |
+> | 还原 `pre-p2-toolkit-manager-*` 快照 | 该快照 sha256 `7541c05a…` **与 git HEAD 逐字节相同**（实测），同样是「无行 + LF」⇒ 同上 |
+>
+> **实测证据**：`scripts/q2-layer-scan.mjs` §4 断言 —— `pre-p2-toolkit-manager-…/cordis.patch.yml` 与 `HEAD:cordis.patch.yml` sha256 完全相同，且 `含 toolkit-manager=false`。
+> 它的 manifest note 自称 *"Pre-P2 toolkit-manager row (git HEAD) backup with SHA for rollback"* —— **它是「P2 之前」的目标，不是「保留面板」的目标。**
+>
+> **要保留面板时的正确回滚路径**（用**含该行**的快照恢复，按需选目标语义）：
+>
+> | 想回到 | 用哪份快照 | size | 该快照里该行的 name |
+> |---|---|---|---|
+> | P2 之前但**已挂面板**（旧名，未改 path-like） | `.panel-backups/arm-manifest-20260917-105930/cordis.patch.yml` | 3072 | `@local/dsh-toolkit/panel` |
+> | 同上 + rate-throttle 处于 disabled 临时态 | `.panel-backups/pre-restore-disabled-20260917-114750/cordis.patch.yml` | 3094 | `@local/dsh-toolkit/panel` |
+> | path-like 时代 | `.panel-backups/p21-evidence-…/`（3113）或 `p22-evidence-…/`（3120） | — | `file:///D:/…/panel/index.js` |
+>
+> **终验 SHA 对账基准 = 磁盘当前值（含那 4 行）：**
+> `ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9`，size **3097**，CRLF。
+> **对账时不得以 git HEAD 的 `7541c05a…`（2914 B、无行）为基准** —— 那是「面板未挂载」的历史态。
 - 杂散目录清理记录：D:/dsh-test-sandbox/_panel（旧 P1 实现副本，含 index.js/client/manager/dsh.plugin.json）已删除；grep 无活动引用，唯一提及为 _api-notes-p2.md:186 的 Q4 历史澄清说明。
 - 布防任务：DSHToolkitPanelRestartTrigger（T+2）/ DSHToolkitPanelRestartSelfheal（T+10），一次性。
 
@@ -648,5 +676,88 @@ body-too-large                                   → 413
 | `pluggable-lint` | 通过 |
 | doctor | **0/0/0** |
 | 真实 `cordis.patch.yml` | **sha 未变**：`ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9`（size 3097） |
+
+### 11.12 Q2 终局结论 + 四层映射 + Q6 溯源 / 处置 / 回滚保险（2026-09-18 09:14）
+
+> 完整表格见 `HANDOFF-MASTER.md` §8 / §9；可复现证据 `panel/docs/evidence/Q2-LAYER-SCAN.txt`（`node scripts/q2-layer-scan.mjs --agent-presets`，**20/20 PASS**）。
+
+#### 一、前提更正（重要）
+
+**「四层 patch 栈」在仓内没有先例。** 全仓 `grep 四层` 只命中本任务自己写的 L-031 / 11.11 / HANDOFF-MASTER。
+⇒ 下方四层是**本侧定义**，**总文档全文到达后必须逐层对账**；对不上即有第五层或被合并，**扫描不算穷尽**。
+
+#### 二、Q2 终局结论（① ② ③ 层）——「无」也是结论
+
+**结论：三层中既不存在 toolkit 五个 id 的重复行，也不存在任何覆盖 / 遮蔽声明。**
+
+| 层 | 扫描项 | 结果 |
+|---|---|---|
+| ① | `- id:` 行 | 共 **9 个**：顶层 2（`web`、`web-search-deepseek`）+ 嵌套 7；其中**插件挂载行 5 个**，另 2 个（`v4-pro`/`v4-flash`）是 `rate-throttle.routing.staticGroups` 的**组 id**、非挂载行 |
+| ① | 同 id | **每个 id 恰好 1 次**，无重复 |
+| ① | 覆盖/遮蔽声明 | `override` / `replace` / `shadow` / `覆盖` / `遮蔽` / `取代` **0 命中** |
+| ② | 五份 `lib/*/dsh.plugin.json` | 字段仅 `manifestVersion` / `name` / `requirements`（`compact-router` 多一个 `optionalDeps`）。**无 `id` / `patch` / `override` / `bundle`** ⇒ 层②**既不产生也不能遮蔽**任何行 |
+| ③ | `panel/dsh.plugin.json` + `panel/package.json` | 同上；`panel/package.json` 只声明 `dsh`（client 面），**不声明 patch 文件** |
+
+**跨层同 id**：五个 id **只出现在第①层**；第②③层用的是**包名**，不是行 id。
+
+#### 三、四层 → 物理载体映射（摘要；全表见 HANDOFF-MASTER §8.1）
+
+| 层 | 物理载体 | 关键行号证据 |
+|---|---|---|
+| ① | `cordis.patch.yml`（仓根） | `package.json:28`（`dsh.bundle.patch`）；面板落盘目标 `panel/index.js:275`/`:328` |
+| ② | `lib/{rate-throttle,compact-router,agent-memory,search-router,web-search-local}/dsh.plugin.json` | 成卡判据 `panel/manager/snapshot.mjs:112` |
+| ③ | `panel/dsh.plugin.json`（+ 运行时 `panel/index.js`） | `panel/dsh.plugin.json:9`；`panel/index.js:16-17`；`api-notes.md:137` |
+| ④ | `scripts/apply-preset-patch.mjs` → `~/.dsh/.agent-presets/*` + shipped presets | 脚本 `:31` / `:64-78` / `:33-46`；`cordis.patch.yml:3` 注释自陈 |
+
+#### 四、Q2 ④ 层（`~/.dsh/.agent-presets` 一次性只读授权，严格只读）
+
+- 目录 2 个：**`liangshen`**（活动预设，21780 B）含新名 `@local/dsh-toolkit/compact-router` ✓，**无** upstream 残留、**无**旧名残留；
+  **`liangshen.bak-20260914`**（人工备份目录，19792 B）同样含新名，被脚本 `.bak` 规则排除（`apply-preset-patch.mjs:84`）⇒ 不会重复改写。
+  **但它含 `agent.cordis.yml`，是否会被 dsh 当预设列出属 dsh 侧行为，本轮未验证（如实标注）。**
+- 对账 `preset-patch-state.json`：4 条（`standard`/`ptc`/`cordis` @ `2026-09-14T05:13:13Z`；`liangshen` @ `08:02:55Z`）。
+- `preset-backups/` 4 份 `.bak` 揭示 **④ 层有两种历史来源**：`standard`/`ptc`/`cordis` = **upstream**（含 `dsh-compaction-basic`）；
+  `liangshen` = **旧独立插件**（含 `@local/dsh-compact-router`）⇒ 迁移到新名是**独立的历史动作**。
+  已断言每个 `.bak` 都是**真正的改写前状态**且**不含新名行** ⇒ 回滚语义成立。
+- **未覆盖面（如实标注）**：3 个 shipped preset 的**当前内容**在 `AppData/…/npm/…/dsh-agent-presets/presets/`，**不在本轮授权路径内、未读**；
+  是否另给授权见 `HANDOFF-MASTER.md` §6 U4。
+- **④ 层结论**：工具链里只有 `compact-router` 经第④层挂载（其余 4 个插件行不在任何预设里）；无旧名残留、无 upstream 残留、每个改写都有 `.bak`。
+
+#### 五、Q6① 溯源 —— 含一处**必须申报的缺口**
+
+- **diff 全文**：4 个 `+` 行 = 空行 + `- insert:` + `    - id: toolkit-manager` + `      name: 'file:///D:/dsh-plugins/dsh-toolkit/panel/index.js'`。
+- **字节账闭合**：磁盘 `3097` = `HEAD` blob `2914`（git 库内存 LF）+ 追加块 `101` + CRLF 增量 `82`。⇒ **磁盘 = HEAD + 这 4 行，逐字节可复现**（「M 单行 = 除该行外零漂移」的硬证明）。
+- **git 侧**：该字符串**从未进入该文件的 git 历史**（pickaxe 无命中）；该文件在 git 里只有 2 次提交（`e50bb00` 总装、`37819e9` Sogou 修正），HEAD blob **2914 B 完全不含该行**。
+- **可归因最早证据**：`.panel-backups/arm-manifest-20260917-105930/cordis.patch.yml`（**3072 B**）**已含该行**（旧名 `@local/dsh-toolkit/panel`）⇒ 该行在 **2026-09-17 10:59:30 之前**已在磁盘。
+- **19:55:50** 改为 path-like（依据 `api-notes.md:132-137`；记载 `ledger.md:65` 与 `:72`）。
+- ⚠️ **缺口申报**：该行的**首次落盘时刻与操作者未留档**（无 git 记录、无备份捕住创建瞬间）。此前 ledger 只记「**行名改写**」，未记「**行首次落盘**」。**据实申报，不掩饰。**
+- **「既有约定」正本出处（存在，非口说无凭）**：`ledger.md:214`（原文：4 行改动**未提交**，属运行配置，按 11 节程序在重启验收后单独处置）+ `ledger.md:55-65` + 本文件 `:118-122`。
+
+#### 六、Q6② 处置意见：**重启验收通过后语义化提交**（同意用户方向）
+
+磁盘是运行真相；**提交只改 `.git` 不动磁盘字节**，`ce0b0b81…` 对账不受影响；**提交后 HEAD 与磁盘一致，回滚才有「保留面板」的语义目标**（见七）。
+唯一可能的「不提交」理由（该文件属运行配置、含环境相关路径）**已是既成事实** —— 文件本身早已入库，只是缺这 4 行 ⇒ **结论：提交。**
+
+#### 七、Q6③ 回滚保险 —— 已加注于本文件 **`:118` 回滚程序**之后（⛔ 醒目块）
+
+要点：`git checkout -- cordis.patch.yml` / `git restore` ⇒ 回退到 HEAD blob（**2914 B、LF、无该行**）⇒ **删 4 行 → 入口消失 → 面板失联**，**且 CRLF→LF**。
+**实测**：`pre-p2-toolkit-manager-…/cordis.patch.yml` 与 `HEAD:cordis.patch.yml` **sha256 完全相同**（`7541c05a…`）⇒ 它是「**P2 之前**」的目标，**不是「保留面板」的目标**。
+保留面板的回滚须按目标语义选**含该行**的快照（3072 / 3094 / 3113 / 3120 四档，表见加注块与 HANDOFF-MASTER §9.5）。
+**终验 SHA 对账基准 = 磁盘当前值 `ce0b0b81…`（3097 B、CRLF、含 4 行）；不得用 `7541c05a…`（2914 B）作基准。**
+
+#### 八、Q5 附注落点
+
+`doctor/dry-run`（`panel/index.js:250` / 守卫 `@:259`）的**有意过度收口**已落 **`panel/docs/api-notes.md` 专节**（「P2.0② 写路由判定」），
+含完整判定表、guard 行号、**以及「请勿当作 bug 修正」的显式说明** —— 实测该路由会 `execFile` 起子进程（`panel/manager/doctor-runner.mjs:5-8`），
+故把它放在「服务缺席时走 `devicesFile` hasOwn 兜底放行」的只读路径上才是真的破口。
+
+#### 九、时钟锚点（小项）
+
+`EVIDENCE.txt` 的「生成时刻」是 **UTC（Z）**，本地 = **UTC+8**。本轮会话的 `<current_time>` 曾给出**错位值**（报 2026-09-17 23:31，实测 2026-09-18 08:53）。
+**真实交互时间锚点**：P2.1 证据 `2026-09-17T15:43:18Z` = 本地 **23:43:18**；P2.2 `15:57:56Z` = 本地 **23:57:56**；P2.2b `2026-09-18T00:13:52Z` = 本地 **08:13:52**；本轮 `2026-09-18 09:14`（本地）。
+`evidence/README.md` 已加注，防未来对账困惑。
+
+#### 十、本轮复跑计数
+
+`q2-layer-scan.mjs`（新增）**20/20** ｜ `p22-verify` 98/98 ｜ `p22-cards-ui` 71/71 ｜ `p1-smoke` 185/185 ｜ `p21-verify` 46/46 ｜ `p2-smoke` 16/16 ｜ `p22b-retention-scope` 15/15 ｜ `node --test` 92/92 ｜ `pluggable-lint` 通过 ｜ doctor 0/0/0 ｜ 真实 `cordis.patch.yml` sha 未变 `ce0b0b81…`。
 
 
