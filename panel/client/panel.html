@@ -58,6 +58,18 @@
   .confirmNote { font-size: 11.5px; color: #a9aeb5; line-height: 1.75; margin-top: 4px; }
   .noteCode { font-family: ui-monospace, Consolas, monospace; color: #d9c58a; }
   .condNote { margin-top: 4px; font-size: 11px; color: #e0d5b7; line-height: 1.7; }
+  /* ---- P2.3 参数编辑 ---- */
+  .cfgBox { margin-top: 10px; padding: 8px 10px; border-radius: 6px; background: #141a1c; border: 1px solid #24403a; }
+  .cfgHead { font-size: 12px; font-weight: 700; color: #9fd8c0; margin-bottom: 4px; }
+  .cfgNote { font-size: 11px; color: #8fa89e; line-height: 1.7; margin-bottom: 6px; }
+  .cfgSection { font-size: 11px; font-weight: 700; color: #7f8f88; margin: 8px 0 2px; font-family: ui-monospace, Consolas, monospace; }
+  .cfgRow { display: flex; gap: 6px; align-items: center; font-size: 11.5px; line-height: 2; flex-wrap: wrap; }
+  .cfgLabel { color: #a9b3ad; flex: 1 1 200px; font-family: ui-monospace, Consolas, monospace; }
+  .cfgCur { color: #6f7a74; font-family: ui-monospace, Consolas, monospace; }
+  .cfgInput { width: 110px; padding: 2px 6px; border-radius: 4px; border: 1px solid #2c3c36; background: #101413; color: #d7e2dc; font-size: 12px; font-family: ui-monospace, Consolas, monospace; }
+  .cfgSave { padding: 2px 8px; border-radius: 4px; border: 1px solid #2c5a4a; background: #12241e; color: #9fd8c0; cursor: pointer; font-size: 11px; }
+  .modeBox { margin-top: 10px; padding: 8px 10px; border-radius: 6px; background: #161a22; border: 1px solid #2a2f36; }
+  .modeLine { font-size: 11.5px; color: #a9aeb5; line-height: 1.8; }
   pre { white-space: pre-wrap; background: #12151a; border: 1px solid #2a2f36; border-radius: 6px; padding: 10px; font-size: 12px; max-height: 340px; overflow: auto; }
   .issues { max-height: 320px; overflow: auto; border: 1px solid #2a2f36; border-radius: 6px; }
   .issue { border-bottom: 1px solid #23272d; padding: 8px; font-size: 12px; line-height: 1.6; }
@@ -179,7 +191,7 @@ function dualSwitchNotice(p) {
       + '<div class="dualLine">第一层（配置文件）：<span class="dualCode">已启用</span> —— 插件已被加载。<br>'
       + '第二层（插件内部）：<span class="dualCode">关闭</span> —— 功能被自己关掉了。<br>'
       + '要让它真正工作，需要把插件配置里的 <span class="dualCode">enabled</span> 改为 <span class="dualCode">true</span>。<br>'
-      + '提示：本面板只负责第一层（加载与否），第二层是插件自己的配置，面板暂不修改 —— <span class="dualCode">P2.3 配置编辑</span>上线后可在此直接改。</div></div>';
+      + '提示：本面板只负责第一层（加载与否）—— 第二层的参数编辑已随 <span class="dualCode">P2.3 配置编辑</span> 上线，见本卡下方<span class="dualCode">「参数编辑」</span>。</div></div>';
   }
   if (p.patchRow && p.patchRow.enabled !== true) {
     return '<div class="dualBox"><div class="dualHead">⚠ 在配置文件中被停用</div>'
@@ -224,9 +236,11 @@ function renderCards() {
       + '<div class="stateRow"><span class="dot ' + st.cls + '"></span><span class="state ' + st.cls + '">' + esc(st.label) + "</span></div>"
       + dualSwitchNotice(p)
       + toggleHtml(p)
+      + (p.dir === "search-router" ? modeHtml(p) : configEditorHtml(p))
       + techDetails(p);
     cards.appendChild(div);
     wireToggle(div, p);
+    wireConfig(div, p);
   }
 }
 
@@ -356,6 +370,143 @@ function renderSnapshot(snap) {
   el("meta").textContent = snap.toolkitName + " " + snap.toolkitVersion + " · 本面板" + (snap.self && snap.self.enabled ? "已启用" : "未启用");
   el("patch").textContent = PATCH_TEXT;
   renderCards();
+}
+
+// ---- P2.3 参数编辑（rate-throttle 白名单标量；服务端权威校验，前端仅录入）----
+var CONFIG_FIELDS = [
+  { path: "enabled", label: "总开关（enabled）", type: "bool", section: "top" },
+  { path: "minIntervalMs", label: "两次请求最小间隔（毫秒）", type: "int", section: "top" },
+  { path: "maxRequestsPerMinute", label: "每分钟最多请求数", type: "int", section: "top" },
+  { path: "adaptive", label: "自动退避（出错后自动放慢）", type: "bool", section: "top" },
+  { path: "maxIntervalMs", label: "退避间隔上限（毫秒）", type: "int", section: "top" },
+  { path: "backoffFactor", label: "退避放大倍数", type: "num", section: "top" },
+  { path: "routing.enabled", label: "自动换源总开关（routing.enabled）", type: "bool", section: "routing" },
+  { path: "routing.autoGroups", label: "自动发现模型分组", type: "bool", section: "routing" },
+  { path: "routing.autoGroupTtlMs", label: "分组缓存时长（毫秒）", type: "int", section: "routing" },
+  { path: "routing.cooldownMs", label: "出错冷却时长（毫秒）", type: "int", section: "routing" },
+  { path: "routing.tpmTurnSkip", label: "TPM 超限当轮跳过", type: "bool", section: "routing" },
+  { path: "routing.tpmCooldownMs", label: "TPM 短暂除名时长（毫秒，0=关闭）", type: "int", section: "routing" },
+  { path: "routing.downgradeContextMargin", label: "降级上下文余量（0.1–1）", type: "num", section: "routing" },
+  { path: "routing.maxDowngradeCompactsPerTurn", label: "单轮最多降级压缩次数", type: "int", section: "routing" },
+  { path: "routing.metricsWindowMs", label: "指标统计窗口（毫秒）", type: "int", section: "routing" },
+  { path: "routing.metricsLogIntervalMs", label: "指标日志间隔（毫秒）", type: "int", section: "routing" },
+  { path: "routing.clearCooldownOnUserSwitch", label: "手动切换时清除冷却", type: "bool", section: "routing" },
+  { path: "routing.syncSelectionOnFailover", label: "换源后同步选择", type: "bool", section: "routing" }
+];
+function cfgRawValue(p, f) {
+  var panel = p.configPanel || {};
+  var v = f.section === "routing"
+    ? ((panel.values && panel.values.routing) || {})[f.path.split(".")[1]]
+    : (panel.values || {})[f.path];
+  return v === undefined || v === null ? "" : String(v).trim();
+}
+function configEditorHtml(p) {
+  var panel = p.configPanel;
+  if (!panel || panel.editable !== true) return "";
+  var html = '<div class="cfgBox" data-cfg-for="' + esc(panel.rowId) + '">'
+    + '<div class="cfgHead">参数编辑（rate-throttle 限流参数 · 改的是配置文件，重启后生效）</div>'
+    + '<div class="cfgNote">' + esc(panel.effectNote || "") + "</div>";
+  var lastSection = "";
+  for (var i = 0; i < CONFIG_FIELDS.length; i++) {
+    var f = CONFIG_FIELDS[i];
+    if (f.section !== lastSection) {
+      lastSection = f.section;
+      html += '<div class="cfgSection">' + (f.section === "top" ? "config:（顶层）" : "config.routing:（换源）") + "</div>";
+    }
+    var cur = cfgRawValue(p, f);
+    var input = f.type === "bool"
+      ? '<input type="checkbox" class="cfgInput" data-cfg-check="' + esc(f.path) + '"' + (cur === "true" ? " checked" : "") + ">"
+      : '<input type="text" class="cfgInput" data-cfg-input="' + esc(f.path) + '" value="' + esc(cur) + '">';
+    html += '<div class="cfgRow"><span class="cfgLabel">' + esc(f.label) + "</span>"
+      + '<span class="cfgCur">当前 ' + esc(cur) + "</span>" + input
+      + '<button class="cfgSave" data-cfg-path="' + esc(f.path) + '" data-cfg-type="' + f.type + '">生成方案</button></div>';
+  }
+  html += '<div class="cfgConfirm"></div><div class="cfgMsg"></div></div>';
+  return html;
+}
+function modeHtml(p) {
+  var panel = p.configPanel;
+  if (!panel || !panel.mode) return "";
+  return '<div class="modeBox"><div class="cfgHead">搜索路由 mode（当前生效值 · 只读）</div>'
+    + '<div class="modeLine">生效值：<span class="dualCode">' + esc(panel.mode.value === null ? "（未设置，走 patch 缺省）" : panel.mode.value)
+    + "</span>　来源：<span class=\"dualCode\">" + esc(panel.mode.source) + "</span></div>"
+    + '<div class="modeLine">' + esc(panel.note || "") + "</div></div>";
+}
+function wireConfig(cardEl, p) {
+  var box = cardEl.querySelector("[data-cfg-for]");
+  if (!box) return;
+  var confirmHost = box.querySelector(".cfgConfirm");
+  var msg = box.querySelector(".cfgMsg");
+  var panel = p.configPanel;
+  box.addEventListener("click", async function (ev) {
+    var btn = ev.target.closest(".cfgSave");
+    if (!btn || btn.disabled) return;
+    var path = btn.getAttribute("data-cfg-path");
+    var type = btn.getAttribute("data-cfg-type");
+    var f = null;
+    for (var i = 0; i < CONFIG_FIELDS.length; i++) if (CONFIG_FIELDS[i].path === path) { f = CONFIG_FIELDS[i]; break; }
+    if (!f) return;
+    var raw;
+    if (type === "bool") {
+      var cb = box.querySelector('[data-cfg-check="' + path + '"]');
+      raw = cb && cb.checked ? "true" : "false";
+    } else {
+      var inp = box.querySelector('[data-cfg-input="' + path + '"]');
+      raw = inp ? inp.value : "";
+    }
+    var cur = cfgRawValue(p, f);
+    if (String(raw).trim() === cur) { msg.innerHTML = '<span class="muted">无改动：已是该值。</span>'; return; }
+    btn.disabled = true;
+    msg.textContent = "正在生成改动方案…";
+    confirmHost.innerHTML = "";
+    try {
+      var res = await fetch("/api/toolkit-panel/config/plan", {
+        method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ rowId: panel.rowId, path: path, value: raw })
+      });
+      var body = await res.json();
+      msg.textContent = "";
+      if (!body.ok) { msg.innerHTML = '<span class="error">没能生成方案：' + esc(body.error || res.status) + "</span>"; btn.disabled = false; return; }
+      p._cfgPlan = body.plan;
+      renderCfgConfirm(confirmHost, btn, p);
+    } catch (e) {
+      msg.innerHTML = '<span class="error">没能生成方案：' + esc(String(e && e.message || e)) + "</span>";
+    }
+  });
+}
+function renderCfgConfirm(host, saveBtn, p) {
+  var plan = p._cfgPlan;
+  if (!plan) return;
+  host.innerHTML = '<div class="confirmBox">'
+    + '<div class="confirmHead">确认后才会写入，下面是具体改动</div>'
+    + '<div class="confirmEffect">' + esc(plan.effectNote || "") + "</div>"
+    + '<div class="confirmLine">目标位置：<span class="dualCode">cordis.patch.yml 第 ' + esc(String(plan.targetLine)) + " 行 · " + esc(plan.rowId) + " → " + esc(plan.path) + "</span></div>"
+    + '<pre class="diffPre">' + esc((plan.diff || []).join("\n")) + "</pre>"
+    + '<div class="confirmNote">该值由插件在启动时读取（<span class="noteCode">激活快照</span>），没有别的配置来源会盖住它 —— 重启后即按新值运行。</div>'
+    + '<div class="confirmRow"><button class="cfgGo">确认写入</button><button class="cfgNo">取消</button></div>'
+    + "</div>";
+  host.querySelector(".cfgNo").onclick = function () { p._cfgPlan = null; host.innerHTML = ""; saveBtn.disabled = false; };
+  host.querySelector(".cfgGo").onclick = async function () {
+    var go = host.querySelector(".cfgGo");
+    go.disabled = true;
+    try {
+      var res = await fetch("/api/toolkit-panel/execute", {
+        method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: plan.token })
+      });
+      var body = await res.json();
+      if (!body.ok) {
+        host.innerHTML = '<div class="errBox">没能完成：' + esc(body.error || ("HTTP " + res.status)) + "</div>";
+        p._cfgPlan = null;
+        return;
+      }
+      p._cfgPlan = null;
+      host.innerHTML = "";
+      await loadSnapshot();
+    } catch (e) {
+      host.innerHTML = '<div class="errBox">没能完成：' + esc(String(e && e.message || e)) + "</div>";
+    }
+  };
 }
 async function loadSnapshot() {
   var res = await fetch("/api/toolkit-panel/snapshot", { cache: "no-store" });

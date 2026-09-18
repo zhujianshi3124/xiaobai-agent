@@ -24,6 +24,8 @@
 
 **开放原则：只写「标量」（布尔/数值/枚举）；数组 / 对象 / 文件路径一律不开放**（结构复杂度与任意路径写风险）。
 
+> **📌 第 19 轮批准要求 ②（已落实）**：其余 **13 个有源码校验字段**的面板合法域 = **源码校验域对齐，不得放宽** —— 上表各字段合法域均 **⊆** 源码校验域（`posNum >0` / `!== false` / `>=0`），属**收窄**非放宽；唯一无源码校验的 5 处（§九）合法域为独立依据。实现落点：`panel/manager/config-whitelist.mjs`（服务端唯一权威，字段元数据内含 src/use 行号）。
+
 ### 顶层（`config:` 直下）
 
 | 字段 | 类型 | 合法域（面板服务端校验） | 源码依据 | 源侧自身校验（设计注记） |
@@ -64,7 +66,9 @@
 
 ---
 
-## 三、search-router `mode` —— 三选一呈报（推荐 **方案 2**）
+## 三、search-router `mode` —— 三选一呈报（**第 19 轮批准 = 方案 1**）
+
+> **📌 第 19 轮裁定**：判定侧批准设计稿时明确 **mode 按** ***第 15 轮方案 1（不提供）*** **执行** —— 本侧推荐的方案 2（呈现遮蔽）不采纳。落地口径：**mode 无任何面板可写入口**；卡片**只读展示**「生效值 + 来源」（§四快照现读），指引文字指向 `~/.dsh/dsh-search-router.json`。方案 3（写热 JSON）仍列 P2.5 候选、需单独授权。§五测试计划相应**不含 mode 写入用例**（无入口即无写路径）。
 
 **补扫事实**（`evidence/P23-SHADOW-SCAN.txt` T1）：`~/.dsh/dsh-search-router.json` **存在且现有 `mode` 键（值 `"auto"`）**，`resolveConfig` 每次调用热读 ⇒ 按判定侧定夺规则，**patch 编辑 mode 无效**。env `DSH_WEB_SEARCH_ROUTER_MODE` = undefined（不遮蔽）。
 
@@ -99,7 +103,7 @@
 ### 确认页人话（按插件分述生效时机，两套渲染器同步）
 
 - **rate-throttle**：「改的是配置文件里的值，**重启 DSH 后生效**；当前没有别的配置来源会盖住它。」
-- **search-router `mode`（方案 2）**：「当前实际生效值来自 `dsh-search-router.json`（**热改即生效**）；本面板写入的是配置文件，**会被它盖住、重启也不会生效**。」
+- **search-router `mode`（第 19 轮裁定 = 方案 1，无面板入口）**：卡片只读展示「生效值 + 来源」（snapshot 现读）；**无写入路径，故无确认页**。指引：「需调整请编辑 `~/.dsh/dsh-search-router.json`（热改即生效）」。
 - **web-search-local**：「当前生效值来自配置文件（设置面板尚未写入）；在 DSH 设置页修改会**立即生效且优先级更高**。」
 
 ---
@@ -114,7 +118,7 @@
 
 1. **白名单合法性**：每个开放字段合法值放行 + 越界值 / 错类型 / `!!js` 注入串 / 含换行或 YAML 结构字符 → 拒绝（4xx）。
 2. **假写拒绝路径**：不在白名单的字段（`logPath`、`staticGroups`、`excludeProviders` 等）提交写 plan → 服务端拒绝；绕过 apply-engine 的写路径 → 唯一通道断言捕获。
-3. **遮蔽场景断言**：热 JSON 含 `mode` ⇒ snapshot 显示遮蔽态 + 确认页遮蔽文案逐字一致；settings section 存在/不存在两态分支。
+3. **遮蔽场景断言**：热 JSON 含 `mode` ⇒ snapshot 显示「生效值 + 来源 = 热 JSON」；env 覆盖分支、patch 回退分支（三分支齐全）；settings section 存在/不存在两态分支。
 4. **双层口径断言**：5 卡层 2 标注逐字（rate-throttle 可写 / 3 卡「无内部开关」/ search-router 特殊文案）；「有键不读」渲染分支用构造用例验证。
 5. **契约回归**：p1-smoke / p21 / p22 系列 / backup-write-test / doctor 0/0/0 全绿；`regression-all.mjs` 一键。
 
@@ -148,7 +152,7 @@
 | 9 | `routing.autoGroupTtlMs` | ✓ `:169` | — | — | — | `:587` |
 | 10 | `routing.cooldownMs` | ✓ `:174` | — | — | — | `:606`（RPM 冷却恢复） |
 | 11 | `routing.tpmTurnSkip` | ✓ `:175` | — | — | — | `:621` · `:656` |
-| 12 | `routing.tpmCooldownMs` | ✓ `:152-158` | — | — | — | TPM 短除名时长（`:31` 语义注释） |
+| 12 | `routing.tpmCooldownMs` | ✓ `:152-158` | — | — | — | **`:1003-1019`**（TPM 短除名写入与恢复时长；第 19 轮批准要求 ③ 补齐。判定侧批文写作「#12（tpmTurnSkip）」，本表 #11 `tpmTurnSkip` 消费点原已具行号 `:621/:656`，缺行号的是本行 #12 `tpmCooldownMs` —— 两处均已齐） |
 | 13 | `routing.downgradeContextMargin` | ✓ `:177` | — | — | — | `:839`（降级阈值） |
 | 14 | `routing.maxDowngradeCompactsPerTurn` | ✓ `:178` | — | — | — | `:855` |
 | 15 | `routing.metricsWindowMs` | ✓ `:179` | — | — | — | `:327` · `:355` · `:373` |

@@ -1,0 +1,54 @@
+════════════════════════════════════════════════════════════════════════════
+P2.3 配置编辑 · 施工验证证据（第 19 轮批准后首个写盘批次）
+生成时刻(GMT+8) 2026-09-18 16:00  状态：代码完成、回归全绿，待 reload 目视验收
+════════════════════════════════════════════════════════════════════════════
+
+## 0. 本批交付（判定侧第 19 轮批准的设计稿 p23-design.md → 实现）
+
+- **服务端**：`panel/manager/config-whitelist.mjs`（新增，白名单唯一权威：18 字段
+  = 顶层 6 + routing 12；13 个有源码校验字段**合法域 ⊆ 源码域，未放宽**＝批准要求 ②；
+  5 处无源码校验字段合法域依据 §九；跨字段校验 maxIntervalMs ≥ minIntervalMs）。
+- **引擎**：`panel/manager/apply-engine.mjs` 新增 `locateConfigKeyLine` / `planConfigEdit`
+  / `createConfigPlan`（config 子树键定位：原地替换 / `config:`·`routing:` 行正下方插入；
+  CRLF 保持；锚点唯一复验沿用）。executePlan 唯一落盘通道不变（SHA 闸 / 过期 / 锚点复验 /
+  写前备份 / 裁剪全部沿用＝批准要求 ④）。
+- **路由**：`/api/toolkit-panel/config/plan`（{change:true}，配对校验走 guard——批准要求 ④）；
+  服务端锁 `CONFIG_EDITABLE_ROW = "rate-throttle"`（其余 rowId 一律 row-not-editable）；
+  mode 不在白名单 ⇒ **无写入路径**（第 15 轮方案 1，批准要求 ①）。
+- **快照**：`panel/manager/snapshot.mjs` 新增 `parseConfigScalars`（config 子树标量现读）
+  与 `searchRouterModeShadow`（env > 热 JSON > patch 三分支；热 JSON 已入乙程序只读清单
+  U13-②）；每卡新增 `configPanel`（rate-throttle 可写 18 字段 / search-router mode 只读
+  展示生效值+来源 / 其余三卡「无内部开关」）。
+- **UI（两渲染器同步）**：`panel/client/index.js` + `panel/client/panel.html` 新增
+  rate-throttle「参数编辑」区块（18 字段、当前值、逐字段两段式：生成方案 → 确认页
+  【重启后生效 + 无遮蔽来源说明】→ execute）与 search-router mode 只读行；黄警告恢复
+  指引更新为「参数编辑已上线」（保留判定侧既有断言字符串「P2.3 配置编辑」「本面板只
+  负责第一层」）。
+- **U9（批准要求 ⑤）**：`preset-patch-state.json` 的 `liangshen.patchedSha` 已随本批次
+  刷新：`1d6e3210705c…` → `acf188892976…`（磁盘 21780 B；内容自 2026-09-14 改写后未再
+  变化，仅 hash 补账），并加语义化 note。
+- **测试（批准要求 ⑥：真实文件零写入，测试一律走副本）**：新增 `scripts/p23-verify.mjs`。
+
+## 1. 验证结果（可重放）
+
+| 项 | 命令 | 结果 |
+|---|---|---|
+| P2.3 专项 | `node scripts/p23-verify.mjs` | **107/107 PASS** |
+| 一键回归 | `node scripts/regression-all.mjs` | **全部通过**（p1 190/0 · p2 16/0 · p21 53/53 · p22 104/104 · p22-cards-ui 79/79 · p22b 17/17 · q2-layer 14/14 · q2-shipped 21/21 · fidelity 38/38 · backup-write 23/23 · lint 通过 · node --test 93/0） |
+| doctor | `runDoctorDryRun`（dry-run，只查不改） | **0/0/0**（error/warning/info） |
+| 基准对账 | `cordis.patch.yml` sha | **`ce0b0b81…` / 3097 B / CRLF 未变**（施工期真实文件零写入） |
+
+p23-verify 覆盖面：① 18 字段合法值放行 + 24 组拒绝（越界/错类型/非整数/注入串/
+YAML 结构字符）② 白名单外字段拒绝（logPath/staticGroups/excludeProviders/mode 等 10 项）
+③ search-router mode 三分支 + 各卡 configPanel 口径 ④ 引擎原地替换/插入回退/CRLF/
+锚点歧义/path 非法 ⑤ 端到端 plan→execute（副本）+ 备份 manifest reason/note + sha 链 +
+过期拒绝 ⑥ 跨字段校验 ⑦ 两渲染器新增区块 + 既有断言字符串未破坏。
+
+## 2. 边界与如实申报
+
+- **真实 `cordis.patch.yml` 本批零写入**：所有落盘测试均在 `os.tmpdir` 副本上；基准 sha
+  施工前后一致。首次真实写入将发生在**用户于面板操作且确认**之时（两段式，批准要求 ⑥）。
+- **reload 提示**：本批改动 = 服务端 + 客户端 bundle，均为「激活时读入内存」⇒ 需按
+  `scripts/restart-trigger.ps1` reload 一次方可目视；U10 黄警告新文案随本次 reload 一并生效。
+- **生效语义提醒**：面板写入的 config 值在**下次重启**进入插件激活快照（§八钉死），
+  当前进程不受影响 —— 与确认页文案一致。

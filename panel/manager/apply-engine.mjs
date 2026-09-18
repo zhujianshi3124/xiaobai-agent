@@ -296,6 +296,133 @@ export function createTogglePlan({ file, rowId, enabled, backupRoot, ttlMs = DEF
   };
 }
 
+// ---------------- P2.3 配置编辑（rate-throttle 白名单标量） ----------------
+
+/**
+ * 在 row 的 `config:` 子树里定位一个（可能嵌套一层的）键的行。
+ *
+ * 路径形态：`enabled`（config 直下）或 `routing.xxx`（config.routing 直下）。
+ * 只支持**一层**嵌套（`routing.`），更深一律拒绝 —— 白名单里也没有更深的字段。
+ *
+ * 返回 { configLine, sectionLine, target } ；target 为 null 表示键不存在（需要插入）。
+ */
+export function locateConfigKeyLine(text, rowId, path) {
+  if (!/^[A-Za-z][A-Za-z0-9_-]*(\.[A-Za-z][A-Za-z0-9_-]*)?$/.test(path)) {
+    throw new PlanError("path-invalid", "配置路径形态非法（只允许 `key` 或 `routing.key`）：" + path);
+  }
+  const { lines } = splitLines(text);
+  const anchor = locateRowAnchor(text, rowId);
+  const own = readRowOwnKeys(lines, anchor);
+  const configLine = own.find((e) => e.key === "config");
+  if (!configLine) {
+    throw new PlanError("config-missing", "该行没有 `config:` 块，无法编辑配置值");
+  }
+  const configIndent = configLine.lineIndex >= 0 ? /^(\s*)/.exec(lines[configLine.lineIndex])[1].length : -1;
+  const [head, nested] = path.split(".");
+  let sectionLine = configLine;
+  let sectionIndent = configIndent;
+  let key = head;
+  if (nested !== undefined) {
+    // 在 config 直下找 `routing:` 行
+    const childIndent = configIndent + 2;
+    let found = null;
+    for (let j = configLine.lineIndex + 1; j < lines.length; j++) {
+      const line = lines[j];
+      if (/^(\s*)- id:/.test(line)) break;
+      const km = /^(\s+)([A-Za-z][A-Za-z0-9_-]*):\s*(.*)$/.exec(line);
+      if (!km) continue;
+      const ki = km[1].length;
+      if (ki <= configIndent) break;
+      if (ki === childIndent && km[2] === head) { found = { lineIndex: j, value: km[3].trim() }; break; }
+    }
+    if (!found) {
+      throw new PlanError("config-missing", "config 下没有 `" + head + ":` 子块");
+    }
+    sectionLine = found;
+    sectionIndent = childIndent;
+    key = nested;
+  }
+  const keyIndent = sectionIndent + 2;
+  // 在该 section 的直接子级里找 key（缩进恰为 keyIndent），直到缩进回落或遇到下一行块
+  const start = sectionLine.lineIndex + 1;
+  for (let j = start; j < lines.length; j++) {
+    const line = lines[j];
+    if (/^(\s*)- id:/.test(line)) break;
+    const km = /^(\s+)([A-Za-z][A-Za-z0-9_-]*):\s*(.*)$/.exec(line);
+    if (!km) continue;
+    const ki = km[1].length;
+    if (ki <= sectionIndent) break;
+    if (ki === keyIndent && km[2] === key) {
+      return { anchor, configLine, sectionLine, sectionIndent, keyIndent, target: { lineIndex: j, value: km[3].trim(), raw: line }, lines };
+    }
+  }
+  return { anchor, configLine, sectionLine, sectionIndent, keyIndent, target: null, lines };
+}
+
+/**
+ * 生成「改 config 子树标量值」的文本改写（只读计算）。
+ * 语义与 planRowFlag 一致：键存在 → 原地替换（保留缩进与 CRLF）；键不存在 → 插入
+ * 到所属 section 的第一个子键位置（`config:` / `routing:` 行正下方）。
+ */
+export function planConfigEdit(text, { rowId, path, value }) {
+  const located = locateConfigKeyLine(text, rowId, path);
+  const { lines } = located;
+  const hasCrlf = /\r\n/.test(text);
+  const next = lines.slice();
+  const indentStr = " ".repeat(located.keyIndent);
+  const after = indentStr + path.split(".").pop() + ": " + String(value);
+
+  if (located.target) {
+    const before = located.target.raw;
+    if (before === after) {
+      return { nextText: text, anchor: located.anchor, before, after, changed: false, targetLine: located.target.lineIndex + 1 };
+    }
+    next[located.target.lineIndex] = after;
+    return { nextText: joinLines(next, hasCrlf), anchor: located.anchor, before, after, changed: true, targetLine: located.target.lineIndex + 1 };
+  }
+
+  // 插入：section 行正下方（第一个子键位置；缩进 = section + 2）
+  const insertAt = located.sectionLine.lineIndex + 1;
+  next.splice(insertAt, 0, after);
+  return { nextText: joinLines(next, hasCrlf), anchor: located.anchor, before: null, after, changed: true, targetLine: insertAt + 1 };
+}
+
+/**
+ * 生成「配置编辑」plan（只读）。白名单校验由调用方（index.js 路由）完成后再进这里；
+ * 本函数仍复验路径合法性与锚点唯一性。
+ */
+export function createConfigPlan({ file, rowId, path, value, backupRoot, ttlMs = DEFAULT_PLAN_TTL_MS, reason = null, note = null }) {
+  if (!existsSync(file)) {
+    throw new PlanError("target-missing", "目标文件不存在：" + file);
+  }
+  const text = readFileSync(file, "utf8");
+  const result = planConfigEdit(text, { rowId, path, value });
+  const now = Date.now();
+  return {
+    token: createHash("sha256")
+      .update(file + "|config|" + rowId + "|" + path + "|" + String(value) + "|" + sha256Of(text) + "|" + now)
+      .digest("hex")
+      .slice(0, 32),
+    kind: "config-edit",
+    file,
+    rowId,
+    key: path,
+    value: String(value),
+    reason: reason != null ? reason : "panel-config-edit",
+    note: note != null ? note : rowId + "." + path + " = " + String(value) + "（P2.3 配置编辑）",
+    backupRoot: backupRoot || null,
+    expectedSha: sha256Of(text),
+    nextSha: sha256Of(result.nextText),
+    changed: result.changed,
+    anchorLine: result.anchor.lineIndex + 1,
+    targetLine: result.targetLine,
+    diff: renderDiff(result),
+    createdAt: new Date(now).toISOString(),
+    expiresAt: new Date(now + ttlMs).toISOString(),
+    nextText: result.nextText,
+  };
+}
+
 // ---------------- 备份保留策略 ----------------
 
 /**

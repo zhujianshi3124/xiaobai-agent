@@ -43,7 +43,7 @@ const fakeCtx = {
 };
 const panelMod = await import(pathToFileURL(join(panelDir, "index.js")).href);
 panelMod.apply(fakeCtx, { toolkitRoot: root, doctorCli, devicesFile: fixtureFile });
-check("routes count == 7", routes.length === 7, String(routes.length));
+check("routes count == 8", routes.length === 8, String(routes.length));
 check("P2.1 plan route registered", routes.some((r) => r.path === "/api/toolkit-panel/plan"));
 check("P2.1 execute route registered", routes.some((r) => r.path === "/api/toolkit-panel/execute"));
 check("P2.1 plan/status route registered", routes.some((r) => r.path === "/api/toolkit-panel/plan/status"));
@@ -57,6 +57,7 @@ const expectedWhenAllowed = {
   "/api/toolkit-panel/execute": ["GET", 405],
   "/api/toolkit-panel/plan/status": ["GET", 404],
   "/api/toolkit-panel/toggle/plan": ["GET", 405],
+  "/api/toolkit-panel/config/plan": ["GET", 405],
 };
 
 // 写路径（options.change === true）路由集合：tunneled 无服务一律 403。
@@ -65,6 +66,7 @@ const WRITE_ROUTES = new Set([
   "/api/toolkit-panel/plan",
   "/api/toolkit-panel/execute",
   "/api/toolkit-panel/toggle/plan",
+  "/api/toolkit-panel/config/plan",
 ]);
 
 // 每个场景独立 apply 一次，通过 ctx.get 注入不同形态的 remoteWebUiPairing。

@@ -105,7 +105,19 @@ window.__ModuleLoader__.load({
 			confirmEffect: { fontSize: 12, fontWeight: 600, color: "#fbbf24", lineHeight: 1.7, marginBottom: 4 },
 			confirmNote: { fontSize: 11.5, color: "#a9aeb5", lineHeight: 1.75, marginTop: 4 },
 			noteCode: { fontFamily: "ui-monospace, Consolas, monospace", color: "#d9c58a" },
-			condNote: { marginTop: 4, fontSize: 11, color: "#e0d5b7", lineHeight: 1.7 }
+			condNote: { marginTop: 4, fontSize: 11, color: "#e0d5b7", lineHeight: 1.7 },
+			// ---- P2.3 参数编辑（rate-throttle 白名单标量）----
+			cfgBox: { marginTop: 10, padding: "8px 10px", borderRadius: 6, background: "#141a1c", border: "1px solid #24403a" },
+			cfgHead: { fontSize: 12, fontWeight: 700, color: "#9fd8c0", marginBottom: 4 },
+			cfgNote: { fontSize: 11, color: "#8fa89e", lineHeight: 1.7, marginBottom: 6 },
+			cfgSection: { fontSize: 11, fontWeight: 700, color: "#7f8f88", margin: "8px 0 2px", fontFamily: "ui-monospace, Consolas, monospace" },
+			cfgRow: { display: "flex", gap: 6, alignItems: "center", fontSize: 11.5, lineHeight: 2, flexWrap: "wrap" },
+			cfgLabel: { color: "#a9b3ad", flex: "1 1 200px", fontFamily: "ui-monospace, Consolas, monospace" },
+			cfgCur: { color: "#6f7a74", fontFamily: "ui-monospace, Consolas, monospace" },
+			cfgInput: { width: 110, padding: "2px 6px", borderRadius: 4, border: "1px solid #2c3c36", background: "#101413", color: "#d7e2dc", fontSize: 12, fontFamily: "ui-monospace, Consolas, monospace" },
+			cfgSave: { padding: "2px 8px", borderRadius: 4, border: "1px solid #2c5a4a", background: "#12241e", color: "#9fd8c0", cursor: "pointer", fontSize: 11 },
+			modeBox: { marginTop: 10, padding: "8px 10px", borderRadius: 6, background: "#161a22", border: "1px solid #2a2f36" },
+			modeLine: { fontSize: 11.5, color: "#a9aeb5", lineHeight: 1.8 }
 		};
 
 		function Badge(props) {
@@ -216,9 +228,9 @@ window.__ModuleLoader__.load({
 						"要让它真正工作，需要把插件配置里的 ", react.createElement("span", { style: styles.dualCode }, "enabled"),
 						" 改为 ", react.createElement("span", { style: styles.dualCode }, "true"), "。",
 						react.createElement("br"),
-						"提示：本面板只负责第一层（加载与否），第二层是插件自己的配置，面板暂不修改 —— ",
+						"提示：本面板只负责第一层（加载与否）—— 第二层的参数编辑已随 ",
 						react.createElement("span", { style: styles.dualCode }, "P2.3 配置编辑"),
-						"上线后可在此直接改。"
+						" 上线，见本卡下方", react.createElement("span", { style: styles.dualCode }, "「参数编辑」"), "。"
 					)
 				);
 			}
@@ -285,6 +297,9 @@ window.__ModuleLoader__.load({
 					patchText: patchText,
 					onChanged: props.onChanged
 				}),
+				plugin.dir === "search-router"
+					? react.createElement(SearchRouterModeRow, { plugin: plugin })
+					: react.createElement(ConfigEditor, { plugin: plugin, onChanged: props.onChanged }),
 				react.createElement(TechDetails, { plugin: plugin })
 			);
 		}
@@ -461,6 +476,192 @@ window.__ModuleLoader__.load({
 				) : null,
 
 				error ? react.createElement("div", { style: styles.errorBox }, "没能完成：" + error) : null
+			);
+		}
+
+		// ---- P2.3 参数编辑（rate-throttle 白名单标量；服务端权威校验，前端仅录入）----
+		// 字段元数据与 p23-design.md §八 一一对应；合法域以服务端 config-whitelist.mjs
+		// 为唯一权威，此处的 min/max 只用于输入框提示与预检。
+		var CONFIG_FIELDS = [
+			{ path: "enabled", label: "总开关（enabled）", type: "bool", section: "top" },
+			{ path: "minIntervalMs", label: "两次请求最小间隔（毫秒）", type: "int", min: 0, max: 3600000, section: "top" },
+			{ path: "maxRequestsPerMinute", label: "每分钟最多请求数", type: "int", min: 1, max: 600, section: "top" },
+			{ path: "adaptive", label: "自动退避（出错后自动放慢）", type: "bool", section: "top" },
+			{ path: "maxIntervalMs", label: "退避间隔上限（毫秒）", type: "int", min: 1, max: 86400000, section: "top" },
+			{ path: "backoffFactor", label: "退避放大倍数", type: "num", min: 1, max: 10, section: "top" },
+			{ path: "routing.enabled", label: "自动换源总开关（routing.enabled）", type: "bool", section: "routing" },
+			{ path: "routing.autoGroups", label: "自动发现模型分组", type: "bool", section: "routing" },
+			{ path: "routing.autoGroupTtlMs", label: "分组缓存时长（毫秒）", type: "int", min: 1, max: 86400000, section: "routing" },
+			{ path: "routing.cooldownMs", label: "出错冷却时长（毫秒）", type: "int", min: 1, max: 86400000, section: "routing" },
+			{ path: "routing.tpmTurnSkip", label: "TPM 超限当轮跳过", type: "bool", section: "routing" },
+			{ path: "routing.tpmCooldownMs", label: "TPM 短暂除名时长（毫秒，0=关闭）", type: "int", min: 0, max: 86400000, section: "routing" },
+			{ path: "routing.downgradeContextMargin", label: "降级上下文余量（0.1–1）", type: "num", min: 0.1, max: 1, section: "routing" },
+			{ path: "routing.maxDowngradeCompactsPerTurn", label: "单轮最多降级压缩次数", type: "int", min: 0, max: 10, section: "routing" },
+			{ path: "routing.metricsWindowMs", label: "指标统计窗口（毫秒）", type: "int", min: 1, max: 86400000, section: "routing" },
+			{ path: "routing.metricsLogIntervalMs", label: "指标日志间隔（毫秒）", type: "int", min: 1, max: 86400000, section: "routing" },
+			{ path: "routing.clearCooldownOnUserSwitch", label: "手动切换时清除冷却", type: "bool", section: "routing" },
+			{ path: "routing.syncSelectionOnFailover", label: "换源后同步选择", type: "bool", section: "routing" }
+		];
+
+		function ConfigEditor(props) {
+			var plugin = props.plugin;
+			var panel = plugin.configPanel;
+			if (!panel || panel.editable !== true) return null;
+			var onChanged = props.onChanged;
+			var edits = react.useState({});
+			var editValues = edits[0];
+			var setEditValues = edits[1];
+			var pend = react.useState(null);
+			var pending = pend[0];
+			var setPending = pend[1];
+			var busySt = react.useState(false);
+			var busy = busySt[0];
+			var setBusy = busySt[1];
+			var errSt = react.useState("");
+			var error = errSt[0];
+			var setError = errSt[1];
+
+			var rawValue = function (f) {
+				var v = f.section === "routing"
+					? ((panel.values && panel.values.routing) || {})[f.path.split(".")[1]]
+					: (panel.values || {})[f.path];
+				return v === undefined || v === null ? "" : String(v).trim();
+			};
+			var draftOf = function (f) {
+				return Object.prototype.hasOwnProperty.call(editValues, f.path) ? editValues[f.path] : rawValue(f);
+			};
+			var setDraft = function (f, v) {
+				var next = Object.assign({}, editValues);
+				next[f.path] = v;
+				setEditValues(next);
+			};
+
+			var askPlan = react.useCallback(async function (f) {
+				setBusy(true);
+				setError("");
+				setPending(null);
+				try {
+					var raw = draftOf(f);
+					var value = f.type === "bool" ? (raw === true || raw === "true") : raw;
+					var res = await fetch("/api/toolkit-panel/config/plan", {
+						method: "POST",
+						cache: "no-store",
+						headers: { "content-type": "application/json" },
+						body: JSON.stringify({ rowId: panel.rowId, path: f.path, value: value })
+					});
+					var body = await res.json();
+					if (!body.ok) {
+						setError(body.error || ("HTTP " + res.status));
+						return;
+					}
+					setPending(body.plan);
+				} catch (e) {
+					setError(e && e.message || e);
+				} finally {
+					setBusy(false);
+				}
+			}, [panel.rowId, editValues]);
+
+			var confirmPlan = react.useCallback(async function () {
+				if (!pending) return;
+				setBusy(true);
+				setError("");
+				try {
+					var res = await fetch("/api/toolkit-panel/execute", {
+						method: "POST",
+						cache: "no-store",
+						headers: { "content-type": "application/json" },
+						body: JSON.stringify({ token: pending.token })
+					});
+					var body = await res.json();
+					if (!body.ok) {
+						setError(body.error || ("HTTP " + res.status));
+						setPending(null);
+						return;
+					}
+					setPending(null);
+					if (onChanged) await onChanged();
+				} catch (e) {
+					setError(e && e.message || e);
+				} finally {
+					setBusy(false);
+				}
+			}, [pending, onChanged]);
+
+			var btn = function (label, onClick, disabled) {
+				return react.createElement("button", {
+					style: Object.assign({}, styles.cfgSave, disabled ? styles.buttonDisabled : {}),
+					onClick: onClick,
+					disabled: !!disabled
+				}, label);
+			};
+
+			var rows = [];
+			var lastSection = "";
+			for (var i = 0; i < CONFIG_FIELDS.length; i++) {
+				var f = CONFIG_FIELDS[i];
+				if (f.section !== lastSection) {
+					lastSection = f.section;
+					rows.push(react.createElement("div", { key: "sec-" + f.section, style: styles.cfgSection },
+						f.section === "top" ? "config:（顶层）" : "config.routing:（换源）"));
+				}
+				var draft = draftOf(f);
+				var changed = draft !== rawValue(f);
+				var input;
+				if (f.type === "bool") {
+					input = react.createElement("input", {
+						type: "checkbox", style: styles.cfgInput, checked: draft === true || draft === "true",
+						onChange: function (f) { return function (e) { setDraft(f, e.target.checked ? "true" : "false"); }; }(f)
+					});
+				} else {
+					input = react.createElement("input", {
+						type: "text", style: styles.cfgInput, value: String(draft),
+						onChange: function (f) { return function (e) { setDraft(f, e.target.value); }; }(f)
+					});
+				}
+				rows.push(react.createElement("div", { key: f.path, style: styles.cfgRow },
+					react.createElement("span", { style: styles.cfgLabel }, f.label),
+					react.createElement("span", { style: styles.cfgCur }, "当前 " + rawValue(f)),
+					input,
+					btn(changed ? "生成方案" : "无改动", function (f) { return function () { askPlan(f); }; }(f), busy || !!pending || !changed)
+				));
+			}
+
+			return react.createElement("div", { style: styles.cfgBox },
+				react.createElement("div", { style: styles.cfgHead }, "参数编辑（rate-throttle 限流参数 · 改的是配置文件，重启后生效）"),
+				react.createElement("div", { style: styles.cfgNote }, panel.effectNote || ""),
+				rows,
+				pending ? react.createElement("div", { style: styles.confirmBox },
+					react.createElement("div", { style: styles.confirmHead }, "确认后才会写入，下面是具体改动"),
+					react.createElement("div", { style: styles.confirmEffect }, pending.effectNote || ""),
+					react.createElement("div", { style: styles.confirmLine },
+						"目标位置：", react.createElement("span", { style: styles.dualCode }, "cordis.patch.yml 第 " + pending.targetLine + " 行 · " + pending.rowId + " → " + pending.path)
+					),
+					react.createElement("pre", { style: styles.diffPre }, (pending.diff || []).join("\n")),
+					react.createElement("div", { style: styles.confirmNote },
+						"该值由插件在启动时读取（", react.createElement("span", { style: styles.noteCode }, "激活快照"),
+						"），没有别的配置来源会盖住它 —— 重启后即按新值运行。"
+					),
+					react.createElement("div", { style: styles.confirmRow },
+						btn("确认写入", confirmPlan, busy),
+						btn("取消", function () { setPending(null); setError(""); }, busy)
+					)
+				) : null,
+				error ? react.createElement("div", { style: styles.errorBox }, "没能完成：" + error) : null
+			);
+		}
+
+		// ---- P2.3 search-router mode：只读展示「生效值 + 来源」（第 15 轮方案 1）----
+		function SearchRouterModeRow(props) {
+			var panel = props.plugin && props.plugin.configPanel;
+			if (!panel || !panel.mode) return null;
+			return react.createElement("div", { style: styles.modeBox },
+				react.createElement("div", { style: styles.cfgHead }, "搜索路由 mode（当前生效值 · 只读）"),
+				react.createElement("div", { style: styles.modeLine },
+					"生效值：", react.createElement("span", { style: styles.dualCode }, panel.mode.value === null ? "（未设置，走 patch 缺省）" : panel.mode.value),
+					"　来源：", react.createElement("span", { style: styles.dualCode }, panel.mode.source)
+				),
+				react.createElement("div", { style: styles.modeLine }, panel.note || "")
 			);
 		}
 
