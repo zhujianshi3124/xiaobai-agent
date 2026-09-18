@@ -836,6 +836,74 @@ const lf = (t) => String(t).replace(/\r\n/g, "\n");   // 断言前置归一
 
 **本阶段为 client 可见改动（新增启停开关 UI），触发 reload。**
 
+## L-030 [已完成] P2.2b 全卡覆盖 + Q1 安全闸 + Q2 层间检查（2026-09-18 00:05–00:20）
+
+**指令来源**：用户 2026-09-18 08:02 指令。三条并行要求：确认页补人话（①）、**测试覆盖缺口**（本轮最大发现）、Q1/Q2/Q3 收口。
+
+### 一、确认页人话补丁（用户 ①：③「重启后生效」提示缺失）
+
+确认页原本只有「目标文件 / 行号 / diff」三项达标，**缺"什么时候生效"**。已补两句，两套渲染器同步：
+
+- **生效时机**（置于确认页头部，按方向二选一）：停用 → 「执行后此插件将于下次重启时停用（当前仍运行）。」；启用 → 「执行后此插件将于下次重启时启用（当前未加载的不会立刻加载）。」
+- **`disabled` 字段人话解释**（紧挨 diff）：「`disabled: true` 的意思是：让 DSH 在下次启动时跳过加载这个插件。它写在配置文件里，不会影响正在运行的进程 —— 所以要重启才会生效。」
+
+### 二、测试覆盖缺口（本轮最大发现）
+
+**缺口**：面板开放启停开关的是 **4 张卡**，但 `p22-verify.mjs` 只对 `rate-throttle` 一张做过真实验证。用户随手点的是 `agent-memory`（第 74 行），**不在用例内**。没翻车是运气，不是证据。
+
+**两点口径修正（与用户描述不同，以证据为准）**：
+
+1. 用户说「面板 5 张卡全部开放 toggle」—— **不成立**。`compact-router` **不开放**：它的挂载由 `scripts/apply-preset-patch.mjs` 改写预设行名完成，**不在 `cordis.patch.yml` 里**（该文件第 3 行注释即写明），没有可写的行，两套渲染器都显式返回空。故开放数为 **4 张**，不是 5 张。
+2. 用户所见 4 卡中提到的 **「compact-memory」在 5 张卡里不存在**。`agent-memory（记忆）` 与 `compact-router（上下文压缩）` 是两个独立插件，应为串读。**未据猜测改口径**，此点请用户确认。
+
+**闭合**：新增 `scripts/p22-cards-ui.mjs`（**两套真实渲染器逐卡真跑**）+ `p22-verify.mjs` 引擎级全卡扫描。
+
+**一个建模陷阱必须留档**：`react.createElement(ToggleControls, …)` 只把组件**按引用**放进树，组件体**不会被调用**（真实 React 才负责调用）。`compact-router` 正是靠 `ToggleControls` **返回 null** 才"没有开关"的 —— 只看元素是否存在，会把 5 张卡**全判成"有开关"**。同理 `StatusRow` 的状态标签要从 `props.state.label` 读。**第一版 harness 同时踩了这两个坑**，由脚本自身断出。任何后续"检查元素树"的测试都要注意这一点。
+
+### 三、顺手对账：agent-memory 锚点行号
+
+**用户看到的是第 74 行 —— 与真实文件逐字一致。** 已写成常驻断言（`p1-smoke.mjs` + `p22-verify.mjs` 各一份）。4 张卡锚点行号：`rate-throttle` 14 / `web-search-local` 58 / `web-search-router` 64 / `agent-memory-runtime` 74。
+
+### 四、Q1：`disabled` 平台行为证据（附安全闸）
+
+**框架事实（源码级）**：`!!js` 是 YAML 自定义标签 `tag:yaml.org,2002:js`（`dsh-app-boot/lib/index.js:17` 构造为 `{__jsExpr}`）；Loader 在条目激活时**求值** —— `cordis-plugin-loader/lib/index.js:378` = `isJsExpr(disabled) ? Boolean(this.evaluate(disabled.__jsExpr)) : Boolean(disabled)`；求值实现 `new Function("ctx","expr","with(ctx){return eval(expr)}")`（`:289`）；且 `disabled` **沿父条目继承**。生态内真实用法：`dsh-liangshen/.../agent.cordis.yml:144,179`、`dsh-better-sidebar/cordis.patch.yml:49`。
+
+**本仓现状**：`disabled` 全是字面量或缺失，**无 `!!js`** ⇒ 本轮改动对现有文件**行为零变化**，闸门纯防御。
+
+**实测出的两处危害（非推断）**：
+1. **读侧误报**：`parseRootRows` 对 `!!js` 行报 `enabled=true` → 面板说「运行中」，而 loader 在 win32 上会真停用它 → **呈现与事实相反**。
+2. **写侧抹条件**：改写会把表达式换成硬布尔（实测 diff `["- disabled: !!js …","+ disabled: true"]`）→ **平台条件被永久销毁**。
+
+**处置（fail-closed）**：引擎新增 `readRowDisabledLiteral()` + 闸门（非字面量 → `value-not-literal` → 400，拒绝写盘）；快照新增 `patchRow.disabledExpr` 如实带出原文；两套渲染器层 1 显示「条件开关（面板不解释）」+ 原文 + 「请手工编辑」并**禁用写入按钮**，页头状态改报「配置层是条件开关…（不再谎报运行中）」。**UI 禁用只是体验，真正的门在引擎**（双保险）。
+
+### 五、Q2：层间覆盖检查
+
+**结论：两层正交，无覆盖。** 层 1（patch 行 `disabled`）= **有没有被加载**，由 Loader 读；层 2（`config.enabled`）= **加载了但自己关掉**，由插件自身读。层 1 关闭时层 2 取值不再被读取，但**两者互不改写**（实测：改写层 1 后**每一行** `config:` 子树逐字节不变）。呈现顺序即优先级：两套 `stateOf` 都先判层 1 再判层 2（已加顺序断言）。
+
+**一条连带效应**：**插入一行会位移其后所有锚点**（实测 74 → 75）。这不是层间覆盖，但会让已生成 plan 的 `anchorLine` 变陈旧；防线是 execute 前 SHA 重读 → `sha-conflict` 拒绝（实测），另有 `anchor-moved` 复验。
+
+### 六、Q3
+
+已按要求在 **handoff 11.7 阶段表**下方新增常驻「**进度**」行：**「P2.2 已落库待验收」** + 三条具体待验收项。放在 11.7 而非别处，因为该节是 P2 的唯一权威范围定义（用户确认口径的地方）。若所指「总文档」另有其文，请指出，我改。
+
+### 七、验收
+
+| 脚本 | 结果 |
+|---|---|
+| `scripts/p22-verify.mjs` | **98/98**（44 → 98） |
+| `scripts/p22-cards-ui.mjs` | **71/71**（新增） |
+| `scripts/p1-smoke.mjs` | **185/185**（167 → 185） |
+| `scripts/p21-verify.mjs` / `p2-smoke.mjs` | 46/46 · 16/16 无回归 |
+| `node --test` | 92/92 |
+| doctor | **0/0/0**（`issues: []`） |
+| 真实 `cordis.patch.yml` | **全程 sha 未变**（`ce0b0b81…`） |
+
+证据 `.panel-backups/p22b-evidence-*/EVIDENCE.txt`；改动前备份 `.panel-backups/pre-p22b-fullcard-20260918/`。
+
+**顺带发现并留档**：真实文件**第 2 行注释**写着 `web-search-local`。若「跳过注释行」规则失效，该卡会凭空多出交叉引用告警。已加双向断言：注释行确实存在（前提）+ 规则确实抑制（结论）+ **去掉 `#` 后规则就命中**（反证抑制来自注释规则）。
+
+**本轮为 client 可见改动（确认页 + 条件开关呈现），触发 reload；但按用户指示「攒着合并 reload」，不单独追加一次。**
+
 ## 待办
 
 - ~~**[L-023 续] 条件④** 全量加固（trigger + selfheal 脚本，先备份，diff 留痕）~~ ✅ 2026-09-17 21:35 完成，见 L-023-④
@@ -847,9 +915,12 @@ const lf = (t) => String(t).replace(/\r\n/g, "\n");   // 断言前置归一
 - ~~**[L-023 续] 停手等重启** → 三验收（桌面 200 / 配对 200 / 无痕 403）→ 删一次性任务 → 关账~~ ✅ 2026-09-17 22:08 重启成功；22:10 三验收全绿；任务已清理。见 L-023-⑤
 - **[L-027 已解除]** P2 阶段表 **2026-09-17 23:31 由用户提供权威版**，已落盘 `handoff-restart.md` **11.7**。待办转为按表执行 P2.0② → P2.1 → P2.2 → P2.3 → P2.4。
 - ~~**【P2 待办】P2.1** 两段式框架（plan→确认→execute，SHA 比对，备份+manifest+保留策略）~~ ✅ 2026-09-17 23:50 完成，见 L-028（commit `a27da81`）
-- ~~**【P2 进行中】P2.2** 启停开关（锚点唯一，交叉引用检查，rate-throttle 首用例）~~ ✅ 2026-09-17 24:05 完成，见 L-029
-- **【P2 进行中】P2.3** 配置编辑（白名单 + 范围/枚举校验 + 服务端校验）
+- ~~**【P2 进行中】P2.2** 启停开关（锚点唯一，交叉引用检查，rate-throttle 首用例）~~ ✅ 2026-09-17 24:05 完成，见 L-029；全卡覆盖缺口 2026-09-18 闭合，见 L-030
+- **【P2 待办】P2.3** 配置编辑（白名单 + 范围/枚举校验 + 服务端校验）
 - **【P2 待办】P2.4** doctor 操作台 + 两套回滚
+- **[待用户·常驻]** **reload 后目视确认 P2.2**（4 张卡有开关/compact-router 无、双层分立、确认页人话）。用户已指示**攒着合并 reload**，不单独追加。
+- **[待用户·待澄清]** 所见 4 卡中的 **「compact-memory」在 5 张卡里不存在**（应为 `agent-memory` 与 `compact-router` 串读）。未据猜测改口径，待确认。
+- **[待用户·前置条件]** **Q1 层间/平台证据已补（L-030 四、五）**；用户此前要求的 Q1/Q2 若指别的事项请指出。真实终验前置条件不变。
 - ~~**[L-025 待用户]** reload dsh web 后可在浏览器看到「英文原名 + 中文注释」新面板~~ ✅ **2026-09-17 23:53 用户已确认界面合格**（随 L-023 关账一并闭环）
 - **[L-024 后续]** ~~修 `panel/manager/snapshot.mjs` `parseRootRows()` 缩进无关正则~~ ✅ 2026-09-17 23:40 完成，见 L-026（属 P2.0①）
 - ~~**[L-023 续 + L-024 + L-025 合并·待用户]** 浏览器端目视确认面板新 UI（**需 reload 后看**）~~ ✅ **2026-09-17 23:53 用户已确认**：设置页 tab 可见、界面合格。**L-023 迁移任务正式关账。**
@@ -889,4 +960,5 @@ const lf = (t) => String(t).replace(/\r\n/g, "\n");   // 断言前置归一
 - L-027：**已解除** —— 用户 2026-09-17 23:31 提供 P2 窄版权威阶段表，落盘 `handoff-restart.md` 11.7。P2 按表执行。
 - L-028：`scripts/p21-verify.mjs` **46/46** 全绿（含篡改后 `sha-conflict` → 409、备份副本 sha == 写前 sha、回滚后逐字节一致、保留策略三场景）；`p1-smoke.mjs` **136/136**；`p2-smoke.mjs` 16/16；doctor **0/0/0**；`pluggable-lint` 通过；真实 `cordis.patch.yml` 全程 sha 未变（`ce0b0b81…`）；改动前备份 `.panel-backups/pre-p21-twophase-20260917/`；真实写操作证据 `.panel-backups/p21-evidence-*/EVIDENCE.txt`。
 - L-029：`scripts/p22-verify.mjs` **44/44** 全绿（CRLF 前提守卫 / 锚点唯一三态 / 交叉引用正反例 / 双层分立两套渲染器 / 两段式复用结构断言 / 真实文件未变）；`p1-smoke.mjs` **167/167**；`p21-verify.mjs` 46/46；`p2-smoke.mjs` 16/16；doctor **0/0/0**（`issues: []`）；`pluggable-lint` 通过；真实写操作 SHA 变化 `ce0b0b81…` → `3d711ad899…`；证据 `.panel-backups/p22-evidence-2026-09-17T15-57-56-541Z/EVIDENCE.txt`；改动前备份 `.panel-backups/pre-p22-toggle-20260917/`；真实 `cordis.patch.yml` 全程 sha 未变。
-- **P2（进行中）**：P2.0① ✅（`193bdd8`）→ P2.0② ✅（`2b05777`）→ **P2.1 ✅（`a27da81`）** → **P2.2 ✅（24:05）** → P2.3 配置编辑 → P2.4 doctor+回滚。**P2.1 起每个写操作须附真实备份产物与 SHA 记录。**
+- L-030：`scripts/p22-verify.mjs` **98/98**；`scripts/p22-cards-ui.mjs` **71/71**（新增，5 卡 × 两套真实渲染器）；`p1-smoke.mjs` **185/185**；`p21-verify.mjs` 46/46；`p2-smoke.mjs` 16/16；`node --test` 92/92；doctor **0/0/0**；`pluggable-lint` 通过；真实 `cordis.patch.yml` 全程 sha 未变（`ce0b0b81…`）；证据 `.panel-backups/p22b-evidence-*/EVIDENCE.txt`；改动前备份 `.panel-backups/pre-p22b-fullcard-20260918/`。
+- **P2（进行中）**：P2.0① ✅（`193bdd8`）→ P2.0② ✅（`2b05777`）→ **P2.1 ✅（`a27da81`）** → **P2.2 ✅（24:05，覆盖缺口 09-18 闭合）** → P2.3 配置编辑 → P2.4 doctor+回滚。**P2.1 起每个写操作须附真实备份产物与 SHA 记录。**

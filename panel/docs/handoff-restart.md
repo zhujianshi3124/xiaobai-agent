@@ -313,6 +313,11 @@ const uiHtml = readFileSync(join(panelRoot(), "client", "panel.html"), "utf8");
 | **P2.3** 配置编辑 | 白名单字段：`enabled`（布尔）、限流数值（**范围校验**）、路由模式（**枚举**）；值含**换行或 YAML 结构字符一律拒绝**；**服务端校验，不信任前端** | 非法值被拒且错误信息**人话化**；合法修改落盘且**备份生成** |
 | **P2.4** doctor 操作台 + 回滚 | 一键修复（apply 走**两段式**、**逐条 diff 预览**）、doctor 回滚、**面板备份回滚**（两套回滚在 UI **分开列明各自覆盖的文件**） | 回滚后文件 **SHA 与备份点逐字节一致** |
 
+**进度（Q3 要求的常驻行，随阶段推进更新）**：
+
+> **P2.2 已落库待验收。** 已落库：commit `c91de92`（启停开关主体）+ `51c2c0d`/`8f6b392`（文档与清单），本轮再补全卡覆盖与 Q1 安全闸。**待用户 reload 后目视验收。**
+> 具体待验收项：① 5 张卡里 4 张有启停开关、`compact-router` 无（口径见 11.10）；② 双层开关**分立**呈现；③ 确认页含「下次重启生效」人话提示与 `disabled` 解释。
+
 **安全模型（全项适用于 P2 各阶段）**：两段式、SHA 冲突检测、锚点唯一、值白名单、写路由 CSRF + 配对服务校验（禁 fallback）、写前备份、plugin-manager 并发防线（**快照现读不缓存**）。
 
 **执行顺序**（用户指定，逐阶段报验收证据后方进下一阶段）：
@@ -403,5 +408,94 @@ body-too-large                                   → 413
 **验收脚本**：`scripts/p22-verify.mjs`（44 条）。改 `apply-engine.mjs` 后**必须**跑它 + `p21-verify.mjs` + `p1-smoke.mjs` + `p2-smoke.mjs` + doctor 0/0/0。
 
 **`.panel-backups/` 已入 `.gitignore`**（人工留档目录，含改动前快照与验收证据，不随仓库入库）。
+
+### 11.10 卡片口径 + 测试覆盖缺口闭合 + Q1/Q2 证据（2026-09-18）
+
+#### 一、卡片口径（权威，对应用户「对齐 5 个口径」）
+
+**面板卡片数 = `lib/` 下带 `dsh.plugin.json` 的目录数 = 5。** 判据在 `panel/manager/snapshot.mjs:112`（`readdirSync(libRoot)` + 清单存在性检查）。
+
+| # | 卡片（dir） | 包名 | 对应 patch 行 | 行号 | 启停开关 |
+|---|---|---|---|---|---|
+| 1 | `agent-memory` | `@local/dsh-toolkit/agent-memory` | `agent-memory-runtime` | **74** | 开放 |
+| 2 | `compact-router` | `@local/dsh-toolkit/compact-router` | **无**（`ROW_IDS` 显式置 null） | — | **不开放** |
+| 3 | `rate-throttle` | `@local/dsh-toolkit/rate-throttle` | `rate-throttle` | 14 | 开放 |
+| 4 | `search-router` | `@local/dsh-toolkit/search-router` | `web-search-router` | 64 | 开放 |
+| 5 | `web-search-local` | `@local/dsh-toolkit/web-search-local` | `web-search-local` | 58 | 开放 |
+
+- **卡片顺序 = `readdirSync` 顺序**（字母序）：agent-memory → compact-router → rate-throttle → search-router → web-search-local。
+- **`toolkit-manager` 不自显为卡片。** 它只出现在 `snapshot.self`，UI 里唯一用途是页头那行元信息「… · 本面板已启用/未启用」（`client/index.js` 的 `meta`）。它**没有卡片、没有启停开关** —— 面板不自带开关，避免"关掉自己"。
+- **关于「compact-memory」**：5 张卡里**不存在**这个名字。用户两屏所见 4 张卡中，`agent-memory（记忆）` 与 `compact-router（上下文压缩）` 是两个独立插件，`compact-memory` 应为二者串读。**不据猜测改口径**，此点请用户确认。
+- **compact-router 为何没有开关**：它的挂载由 `scripts/apply-preset-patch.mjs` 改写预设行名完成，**根本不在 `cordis.patch.yml` 里**（该文件第 3 行注释即写明）。没有可写的行 ⇒ 两套渲染器都显式 `return null`/`return ""`。引擎侧若被强行走 toggle 会报 `anchor-missing`（fail-closed，不会误写别的行）。
+
+#### 二、测试覆盖缺口（本轮最大发现，已闭合）
+
+**原缺口**：面板开放启停开关的有 4 张卡，但 `p22-verify.mjs` 只对 `rate-throttle` 一张做过真实验证。用户随手点的 `agent-memory`（第 74 行）**不在用例内** —— 没翻车是运气。「只证 1 张」等于没证。
+
+**闭合方式**：新增 `scripts/p22-cards-ui.mjs`（**用两套真实渲染器逐卡真跑**，不是文本匹配）：
+
+- `client/index.js` → 捕获 `window.__ModuleLoader__` 工厂 → 假 react → 调 `apply()` 拿组件 → 渲染 → 从元素树取 `PluginCard` / `ToggleControls` 并**调用** → 收集文本
+- `client/panel.html` → 抽出内联 `<script>` → 假 `document`/`fetch` → 直接调 `toggleHtml()` / `stateOf()` / `renderConfirm()`
+
+**一个必须留档的建模陷阱**：`react.createElement(ToggleControls, …)` 只是把组件**按引用**放进树，组件体不会被调用（真实 React 才负责调用）。`compact-router` 正是靠 `ToggleControls` **返回 null** 来"不渲染开关"的 —— 只看元素是否存在会把 5 张卡全判成"有开关"。同理 `StateRow` 的状态标签要从 `props.state.label` 读，不能从文本里找。**第一版 harness 就是踩了这两个坑**，由脚本自身断言抓出。
+
+同时 `p22-verify.mjs` 增加引擎级全卡扫描（4 卡各跑一次 toggle plan：锚点唯一 + 行号对账 + 交叉引用 + 确认页元数据 + 只读性）。**`agent-memory` 锚点行号 74 与真实文件逐字对上，与用户实际点击时看到的行号一致。**
+
+#### 三、Q1 —— `disabled` 的平台条件行为（源码级证据）
+
+**框架事实**（三处，均为已安装源码）：
+
+| 事实 | 出处 |
+|---|---|
+| `!!js` 是 YAML 方言自定义标签 `tag:yaml.org,2002:js`，构造为 `{ __jsExpr: data }` | `dsh-app-boot/lib/index.js:17-23`（`cordis-plugin-include` 同源） |
+| Loader 在**条目激活时**求值：`isJsExpr(options.disabled) ? Boolean(this.evaluate(options.disabled.__jsExpr)) : Boolean(options.disabled)` | `cordis-plugin-loader/lib/index.js:378` |
+| 求值实现 = `new Function("ctx","expr","with(ctx){return eval(expr)}")` | 同上 `:289` |
+| `disabled` **沿父条目继承**（`_disabled` 向上遍历 `parent.ctx.fiber.entry`） | 同上（`_disabled` / `disabledOf`） |
+
+**生态内的真实用法**：`dsh-liangshen/presets/liangshen/agent.cordis.yml:144,179` 有 `disabled: !!js process.platform === 'win32'` / `!== 'win32'`；`dsh-better-sidebar/cordis.patch.yml:49` 有基于 `ctx.loader.entries()` 的写法。**平台条件式停用是这个生态里真实存在的模式。**
+
+**本仓现状**：`cordis.patch.yml` 的 `disabled` **全部是字面量或缺失**（仅 `web-search-deepseek: disabled: false`），**没有 `!!js`**。所以本轮改动对现有文件**行为零变化**，闸门纯属防御。
+
+**实测出的两处危害（不是推断）**：
+
+1. **读侧误报**：`parseRootRows` 遇到 `!!js` 时，值既非 `"true"` 也非 `"false"`，于是 `enabled` 保持 `true` → 面板报「运行中」。而 loader 在 win32 上会**真的停用它**。**呈现与事实相反。**
+2. **写侧抹条件**：改写会把表达式换成硬布尔（实测 diff = `["- disabled: !!js …", "+ disabled: true"]`），**平台条件被永久销毁**。
+
+**处置（fail-closed）**：
+- 引擎新增 `readRowDisabledLiteral()` + 闸门：现有 `disabled` 非字面量 ⇒ 抛 `value-not-literal`（HTTP 400），**拒绝写盘**。
+- 快照新增 `patchRow.disabledExpr`，如实带出表达式原文。
+- 两套渲染器：层 1 显示「条件开关（面板不解释）」+ 表达式原文 + 「请手工编辑」，并**禁用写入按钮**；页头状态改为「配置层是条件开关 · 实际是否加载取决于该表达式，面板不解释」（**不再谎报「运行中」**）。
+- 服务端闸门与 UI 禁用**互为双保险**：UI 禁用只是体验，真正的门在引擎。
+
+#### 四、Q2 —— 层间覆盖检查
+
+**结论：两层正交，不存在覆盖关系。**
+
+| 层 | 位置 | 语义 | 谁读 |
+|---|---|---|---|
+| 第一层 | patch 行 `disabled` | **有没有被加载**（false 时 Loader 直接不 activate） | cordis Loader |
+| 第二层 | `config.enabled` | **加载了，但插件自己把功能关掉** | 插件自身代码 |
+
+- **层 1 关闭 ⇒ 层 2 的取值不再被读取**（插件根本没加载），但**两者互不改写**。实测：改写层 1 后，**每一行**的 `config:` 子树逐字节不变。
+- **呈现顺序即优先级**：两套渲染器的 `stateOf` 都先判层 1、再判层 2（已加顺序断言）。层 1 关时面板一律报「配置层停用 · 未加载」，**不会**因为层 2 是 `true` 就说"运行中"。
+- **一条必须知道的连带效应**：**插入一行会位移其后所有锚点**（实测插入 `disabled: true` 到第 14 行后，`agent-memory` 的锚点 74 → 75）。这不是层间覆盖，但会**让已生成的 plan 的 `anchorLine` 变陈旧**。防线是 execute 前的 SHA 重读：文件一变，`sha-conflict` 直接拒绝（实测通过）。`executePlan` 里另有一道 `anchor-moved` 复验。
+- 面板层间真值表（两套渲染器一致，`p22-cards-ui.mjs` 逐格断言）：层1开+层2开→运行中；层1开+层2关→已加载·功能开关关闭；层1开+无内部开关→运行中；层1关→配置层停用（不论层2）；条件表达式→条件开关·不解释。
+
+#### 五、本轮验收脚本与计数
+
+| 脚本 | 结果 | 说明 |
+|---|---|---|
+| `scripts/p22-verify.mjs` | **98/98** | 44 → 98：加全卡覆盖、compact-router 无 toggle、真实注释行负例、`!!js` 闸、层间真值表 |
+| `scripts/p22-cards-ui.mjs` | **71/71** | **新增**，5 张卡 × 两套真实渲染器 |
+| `scripts/p1-smoke.mjs` | **185/185** | 167 → 185 |
+| `scripts/p21-verify.mjs` | 46/46 | 无回归 |
+| `scripts/p2-smoke.mjs` | 16/16 | 无回归 |
+| `node --test` | 92/92 | 全仓 |
+| doctor | **0/0/0**（`issues: []`） | — |
+
+证据：`.panel-backups/p22b-evidence-*/EVIDENCE.txt`（含真实写操作 + 备份 manifest + Q1/Q2 实测）。
+改动前备份：`.panel-backups/pre-p22b-fullcard-20260918/`。
+
+**一条真实文件的注释负例（顺带发现，值得留档）**：`cordis.patch.yml` **第 2 行注释**里写着 `web-search-local`。若「跳过注释行」这条规则失效，`web-search-local` 就会凭空多出一条交叉引用告警。现已双向断言：**该注释行确实存在**（前提）+ **规则确实抑制了它**（结论）+ **去掉 `#` 后规则就会命中**（反证抑制来自注释规则而非别的原因）。
 
 
