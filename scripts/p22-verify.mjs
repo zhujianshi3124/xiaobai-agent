@@ -10,7 +10,7 @@
 //   ⑥ 双层开关 UI 分立（patch disabled 与 config.enabled 不得合并呈现）
 //
 // 全部操作发生在 OS 临时目录的副本上，**绝不触碰真实 cordis.patch.yml**。
-import { mkdtempSync, readFileSync, writeFileSync, existsSync, mkdirSync, utimesSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync, existsSync, mkdirSync, utimesSync, readdirSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -169,8 +169,21 @@ function freshPatch() {
   const manifest = JSON.parse(readFileSync(join(result.backupDir, "manifest.json"), "utf8"));
   check("backup manifest sha == pre-write sha (byte-identical proof)",
     manifest.files[0].sha256 === beforeSha, manifest.files[0].sha256.slice(0, 16) + " vs " + beforeSha.slice(0, 16));
+  // D-01 防复发：不依赖 manifest.savedAs，独立按目录实体核验副本
+  // （旧缺陷：savedAs 未净化盘符冒号 ⇒ 内容落 NTFS ADS，目录只剩 0 字节文件）
+  const bkpEntries = readdirSync(result.backupDir).filter((n) => n !== "manifest.json");
+  check("backup dir has exactly one payload file", bkpEntries.length === 1, JSON.stringify(bkpEntries));
+  check("backup payload has no zero-byte entry (ADS-defect fingerprint)",
+    bkpEntries.every((n) => statSync(join(result.backupDir, n)).size > 0), JSON.stringify(bkpEntries));
+  check("backup payload name contains no ':' (NTFS ADS specifier)",
+    !bkpEntries.some((n) => n.includes(":")), JSON.stringify(bkpEntries));
+  const bkpBytes = readFileSync(join(result.backupDir, bkpEntries[0]));
+  check("backup payload sha == pre-write sha", sha(bkpBytes.toString("utf8")) === beforeSha);
+  // manifest 必须自解释（reason/note 非 null）—— 防「恒为 null」回归
+  check("backup manifest records a reason (non-null)", typeof manifest.reason === "string" && manifest.reason.length > 0, JSON.stringify(manifest.reason));
+  check("backup manifest records a note (non-null)", typeof manifest.note === "string" && manifest.note.length > 0, JSON.stringify(manifest.note));
   check("backup copy is byte-identical to pre-write content",
-    readFileSync(join(result.backupDir, manifest.files[0].savedAs), "utf8") === beforeText);
+    bkpBytes.toString("utf8") === beforeText);
 
   // 状态保持：重读文件后解析结果应反映停用
   const snapMod = await import(new URL("../panel/manager/snapshot.mjs", import.meta.url).href);

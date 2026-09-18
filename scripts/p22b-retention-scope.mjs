@@ -14,8 +14,11 @@
 //   E3 运行时隔离 —— 同一父目录下并排放 write-backups/ 与 manual-archive/，
 //                    对前者跑 pruneBackups：后者逐字节不变，且父目录内除 write-backups
 //                    之外零增删。这是「越界删除」的直接反证。
-//   E4 生产实况 —— 默认 backupRoot .panel-write-backups 当前**不存在** ⇒
-//                  生产环境从未执行过裁剪，故不可能裁掉任何东西。
+//   E4 生产实况 —— 默认 backupRoot .panel-write-backups 的现状。
+//                  2026-09-18 修订：用户已在面板上跑过真实 停用/复原（4 次写），
+//                  该目录**已经存在**。故 E4 不再断言「不存在 ⇒ 从未裁剪」，改为断言
+//                  「引擎备份数 ≤ 保留上限 ⇒ 没有任何一份引擎备份因密度被裁掉」，
+//                  并继续证明人工留档未被生产裁剪波及。核心证明仍在 E3（运行时隔离）。
 //
 // 全部操作发生在 OS 临时目录；对真实仓只做**只读**读取。
 // 绝不改动真实 cordis.patch.yml，也绝不触碰真实 .panel-backups/。
@@ -131,11 +134,24 @@ check("E3f pruning created nothing outside the engine root",
 
 rmSync(work, { recursive: true, force: true });
 
-// ================= E4 生产实况 =================
-check("E4a engine default backupRoot does not exist on disk => pruning has never run in production",
-  !existsSync(engineDefaultRoot),
-  engineDefaultRoot + " 不存在");
-check("E4b manual archive dir is therefore trivially intact",
+// ================= E4 生产实况（2026-09-18 修订） =================
+// 背景：用户在面板上的真实 停用/复原 已使默认 backupRoot 出现 4 份写前备份。
+// 原断言「目录不存在 ⇒ 生产从未裁剪」前提已失效，按新现实重写（不复述旧结论）。
+const engineBackups = existsSync(engineDefaultRoot)
+  ? readdirSync(engineDefaultRoot).filter((n) => existsSync(join(engineDefaultRoot, n, "manifest.json")))
+  : [];
+check("E4a engine default backupRoot exists on disk (panel has performed real writes)",
+  existsSync(engineDefaultRoot),
+  engineDefaultRoot + "  exists=" + existsSync(engineDefaultRoot) + "  backups=" + engineBackups.length);
+check("E4b engine backup count <= keep-count cap => no engine backup lost to density pruning",
+  engineBackups.length <= eng.BACKUP_KEEP_COUNT,
+  "engine backups=" + engineBackups.length + " <= keepCount " + eng.BACKUP_KEEP_COUNT);
+check("E4c engine root and manual archive are disjoint real directories (same parent, no nesting)",
+  existsSync(engineDefaultRoot) && existsSync(manualArchiveRoot)
+    && !engineDefaultRoot.startsWith(manualArchiveRoot + "\\")
+    && !manualArchiveRoot.startsWith(engineDefaultRoot + "\\"),
+  "两者为同级目录，非同一、非父子");
+check("E4d manual archive still intact (not eaten by any production pruning)",
   existsSync(manualArchiveRoot) && readdirSync(manualArchiveRoot).length > 0,
   "manual archive entries=" + readdirSync(manualArchiveRoot).length);
 
@@ -147,7 +163,7 @@ if (passed === 0 && failed === 0) {
 console.log("\n" + passed + "/" + (passed + failed) + " PASS");
 console.log("");
 console.log("=== 裁剪排除证据（存档用） ===");
-console.log("引擎默认 backupRoot      : " + engineDefaultRoot + "  (exists=" + existsSync(engineDefaultRoot) + ")");
+console.log("引擎默认 backupRoot      : " + engineDefaultRoot + "  (exists=" + existsSync(engineDefaultRoot) + ", backups=" + engineBackups.length + ")");
 console.log("人工留档目录             : " + manualArchiveRoot + "  (exists=" + existsSync(manualArchiveRoot) + ", entries=" + (existsSync(manualArchiveRoot) ? readdirSync(manualArchiveRoot).length : 0) + ")");
 console.log("两者关系                 : 同级目录，非同一、非父子");
 console.log("listBackups 过滤条件     : 只认含 manifest.json 的子目录");

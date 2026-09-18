@@ -13,3 +13,6 @@ node_modules/*
 
 # 引擎运行时写前备份根（panel/index.js 默认 backupRoot），运行期产物，不入库
 .panel-write-backups/
+
+# D-01 备份真实写测试的沙箱（脚本自建自清），不入库
+.d01-sandbox/

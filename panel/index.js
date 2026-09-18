@@ -279,6 +279,8 @@ export function apply(ctx, config = {}) {
             key: String(body.key || ""),
             value: body.value === undefined ? "" : body.value,
             backupRoot,
+            reason: "panel-plan",
+            note: String(body.rowId || "") + "." + String(body.key || "") + " = " + String(body.value === undefined ? "" : body.value),
           });
           putPlan(plan);
           // plan 的 nextText 不下发（客户端无需持有全文），避免暴露内部实现细节。
@@ -330,6 +332,11 @@ export function apply(ctx, config = {}) {
             enabled: body.enabled,
             backupRoot,
             alsoMatch: Array.isArray(body.alsoMatch) ? body.alsoMatch : [],
+            // 修复「manifest reason/note 恒为 null」：写前备份必须自解释该恢复点
+            // 对应哪一次操作，否则回滚时无法判断备份用途。
+            reason: "panel-toggle",
+            note: rowId + (body.enabled ? " 启用" : " 停用")
+              + "（patch-row.disabled = " + (body.enabled ? "false" : "true") + "）",
           });
           putPlan(plan);
           sendJson(response, 200, {
