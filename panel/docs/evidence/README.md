@@ -24,6 +24,8 @@
 | `P2.2b-EVIDENCE.txt` | `.panel-backups/p22b-evidence-2026-09-18T00-13-52-624Z/EVIDENCE.txt` | 5752 | `b802c99bcc523414d5f174439725d127aed6b57b215afb965154dba75472b681` |
 | `RETENTION-SCOPE.txt` | 由 `scripts/p22b-retention-scope.mjs` 生成（可重放） | 2039 | `67952c4ba5fd081e2609731256b04881b3d10a8f89c062e2ed5a20ad507760a7` |
 | `Q2-LAYER-SCAN.txt` | 由 `scripts/q2-layer-scan.mjs --agent-presets` 生成（可重放，**20/20 PASS**） | 13447 | `e03c409fe998b5662b6d3453631b8ae5527551a83ef895e3008a614bf3cf15bd` |
+| `Q2-SHIPPED-PRESET-SCAN.txt` | 由 `scripts/q2-shipped-scan.mjs` 生成（可重放，**21/21 PASS**） | 10400 | `d38ab769f87dfeadedc2e91de7cdd8e71e5b077668521c234053b1db7613b615` |
+| `Q2-SHIPPED-PRESET-DIFF.txt` | 由 `scripts/q2-shipped-diff.mjs` 生成（可重放，逐行 diff 原版↔现版） | 55314 | `c24cabd61f492ee26a8a7fc3c152b9f646f15910fe7faf500451589016c8bf66` |
 
 前三份为**逐字节复制**（复制后比对 sha256 一致才落盘），未经改写。
 
@@ -85,6 +87,7 @@ node scripts/p22b-retention-scope.mjs > panel/docs/evidence/RETENTION-SCOPE.txt 
 | `P2.2-EVIDENCE.txt` | `2026-09-17T15:57:56Z` | **2026-09-17 23:57:56** |
 | `P2.2b-EVIDENCE.txt` | `2026-09-18T00:13:52Z` | **2026-09-18 08:13:52** |
 | `RETENTION-SCOPE.txt` / `Q2-LAYER-SCAN.txt` | 无内嵌时刻（可重放） | 生成于 **2026-09-18 09:0x / 09:1x** |
+| `Q2-SHIPPED-PRESET-SCAN.txt` / `Q2-SHIPPED-PRESET-DIFF.txt` | 无内嵌时刻（可重放） | 生成于 **2026-09-18 10:1x–10:2x** |
 
 **推论**：ledger 里「L-030 24:05」这类写法沿用了 UTC 戳的数字，**不等于本地 24:05**（本地对应次日 08:0x）。
 对账时**先看是哪种时钟**，再比时间。
@@ -100,8 +103,32 @@ node scripts/p22b-retention-scope.mjs > panel/docs/evidence/RETENTION-SCOPE.txt 
 | ③ | `panel/dsh.plugin.json`（+ `panel/package.json`） | 同构；`panel/package.json` 只声明 `dsh`（client 面），不声明 patch 文件 |
 | ④ | `scripts/apply-preset-patch.mjs` → `~/.dsh/.agent-presets/*` + shipped presets | 授权范围内 2 个目录；只有 `compact-router` 经此层挂载；无旧名/upstream 残留；每个改写都有 `.bak`（**含两种历史来源**：upstream 与旧独立插件） |
 
-**未覆盖面（如实标注）**：3 个 shipped preset（`standard`/`ptc`/`cordis`）的**当前内容**在 `AppData/…/npm/…/dsh-agent-presets/presets/`，
-**不在已授权路径内、未读**；其「已被改写」由 `preset-patch-state.json` + 仓内 `.bak` 间接支持，内容验证需另给授权。
+**未覆盖面（已于 2026-09-18 闭合）**：3 个 shipped preset 的**当前内容**当时标注为「不在已授权路径内、未读」。
+现已查明该判断**过度收窄** —— `AppData/…/npm/…` 是 **DSH 安装目录，不在红线内**（红线仅 `~/.dsh`、cloudflared 进程、五子插件源码目录）
+⇒ **无需新增授权**即可补扫，缺口闭合（见下节）。
 
 **另含一条本轮查出的溯源缺口**：`toolkit-manager` 行的**首次落盘时刻与操作者未留档**（该字符串从未进入该文件的 git 历史；
 可归因最早证据 = `.panel-backups/arm-manifest-20260917-105930/`，已含该行、旧名）。详见 `HANDOFF-MASTER.md` §9.2。
+
+## shipped presets 补扫（`Q2-SHIPPED-PRESET-SCAN.txt` + `Q2-SHIPPED-PRESET-DIFF.txt`）
+
+`node scripts/q2-shipped-scan.mjs` → **21/21 PASS**；`node scripts/q2-shipped-diff.mjs` → 逐行 diff（原版 `.bak` ↔ 现版磁盘）。
+**依据**：`AppData/Roaming/npm/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-agent-presets/presets/` 属 DSH 安装目录，**不在红线内**。
+
+| preset | 字节 | sha256（前 12） | `- id:` 行 | marker 对账 |
+|---|---|---|---|---|
+| `standard` | 13070 | `a5e4d87112f0` | 31 | **== patchedSha ✓** |
+| `ptc` | 14145 | `7d9aff861cd6` | 32 | **== patchedSha ✓** |
+| `cordis` | 14152 | `9525c9a6ca40` | 32 | **== patchedSha ✓** |
+| `minimal` | 3119 | `e75af996ab8c` | 7 | 无 marker（脚本明文：**设计上不动**） |
+
+**结论**：① **toolkit 五 id 行 = 无**（五条 `insert` 行的 id 一处都没有）；② **覆盖声明 = 无**
+（`disabled`/`override`/`merge` 命中**全是 upstream 自己的内容**）；
+③ 三份**各含 1 行** `- id: compact-router` —— 是 `scripts/apply-preset-patch.mjs` 把 upstream
+`- id: compaction-basic`/`@deepseek-ai/dsh-compaction-basic` **原位替换**的结果（**Δ +5 行 / +142 B**，三份一致），
+`cordis.patch.yml:3` 注释自陈此事 ⇒ **文档化注入路径，不是泄漏**；`@deepseek-ai/dsh-compaction-basic` 与旧名 `@local/dsh-compact-router` **均 0 残留**。
+
+**同时产出的源码定案**：DSH 启动的**全部 patch/配置注入点 + 同 id 合并语义**已落 `panel/docs/api-notes.md` 新节「**P2.0③**」
+（bundle → profile → home → `--patch` → telemetry；非 patch 面：env / `!!js` / agent-preset / 预设改写路径；
+**同 id**：patch 平面「后者覆盖、顶层赋值、非深合并」，loader 平面「复用同一 Entry」，**agent-preset 平面「首根胜」**）。
+据此裁决：**「同 id 后者覆盖」= 真**；**「四层 patch 栈」= 转述失真候选（第四例，与 11.11 同族）** —— 原文不删，`HANDOFF-MASTER.md` §8.0 / §8.4 加批注。
