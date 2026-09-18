@@ -508,25 +508,31 @@ export function apply(ctx, config = {}) {
           const body = await readJsonBody(request);
           const plugin = String(body.plugin || "");
           const mode = String(body.mode || "");
-          if (mode !== "soft" && mode !== "true") {
-            throw new PlanError("mode-invalid", "mode 必须是 soft（软卸载）或 true（真卸载）");
+          // Q2'-a 下架（L-059）：存档式真卸载为**已推翻设计**，不得留产品面 —— 入口在此拒绝。
+          // 设计改「销毁式」（p24-design-v2-destroy.md），待 v2 施工＋判定侧验收＋用户目视文案后重新上架。
+          if (mode === "true") {
+            throw new PlanError(
+              "true-uninstall-withdrawn",
+              "真卸载已下架：该路径设计已改为「销毁式」，待新版上架后开放。当前仅提供软卸载。",
+            );
+          }
+          if (mode !== "soft") {
+            throw new PlanError("mode-invalid", "mode 必须是 soft（软卸载）；真卸载已下架，待销毁式新版上架");
           }
           const meta = assertUninstallable(plugin);
-          // 知情确认复核：确认页要求手动输入插件名（软一次 / 真两次），服务端不信任前端状态。
+          // 知情确认复核：确认页要求手动输入插件名（软一次），服务端不信任前端状态。
           const typed = Array.isArray(body.confirm) ? body.confirm.map(String) : [String(body.confirm || "")];
-          const expectedCount = mode === "true" ? 2 : 1;
+          const expectedCount = 1;
           if (typed.length !== expectedCount || typed.some((t) => t !== plugin)) {
             throw new PlanError(
               "confirm-missing",
-              "知情确认未完成：请" + (mode === "true" ? "两次输入" : "输入") + "插件名 " + plugin + " 后再执行",
+              "知情确认未完成：请输入插件名 " + plugin + " 后再执行",
             );
           }
           const userReason = body.reason ? String(body.reason).slice(0, 200) : null;
           const confirmCopy = JSON.stringify({ plugin, mode, typedCount: typed.length, at: new Date().toISOString() });
           const planArgs = { toolkitRoot, plugin, userReason, confirmCopy };
-          const plan = mode === "soft"
-            ? createSoftUninstallPlan(planArgs)
-            : createTrueUninstallPlan(planArgs);
+          const plan = createSoftUninstallPlan(planArgs);
           const isTextPlan = !!plan.file;
           sendJson(response, 200, {
             ok: true,
@@ -571,6 +577,14 @@ export function apply(ctx, config = {}) {
           const plan = getPlan(token);
           if (!plan) throw new PlanError("plan-not-found", "方案不存在或已失效，请重新生成");
           let result;
+          // Q2'-a 下架（L-059）：存档式真卸载 plan 一律拒绝执行（防御纵深——即便存在历史 token，
+          // 也不得走通「存档→摘行→删本体」这条已推翻路径）。
+          if (plan.kind === "uninstall-true-patch" || plan.kind === "uninstall-true-preset") {
+            throw new PlanError(
+              "true-uninstall-withdrawn",
+              "真卸载已下架：该路径设计已改为「销毁式」，待新版上架后开放。当前仅提供软卸载。",
+            );
+          }
           if (plan.kind === "uninstall-soft-patch") {
             result = await executeSoftUninstall({ plan: getPlan(token), toolkitRoot, backupRoot });
           } else if (plan.kind === "uninstall-true-patch") {
