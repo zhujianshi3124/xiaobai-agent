@@ -347,3 +347,30 @@ SHIPPED_PRESET_ROOT (trust: system)  →  config.roots  →  $DSH_HOME/.agent-pr
 
 **证据**：`panel/docs/evidence/Q2-SHIPPED-PRESET-SCAN.txt`（**21/21 PASS**）、`Q2-SHIPPED-PRESET-DIFF.txt`（55 KB 逐行 diff）；脚本 `scripts/q2-shipped-scan.mjs` / `q2-shipped-diff.mjs`。
 **Q2 尾②（loader 源码定案）**见本文 **§P2.0③**（注入点全集 + 分平面合并语义 + 对「四层栈」的裁决）。
+
+---
+
+## P2.3 前置 · **`config.enabled` 五插件源码消费点证据**（2026-09-18 第 14 轮放行后第一动作，先证后写）
+
+**命题**：P2.3 白名单（`enabled` 布尔 / 限流数值范围 / 路由模式枚举）写入的是 patch 行的 `config:` 块 —— 必须**先证明谁真的读它、读了做什么、改值后如何生效（含是否需重启）**，再动手写。以下每行给文件 + 行号，可复核。**取证全程只读。**
+
+### ① 结论总表
+
+| 插件 | `config.enabled` 消费点 | 谁读 / 做什么 | 改值后生效路径 |
+|---|---|---|---|
+| **rate-throttle** | **有（唯一）**：`:157` `:167` `:224` `:656` `:781` | **插件激活时一次性快照**进 `cfg`（`:157` `enabled: config.enabled !== false`，缺省 true；`:167` `routing.enabled !== false`）。消费：**`throttle()` 主功能闸 `:224`**（`!cfg.enabled → return 0`，即完全不节流）+ `retryDispatchScan() :656` 与 `routeRequest() :781`（`!cfg.routing.enabled → 短路`，不做换源路由） | **需重启 dsh web**：`cfg` 在插件激活时构建，此后只读快照；且该值来自 bundle patch（`cordis.patch.yml`），**bundle 层不热重载**（仅 profile/home 两份用户 patch 文件被 `patchReload: live` 监视） |
+| agent-memory | **无** | 配置仅读 `dataRoot` / `defaultWorkspace` / `enforceFreshness`（`plugin.js:105-106,108,158,211,244`）；全目录 `enabled` 命中 = 0 | —（面板若给它的层 2 开关写了 `config.enabled`，**没有任何代码会读**） |
+| compact-router | **无** | `index.js` 读 `summarizationProvider/Model`、`instantBudget` 等；`instant-digest.js:271` 的 `enabled` 是**注释**（`preserveInstructions`） | —（同上） |
+| search-router | **无 `enabled`** | 配置面三层层叠（`index.js:88-93` `resolveConfig`）：**seed（cordis patch）< 热 JSON `~/.dsh/dsh-search-router.json`（每次调用 `readFileSync` 热读，`:75-79,133,171`）< env `DSH_WEB_SEARCH_ROUTER_MODE`**。字段：`mode`（**枚举 `MODES = ["auto","official","local"]`** `:38`）、`officialProviders`、`officialProviderPatterns`、`officialModelPatterns`、`defaultWhenUnknown` | **改 patch 值需重启**才进 seed；但**运行时热 JSON 优先级更高 ⇒ 会遮蔽 patch 值**（P2.3 UI 必须注明，否则用户改了「不生效」） |
+| web-search-local | **无 `enabled`** | 有 **Schemastery schema** 注册进 settings 服务（`SETTINGS_NAMESPACE='web-search-local'`，`Config` = 纯数值/数组/字符串字段，`:117-134`）；层叠 = defaults → composition config（patch）→ **settings section（活）**（`:1425-1440`） | **双重生效路径**：settings UI 改值 → **下一次 search/fetch 立即生效（无需 reload）**；改 patch 值需重启且**会被 settings section 覆盖**（若 settings 已挂载） |
+
+### ② 对 P2.3 设计的三条直接影响（先证后写的产出）
+
+1. **`enabled` 布尔的层 2 开关只有 rate-throttle 真实消费** —— 其余 4 插件的层 2 展示必须标注「插件不读此字段」（或对 4 卡不提供层 2 可写入口），否则用户操作 = 写一个无人读的键，**与「不解释能看懂」铁律冲突**。
+2. **「路由模式枚举」= search-router `mode`（auto/official/local）**，但存在**更高优先级热通道**（`~/.dsh/dsh-search-router.json` + env）⇒ 面板写 patch 的 `mode` 前必须**读热 JSON 并在 UI 呈现遮蔽关系**，或考虑直接写热 JSON（需另立项，不在本轮白名单内）。
+3. **所有 patch 侧写入的生效时机 = 重启 dsh web**（bundle 层不热重载）——与既有「确认页 · 下次重启生效」文案一致；但 search-router / web-search-local 各有**会遮蔽 patch 值的活通道**（热 JSON / settings section），确认页需如实提示。
+
+### ③ 取证方法与边界
+
+- 方法：`grep -rn "enabled"` 全 `lib/`（8 处命中，逐条人工定性：rate-throttle 5 处消费 + 3 处注释）；`grep -rn "disable"`（无 `enabled` 同义消费）；逐插件通读 `config` 读取模式。
+- 边界（如实申报）：本证据只覆盖**五插件自身源码**；平台侧对 `config:` 块的透传机制已由 §P2.0③ 定案（整块替换、非深合并）。rate-throttle `cfg` 其余字段（数值范围）的**白名单取值域**属 P2.3 施工设计，不在本证据范围。
