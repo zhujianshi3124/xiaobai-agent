@@ -1,6 +1,13 @@
-import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { PLUGINS, DEPENDENCIES } from "./plugin-registry.mjs";
+import { listCustody, getSoftRecord, custodyRoot } from "./custody.mjs";
+
+function createHashSha256(text) {
+  return createHash("sha256").update(text).digest("hex");
+}
 
 const ORIGINS = {
   "agent-memory": { origin: "local" },
@@ -24,7 +31,7 @@ const ROW_IDS = {
   "web-search-local": "web-search-local",
 };
 
-function parseRootRows(patchText) {
+export function parseRootRows(patchText) {
   const lines = patchText.split(/\r?\n/);
   const rows = [];
   for (let i = 0; i < lines.length; i++) {
@@ -107,6 +114,63 @@ function loadJson(abs) {
     return undefined;
   }
 }
+
+/**
+ * P2.4：compact-router 预设挂载态（快照现读，不缓存）。
+ * 判据 = preset-patch-state.json 存在且该预设当前文件 sha == 记录的 patchedSha。
+ * 状态文件被 U9 纪律保持与磁盘对账；脚本侧 --status 是权威，但快照内不拉子进程。
+ */
+function presetPatchedAny(toolkitRoot) {
+  const state = loadJson(join(toolkitRoot, "preset-patch-state.json"));
+  if (!state || typeof state !== "object") return { patched: false, all: {} };
+  const all = {};
+  let any = false;
+  for (const [id, entry] of Object.entries(state)) {
+    let patched = false;
+    try {
+      if (entry && entry.file && entry.patchedSha && existsSync(entry.file)) {
+        patched = createHashSha256(readFileSync(entry.file, "utf8")) === entry.patchedSha;
+      }
+    } catch {
+      patched = false;
+    }
+    all[id] = patched;
+    if (patched) any = true;
+  }
+  return { patched: any, all };
+}
+
+/**
+ * P2.4 缺席态判定（p24-design.md §5.3 六态）：
+ *   mounted                —— 本体在 + 挂载在（patch 行 / 预设 patched）
+ *   soft-unmounted         —— 本体在 + 行不在 + 面板软卸载台账在案（面板发起，可一键恢复）
+ *   true-uninstalled       —— 本体不在 + 保管区存档在案（面板真卸载，可一键恢复）
+ *   installed-unmounted    —— 本体在 + 行不在 + 无面板台账（面板外摘除，doctor 提「已安装未挂载」）
+ *   dangling-mount         —— 行在 + 本体不在（无存档；doctor 提「挂载行存在但本体缺失」）
+ *   dependency-broken      —— mounted 修饰态：依赖的本地搜索缺席（搜索功能不可用）
+ */
+function determineAbsenceState({ dir, meta, bodyPresent, rowPresent, softRecord, custodyArchived, presetState }) {
+  if (meta.managedBy === "preset") {
+    if (bodyPresent && presetState.patched) return "mounted";
+    if (bodyPresent && !presetState.patched) return softRecord ? "soft-unmounted" : "installed-unmounted";
+    if (!bodyPresent && custodyArchived) return "true-uninstalled";
+    return "unknown-absent";
+  }
+  if (bodyPresent && rowPresent) return "mounted";
+  if (bodyPresent && !rowPresent) return softRecord ? "soft-unmounted" : "installed-unmounted";
+  if (!bodyPresent && rowPresent) return "dangling-mount";
+  if (!bodyPresent && !rowPresent) return custodyArchived ? "true-uninstalled" : "unknown-absent";
+  return "unknown-absent";
+}
+
+const ABSENCE_COPY = {
+  "mounted": null,
+  "soft-unmounted": "已软卸载 · 本体保留 · 可一键恢复",
+  "true-uninstalled": "已卸载（真）· 本体已移入保管区 · 可一键恢复",
+  "installed-unmounted": "已安装未挂载（不是面板卸载的）· 可从面板重新挂载",
+  "dangling-mount": "挂载行存在，但本体缺失 · 异常态",
+  "unknown-absent": "未安装",
+};
 
 /**
  * P2.3：解析某行 `config:` 子树里的**标量值**（config 直下 + routing 直下），
@@ -199,38 +263,98 @@ export async function buildSnapshot({ toolkitRoot, hotRouterPath = join(homedir(
   const patchPath = join(toolkitRoot, "cordis.patch.yml");
   const patchText = readFileSync(patchPath, "utf8");
   const rows = parseRootRows(patchText);
+  const presetState = presetPatchedAny(toolkitRoot);
 
+  // P2.4：登记表枚举（不是 readdirSync）—— 真卸载后本体已删，卡片仍须渲染（五卡渲染硬断言）。
+  const custodyEntries = listCustody(toolkitRoot);
+  // 第一遍：原始缺席态（六态基础判定；依赖修饰态需全局视口，故分两遍）
+  const rawByDir = {};
+  for (const dir of Object.keys(PLUGINS)) {
+    const meta = PLUGINS[dir];
+    const manifestPath = join(toolkitRoot, "lib", dir, "dsh.plugin.json");
+    const bodyPresent = existsSync(manifestPath);
+    const patchRow = meta.rowId ? rows.find((r) => r.id === meta.rowId) : undefined;
+    const softRecord = meta.rowId ? getSoftRecord(toolkitRoot, meta.rowId) : getSoftRecord(toolkitRoot, dir);
+    const custodyArchived = custodyEntries.some((e) => e.plugin === dir && e.kind === "true-uninstall");
+    rawByDir[dir] = {
+      meta,
+      bodyPresent,
+      patchRow: patchRow || null,
+      softRecord,
+      custodyArchived,
+      status: determineAbsenceState({
+        dir,
+        meta,
+        bodyPresent,
+        rowPresent: !!patchRow,
+        softRecord,
+        custodyArchived,
+        presetState,
+      }),
+    };
+  }
+  const statusByDir = {};
+  for (const dir of Object.keys(rawByDir)) statusByDir[dir] = rawByDir[dir].status;
+
+  // 第二遍：出卡（依赖修饰态在此换算——依赖缺席 ⇒ dependency-broken）
   const plugins = [];
-  const libRoot = join(toolkitRoot, "lib");
-  for (const dir of readdirSync(libRoot)) {
-    const manifestPath = join(libRoot, dir, "dsh.plugin.json");
-    if (!existsSync(manifestPath)) continue;
-    const manifest = loadJson(manifestPath);
-    if (!manifest) continue;
-    const req = (manifest.requirements && manifest.requirements.registers) || {};
-    const rowId = ROW_IDS[dir] || dir;
-    const patchRow = rowId ? rows.find((r) => r.id === rowId) : undefined;
+  for (const dir of Object.keys(PLUGINS)) {
+    const raw = rawByDir[dir];
+    const meta = raw.meta;
+    const manifestPath = join(toolkitRoot, "lib", dir, "dsh.plugin.json");
+    const manifest = raw.bodyPresent ? loadJson(manifestPath) : null;
+    let status = raw.status;
+    const mounted = status === "mounted";
+
+    // 联动感知：依赖插件本体缺席 ⇒ dependency-broken（本体挂载事实保留在 mounted 字段）
+    let dependency = null;
+    for (const dep of DEPENDENCIES) {
+      if (dep.plugin !== dir) continue;
+      const requires = dep.requires;
+      const depRaw = rawByDir[requires];
+      if (depRaw && !depRaw.bodyPresent) {
+        status = "dependency-broken";
+        dependency = { requires, note: dep.note, requiresState: statusByDir[requires] };
+      }
+    }
+
     plugins.push({
       dir,
-      name: manifest.name,
+      name: (manifest && manifest.name) || meta.pkg,
+      bodyPresent: raw.bodyPresent,
       origin: (ORIGINS[dir] || { origin: "unknown" }).origin,
       upstream: (ORIGINS[dir] || {}).upstream || null,
       author: (ORIGINS[dir] || {}).author || null,
       license: (ORIGINS[dir] || {}).license || null,
       note: (ORIGINS[dir] || {}).note || null,
-      entry: manifest.requirements && manifest.requirements.exports,
-      inject: Array.isArray(req.inject) ? req.inject : [],
+      entry: manifest && manifest.requirements && manifest.requirements.exports,
+      inject: manifest && Array.isArray((manifest.requirements || {}).inject) ? manifest.requirements.inject : [],
       registers: {
-        events: req.events || [],
-        services: req.services || [],
-        commands: req.commands || [],
-        providers: req.providers || [],
+        events: (manifest && (manifest.requirements || {}).registers || {}).events || [],
+        services: (manifest && (manifest.requirements || {}).registers || {}).services || [],
+        commands: (manifest && (manifest.requirements || {}).registers || {}).commands || [],
+        providers: (manifest && (manifest.requirements || {}).registers || {}).providers || [],
       },
-      managedBy: patchRow ? "patch" : dir === "compact-router" ? "preset-script" : "none",
-      enabled: patchRow ? patchRow.enabled : dir === "compact-router" ? "compact-router 由 scripts/apply-preset-patch.mjs 管理，不在 cordis.patch.yml" : false,
-      patchRow: patchRow || null,
-      // ---- P2.3 配置编辑（判定侧第 19 轮批准的设计稿 p23-design.md）----
-      configPanel: buildConfigPanel(dir, patchRow ? patchRow.id : null, patchText, { hotRouterPath, envMode }),
+      managedBy: raw.patchRow ? "patch" : meta.managedBy === "preset" ? "preset-script" : "none",
+      enabled: raw.patchRow ? raw.patchRow.enabled : meta.managedBy === "preset" ? presetState.patched : false,
+      patchRow: raw.patchRow,
+      // ---- P2.4 缺席态（六态）----
+      status,
+      statusCopy: status === "dependency-broken" ? (dependency && dependency.note) || "依赖缺失" : ABSENCE_COPY[status],
+      mounted,
+      custodyArchived: raw.custodyArchived,
+      softRecorded: !!raw.softRecord,
+      dependency,
+      defaultUninstallMode: meta.defaultMode,
+      restoreAvailable:
+        status === "soft-unmounted" ||
+        status === "true-uninstalled" ||
+        (status === "installed-unmounted" && raw.bodyPresent) ||
+        (meta.managedBy === "preset" && !mounted && (raw.bodyPresent || raw.custodyArchived)),
+      // ---- P2.3 配置编辑（卸载态隐藏多余操作，状态照常渲染）----
+      configPanel: mounted
+        ? buildConfigPanel(dir, raw.patchRow ? raw.patchRow.id : null, patchText, { hotRouterPath, envMode })
+        : { editable: false, hiddenForAbsence: true },
     });
   }
 
@@ -255,6 +379,11 @@ export async function buildSnapshot({ toolkitRoot, hotRouterPath = join(homedir(
       text: patchText,
       rows,
       webRow,
+    },
+    custody: {
+      root: custodyRoot(toolkitRoot),
+      entries: custodyEntries,
+      presetState: presetState.all,
     },
     plugins,
   };
