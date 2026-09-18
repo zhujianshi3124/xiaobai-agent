@@ -11,6 +11,9 @@ node_modules/*
 # 人工留档备份目录（改动前快照 / 验收证据），不入库
 .panel-backups/
 
+# P2.4 面板保管区（真卸载存档式恢复根），运行期产物，不入库
+.panel-custody/
+
 # 引擎运行时写前备份根（panel/index.js 默认 backupRoot），运行期产物，不入库
 .panel-write-backups/
 
