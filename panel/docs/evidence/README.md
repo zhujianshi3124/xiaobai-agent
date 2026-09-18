@@ -30,6 +30,7 @@
 | `MASTER-MERGE-NORMALIZATION.txt` | 本侧撰写 —— 总文档合并的**3 项排版归一枚举 + 保真说明**（含「字面全文 diff 不可构造」的如实申报） | 4707 | `7da72b053b9a110514b855b121ccdbbbbfe25794baced153af689da25db8eae2` |
 | `TERMINAL-ACCEPTANCE-ROUND10.txt` | 由 `scripts/terminal-acceptance-report.mjs` 生成（第 10 轮终验取证 a–e；**只读**，重建 4 次写链 LCS） | 6689 | `49ef62a02e6d5d0379de1597fc5566c673b26684f55a56cef1e0001464ef2e55` |
 | `D01-MANIFEST-FIX.diff` | 第 11 轮 D-01（ADS 备份）+ manifest `reason`/`note` 修复的 **diff 留痕** | 16579 | `17fa692cb59ded4e7dcbcac1c865ad950540211b3802f4da12e80248a37a6b07` |
+| `ROUND12-SUPPLEMENTARY-ACCEPTANCE.md` | 第 12 轮 —— 催收**三项补验收正文摘要**（A：`api-notes` 两新节 / B：附录 B U1–U11 / C：3 项归一枚举 + 「全文 diff 不可构造」）+ U8/U9 呈报 + 新增 U12（授权语义澄清） | 10848 | `84c69d88f56152419a97a535a1396b10f06127cf819a490051371368ecfef2ab` |
 
 前三份为**逐字节复制**（复制后比对 sha256 一致才落盘），未经改写。
 
@@ -47,6 +48,7 @@
 - **`MASTER-MERGE-NORMALIZATION.txt`** —— 3 项**排版归一**（合并时唯一的非保真动作）的逐项枚举 + 依据；并**如实申报**「字面级全文 diff 不可构造」（原文以会话消息形态送达、未落过盘，压缩后不可取回）。
 - **`TERMINAL-ACCEPTANCE-ROUND10.txt`** —— 第 10 轮终验取证 **a–e** 正本（**只读**）：以 4 份写前备份的载荷做 **LCS 重建**，还原出 `ce0b0b81`(3097) →写#1→ `77279ccb`(3119) →写#2→ `54345b4f`(3120) →写#3→ `2620280b`(3142) →写#4→ `c03e2c81`(3143) 的完整链（**链式 `shaBefore` 互证** ⇒ 均走 `executePlan` 唯一通道）。**该报告结论为 (c)✗ / (d)✗ / (a) 部分✗** —— 正是据此**喊停、未进关账**；第 11 轮裁决后以**授权恢复**达成基准。
 - **`D01-MANIFEST-FIX.diff`** —— D-01（备份副本落 NTFS **ADS**、目录只留 0 字节 `D` 载体）修复 + `manifest.reason`/`note` 恒 null 修复的 diff 留痕（**安全关键脚本 `backup.mjs` 的改动须留痕**）。
+- **`ROUND12-SUPPLEMENTARY-ACCEPTANCE.md`** —— 第 12 轮关账后**保留事项**的执行正本：把**催收三项**（`api-notes` 两新节 / 附录 B U1–U11 / 3 项归一枚举 + 全文 diff 说明）的**正文摘要**呈判定者补验收；附 **U8/U9 呈报**与**新增 U12（授权语义澄清）**。**关账已被接受，本件不改结论**；本轮**磁盘动作 = 零**。
 
 ## 裁剪（保留策略）排除证据 —— 对应用户 Q4
 
@@ -170,6 +172,7 @@ node scripts/p22b-retention-scope.mjs > panel/docs/evidence/RETENTION-SCOPE.txt 
 | 2026-09-18 11:2x（第 10 轮） | 终验取证 a–e 出结论 **(c)✗ / (d)✗ / (a) 部分✗** ⇒ **喊停不进关账** | 新增 `TERMINAL-ACCEPTANCE-ROUND10.txt` |
 | 2026-09-18 12:1x（第 11 轮） | D-01（ADS）+ manifest `reason`/`note` 修复；`p21/p22-verify` 备份断言升级为**独立路径取证**；`p22b` E4 重写（15→17）；新增 `backup-write-test`（23/23） | 新增 `D01-MANIFEST-FIX.diff`；上表 `RETENTION-SCOPE.txt` 条目加注 |
 | 2026-09-18 12:40–12:48（第 11 轮） | 授权**恢复** `cordis.patch.yml` → `ce0b0b81…`（3097 B / CRLF）+ **语义化提交** `22fde85` | `Q2-LAYER-SCAN.txt` 条目加注（§4 断言按新现实修订，**计数不变** 20/20；默认 14/14）；「生产实况」一条加注（前提失效） |
+| 2026-09-18 13:07（第 12 轮） | 关账被判定侧接受（「关账成立 ✓」）；执行保留事项 —— **催收三项补验收呈报** + **U6/U7 销项** + **新增 U12 授权语义澄清**；**零磁盘动作**（`cordis.patch.yml` sha 未变 `ce0b0b81…`） | 新增 `ROUND12-SUPPLEMENTARY-ACCEPTANCE.md`（10848 B） |
 
 > **本目录的两条硬约定**：① **只增不改** —— 已入库的归档文件**永不覆盖**；与脚本产生时序差时，**加注记、以脚本重放为准**。
 > ② **每份证据必须可重放** —— 上表所有「由 `scripts/*.mjs` 生成」者，重放命令即其生成命令。
