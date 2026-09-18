@@ -100,7 +100,12 @@ window.__ModuleLoader__.load({
 			crossHead: { fontSize: 11.5, fontWeight: 700, color: "#fbbf24", marginBottom: 3 },
 			crossLine: { fontSize: 11, color: "#e0d5b7", fontFamily: "ui-monospace, Consolas, monospace", lineHeight: 1.7, wordBreak: "break-all" },
 			crossFoot: { fontSize: 11, color: "#c9bd9a", marginTop: 3 },
-			errorBox: { marginTop: 6, padding: "6px 8px", borderRadius: 4, background: "#2b1719", border: "1px solid #6b2226", fontSize: 11.5, color: "#f2a6a0" }
+			errorBox: { marginTop: 6, padding: "6px 8px", borderRadius: 4, background: "#2b1719", border: "1px solid #6b2226", fontSize: 11.5, color: "#f2a6a0" },
+			// 确认页：生效时机说明 + 字段人话解释
+			confirmEffect: { fontSize: 12, fontWeight: 600, color: "#fbbf24", lineHeight: 1.7, marginBottom: 4 },
+			confirmNote: { fontSize: 11.5, color: "#a9aeb5", lineHeight: 1.75, marginTop: 4 },
+			noteCode: { fontFamily: "ui-monospace, Consolas, monospace", color: "#d9c58a" },
+			condNote: { marginTop: 4, fontSize: 11, color: "#e0d5b7", lineHeight: 1.7 }
 		};
 
 		function Badge(props) {
@@ -174,6 +179,11 @@ window.__ModuleLoader__.load({
 			}
 			if (!row) {
 				return { kind: "config-off", label: "配置层停用 · 未加载", style: styles.stateOff, dot: styles.dotOff };
+			}
+			// Q1：`disabled` 是条件写法（如 `!!js process.platform === 'win32'`）时，
+			// 实际是否加载取决于该表达式，面板**不解释**，因此不能报"运行中"。
+			if (row.disabledExpr) {
+				return { kind: "config-conditional", label: "配置层是条件开关 · 实际是否加载取决于该表达式，面板不解释", style: styles.stateWarn, dot: styles.dotWarn };
 			}
 			if (row.enabled !== true) {
 				return { kind: "config-off", label: "配置层停用 · 未加载", style: styles.stateOff, dot: styles.dotOff };
@@ -308,6 +318,8 @@ window.__ModuleLoader__.load({
 
 			var currentEnabled = row.enabled === true;
 			var inner = innerSwitchValue(plugin, patchText);
+			// Q1：条件写法（`!!js ...`）不解释、也不改写 —— 服务端同样会拒绝（双保险）。
+			var conditional = !!row.disabledExpr;
 
 			// 第一段：向服务端要一个方案（只读，不落盘）
 			var askToggle = react.useCallback(async function (targetEnabled) {
@@ -380,8 +392,10 @@ window.__ModuleLoader__.load({
 				// 两层分立列明
 				layerRow(
 					"第一层 · 配置文件（patch-row.disabled）",
-					currentEnabled ? "已加载" : "未加载（被配置层停用）",
-					currentEnabled ? styles.stateOn : styles.stateOff
+					conditional
+						? "条件开关（面板不解释）"
+						: (currentEnabled ? "已加载" : "未加载（被配置层停用）"),
+					conditional ? styles.stateWarn : (currentEnabled ? styles.stateOn : styles.stateOff)
 				),
 				layerRow(
 					"第二层 · 插件内部（config.enabled）",
@@ -389,14 +403,27 @@ window.__ModuleLoader__.load({
 					inner === null ? styles.stateOff : (inner ? styles.stateOn : styles.stateWarn)
 				),
 
+				conditional
+					? react.createElement("div", { style: styles.condNote },
+						"这一行的 ", react.createElement("span", { style: styles.noteCode }, "disabled"),
+						" 是条件写法（", react.createElement("span", { style: styles.noteCode }, row.disabledExpr),
+						"）。实际是否加载由该表达式决定，面板不解释、也不会改写它 —— 请手工编辑。")
+					: null,
+
 				react.createElement("div", { style: styles.toggleRow },
-					btn(currentEnabled ? "停用（改第一层）" : "启用（改第一层）", function () { askToggle(!currentEnabled); }, busy || !!pending),
+					btn(currentEnabled ? "停用（改第一层）" : "启用（改第一层）", function () { askToggle(!currentEnabled); }, busy || !!pending || conditional),
 					busy && !pending ? react.createElement("span", { style: styles.muted }, "正在生成改动方案…") : null
 				),
 
 				// 提交前的确认区：diff + 交叉引用 + 明确写出改哪个文件
 				pending ? react.createElement("div", { style: styles.confirmBox },
 					react.createElement("div", { style: styles.confirmHead }, "确认后才会写入，下面是具体改动"),
+					// 生效时机（人话）：改的是配置文件，不影响当前进程
+					react.createElement("div", { style: styles.confirmEffect },
+						pending.targetEnabled
+							? "执行后此插件将于下次重启时启用（当前未加载的不会立刻加载）。"
+							: "执行后此插件将于下次重启时停用（当前仍运行）。"
+					),
 					react.createElement("div", { style: styles.confirmLine },
 						"目标文件：", react.createElement("span", { style: styles.dualCode }, pending.file)
 					),
@@ -404,6 +431,12 @@ window.__ModuleLoader__.load({
 						"改动位置：第 ", String(pending.anchorLine), " 行的 ", react.createElement("span", { style: styles.dualCode }, "- id: " + pending.rowId)
 					),
 					react.createElement("pre", { style: styles.diffPre }, (pending.diff || []).join("\n")),
+					// disabled 字段本身的人话解释（紧挨 diff）
+					react.createElement("div", { style: styles.confirmNote },
+						react.createElement("span", { style: styles.noteCode }, "disabled: true"),
+						" 的意思是：让 DSH 在下次启动时跳过加载这个插件。它写在配置文件里，"
+						+ "不会影响正在运行的进程 —— 所以要重启才会生效。"
+					),
 					crossRefs.length > 0
 						? react.createElement("div", { style: styles.crossBox },
 							react.createElement("div", { style: styles.crossHead }, "⚠ 有其它配置引用这个插件（共 " + crossRefs.length + " 处）"),

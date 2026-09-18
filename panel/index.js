@@ -159,6 +159,8 @@ const PLAN_ERROR_STATUS = {
   "body-invalid-json": 400,
   "value-invalid": 400,
   "value-not-whitelisted": 400,
+  // Q1 安全闸：现有 disabled 是条件表达式（如 `!!js ...`），不予改写 → 400
+  "value-not-literal": 400,
 };
 
 function planErrorStatus(code) {

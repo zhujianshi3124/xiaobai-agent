@@ -31,7 +31,7 @@ function parseRootRows(patchText) {
     if (!idMatch) continue;
     const indent = idMatch[1].length;
     const id = idMatch[2];
-    const row = { id, line: i + 1, indent, enabled: true, disabledExplicit: false, config: {} };
+    const row = { id, line: i + 1, indent, enabled: true, disabledExplicit: false, disabledExpr: null, config: {} };
     // 本行块的直接子级缩进。`- id:` 自身缩进为 indent，其键缩进为 indent + 2。
     // 嵌套分支（如 config.routing.enabled）缩进更深，**不属于本行 config 的直接子级**，
     // 必须排除，否则会与同级键同名互相覆盖（历史缺陷：rate-throttle 自身
@@ -70,6 +70,13 @@ function parseRootRows(patchText) {
           row.disabledExplicit = true;
         } else if (value === "false") {
           row.disabledExplicit = true;
+        } else {
+          // 非字面量：典型是 `disabled: !!js <表达式>`（cordis Loader 在条目激活时
+          // 用 Boolean(eval(expr)) 求值）。**面板不解释这类表达式** —— 解析成布尔
+          // 是错的：写 `!!js process.platform === 'win32'` 的行在 Windows 上实际
+          // 是停用的，若只按「不是 true/false 就算开着」处理，面板会报「运行中」，
+          // 与事实相反。因此单独记下原文，交由 UI 如实显示为「条件开关，面板不解释」。
+          row.disabledExpr = value;
         }
         continue;
       }
