@@ -162,6 +162,7 @@ window.__ModuleLoader__.load({
 			dlgLineBold: { fontSize: 11.5, color: "#cfd4da", lineHeight: 1.8, fontWeight: 700, wordBreak: "break-word" },
 			dlgInput: { width: "100%", boxSizing: "border-box", padding: "3px 6px", borderRadius: 4, border: "1px solid #3a4048", background: "#101413", color: "#e6e6e6", fontSize: 12, fontFamily: "ui-monospace, Consolas, monospace", marginTop: 3 },
 			dlgWarn: { marginTop: 6, padding: "6px 8px", borderRadius: 4, background: "#2a2210", border: "1px solid #6b5a1e", fontSize: 11.5, color: "#e0d5b7", lineHeight: 1.8 },
+			dlgWarnTop: { marginBottom: 6, padding: "5px 8px", borderRadius: 4, background: "#3a1414", border: "1px solid #8a3030", fontSize: 12, fontWeight: 700, color: "#f0c0bc" },
 			dlgErr: { fontSize: 11.5, color: "#f2a6a0" },
 			banner: { margin: "12px 0", padding: "10px 12px", borderRadius: 6, background: "#12241e", border: "1px solid #2c5a4a", color: "#9fd8c0", fontSize: 13 }
 		};
@@ -730,16 +731,17 @@ window.__ModuleLoader__.load({
 		}
 
 		// ============================================================
-		// P2.4 卸载 / 恢复（施工批 1 UI 收尾）
+		// P2.4 卸载 / 恢复 / 挂载（**销毁式 v2**，L-060）
 		//
-		// 文案逐句来自 panel/docs/p24-test-plan-batch1.md §2 —— **一字不改**
-		// （markdown 的 ** 强调符按排版处理，字面文本原样保留）。
-		// 快照接线字段：status / statusCopy / restoreAvailable / defaultUninstallMode /
-		// conflict（冲突三态由 /restore/plan 返回的 host-key-conflict 结构化数据驱动）。
-		//
-		// ⚠ 如实申报：§2 未给「真卸载 rate-throttle / agent-memory」文案（§2.6–2.8 只给了
-		// 搜索路由 / 本地搜索 / 压缩）。此处按 §2.6 的 ①③ 句 + §2.8 的 ② 句逐句拼装
-		// （仅替换插件名与专属句），已在报判中申报，待判定侧补稿/追认。
+		// 文案口径：
+		//   · 软卸载 —— 逐句来自 panel/docs/p24-test-plan-batch1.md §2（**一字不改**）。
+		//   · 真卸载 —— 改用 panel/docs/p24-design-v2-destroy.md §6.1 **文案 v2（销毁式）**，
+		//     必含**三句**：① 空窗期警告（开源前不可恢复、不可重装）② 收据透明句（仅对账、
+		//     不含文件内容、不能用于恢复）③ 回收站句（删除不进回收站、无法通过回收站找回）。
+		//     并按 Q5 采纳**两补强**：(a) 弹窗顶部重复短句「开源前删除不可恢复」，且空窗期
+		//     警告在两次输入**之间**再次展示；(b) 确认前展示**将删文件清单 + 总字节数**。
+		// 快照接线字段：status / statusCopy / restoreAvailable / canMount /
+		// conflict（冲突三态由 /restore/plan、/mount/plan 返回的 host-key-conflict 驱动）。
 		// ============================================================
 		var UNINSTALL_COPY = {
 			"rate-throttle": {
@@ -754,14 +756,12 @@ window.__ModuleLoader__.load({
 					confirm: "请手动输入 rate-throttle 后点「确认软卸载」，或点「取消」。"
 				},
 				true: {
-					title: "真卸载「限流 rate-throttle」——删除本体，先自动存档并校验",
-					del: "确认执行后：① 把磁盘上的限流源代码文件完整复制到面板保管区并逐文件校验；② 让 DSH 下次启动时不再加载该功能模块；③ 校验通过后再删除磁盘上的源代码文件。",
+					title: "真卸载「限流 rate-throttle」——彻底删除，不留副本",
+					del: "确认执行后：① 让 DSH 下次启动时不再加载该功能模块；② 彻底删除磁盘上的限流源代码目录（lib/rate-throttle），不保留任何副本。",
 					consequence: "重启后，平台不再按当前面板里的限流参数进行限速；重启前仍按当前状态运行。",
-					timing: "确认执行并校验通过后，删除立即完成；对运行中的系统，将在下次重启时停止使用；重启前仍按当前状态运行。",
-					archive: "将自动存档（确认执行后、删除前）：先把源码复制到面板保管区并逐文件校验，校验通过后才删除；校验失败则中止，不删除。",
-					restorePath: "面板 →「限流 rate-throttle」卡片 → 点「恢复」，即可从保管区一键恢复。",
-					restart: "恢复后需要重启才生效。",
-					confirm: "请手动输入 rate-throttle 两次并点「确认真卸载」，或点「取消」。"
+					timing: "确认执行后立即删除；对运行中的系统，将在下次重启时停用；重启前仍按当前状态运行。",
+					restorePath: "本次删除不可恢复。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
+					confirm: "请手动输入 rate-throttle 两次并点「确认彻底删除」，或点「取消」。"
 				}
 			},
 			"agent-memory": {
@@ -776,14 +776,12 @@ window.__ModuleLoader__.load({
 					confirm: "请手动输入 agent-memory 后点「确认软卸载」，或点「取消」。"
 				},
 				true: {
-					title: "真卸载「记忆 agent-memory」——删除本体，先自动存档并校验",
-					del: "确认执行后：① 把磁盘上的记忆源代码文件完整复制到面板保管区并逐文件校验；② 让 DSH 下次启动时不再加载该功能模块；③ 校验通过后再删除磁盘上的源代码文件。",
+					title: "真卸载「记忆 agent-memory」——彻底删除，不留副本",
+					del: "确认执行后：① 让 DSH 下次启动时不再加载该功能模块；② 彻底删除磁盘上的记忆源代码目录（lib/agent-memory），不保留任何副本。",
 					consequence: "重启后，记忆内容在压缩结果里不再显示；重启前仍按当前状态运行。",
-					timing: "确认执行并校验通过后，删除立即完成；对运行中的系统，将在下次重启时停止使用；重启前仍按当前状态运行。",
-					archive: "将自动存档（确认执行后、删除前）：先把源码复制到面板保管区并逐文件校验，校验通过后才删除；校验失败则中止，不删除。",
-					restorePath: "面板 →「记忆 agent-memory」卡片 → 点「恢复」，即可从保管区一键恢复。",
-					restart: "恢复后需要重启才生效。",
-					confirm: "请手动输入 agent-memory 两次并点「确认真卸载」，或点「取消」。"
+					timing: "确认执行后立即删除；对运行中的系统，将在下次重启时停用；重启前仍按当前状态运行。",
+					restorePath: "本次删除不可恢复。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
+					confirm: "请手动输入 agent-memory 两次并点「确认彻底删除」，或点「取消」。"
 				}
 			},
 			"compact-router": {
@@ -798,14 +796,12 @@ window.__ModuleLoader__.load({
 					confirm: "请手动输入 compact-router 后点「确认软卸载」，或点「取消」。"
 				},
 				true: {
-					title: "真卸载「压缩 compact-router」——删除本体，先自动存档并校验",
-					del: "确认执行后：① 让 DSH 下次启动时恢复为系统自带压缩版本；② 把磁盘上的压缩源代码文件完整复制到面板保管区并逐文件校验；③ 校验通过后再删除磁盘上的源代码文件。",
+					title: "真卸载「压缩 compact-router」——彻底删除，不留副本",
+					del: "确认执行后：① 让 DSH 下次启动时恢复为系统自带压缩版本；② 彻底删除磁盘上的压缩源代码目录（lib/compact-router），不保留任何副本。",
 					consequence: "重启后，平台使用系统自带的压缩功能；限流的自动换源降级功能会退化；记忆功能本身不受影响；重启前仍按当前状态运行。",
-					timing: "确认执行并校验通过后，删除立即完成；对运行中的系统，将在下次重启时停止使用；重启前仍按当前状态运行。",
-					archive: "将自动存档（确认执行后、删除前）：先把源码复制到面板保管区并逐文件校验，校验通过后才删除；校验失败则中止，不删除。",
-					restorePath: "面板 →「压缩 compact-router」卡片 → 点「恢复」，即可从保管区一键恢复。",
-					restart: "恢复后需要重启才生效。",
-					confirm: "请手动输入 compact-router 两次并点「确认真卸载」，或点「取消」。"
+					timing: "确认执行后立即删除；对运行中的系统，将在下次重启时停用；重启前仍按当前状态运行。",
+					restorePath: "本次删除不可恢复。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
+					confirm: "请手动输入 compact-router 两次并点「确认彻底删除」，或点「取消」。"
 				}
 			},
 			"search-router": {
@@ -820,14 +816,12 @@ window.__ModuleLoader__.load({
 					confirm: "请手动输入 search-router 后点「确认软卸载」，或点「取消」。"
 				},
 				true: {
-					title: "真卸载「搜索路由 search-router」——删除本体，先自动存档并校验",
-					del: "确认执行后：① 把磁盘上的搜索路由源代码文件完整复制到面板保管区并逐文件校验；② 让 DSH 下次启动时不再加载该功能模块；③ 把面板里一项网页搜索系统设置改回「系统默认（未指定）」；④ 校验通过后再删除磁盘上的源代码文件。",
-					consequence: "重启后，网页搜索退回到系统默认行为；重启前仍按当前状态运行。你随时可以从面板保管区恢复。",
-					timing: "确认执行并校验通过后，删除立即完成；对运行中的系统，将在下次重启时停止使用；重启前仍按当前状态运行。",
-					archive: "将自动存档（确认执行后、删除前）：先把源码复制到面板保管区并逐文件校验，校验通过后才删除；校验失败则中止，不删除。",
-					restorePath: "面板 →「搜索路由 search-router」卡片 → 点「恢复」，即可从保管区一键恢复。",
-					restart: "恢复后需要重启才生效。",
-					confirm: "请手动输入 search-router 两次并点「确认真卸载」，或点「取消」。"
+					title: "真卸载「搜索路由 search-router」——彻底删除，不留副本",
+					del: "确认执行后：① 让 DSH 下次启动时不再加载该功能模块；② 把面板里一项网页搜索系统设置改回「系统默认（未指定）」；③ 彻底删除磁盘上的搜索路由源代码目录（lib/search-router），不保留任何副本。",
+					consequence: "重启后，网页搜索退回到系统默认行为；重启前仍按当前状态运行。",
+					timing: "确认执行后立即删除；对运行中的系统，将在下次重启时停用；重启前仍按当前状态运行。",
+					restorePath: "本次删除不可恢复。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
+					confirm: "请手动输入 search-router 两次并点「确认彻底删除」，或点「取消」。"
 				}
 			},
 			"web-search-local": {
@@ -842,16 +836,24 @@ window.__ModuleLoader__.load({
 					confirm: "请手动输入 web-search-local 后点「确认软卸载」，或点「取消」。"
 				},
 				true: {
-					title: "真卸载「本地搜索 web-search-local」——删除本体，先自动存档并校验",
-					del: "确认执行后：① 把磁盘上的本地搜索源代码文件完整复制到面板保管区并逐文件校验；② 让 DSH 下次启动时不再加载该功能模块；③ 把面板里一项网页抓取系统设置改回「系统默认（未指定）」；④ 校验通过后再删除磁盘上的源代码文件。",
-					consequence: "重启后，网页抓取退回到系统默认行为；「搜索路由」的搜索功能将不可用（它依赖本插件）；若需搜索请同时卸载或保留其一；重启前仍按当前状态运行。",
-					timing: "确认执行并校验通过后，删除立即完成；对运行中的系统，将在下次重启时停止使用；重启前仍按当前状态运行。",
-					archive: "将自动存档（确认执行后、删除前）：先把源码复制到面板保管区并逐文件校验，校验通过后才删除；校验失败则中止，不删除。",
-					restorePath: "面板 →「本地搜索 web-search-local」卡片 → 点「恢复」，即可从保管区一键恢复。",
-					restart: "恢复后需要重启才生效。",
-					confirm: "请手动输入 web-search-local 两次并点「确认真卸载」，或点「取消」。"
+					title: "真卸载「本地搜索 web-search-local」——彻底删除，不留副本",
+					del: "确认执行后：① 让 DSH 下次启动时不再加载该功能模块；② 把面板里一项网页抓取系统设置改回「系统默认（未指定）」；③ 彻底删除磁盘上的本地搜索源代码目录（lib/web-search-local），不保留任何副本。",
+					consequence: "重启后，网页抓取退回到系统默认行为；「搜索路由」的搜索功能将不可用（它依赖本插件）；重启前仍按当前状态运行。",
+					timing: "确认执行后立即删除；对运行中的系统，将在下次重启时停用；重启前仍按当前状态运行。",
+					restorePath: "本次删除不可恢复。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
+					confirm: "请手动输入 web-search-local 两次并点「确认彻底删除」，或点「取消」。"
 				}
 			}
+		};
+
+		// 真卸载（销毁式）**三句必含**（文案 v2 §6.1；判定侧点名用户目视项）：
+		//   ① 空窗期警告 ② 收据透明句 ③ 回收站句。另含顶部重复短句（两补强之 a）。
+		var TRUE_COMMON = {
+			topWarning: "开源前删除不可恢复",
+			windowWarning: "⚠ 本次是彻底删除，面板不会留下任何副本。当前版本尚未开源，删除后无法恢复，也无法重新安装。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
+			receipt: "面板只留下一份删除收据：被删文件的清单、逐个校验值和你的填写原因。收据仅用于事后对账，不含文件内容，不能用来恢复。",
+			recycleBin: "注意：删除不进回收站。文件是直接从磁盘上移除的，系统回收站里也找不到，无法通过回收站找回。",
+			restart: "恢复后需要重启才生效。"
 		};
 
 		// ---- 缺席态横幅（六态；dependency-broken 用警示色）----
@@ -871,15 +873,13 @@ window.__ModuleLoader__.load({
 			);
 		}
 
-		// ---- §2.9 恢复确认页（真卸载恢复）/ §2.9b 软卸载恢复确认页（无文件回写）----
+		// ---- §2.9b 软卸载恢复确认页（无文件回写）／挂载确认页（重装后）----
 		function restoreCopyOf(plugin, mode, custody) {
 			var name = p24Name(plugin);
-			if (mode === "true") {
-				var n = custody && typeof custody.fileCount === "number" ? String(custody.fileCount) : "N";
-				var m = custody && typeof custody.totalBytes === "number" ? String(custody.totalBytes) : "M";
+			if (mode === "mount") {
 				return {
-					title: "恢复「" + name + "」",
-					body: "将从面板保管区恢复「" + name + "」：恢复 " + n + " 个文件（共 " + m + " 字节），先逐文件校验，校验通过后才写回磁盘；写回后自动恢复它的启动入口（以及卸载时改动的系统设置项，如有）。"
+					title: "挂载「" + name + "」（重新安装后）",
+					body: "将把「" + name + "」的启动入口重新写回挂载面（行块与系统设置项按卸载收据复原）。源代码文件已由你重新安装放回本地，本操作不涉及文件写入。"
 				};
 			}
 			return {
@@ -900,23 +900,53 @@ window.__ModuleLoader__.load({
 			var c = set && set[mode];
 			if (!c) return null;
 			var typed = props.typed || {};
+			var isTrue = mode === "true";
 			var kids = [react.createElement("div", { key: "t", style: styles.dlgTitle }, c.title)];
-			var rows = [
-				["删什么", c.del, false],
-				["后果（重启后）", c.consequence, false],
-				["生效时间", c.timing, false],
-				[mode === "true" ? "存档安排" : "已存档", c.archive, true],
-				["恢复路径", c.restorePath, false],
-				["重启", c.restart, true],
-				["确认操作", c.confirm, false]
-			];
+			// 两补强 (a)：真卸载弹窗顶部重复短句
+			if (isTrue) {
+				kids.push(react.createElement("div", { key: "topwarn", style: styles.dlgWarnTop }, "⚠ " + TRUE_COMMON.topWarning));
+			}
+			var rows = isTrue
+				? [
+					["删什么", c.del, false],
+					["后果（重启后）", c.consequence, false],
+					["不可恢复（空窗期）", TRUE_COMMON.windowWarning, true],
+					["收据（仅对账）", TRUE_COMMON.receipt, false],
+					["回收站", TRUE_COMMON.recycleBin, true],
+					["生效时间", c.timing, false],
+					["恢复路径", c.restorePath, false],
+					["重启", TRUE_COMMON.restart, true],
+					["确认操作", c.confirm, false]
+				]
+				: [
+					["删什么", c.del, false],
+					["后果（重启后）", c.consequence, false],
+					["生效时间", c.timing, false],
+					["已存档", c.archive, true],
+					["恢复路径", c.restorePath, false],
+					["重启", c.restart, true],
+					["确认操作", c.confirm, false]
+				];
 			for (var i = 0; i < rows.length; i++) {
 				kids.push(react.createElement("div", { key: "k" + i, style: styles.dlgKey }, rows[i][0]));
 				kids.push(react.createElement(DialogLine, { key: "v" + i, text: rows[i][1], bold: rows[i][2] }));
 			}
-			var count = mode === "true" ? 2 : 1;
+			// 两补强 (b)：确认前展示**将删文件清单 + 总字节数**（来自 plan 的只读枚举）
+			if (isTrue && props.willDelete) {
+				kids.push(react.createElement("div", { key: "wdk", style: styles.dlgKey }, "将删除"));
+				kids.push(react.createElement(DialogLine, {
+					key: "wdv",
+					text: "共 " + props.willDelete.files + " 个文件，合计 " + props.willDelete.bytes + " 字节（清单已记入收据，可事后对账）。",
+					bold: true
+				}));
+			}
+			var count = isTrue ? 2 : 1;
 			var inputs = [];
 			for (var j = 0; j < count; j++) {
+				// 两补强 (a)：空窗期警告在两次输入**之间**再次展示（不可折叠、非小字）
+				if (j === 1) {
+					inputs.push(react.createElement("div", { key: "midwarn", style: styles.dlgWarn }, TRUE_COMMON.windowWarning));
+				}
 				inputs.push(react.createElement("input", {
 					key: "i" + j,
 					style: styles.dlgInput,
@@ -930,7 +960,7 @@ window.__ModuleLoader__.load({
 			kids.push(react.createElement("div", { key: "inputs" }, inputs));
 			kids.push(react.createElement("div", { key: "row", style: styles.uninRow },
 				react.createElement("button", { style: styles.btnOpen, disabled: !!props.busy, onClick: props.onConfirm },
-					mode === "true" ? "确认真卸载" : "确认软卸载"),
+					isTrue ? "确认彻底删除" : "确认软卸载"),
 				react.createElement("button", { style: styles.btnOpen, disabled: !!props.busy, onClick: props.onCancel }, "取消"),
 				props.error ? react.createElement("span", { style: styles.dlgErr }, props.error) : null
 			));
@@ -997,12 +1027,14 @@ window.__ModuleLoader__.load({
 			var setTyped = tpSt[1];
 
 			var status = plugin.status || "mounted";
-			// 卸载入口只对「本体在且不是面板已摘除」的态可见；恢复入口**只认快照 restoreAvailable**
-			// （soft-unmounted / true-uninstalled 正是需要恢复的态，绝不能被 gone 抵消——D-UI-01）。
+			// 三入口各认快照字段（唯一真源）：
+			//   卸载 —— 本体在且非面板已摘除态；恢复 —— restoreAvailable（**软卸载专有**）；
+			//   挂载 —— canMount（**重装后**的 installed-unmounted，销毁式 v2 §5）。
 			var gone = status === "soft-unmounted" || status === "true-uninstalled" || status === "unknown-absent";
 			var canUninstall = !gone;
 			var canRestore = plugin.restoreAvailable === true;
-			if (!canUninstall && !canRestore) return null;
+			var canMount = plugin.canMount === true;
+			if (!canUninstall && !canRestore && !canMount) return null;
 
 			var openUninstall = function (mode) {
 				setError("");
@@ -1037,52 +1069,35 @@ window.__ModuleLoader__.load({
 				}
 			}, [plugin.dir, typed, onChanged]);
 
-			var openRestore = react.useCallback(async function () {
-				var mode = plugin.status === "true-uninstalled" ? "true" : "soft";
+			// 恢复（**软卸载专有**，§2.9b 文案）：副作用 = 行块插回 + 宿主键写回。
+			var openRestore = react.useCallback(function () {
 				setError("");
-				setBusy(true);
-				var custody = null;
-				try {
-					if (mode === "true") {
-						var res = await fetch("/api/toolkit-panel/custody", { cache: "no-store" });
-						var body = await res.json();
-						if (body.ok && body.custody && Array.isArray(body.custody.entries)) {
-							for (var i = 0; i < body.custody.entries.length; i++) {
-								var e = body.custody.entries[i];
-								if (e.plugin === plugin.dir && e.kind === "true-uninstall") { custody = e; break; }
-							}
-						}
-					}
-				} catch (e) {
-					setError(String(e && e.message || e));
-				} finally {
-					setBusy(false);
-				}
-				setDlg({ kind: "restore", mode: mode, custody: custody });
-			}, [plugin.dir, plugin.status]);
+				setDlg({ kind: "restore", mode: "soft" });
+			}, []);
 
 			var doRestore = react.useCallback(async function (choice) {
 				setBusy(true);
 				setError("");
 				try {
+					// 挂载（重装后）与软恢复共用同一确认弹窗；按 dlg.mode 分派到各自端点。
+					var isMount = dlg && dlg.mode === "mount";
+					var planPath = isMount ? "/api/toolkit-panel/mount/plan" : "/api/toolkit-panel/restore/plan";
+					var execPath = isMount ? "/api/toolkit-panel/mount/execute" : "/api/toolkit-panel/restore/execute";
 					var payload = { plugin: plugin.dir };
-					if (dlg && dlg.custody) payload.custodyId = dlg.custody.custodyId;
 					if (choice) payload.hostKeyChoice = choice;
-					var res = await fetch("/api/toolkit-panel/restore/plan", {
+					var res = await fetch(planPath, {
 						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
 						body: JSON.stringify(payload)
 					});
 					var body = await res.json();
 					if (body.ok === false && body.code === "host-key-conflict") {
-						setDlg({ kind: "restore", mode: dlg.mode, custody: dlg.custody, conflict: body.conflict, choices: body.choices });
+						setDlg({ kind: "restore", mode: dlg.mode, conflict: body.conflict, choices: body.choices });
 						return;
 					}
 					if (!body.ok) { setError(body.error || ("HTTP " + res.status)); return; }
-					var payload2 = { token: body.plan.token };
-					if (dlg && dlg.custody) payload2.custodyId = dlg.custody.custodyId;
-					var res2 = await fetch("/api/toolkit-panel/restore/execute", {
+					var res2 = await fetch(execPath, {
 						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
-						body: JSON.stringify(payload2)
+						body: JSON.stringify({ token: body.plan.token })
 					});
 					var body2 = await res2.json();
 					if (!body2.ok) { setError(body2.error || ("HTTP " + res2.status)); return; }
@@ -1096,15 +1111,47 @@ window.__ModuleLoader__.load({
 				}
 			}, [plugin.dir, dlg, showBanner, onChanged]);
 
+			// 挂载（重装后）：/mount/plan → 冲突三态（如有）→ /mount/execute
+			var doMount = react.useCallback(async function (choice) {
+				setBusy(true);
+				setError("");
+				try {
+					var payload = { plugin: plugin.dir };
+					if (choice) payload.hostKeyChoice = choice;
+					var res = await fetch("/api/toolkit-panel/mount/plan", {
+						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
+						body: JSON.stringify(payload)
+					});
+					var body = await res.json();
+					if (body.ok === false && body.code === "host-key-conflict") {
+						setDlg({ kind: "restore", mode: "mount", conflict: body.conflict, choices: body.choices });
+						return;
+					}
+					if (!body.ok) { setError(body.error || ("HTTP " + res.status)); return; }
+					var res2 = await fetch("/api/toolkit-panel/mount/execute", {
+						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
+						body: JSON.stringify({ token: body.plan.token })
+					});
+					var body2 = await res2.json();
+					if (!body2.ok) { setError(body2.error || ("HTTP " + res2.status)); return; }
+					setDlg(null);
+					if (showBanner) showBanner(RESTORE_DONE_BANNER);
+					if (onChanged) await onChanged();
+				} catch (e) {
+					setError(String(e && e.message || e));
+				} finally {
+					setBusy(false);
+				}
+			}, [plugin.dir, showBanner, onChanged]);
+
 			var kids = [];
 			if (canUninstall) {
-				// Q2'-a 下架（L-059）：真卸载入口摘除——存档式设计已被「销毁式」推翻，不得留产品面。
-				// （真卸载弹窗组件与 §2 文案暂保留但已不可达；v2 施工时以「文案 v2」整体替换后重新上架。）
+				// 销毁式 v2：软 / 真两入口并存。真卸载**不可逆**（弹窗三句必含 + 输入两次）。
 				kids.push(react.createElement("div", { key: "hint", style: styles.dlgLine },
-					"本插件当前提供「软卸载」：摘除挂载行、本体保留，之后可从面板一键恢复。"));
+					"「软卸载」摘除挂载行、本体保留、可一键恢复；「真卸载」彻底删除本体、不留副本、不可恢复。"));
 				kids.push(react.createElement("div", { key: "row", style: styles.uninRow },
-					react.createElement("button", { style: styles.btnOpen, disabled: busy, onClick: function () { openUninstall("soft"); } },
-						"软卸载")
+					react.createElement("button", { style: styles.btnOpen, disabled: busy, onClick: function () { openUninstall("soft"); } }, "软卸载"),
+					react.createElement("button", { style: styles.btnOpen, disabled: busy, onClick: function () { openUninstall("true"); } }, "真卸载")
 				));
 			}
 			if (canRestore) {
@@ -1112,11 +1159,17 @@ window.__ModuleLoader__.load({
 					react.createElement("button", { style: styles.btnRest, disabled: busy, onClick: openRestore }, "恢复")
 				));
 			}
+			if (canMount) {
+				kids.push(react.createElement("div", { key: "mountrow", style: styles.uninRow },
+					react.createElement("button", { style: styles.btnRest, disabled: busy, onClick: function () { doMount(null); } }, "挂载（重装后）")
+				));
+			}
 			if (dlg && dlg.kind === "uninstall") {
 				kids.push(react.createElement(UninstallDialog, {
 					key: "dlg-u",
 					plugin: plugin,
 					mode: dlg.mode,
+					willDelete: plugin.bodyStats || null,
 					typed: typed,
 					busy: busy,
 					error: error,

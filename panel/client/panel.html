@@ -88,6 +88,7 @@
   .dlgLine { font-size: 11.5px; color: #cfd4da; line-height: 1.8; }
   .dlgInput { width: 100%; box-sizing: border-box; padding: 3px 6px; border-radius: 4px; border: 1px solid #3a4048; background: #101413; color: #e6e6e6; font-size: 12px; font-family: ui-monospace, Consolas, monospace; margin-top: 3px; }
   .dlgWarn { margin-top: 6px; padding: 6px 8px; border-radius: 4px; background: #2a2210; border: 1px solid #6b5a1e; font-size: 11.5px; color: #e0d5b7; line-height: 1.8; }
+  .dlgWarnTop { margin-bottom: 6px; padding: 5px 8px; border-radius: 4px; background: #3a1414; border: 1px solid #8a3030; font-size: 12px; font-weight: 700; color: #f0c0bc; }
   .dlgBold { font-weight: 700; }
   .banner { margin: 12px 0; padding: 10px 12px; border-radius: 6px; background: #12241e; border: 1px solid #2c5a4a; color: #9fd8c0; font-size: 13px; }
   pre { white-space: pre-wrap; background: #12151a; border: 1px solid #2a2f36; border-radius: 6px; padding: 10px; font-size: 12px; max-height: 340px; overflow: auto; }
@@ -602,14 +603,12 @@ var UNINSTALL_COPY = {
       confirm: "请手动输入 rate-throttle 后点「确认软卸载」，或点「取消」。"
     },
     true: {
-      title: "真卸载「限流 rate-throttle」——删除本体，先自动存档并校验",
-      del: "确认执行后：① 把磁盘上的限流源代码文件完整复制到面板保管区并逐文件校验；② 让 DSH 下次启动时不再加载该功能模块；③ 校验通过后再删除磁盘上的源代码文件。",
+      title: "真卸载「限流 rate-throttle」——彻底删除，不留副本",
+      del: "确认执行后：① 让 DSH 下次启动时不再加载该功能模块；② 彻底删除磁盘上的限流源代码目录（lib/rate-throttle），不保留任何副本。",
       consequence: "重启后，平台不再按当前面板里的限流参数进行限速；重启前仍按当前状态运行。",
-      timing: "确认执行并校验通过后，删除立即完成；对运行中的系统，将在下次重启时停止使用；重启前仍按当前状态运行。",
-      archive: "将自动存档（确认执行后、删除前）：先把源码复制到面板保管区并逐文件校验，校验通过后才删除；校验失败则中止，不删除。",
-      restorePath: "面板 →「限流 rate-throttle」卡片 → 点「恢复」，即可从保管区一键恢复。",
-      restart: "恢复后需要重启才生效。",
-      confirm: "请手动输入 rate-throttle 两次并点「确认真卸载」，或点「取消」。"
+      timing: "确认执行后立即删除；对运行中的系统，将在下次重启时停用；重启前仍按当前状态运行。",
+      restorePath: "本次删除不可恢复。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
+      confirm: "请手动输入 rate-throttle 两次并点「确认彻底删除」，或点「取消」。"
     }
   },
   "agent-memory": {
@@ -624,14 +623,12 @@ var UNINSTALL_COPY = {
       confirm: "请手动输入 agent-memory 后点「确认软卸载」，或点「取消」。"
     },
     true: {
-      title: "真卸载「记忆 agent-memory」——删除本体，先自动存档并校验",
-      del: "确认执行后：① 把磁盘上的记忆源代码文件完整复制到面板保管区并逐文件校验；② 让 DSH 下次启动时不再加载该功能模块；③ 校验通过后再删除磁盘上的源代码文件。",
+      title: "真卸载「记忆 agent-memory」——彻底删除，不留副本",
+      del: "确认执行后：① 让 DSH 下次启动时不再加载该功能模块；② 彻底删除磁盘上的记忆源代码目录（lib/agent-memory），不保留任何副本。",
       consequence: "重启后，记忆内容在压缩结果里不再显示；重启前仍按当前状态运行。",
-      timing: "确认执行并校验通过后，删除立即完成；对运行中的系统，将在下次重启时停止使用；重启前仍按当前状态运行。",
-      archive: "将自动存档（确认执行后、删除前）：先把源码复制到面板保管区并逐文件校验，校验通过后才删除；校验失败则中止，不删除。",
-      restorePath: "面板 →「记忆 agent-memory」卡片 → 点「恢复」，即可从保管区一键恢复。",
-      restart: "恢复后需要重启才生效。",
-      confirm: "请手动输入 agent-memory 两次并点「确认真卸载」，或点「取消」。"
+      timing: "确认执行后立即删除；对运行中的系统，将在下次重启时停用；重启前仍按当前状态运行。",
+      restorePath: "本次删除不可恢复。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
+      confirm: "请手动输入 agent-memory 两次并点「确认彻底删除」，或点「取消」。"
     }
   },
   "compact-router": {
@@ -646,14 +643,12 @@ var UNINSTALL_COPY = {
       confirm: "请手动输入 compact-router 后点「确认软卸载」，或点「取消」。"
     },
     true: {
-      title: "真卸载「压缩 compact-router」——删除本体，先自动存档并校验",
-      del: "确认执行后：① 让 DSH 下次启动时恢复为系统自带压缩版本；② 把磁盘上的压缩源代码文件完整复制到面板保管区并逐文件校验；③ 校验通过后再删除磁盘上的源代码文件。",
+      title: "真卸载「压缩 compact-router」——彻底删除，不留副本",
+      del: "确认执行后：① 让 DSH 下次启动时恢复为系统自带压缩版本；② 彻底删除磁盘上的压缩源代码目录（lib/compact-router），不保留任何副本。",
       consequence: "重启后，平台使用系统自带的压缩功能；限流的自动换源降级功能会退化；记忆功能本身不受影响；重启前仍按当前状态运行。",
-      timing: "确认执行并校验通过后，删除立即完成；对运行中的系统，将在下次重启时停止使用；重启前仍按当前状态运行。",
-      archive: "将自动存档（确认执行后、删除前）：先把源码复制到面板保管区并逐文件校验，校验通过后才删除；校验失败则中止，不删除。",
-      restorePath: "面板 →「压缩 compact-router」卡片 → 点「恢复」，即可从保管区一键恢复。",
-      restart: "恢复后需要重启才生效。",
-      confirm: "请手动输入 compact-router 两次并点「确认真卸载」，或点「取消」。"
+      timing: "确认执行后立即删除；对运行中的系统，将在下次重启时停用；重启前仍按当前状态运行。",
+      restorePath: "本次删除不可恢复。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
+      confirm: "请手动输入 compact-router 两次并点「确认彻底删除」，或点「取消」。"
     }
   },
   "search-router": {
@@ -668,14 +663,12 @@ var UNINSTALL_COPY = {
       confirm: "请手动输入 search-router 后点「确认软卸载」，或点「取消」。"
     },
     true: {
-      title: "真卸载「搜索路由 search-router」——删除本体，先自动存档并校验",
-      del: "确认执行后：① 把磁盘上的搜索路由源代码文件完整复制到面板保管区并逐文件校验；② 让 DSH 下次启动时不再加载该功能模块；③ 把面板里一项网页搜索系统设置改回「系统默认（未指定）」；④ 校验通过后再删除磁盘上的源代码文件。",
-      consequence: "重启后，网页搜索退回到系统默认行为；重启前仍按当前状态运行。你随时可以从面板保管区恢复。",
-      timing: "确认执行并校验通过后，删除立即完成；对运行中的系统，将在下次重启时停止使用；重启前仍按当前状态运行。",
-      archive: "将自动存档（确认执行后、删除前）：先把源码复制到面板保管区并逐文件校验，校验通过后才删除；校验失败则中止，不删除。",
-      restorePath: "面板 →「搜索路由 search-router」卡片 → 点「恢复」，即可从保管区一键恢复。",
-      restart: "恢复后需要重启才生效。",
-      confirm: "请手动输入 search-router 两次并点「确认真卸载」，或点「取消」。"
+      title: "真卸载「搜索路由 search-router」——彻底删除，不留副本",
+      del: "确认执行后：① 让 DSH 下次启动时不再加载该功能模块；② 把面板里一项网页搜索系统设置改回「系统默认（未指定）」；③ 彻底删除磁盘上的搜索路由源代码目录（lib/search-router），不保留任何副本。",
+      consequence: "重启后，网页搜索退回到系统默认行为；重启前仍按当前状态运行。",
+      timing: "确认执行后立即删除；对运行中的系统，将在下次重启时停用；重启前仍按当前状态运行。",
+      restorePath: "本次删除不可恢复。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
+      confirm: "请手动输入 search-router 两次并点「确认彻底删除」，或点「取消」。"
     }
   },
   "web-search-local": {
@@ -690,16 +683,24 @@ var UNINSTALL_COPY = {
       confirm: "请手动输入 web-search-local 后点「确认软卸载」，或点「取消」。"
     },
     true: {
-      title: "真卸载「本地搜索 web-search-local」——删除本体，先自动存档并校验",
-      del: "确认执行后：① 把磁盘上的本地搜索源代码文件完整复制到面板保管区并逐文件校验；② 让 DSH 下次启动时不再加载该功能模块；③ 把面板里一项网页抓取系统设置改回「系统默认（未指定）」；④ 校验通过后再删除磁盘上的源代码文件。",
-      consequence: "重启后，网页抓取退回到系统默认行为；「搜索路由」的搜索功能将不可用（它依赖本插件）；若需搜索请同时卸载或保留其一；重启前仍按当前状态运行。",
-      timing: "确认执行并校验通过后，删除立即完成；对运行中的系统，将在下次重启时停止使用；重启前仍按当前状态运行。",
-      archive: "将自动存档（确认执行后、删除前）：先把源码复制到面板保管区并逐文件校验，校验通过后才删除；校验失败则中止，不删除。",
-      restorePath: "面板 →「本地搜索 web-search-local」卡片 → 点「恢复」，即可从保管区一键恢复。",
-      restart: "恢复后需要重启才生效。",
-      confirm: "请手动输入 web-search-local 两次并点「确认真卸载」，或点「取消」。"
+      title: "真卸载「本地搜索 web-search-local」——彻底删除，不留副本",
+      del: "确认执行后：① 让 DSH 下次启动时不再加载该功能模块；② 把面板里一项网页抓取系统设置改回「系统默认（未指定）」；③ 彻底删除磁盘上的本地搜索源代码目录（lib/web-search-local），不保留任何副本。",
+      consequence: "重启后，网页抓取退回到系统默认行为；「搜索路由」的搜索功能将不可用（它依赖本插件）；重启前仍按当前状态运行。",
+      timing: "确认执行后立即删除；对运行中的系统，将在下次重启时停用；重启前仍按当前状态运行。",
+      restorePath: "本次删除不可恢复。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
+      confirm: "请手动输入 web-search-local 两次并点「确认彻底删除」，或点「取消」。"
     }
   }
+};
+
+// 真卸载（销毁式）**三句必含**（文案 v2 §6.1；判定侧点名用户目视项）：
+//   ① 空窗期警告 ② 收据透明句 ③ 回收站句。另含顶部重复短句（两补强之 a）。
+var TRUE_COMMON = {
+  topWarning: "开源前删除不可恢复",
+  windowWarning: "⚠ 本次是彻底删除，面板不会留下任何副本。当前版本尚未开源，删除后无法恢复，也无法重新安装。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
+  receipt: "面板只留下一份删除收据：被删文件的清单、逐个校验值和你的填写原因。收据仅用于事后对账，不含文件内容，不能用来恢复。",
+  recycleBin: "注意：删除不进回收站。文件是直接从磁盘上移除的，系统回收站里也找不到，无法通过回收站找回。",
+  restart: "恢复后需要重启才生效。"
 };
 
 // §2.9 完成后页面横幅（逐字）
@@ -709,35 +710,52 @@ function uninstallDialogHtml(p, mode) {
   var set = UNINSTALL_COPY[p.dir];
   var c = set && set[mode];
   if (!c) return "";
-  var inputs = mode === "true"
-    ? '<input class="dlgInput" data-confirm-idx="0" placeholder="' + esc(p.dir) + '"><input class="dlgInput" data-confirm-idx="1" placeholder="' + esc(p.dir) + '">'
+  var isTrue = mode === "true";
+  var wd = p.bodyStats || null;
+  var inputs = isTrue
+    ? '<input class="dlgInput" data-confirm-idx="0" placeholder="' + esc(p.dir) + '">'
+      + '<div class="dlgWarn">' + esc(TRUE_COMMON.windowWarning) + "</div>"
+      + '<input class="dlgInput" data-confirm-idx="1" placeholder="' + esc(p.dir) + '">'
     : '<input class="dlgInput" data-confirm-idx="0" placeholder="' + esc(p.dir) + '">';
-  return '<div class="dlgBox" data-uninstall-for="' + esc(p.dir) + '" data-uninstall-mode="' + mode + '">'
-    + '<div class="dlgTitle">' + esc(c.title) + "</div>"
-    + '<div class="dlgKey">删什么</div><div class="dlgLine">' + esc(c.del) + "</div>"
-    + '<div class="dlgKey">后果（重启后）</div><div class="dlgLine">' + esc(c.consequence) + "</div>"
-    + '<div class="dlgKey">生效时间</div><div class="dlgLine">' + esc(c.timing) + "</div>"
-    + '<div class="dlgKey">' + (mode === "true" ? "存档安排" : "已存档") + "</div>"
-    + '<div class="dlgLine"><span class="dlgBold">' + esc(c.archive) + "</span></div>"
-    + '<div class="dlgKey">恢复路径</div><div class="dlgLine">' + esc(c.restorePath) + "</div>"
-    + '<div class="dlgKey">重启</div><div class="dlgLine"><span class="dlgBold">' + esc(c.restart) + "</span></div>"
+  var html = '<div class="dlgBox" data-uninstall-for="' + esc(p.dir) + '" data-uninstall-mode="' + mode + '">'
+    + '<div class="dlgTitle">' + esc(c.title) + "</div>";
+  // 两补强 (a)：顶部重复短句
+  if (isTrue) html += '<div class="dlgWarnTop">⚠ ' + esc(TRUE_COMMON.topWarning) + "</div>";
+  html += '<div class="dlgKey">删什么</div><div class="dlgLine">' + esc(c.del) + "</div>"
+    + '<div class="dlgKey">后果（重启后）</div><div class="dlgLine">' + esc(c.consequence) + "</div>";
+  // 真卸载三句必含：空窗期警告 / 收据透明句 / 回收站句
+  if (isTrue) {
+    html += '<div class="dlgKey">不可恢复（空窗期）</div><div class="dlgLine"><span class="dlgBold">' + esc(TRUE_COMMON.windowWarning) + "</span></div>"
+      + '<div class="dlgKey">收据（仅对账）</div><div class="dlgLine">' + esc(TRUE_COMMON.receipt) + "</div>"
+      + '<div class="dlgKey">回收站</div><div class="dlgLine"><span class="dlgBold">' + esc(TRUE_COMMON.recycleBin) + "</span></div>";
+  }
+  html += '<div class="dlgKey">生效时间</div><div class="dlgLine">' + esc(c.timing) + "</div>";
+  if (!isTrue) {
+    html += '<div class="dlgKey">已存档</div><div class="dlgLine"><span class="dlgBold">' + esc(c.archive) + "</span></div>";
+  }
+  // 两补强 (b)：确认前展示将删文件清单 + 总字节数
+  if (isTrue && wd) {
+    html += '<div class="dlgKey">将删除</div><div class="dlgLine"><span class="dlgBold">共 ' + wd.files
+      + " 个文件，合计 " + wd.bytes + " 字节（清单已记入收据，可事后对账）。</span></div>";
+  }
+  html += '<div class="dlgKey">恢复路径</div><div class="dlgLine">' + esc(c.restorePath) + "</div>"
+    + '<div class="dlgKey">重启</div><div class="dlgLine"><span class="dlgBold">' + esc(isTrue ? TRUE_COMMON.restart : c.restart) + "</span></div>"
     + '<div class="dlgKey">确认操作</div><div class="dlgLine">' + esc(c.confirm) + "</div>"
     + inputs
     + '<div class="uninRow"><button class="uninGo" data-mode="' + mode + '">'
-    + (mode === "true" ? "确认真卸载" : "确认软卸载") + "</button>"
+    + (isTrue ? "确认彻底删除" : "确认软卸载") + "</button>"
     + '<button class="uninNo">取消</button><span class="muted uninMsg"></span></div></div>';
+  return html;
 }
 
-// §2.9 恢复确认页（真卸载恢复）/ §2.9b 软卸载恢复确认页（无文件回写）
+// 软卸载恢复确认页（§2.9b，无文件回写）／挂载确认页（重装后，销毁式 v2 §5）
 function restoreDialogHtml(p, kind, custody, conflict, choices) {
   var name = p24Name(p);
   var c;
-  if (kind === "true") {
-    var n = custody && typeof custody.fileCount === "number" ? String(custody.fileCount) : "N";
-    var m = custody && typeof custody.totalBytes === "number" ? String(custody.totalBytes) : "M";
+  if (kind === "mount") {
     c = {
-      title: "恢复「" + name + "」",
-      body: "将从面板保管区恢复「" + name + "」：恢复 " + n + " 个文件（共 " + m + " 字节），先逐文件校验，校验通过后才写回磁盘；写回后自动恢复它的启动入口（以及卸载时改动的系统设置项，如有）。"
+      title: "挂载「" + name + "」（重新安装后）",
+      body: "将把「" + name + "」的启动入口重新写回挂载面（行块与系统设置项按卸载收据复原）。源代码文件已由你重新安装放回本地，本操作不涉及文件写入。"
     };
   } else {
     c = {
@@ -771,22 +789,23 @@ function restoreDialogHtml(p, kind, custody, conflict, choices) {
 
 function p24SectionHtml(p) {
   var status = p.status || "mounted";
-  // 卸载入口只对「本体在且不是面板已摘除」的态可见；恢复入口**只认快照 restoreAvailable**
-  // （soft-unmounted / true-uninstalled 正是需要恢复的态，绝不能被 gone 抵消——D-UI-01）。
+  // 三入口各认快照字段（唯一真源）：卸载 / 恢复（**软卸载专有**）/ 挂载（**重装后**，销毁式 v2 §5）。
   var gone = status === "soft-unmounted" || status === "true-uninstalled" || status === "unknown-absent";
   var canUninstall = !gone;
   var canRestore = p.restoreAvailable === true;
-  if (!canUninstall && !canRestore) return "";
+  var canMount = p.canMount === true;
+  if (!canUninstall && !canRestore && !canMount) return "";
   var html = '<div class="uninBox" data-p24-for="' + esc(p.dir) + '"><div class="uninHead">卸载 / 恢复</div>';
   if (canUninstall) {
-    // Q2'-a 下架（L-059）：真卸载入口摘除——存档式设计已被「销毁式」推翻，不得留产品面。
-    // （真卸载弹窗文案暂保留但已不可达；v2 施工时以「文案 v2」整体替换后重新上架。）
-    html += '<div class="dlgLine">本插件当前提供「软卸载」：摘除挂载行、本体保留，之后可从面板一键恢复。</div>'
+    // 销毁式 v2：软 / 真两入口并存。真卸载**不可逆**（弹窗三句必含 + 输入两次）。
+    html += '<div class="dlgLine">「软卸载」摘除挂载行、本体保留、可一键恢复；「真卸载」彻底删除本体、不留副本、不可恢复。</div>'
       + '<div class="uninRow">'
       + '<button class="uninOpen" data-mode="soft">软卸载</button>'
+      + '<button class="uninOpen" data-mode="true">真卸载</button>'
       + "</div>";
   }
   if (canRestore) html += '<div class="uninRow"><button class="restOpen">恢复</button></div>';
+  if (canMount) html += '<div class="uninRow"><button class="mountOpen">挂载（重装后）</button></div>';
   return html + '<div class="p24Dlg"></div><div class="p24Msg"></div></div>';
 }
 
@@ -824,6 +843,8 @@ function wireP24(cardEl, p) {
   }
   var rest = box.querySelector(".restOpen");
   if (rest) rest.onclick = function () { openRestoreDialog(p, dlgHost, msg); };
+  var mount = box.querySelector(".mountOpen");
+  if (mount) mount.onclick = function () { openMountDialog(p, dlgHost, msg); };
 }
 function wireP24Dialog(host, p) {
   var go = host.querySelector(".uninGo");
@@ -863,46 +884,42 @@ function wireP24Dialog(host, p) {
     await loadSnapshot();
   };
 }
+// 恢复（**软卸载专有**，§2.9b 文案）
 async function openRestoreDialog(p, host, msg) {
-  var kind = p.status === "true-uninstalled" ? "true" : "soft";
-  var custody = null;
-  if (kind === "true") {
-    if (msg) msg.innerHTML = '<span class="muted">正在读取保管区…</span>';
-    var got = await p24Get("/api/toolkit-panel/custody");
-    if (got.body.ok && got.body.custody && Array.isArray(got.body.custody.entries)) {
-      var mine = got.body.custody.entries.filter(function (e) { return e.plugin === p.dir && e.kind === "true-uninstall"; });
-      custody = mine.length > 0 ? mine[0] : null;
-    }
-    if (msg) msg.innerHTML = "";
-  }
-  p._restoreKind = kind;
-  p._custody = custody;
-  host.innerHTML = restoreDialogHtml(p, kind, custody, null);
+  p._restoreKind = "soft";
+  host.innerHTML = restoreDialogHtml(p, "soft", null, null);
+  wireRestoreDialog(host, p, msg);
+}
+// 挂载（**重装后**，销毁式 v2 §5）：行块事实取自真卸载收据
+async function openMountDialog(p, host, msg) {
+  p._restoreKind = "mount";
+  host.innerHTML = restoreDialogHtml(p, "mount", null, null);
   wireRestoreDialog(host, p, msg);
 }
 function wireRestoreDialog(host, p, msg, conflict) {
   var no = host.querySelector(".restNo");
   if (no) no.onclick = function () { host.innerHTML = ""; };
+  var isMount = p._restoreKind === "mount";
+  var planUrl = isMount ? "/api/toolkit-panel/mount/plan" : "/api/toolkit-panel/restore/plan";
+  var execUrl = isMount ? "/api/toolkit-panel/mount/execute" : "/api/toolkit-panel/restore/execute";
+  var verb = isMount ? "挂载" : "恢复";
   var runRestore = async function (choice) {
     var payload = { plugin: p.dir };
-    if (p._custody) payload.custodyId = p._custody.custodyId;
     if (choice) payload.hostKeyChoice = choice;
-    var planned = await p24Post("/api/toolkit-panel/restore/plan", payload);
+    var planned = await p24Post(planUrl, payload);
     if (planned.body.ok === false && planned.body.code === "host-key-conflict") {
-      host.innerHTML = restoreDialogHtml(p, p._restoreKind, p._custody, planned.body.conflict, planned.body.choices);
+      host.innerHTML = restoreDialogHtml(p, p._restoreKind, null, planned.body.conflict, planned.body.choices);
       wireRestoreDialog(host, p, msg, planned.body.conflict);
       return;
     }
     if (!planned.body.ok) {
-      msg.innerHTML = '<span class="error">没能开始恢复：' + esc(planned.body.error || planned.status) + "</span>";
+      msg.innerHTML = '<span class="error">没能开始' + verb + '：' + esc(planned.body.error || planned.status) + "</span>";
       return;
     }
-    msg.innerHTML = '<span class="muted">正在恢复…</span>';
-    var payload2 = { token: planned.body.plan.token };
-    if (p._custody) payload2.custodyId = p._custody.custodyId;
-    var exec = await p24Post("/api/toolkit-panel/restore/execute", payload2);
+    msg.innerHTML = '<span class="muted">正在' + verb + "…</span>";
+    var exec = await p24Post(execUrl, { token: planned.body.plan.token });
     if (!exec.body.ok) {
-      msg.innerHTML = '<span class="error">没能完成恢复：' + esc(exec.body.error || exec.status) + "</span>";
+      msg.innerHTML = '<span class="error">没能完成' + verb + '：' + esc(exec.body.error || exec.status) + "</span>";
       return;
     }
     host.innerHTML = "";

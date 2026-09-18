@@ -306,10 +306,10 @@ function loadReactClient(initialPatchText) {
     p24Body,
     /** P24Controls 在默认态下是否渲染出「恢复」按钮（恢复入口接线断言）。 */
     hasRestoreButton: (p24El) => buttonsOf(p24Body(p24El)).some((b) => textOf(b).join("") === "恢复"),
-    /** P24Controls 下架期口径（Q2'-a / L-059）：须有「软卸载」入口，且**不得**出现「真卸载」入口。 */
+    /** P24Controls 默认态：软卸载 + 真卸载（销毁式）两入口并存。 */
     hasUninstallButtons: (p24El) => {
       const labels = buttonsOf(p24Body(p24El)).map((b) => textOf(b).join(""));
-      return labels.some((t) => t.indexOf("软卸载") === 0) && !labels.some((t) => t.indexOf("真卸载") === 0);
+      return labels.some((t) => t.indexOf("软卸载") === 0) && labels.some((t) => t.indexOf("真卸载") === 0);
     },
     absenceOf: (cardEl) => {
       const el = cardEl ? namedOf(render1(cardEl), "AbsenceBanner")[0] || null : null;
@@ -370,17 +370,19 @@ const S2 = {
       archiveKey: "已存档", inputs: 1, button: "确认软卸载",
     },
     true: {
-      title: "真卸载「限流 rate-throttle」——删除本体，先自动存档并校验",
+      title: "真卸载「限流 rate-throttle」——彻底删除，不留副本",
       lines: [
-        "确认执行后：① 把磁盘上的限流源代码文件完整复制到面板保管区并逐文件校验；② 让 DSH 下次启动时不再加载该功能模块；③ 校验通过后再删除磁盘上的源代码文件。",
+        "确认执行后：① 让 DSH 下次启动时不再加载该功能模块；② 彻底删除磁盘上的限流源代码目录（lib/rate-throttle），不保留任何副本。",
         "重启后，平台不再按当前面板里的限流参数进行限速；重启前仍按当前状态运行。",
-        "确认执行并校验通过后，删除立即完成；对运行中的系统，将在下次重启时停止使用；重启前仍按当前状态运行。",
-        "将自动存档（确认执行后、删除前）：先把源码复制到面板保管区并逐文件校验，校验通过后才删除；校验失败则中止，不删除。",
-        "面板 →「限流 rate-throttle」卡片 → 点「恢复」，即可从保管区一键恢复。",
+        "⚠ 本次是彻底删除，面板不会留下任何副本。当前版本尚未开源，删除后无法恢复，也无法重新安装。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
+        "面板只留下一份删除收据：被删文件的清单、逐个校验值和你的填写原因。收据仅用于事后对账，不含文件内容，不能用来恢复。",
+        "注意：删除不进回收站。文件是直接从磁盘上移除的，系统回收站里也找不到，无法通过回收站找回。",
+        "确认执行后立即删除；对运行中的系统，将在下次重启时停用；重启前仍按当前状态运行。",
+        "本次删除不可恢复。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
         "恢复后需要重启才生效。",
-        "请手动输入 rate-throttle 两次并点「确认真卸载」，或点「取消」。",
+        "请手动输入 rate-throttle 两次并点「确认彻底删除」，或点「取消」。",
       ],
-      archiveKey: "存档安排", inputs: 2, button: "确认真卸载",
+      warningKey: "不可恢复（空窗期）", topWarning: "开源前删除不可恢复", inputs: 2, button: "确认彻底删除",
     },
   },
   "agent-memory": {
@@ -398,17 +400,19 @@ const S2 = {
       archiveKey: "已存档", inputs: 1, button: "确认软卸载",
     },
     true: {
-      title: "真卸载「记忆 agent-memory」——删除本体，先自动存档并校验",
+      title: "真卸载「记忆 agent-memory」——彻底删除，不留副本",
       lines: [
-        "确认执行后：① 把磁盘上的记忆源代码文件完整复制到面板保管区并逐文件校验；② 让 DSH 下次启动时不再加载该功能模块；③ 校验通过后再删除磁盘上的源代码文件。",
+        "确认执行后：① 让 DSH 下次启动时不再加载该功能模块；② 彻底删除磁盘上的记忆源代码目录（lib/agent-memory），不保留任何副本。",
         "重启后，记忆内容在压缩结果里不再显示；重启前仍按当前状态运行。",
-        "确认执行并校验通过后，删除立即完成；对运行中的系统，将在下次重启时停止使用；重启前仍按当前状态运行。",
-        "将自动存档（确认执行后、删除前）：先把源码复制到面板保管区并逐文件校验，校验通过后才删除；校验失败则中止，不删除。",
-        "面板 →「记忆 agent-memory」卡片 → 点「恢复」，即可从保管区一键恢复。",
+        "⚠ 本次是彻底删除，面板不会留下任何副本。当前版本尚未开源，删除后无法恢复，也无法重新安装。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
+        "面板只留下一份删除收据：被删文件的清单、逐个校验值和你的填写原因。收据仅用于事后对账，不含文件内容，不能用来恢复。",
+        "注意：删除不进回收站。文件是直接从磁盘上移除的，系统回收站里也找不到，无法通过回收站找回。",
+        "确认执行后立即删除；对运行中的系统，将在下次重启时停用；重启前仍按当前状态运行。",
+        "本次删除不可恢复。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
         "恢复后需要重启才生效。",
-        "请手动输入 agent-memory 两次并点「确认真卸载」，或点「取消」。",
+        "请手动输入 agent-memory 两次并点「确认彻底删除」，或点「取消」。",
       ],
-      archiveKey: "存档安排", inputs: 2, button: "确认真卸载",
+      warningKey: "不可恢复（空窗期）", topWarning: "开源前删除不可恢复", inputs: 2, button: "确认彻底删除",
     },
   },
   "compact-router": {
@@ -426,17 +430,19 @@ const S2 = {
       archiveKey: "已存档", inputs: 1, button: "确认软卸载",
     },
     true: {
-      title: "真卸载「压缩 compact-router」——删除本体，先自动存档并校验",
+      title: "真卸载「压缩 compact-router」——彻底删除，不留副本",
       lines: [
-        "确认执行后：① 让 DSH 下次启动时恢复为系统自带压缩版本；② 把磁盘上的压缩源代码文件完整复制到面板保管区并逐文件校验；③ 校验通过后再删除磁盘上的源代码文件。",
+        "确认执行后：① 让 DSH 下次启动时恢复为系统自带压缩版本；② 彻底删除磁盘上的压缩源代码目录（lib/compact-router），不保留任何副本。",
         "重启后，平台使用系统自带的压缩功能；限流的自动换源降级功能会退化；记忆功能本身不受影响；重启前仍按当前状态运行。",
-        "确认执行并校验通过后，删除立即完成；对运行中的系统，将在下次重启时停止使用；重启前仍按当前状态运行。",
-        "将自动存档（确认执行后、删除前）：先把源码复制到面板保管区并逐文件校验，校验通过后才删除；校验失败则中止，不删除。",
-        "面板 →「压缩 compact-router」卡片 → 点「恢复」，即可从保管区一键恢复。",
+        "⚠ 本次是彻底删除，面板不会留下任何副本。当前版本尚未开源，删除后无法恢复，也无法重新安装。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
+        "面板只留下一份删除收据：被删文件的清单、逐个校验值和你的填写原因。收据仅用于事后对账，不含文件内容，不能用来恢复。",
+        "注意：删除不进回收站。文件是直接从磁盘上移除的，系统回收站里也找不到，无法通过回收站找回。",
+        "确认执行后立即删除；对运行中的系统，将在下次重启时停用；重启前仍按当前状态运行。",
+        "本次删除不可恢复。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
         "恢复后需要重启才生效。",
-        "请手动输入 compact-router 两次并点「确认真卸载」，或点「取消」。",
+        "请手动输入 compact-router 两次并点「确认彻底删除」，或点「取消」。",
       ],
-      archiveKey: "存档安排", inputs: 2, button: "确认真卸载",
+      warningKey: "不可恢复（空窗期）", topWarning: "开源前删除不可恢复", inputs: 2, button: "确认彻底删除",
     },
   },
   "search-router": {
@@ -454,17 +460,19 @@ const S2 = {
       archiveKey: "已存档", inputs: 1, button: "确认软卸载",
     },
     true: {
-      title: "真卸载「搜索路由 search-router」——删除本体，先自动存档并校验",
+      title: "真卸载「搜索路由 search-router」——彻底删除，不留副本",
       lines: [
-        "确认执行后：① 把磁盘上的搜索路由源代码文件完整复制到面板保管区并逐文件校验；② 让 DSH 下次启动时不再加载该功能模块；③ 把面板里一项网页搜索系统设置改回「系统默认（未指定）」；④ 校验通过后再删除磁盘上的源代码文件。",
-        "重启后，网页搜索退回到系统默认行为；重启前仍按当前状态运行。你随时可以从面板保管区恢复。",
-        "确认执行并校验通过后，删除立即完成；对运行中的系统，将在下次重启时停止使用；重启前仍按当前状态运行。",
-        "将自动存档（确认执行后、删除前）：先把源码复制到面板保管区并逐文件校验，校验通过后才删除；校验失败则中止，不删除。",
-        "面板 →「搜索路由 search-router」卡片 → 点「恢复」，即可从保管区一键恢复。",
+        "确认执行后：① 让 DSH 下次启动时不再加载该功能模块；② 把面板里一项网页搜索系统设置改回「系统默认（未指定）」；③ 彻底删除磁盘上的搜索路由源代码目录（lib/search-router），不保留任何副本。",
+        "重启后，网页搜索退回到系统默认行为；重启前仍按当前状态运行。",
+        "⚠ 本次是彻底删除，面板不会留下任何副本。当前版本尚未开源，删除后无法恢复，也无法重新安装。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
+        "面板只留下一份删除收据：被删文件的清单、逐个校验值和你的填写原因。收据仅用于事后对账，不含文件内容，不能用来恢复。",
+        "注意：删除不进回收站。文件是直接从磁盘上移除的，系统回收站里也找不到，无法通过回收站找回。",
+        "确认执行后立即删除；对运行中的系统，将在下次重启时停用；重启前仍按当前状态运行。",
+        "本次删除不可恢复。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
         "恢复后需要重启才生效。",
-        "请手动输入 search-router 两次并点「确认真卸载」，或点「取消」。",
+        "请手动输入 search-router 两次并点「确认彻底删除」，或点「取消」。",
       ],
-      archiveKey: "存档安排", inputs: 2, button: "确认真卸载",
+      warningKey: "不可恢复（空窗期）", topWarning: "开源前删除不可恢复", inputs: 2, button: "确认彻底删除",
     },
   },
   "web-search-local": {
@@ -482,17 +490,19 @@ const S2 = {
       archiveKey: "已存档", inputs: 1, button: "确认软卸载",
     },
     true: {
-      title: "真卸载「本地搜索 web-search-local」——删除本体，先自动存档并校验",
+      title: "真卸载「本地搜索 web-search-local」——彻底删除，不留副本",
       lines: [
-        "确认执行后：① 把磁盘上的本地搜索源代码文件完整复制到面板保管区并逐文件校验；② 让 DSH 下次启动时不再加载该功能模块；③ 把面板里一项网页抓取系统设置改回「系统默认（未指定）」；④ 校验通过后再删除磁盘上的源代码文件。",
-        "重启后，网页抓取退回到系统默认行为；「搜索路由」的搜索功能将不可用（它依赖本插件）；若需搜索请同时卸载或保留其一；重启前仍按当前状态运行。",
-        "确认执行并校验通过后，删除立即完成；对运行中的系统，将在下次重启时停止使用；重启前仍按当前状态运行。",
-        "将自动存档（确认执行后、删除前）：先把源码复制到面板保管区并逐文件校验，校验通过后才删除；校验失败则中止，不删除。",
-        "面板 →「本地搜索 web-search-local」卡片 → 点「恢复」，即可从保管区一键恢复。",
+        "确认执行后：① 让 DSH 下次启动时不再加载该功能模块；② 把面板里一项网页抓取系统设置改回「系统默认（未指定）」；③ 彻底删除磁盘上的本地搜索源代码目录（lib/web-search-local），不保留任何副本。",
+        "重启后，网页抓取退回到系统默认行为；「搜索路由」的搜索功能将不可用（它依赖本插件）；重启前仍按当前状态运行。",
+        "⚠ 本次是彻底删除，面板不会留下任何副本。当前版本尚未开源，删除后无法恢复，也无法重新安装。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
+        "面板只留下一份删除收据：被删文件的清单、逐个校验值和你的填写原因。收据仅用于事后对账，不含文件内容，不能用来恢复。",
+        "注意：删除不进回收站。文件是直接从磁盘上移除的，系统回收站里也找不到，无法通过回收站找回。",
+        "确认执行后立即删除；对运行中的系统，将在下次重启时停用；重启前仍按当前状态运行。",
+        "本次删除不可恢复。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
         "恢复后需要重启才生效。",
-        "请手动输入 web-search-local 两次并点「确认真卸载」，或点「取消」。",
+        "请手动输入 web-search-local 两次并点「确认彻底删除」，或点「取消」。",
       ],
-      archiveKey: "存档安排", inputs: 2, button: "确认真卸载",
+      warningKey: "不可恢复（空窗期）", topWarning: "开源前删除不可恢复", inputs: 2, button: "确认彻底删除",
     },
   },
 };
@@ -508,15 +518,23 @@ for (const dir of Object.keys(S2)) {
 
   for (const mode of ["soft", "true"]) {
     const exp = S2[dir][mode];
+    // 软卸载分区名 = 「已存档」；真卸载（销毁式）分区名 = 「不可恢复（空窗期）」（文案 v2 §6.1）
+    const keyName = mode === "true" ? exp.warningKey : exp.archiveKey;
 
     // ---- html 渲染器 ----
     const h = htmlR.uninstallDialogHtml(plugin, mode);
     check("§2[" + dir + "/" + mode + "] html 标题逐字", h.includes(exp.title), exp.title);
     for (const line of exp.lines) check("§2[" + dir + "/" + mode + "] html 含「" + line.slice(0, 16) + "…」", h.includes(line), line);
-    check("§2[" + dir + "/" + mode + "] html 分区名「" + exp.archiveKey + "」", h.includes(exp.archiveKey));
+    check("§2[" + dir + "/" + mode + "] html 分区名「" + keyName + "」", h.includes(keyName));
     check("§2[" + dir + "/" + mode + "] html 按钮「" + exp.button + "」+ 取消", h.includes(exp.button) && h.includes(">取消<"));
     check("§2[" + dir + "/" + mode + "] html 输入框数 = " + exp.inputs,
       (h.match(/data-confirm-idx=/g) || []).length === exp.inputs, String((h.match(/data-confirm-idx=/g) || []).length));
+    if (mode === "true") {
+      // 两补强 (a)：顶部重复短句
+      check("§2[" + dir + "/true] html 顶部重复短句「" + exp.topWarning + "」", h.includes(exp.topWarning));
+      // 两补强 (b)：将删文件清单 + 总字节数
+      check("§2[" + dir + "/true] html 含「将删除」清单行（文件数/字节数）", h.includes("将删除") && /共 \d+ 个文件，合计 \d+ 字节/.test(h));
+    }
 
     // ---- react 渲染器 ----
     const dlgEls = namedOf(reactR.direct(p24El, [{ kind: "uninstall", mode }]), "UninstallDialog");
@@ -527,10 +545,14 @@ for (const dir of Object.keys(S2)) {
       if (dir === "rate-throttle" && mode === "soft") console.log("  · react 弹窗实际文本（前 400 字）：" + txt.slice(0, 400));
       check("§2[" + dir + "/" + mode + "] react 标题逐字", txt.includes(exp.title), "actual=" + txt.slice(0, 160));
       for (const line of exp.lines) check("§2[" + dir + "/" + mode + "] react 含「" + line.slice(0, 16) + "…」", txt.includes(line), "actual=" + txt.slice(0, 200));
-      check("§2[" + dir + "/" + mode + "] react 分区名「" + exp.archiveKey + "」+ 按钮逐字",
-        txt.includes(exp.archiveKey) && txt.includes(exp.button) && txt.includes("取消"), "actual=" + txt.slice(0, 200));
+      check("§2[" + dir + "/" + mode + "] react 分区名「" + keyName + "」+ 按钮逐字",
+        txt.includes(keyName) && txt.includes(exp.button) && txt.includes("取消"), "actual=" + txt.slice(0, 200));
       const inputs = findAll(render1(dlg), (n) => n.type === "input");
       check("§2[" + dir + "/" + mode + "] react 输入框数 = " + exp.inputs, inputs.length === exp.inputs, String(inputs.length));
+      if (mode === "true") {
+        check("§2[" + dir + "/true] react 顶部重复短句 + 将删清单行",
+          txt.includes(exp.topWarning) && /共 \d+ 个文件，合计 \d+ 字节/.test(txt), "actual=" + txt.slice(0, 260));
+      }
     }
   }
 }
@@ -538,32 +560,30 @@ for (const dir of Object.keys(S2)) {
 // ---- §2.9 / §2.9b 恢复确认页（含冲突三态）+ 完成后横幅 ----
 section("§2.9 / §2.9b 恢复确认页 + 冲突三态 + 完成后横幅");
 {
-  const custodyFixture = { custodyId: "search-router-2026-09-18T00-00-00-000Z", plugin: "search-router", kind: "true-uninstall", fileCount: 4, totalBytes: 4321 };
   const sr = snapByDir["search-router"];
   const rt = snapByDir["rate-throttle"];
   const rtCard = reactR.cardByDir(reactR.render(realSnap, realSnap.patch.text), "rate-throttle");
   const rtP24 = reactR.p24Of(rtCard);
 
-  const R29_TITLE_SR = "恢复「搜索路由 search-router」";
-  const R29_BODY_SR = "将从面板保管区恢复「搜索路由 search-router」：恢复 4 个文件（共 4321 字节），先逐文件校验，校验通过后才写回磁盘；写回后自动恢复它的启动入口（以及卸载时改动的系统设置项，如有）。";
   const R29B_TITLE_RT = "恢复「限流 rate-throttle」（软卸载恢复）";
   const R29B_BODY_RT = "将重新打开面板到「限流 rate-throttle」的启动入口，源代码文件一直在本地，不涉及文件恢复；若卸载时改动了系统设置项，将一并恢复。";
+  const MOUNT_TITLE_SR = "挂载「搜索路由 search-router」（重新安装后）";
+  const MOUNT_BODY_SR = "将把「搜索路由 search-router」的启动入口重新写回挂载面（行块与系统设置项按卸载收据复原）。源代码文件已由你重新安装放回本地，本操作不涉及文件写入。";
   const RESTART_LINE = "恢复完成后需要重启才生效。";
   const CONFIRM_LINE = "点「确认恢复」，或点「取消」。";
   const BANNER_LINE = "恢复完成，重启后生效";
-
-  // html：真卸载恢复（2.9）
-  const hTrue = htmlR.restoreDialogHtml(sr, "true", custodyFixture, null);
-  check("§2.9 html 标题逐字", hTrue.includes(R29_TITLE_SR));
-  check("§2.9 html 正文逐字（N/M 已代入）", hTrue.includes(R29_BODY_SR), R29_BODY_SR);
-  check("§2.9 html 含重启句 + 确认操作句 + 按钮逐字",
-    hTrue.includes(RESTART_LINE) && hTrue.includes(CONFIRM_LINE) && hTrue.includes(">确认恢复<") && hTrue.includes(">取消<"));
 
   // html：软卸载恢复（2.9b）
   const hSoft = htmlR.restoreDialogHtml(rt, "soft", null, null);
   check("§2.9b html 标题逐字", hSoft.includes(R29B_TITLE_RT));
   check("§2.9b html 正文逐字", hSoft.includes(R29B_BODY_RT), R29B_BODY_RT);
   check("§2.9b html 含重启句 + 按钮", hSoft.includes(RESTART_LINE) && hSoft.includes(">确认恢复<"));
+
+  // html：挂载确认页（**重装后**；销毁式 v2 §5 —— 真卸载唯一恢复途径）
+  const hMount = htmlR.restoreDialogHtml(sr, "mount", null, null);
+  check("§2.9' html 挂载标题逐字", hMount.includes(MOUNT_TITLE_SR), MOUNT_TITLE_SR);
+  check("§2.9' html 挂载正文逐字", hMount.includes(MOUNT_BODY_SR), MOUNT_BODY_SR);
+  check("§2.9' html 挂载含重启句 + 按钮", hMount.includes(">确认恢复<") && hMount.includes(">取消<"));
 
   // html：冲突三态（带真实 cur/backup）
   const conflict = { key: "searchProvider", currentValue: "official-only", backupValue: "searchProvider: auto-search" };
@@ -572,24 +592,23 @@ section("§2.9 / §2.9b 恢复确认页 + 冲突三态 + 完成后横幅");
     { id: "B", label: "恢复成卸载前的值", hostKeyChoice: "restore-backup" },
     { id: "C", label: "取消本次恢复" },
   ];
-  const hCf = htmlR.restoreDialogHtml(sr, "true", custodyFixture, conflict, choices);
+  const hCf = htmlR.restoreDialogHtml(sr, "soft", null, conflict, choices);
   check("§2.9 冲突三态 html 逐字（含 cur/backup 代入）",
     hCf.includes("若恢复时发现某项系统设置已被其他程序改掉（当前值是 official-only，卸载前是 searchProvider: auto-search），弹窗三选一：A. 保留当前值（不覆盖）；B. 恢复成卸载前的值；C. 取消本次恢复。面板不会自动覆盖。"));
   check("§2.9 冲突三态 html 三按钮 = 服务端 choices 标签",
     hCf.includes(">保留当前值（不覆盖）<") && hCf.includes(">恢复成卸载前的值<") && hCf.includes(">取消本次恢复<"));
 
-  // react：2.9 + 2.9b + 冲突三态
-  const dlgTrue = namedOf(reactR.direct(reactR.p24Of(reactR.cardByDir(reactR.render(realSnap, realSnap.patch.text), "search-router")), [{ kind: "restore", mode: "true", custody: custodyFixture }]), "RestoreDialog")[0];
-  const txtTrue = dlgTrue ? textOf(render1(dlgTrue)).join(" ") : "";
-  check("§2.9 react 标题 + 正文逐字", txtTrue.includes(R29_TITLE_SR) && txtTrue.includes(R29_BODY_SR));
-  check("§2.9 react 含重启/确认句 + 按钮",
-    txtTrue.includes(RESTART_LINE) && txtTrue.includes(CONFIRM_LINE) && txtTrue.includes("确认恢复"));
-
+  // react：2.9b + 挂载 + 冲突三态
   const dlgSoft = namedOf(reactR.direct(rtP24, [{ kind: "restore", mode: "soft" }]), "RestoreDialog")[0];
   const txtSoft = dlgSoft ? textOf(render1(dlgSoft)).join(" ") : "";
   check("§2.9b react 标题 + 正文逐字", txtSoft.includes(R29B_TITLE_RT) && txtSoft.includes(R29B_BODY_RT));
 
-  const dlgCf = namedOf(reactR.direct(rtP24, [{ kind: "restore", mode: "true", custody: custodyFixture, conflict, choices }]), "RestoreDialog")[0];
+  const srP24 = reactR.p24Of(reactR.cardByDir(reactR.render(realSnap, realSnap.patch.text), "search-router"));
+  const dlgMount = namedOf(reactR.direct(srP24, [{ kind: "restore", mode: "mount" }]), "RestoreDialog")[0];
+  const txtMount = dlgMount ? textOf(render1(dlgMount)).join(" ") : "";
+  check("§2.9' react 挂载标题 + 正文逐字", txtMount.includes(MOUNT_TITLE_SR) && txtMount.includes(MOUNT_BODY_SR), "actual=" + txtMount.slice(0, 200));
+
+  const dlgCf = namedOf(reactR.direct(rtP24, [{ kind: "restore", mode: "soft", conflict, choices }]), "RestoreDialog")[0];
   const txtCf = dlgCf ? textOf(render1(dlgCf)).join(" ") : "";
   check("§2.9 冲突三态 react 逐字",
     txtCf.includes("当前值是 official-only，卸载前是 searchProvider: auto-search")
@@ -643,7 +662,7 @@ section("缺席态六态渲染（两渲染器逐态）");
     const sec = htmlR.p24SectionHtml(plugin);
     const p24El = cardEl ? reactR.p24Of(cardEl) : null;
     check("六态[" + c.status + "] 两渲染器都渲染出 p24 区块", sec !== "" && !!p24El, "html=" + (sec !== "") + " react=" + !!p24El);
-    check("六态[" + c.status + "] html 卸载入口可见（软卸载有／真卸载无） == " + (!c.gone), (sec.includes("软卸载") && !sec.includes("真卸载")) === !c.gone);
+    check("六态[" + c.status + "] html 卸载入口可见（软+真） == " + (!c.gone), (sec.includes("软卸载") && sec.includes("真卸载")) === !c.gone);
     check("六态[" + c.status + "] react 卸载入口可见 == " + (!c.gone), reactR.hasUninstallButtons(p24El) === !c.gone);
     check("六态[" + c.status + "] html 恢复入口可见 == restoreAvailable(" + c.restore + ")", sec.includes(">恢复<") === c.restore, sec.slice(0, 90));
     check("六态[" + c.status + "] react 恢复入口可见 == restoreAvailable(" + c.restore + ")", reactR.hasRestoreButton(p24El) === c.restore);
@@ -690,33 +709,62 @@ function assertCards(tag, r, expect) {
   }
 }
 
-// ---------- 下架期共用断言（Q2'-a / L-059）----------
-// 真卸载（存档式）为**已推翻设计**，不得留产品面。本组断言锁死「下架」这一产品事实：
-//   ① 真实 API `uninstall/plan` 对 mode:"true" 一律拒绝（码 true-uninstall-withdrawn）；
-//   ② 拒绝时不下发任何 token（execute 无从触达）；
-//   ③ 两渲染器卸载入口**只剩软卸载**，不得出现「真卸载」按钮/文案；
-//   ④ 拒绝后副本 cordis.patch.yml 零写入；⑤ doctor 仍 error=0；⑥ 无任何缺席态副作用。
-// v2 施工（销毁式）上架时，本组将被替换为销毁式真卸载用例；此处保留用例位 A4/A5/B1/C2 以便对照。
-async function assertTrueUninstallDownlisted(tag, dir) {
-  const api = makeApi(dir);
-  const beforeSha = shaFile(join(dir, "cordis.patch.yml"));
-  const p = await api.uninstallPlan("search-router", "true", ["search-router", "search-router"]);
-  check(tag + " ① plan(mode:true) 被拒且码 = true-uninstall-withdrawn",
-    p.status !== 200 && p.json && p.json.ok === false && p.json.code === "true-uninstall-withdrawn",
-    "status=" + p.status + " " + JSON.stringify(p.json));
-  check(tag + " ② 拒绝信息为人话且含「已下架」", !!(p.json && /已下架/.test(String(p.json.error || ""))), p.json && p.json.error);
-  check(tag + " ③ 拒绝时不下发 token（execute 无从触达）", !(p.json && p.json.plan && p.json.plan.token));
-  const r = await renderCase(dir);
-  const el = reactR.p24Of(r.byDir("search-router"));
-  check(tag + " ④ react 卸载入口 = 仅软卸载（无「真卸载」按钮）", reactR.hasUninstallButtons(el) === true);
-  const sec = htmlR.p24SectionHtml(r.snap.plugins.find((x) => x.dir === "search-router"));
-  check(tag + " ⑤ html 卸载入口 = 仅软卸载（无「真卸载」按钮）", sec.includes("软卸载") && !sec.includes("真卸载"), sec.slice(0, 120));
-  check(tag + " ⑥ 拒绝后 cordis.patch.yml 零写入", shaFile(join(dir, "cordis.patch.yml")) === beforeSha);
-  check(tag + " ⑦ lib/search-router 未被动（下架≠删除）", existsSync(join(dir, "lib", "search-router")));
-  check(tag + " ⑧ doctor error=0（下架后仓态如常）", runDoctor(dir).summary.error === 0);
-  check(tag + " ⑨ 无任何缺席态副作用（无 true-uninstalled / soft-unmounted）",
-    r.snap.plugins.every((x) => x.status !== "true-uninstalled" && x.status !== "soft-unmounted"),
-    JSON.stringify(r.snap.plugins.map((x) => [x.dir, x.status])));
+// ---------- 销毁式真卸载 · 共用断言（L-060）----------
+// 真卸载 = **彻底删除、不留副本**（p24-design-v2-destroy.md §1/§2）。本组锁死：
+//   ① 走真实 API 完成一次销毁式真卸载（输入插件名两次）；
+//   ② **5 条销毁式硬判据**：收据在案无 body/ · custody 全域无源码 · 无恢复用字段 · lib 已删 · 收据内容自洽；
+//   ③ 真卸载态下两渲染器**均无「恢复」「挂载」入口**（无副本 ⇒ 不可恢复）。
+const SOURCE_RE = /\.(js|mjs|cjs|ts)$/;
+function anySourceUnder(d) {
+  if (!existsSync(d)) return false;
+  for (const e of readdirSync(d, { withFileTypes: true })) {
+    const p = join(d, e.name);
+    if (e.isDirectory()) {
+      if (anySourceUnder(p)) return true;
+    } else if (SOURCE_RE.test(e.name)) return true;
+  }
+  return false;
+}
+async function destroyTrue(tag, api, plugin) {
+  const { planned, executed } = await uninstall(api, plugin, "true");
+  check(
+    tag + " 真卸载(销毁式) plan+execute 均 ok",
+    planned.status === 200 && planned.json.ok === true && !!executed && executed.status === 200 && executed.json.ok === true,
+    JSON.stringify({ planned: planned.json && (planned.json.code || planned.json.error), exec: executed && executed.json })
+  );
+  check(
+    tag + " 回执含 deletedFiles / deletedBytes（收据计数）",
+    !!executed && executed.json.deletedFiles > 0 && executed.json.deletedBytes > 0,
+    JSON.stringify(executed && executed.json)
+  );
+  return executed.json;
+}
+function assertDestroyHard(tag, dir, plugin, execJson) {
+  const m = JSON.parse(readFileSync(join(dir, ".panel-custody", execJson.custodyId, "manifest.json"), "utf8"));
+  check(tag + " 硬判据① 收据在案且 kind=true-uninstall-receipt", m.kind === "true-uninstall-receipt" && m.schemaVersion === 2);
+  check(
+    tag + " 硬判据② 收据目录**无 body/**（不留副本）",
+    !existsSync(join(dir, ".panel-custody", execJson.custodyId, "body")) && m.bodyStored === false
+  );
+  check(tag + " 硬判据③ .panel-custody 全域无任何源码副本", !anySourceUnder(join(dir, ".panel-custody")));
+  check(tag + " 硬判据④ 收据无恢复用字段（body / restore）", m.body === undefined && m.restore === undefined);
+  check(tag + " 硬判据⑤ lib/" + plugin + " 已彻底删除", !existsSync(join(dir, "lib", plugin)));
+  check(
+    tag + " 收据内容：逐文件 sha 齐 + totals 自洽 + rebuild 行块齐（重装挂载依据）",
+    Array.isArray(m.deleted.body) && m.deleted.body.length > 0 && m.deleted.body.every((f) => f.sha256)
+      && m.deleted.totals.files === m.deleted.body.length && !!m.rebuild.rowBlock,
+    JSON.stringify({ files: m.deleted && m.deleted.body && m.deleted.body.length, totals: m.deleted && m.deleted.totals })
+  );
+  return m;
+}
+function assertNoRestoreNoMount(tag, r, plugin) {
+  const el = reactR.p24Of(r.byDir(plugin));
+  const sec = htmlR.p24SectionHtml(r.snap.plugins.find((x) => x.dir === plugin));
+  check(
+    tag + " 真卸载态：两渲染器均无「恢复」「挂载」入口（无副本）",
+    reactR.hasRestoreButton(el) === false && sec.includes(">恢复<") === false && sec.includes("挂载") === false,
+    sec.slice(0, 140)
+  );
 }
 
 // ---------- A0 前置基线（§3.2 每例前置：基线 sha / doctor 0/0/0 / 5 卡 mounted）----------
@@ -831,45 +879,73 @@ async function assertTrueUninstallDownlisted(tag, dir) {
   assertCards(tag + "·恢复后", await renderCase(dir), { "agent-memory": "mounted" });
 }
 
-// ---------- A4 真卸载入口下架（原「单删 search-router（真）」位；销毁式上架后重建）----------
+// ---------- A4 单删 search-router（真 · 销毁式）----------
 {
-  await assertTrueUninstallDownlisted("A4", makeCopy("a4"));
+  const tag = "A4";
+  const dir = makeCopy("a4");
+  const api = makeApi(dir);
+  const exec = await destroyTrue(tag, api, "search-router");
+  assertDestroyHard(tag, dir, "search-router", exec);
+  const after = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
+  check(tag + " 行块摘除（无 web-search-router 行）", !/- id: web-search-router/.test(after));
+  check(tag + " 宿主键 searchProvider 已 unset", !/^    searchProvider:/m.test(after));
+  check(tag + " web-search-local 未受影响（本体在 + 行在）", existsSync(join(dir, "lib", "web-search-local")) && /- id: web-search-local/.test(after));
+  const r = await renderCase(dir);
+  assertCards(tag, r, { "search-router": "true-uninstalled", "web-search-local": "mounted" });
+  const sr = r.snap.plugins.find((p) => p.dir === "search-router");
+  check(tag + " 快照：「无副本」文案逐字 + restoreAvailable=false", sr.statusCopy === "已卸载（无副本）· 重新安装后面板可挂载" && sr.restoreAvailable === false, sr.statusCopy);
+  assertNoRestoreNoMount(tag, r, "search-router");
+  check(tag + " 保管区清单 API 可见该收据且 mountable", (await api.custody()).json.custody.entries.some((e) => e.plugin === "search-router" && e.kind === "true-uninstall-receipt" && e.mountable === true));
+  const doc = runDoctor(dir);
+  const mount = doc.issues.filter((i) => i.category === "mount");
+  check(tag + " doctor error=0 且无 dangling 引用", doc.summary.error === 0 && !mount.some((i) => i.id === "provider.dangling-reference"), JSON.stringify(doc.summary));
 }
 
-// ---------- A5 真卸载入口下架（原「单删 web-search-local（真）→ dependency-broken」位）----------
+// ---------- A5 单删 web-search-local（真 · 销毁式）→ dependency-broken ----------
 {
-  await assertTrueUninstallDownlisted("A5", makeCopy("a5"));
+  const tag = "A5";
+  const dir = makeCopy("a5");
+  const api = makeApi(dir);
+  const exec = await destroyTrue(tag, api, "web-search-local");
+  assertDestroyHard(tag, dir, "web-search-local", exec);
+  const after = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
+  check(tag + " 行块摘除 + 宿主键 fetchProvider unset", !/- id: web-search-local/.test(after) && !/^    fetchProvider:/m.test(after));
+  const r = await renderCase(dir);
+  const wsl = r.snap.plugins.find((p) => p.dir === "web-search-local");
+  const sr = r.snap.plugins.find((p) => p.dir === "search-router");
+  check(tag + " 快照：web-search-local=true-uninstalled（无副本、不可恢复）", wsl.status === "true-uninstalled" && wsl.restoreAvailable === false && wsl.canMount === false);
+  check(tag + " 快照：search-router=dependency-broken 且 mounted=true", sr.status === "dependency-broken" && sr.mounted === true, sr.status);
+  check(tag + " dependency-broken 文案逐字命中", sr.statusCopy === "已加载，但依赖的本地搜索未安装——搜索功能不可用", sr.statusCopy);
+  assertCards(tag, r, { "web-search-local": "true-uninstalled", "search-router": "dependency-broken" });
+  const doc = runDoctor(dir);
+  const mount = doc.issues.filter((i) => i.category === "mount");
+  check(tag + " doctor error=0 + missing-provider warning 在案", doc.summary.error === 0 && mount.some((i) => i.id === "provider.missing-provider" && i.severity === "warning"));
+  check(tag + " 无 dangling provider 警告", !mount.some((i) => i.id === "provider.dangling-reference"));
 }
 
-// ---------- B1 双真卸载请求均被拒（原「搜索对同删（真）」位；销毁式上架后重建为对同删）----------
+// ---------- B1 搜索对同删（真 · 销毁式）----------
 {
   const tag = "B1";
   const dir = makeCopy("b1");
   const api = makeApi(dir);
-  const before = shaFile(join(dir, "cordis.patch.yml"));
-  const a = await api.uninstallPlan("search-router", "true", ["search-router", "search-router"]);
-  const b = await api.uninstallPlan("web-search-local", "true", ["web-search-local", "web-search-local"]);
-  check(tag + " ① 两插件真卸载请求均被拒（下架）",
-    a.status !== 200 && b.status !== 200 && a.json.code === "true-uninstall-withdrawn" && b.json.code === "true-uninstall-withdrawn",
-    JSON.stringify([a.json, b.json]));
-  check(tag + " ② 两 lib 目录均未被动", existsSync(join(dir, "lib", "search-router")) && existsSync(join(dir, "lib", "web-search-local")));
+  const ea = await destroyTrue(tag + "·search-router", api, "search-router");
+  const eb = await destroyTrue(tag + "·web-search-local", api, "web-search-local");
+  assertDestroyHard(tag + "·search-router", dir, "search-router", ea);
+  assertDestroyHard(tag + "·web-search-local", dir, "web-search-local", eb);
+  check(tag + " 两收据并存（互不覆盖）", ea.custodyId !== eb.custodyId);
   const after = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
-  check(tag + " ③④ 两行 + 两宿主键均未动",
-    /- id: web-search-router/.test(after) && /- id: web-search-local/.test(after)
-    && /^    searchProvider:/m.test(after) && /^    fetchProvider:/m.test(after));
-  check(tag + " ⑤ cordis.patch.yml sha 零写入", shaFile(join(dir, "cordis.patch.yml")) === before);
+  check(tag + " 两行 + 两宿主键均清",
+    !/- id: web-search-router/.test(after) && !/- id: web-search-local/.test(after)
+    && !/^    searchProvider:/m.test(after) && !/^    fetchProvider:/m.test(after));
   const r = await renderCase(dir);
-  assertCards(tag, r, { "search-router": "mounted", "web-search-local": "mounted" });
-  check(tag + " ⑥ 无 dependency-broken（未发生任何卸载）", !r.snap.plugins.some((p) => p.status === "dependency-broken"),
-    JSON.stringify(r.snap.plugins.map((p) => [p.dir, p.status])));
+  assertCards(tag, r, { "search-router": "true-uninstalled", "web-search-local": "true-uninstalled", "rate-throttle": "mounted", "compact-router": "mounted" });
+  check(tag + " 其余 3 卡 mounted（含 compact-router，预设挂载面）",
+    r.snap.plugins.filter((p) => !["search-router", "web-search-local"].includes(p.dir)).every((p) => p.status === "mounted"));
   const doc = runDoctor(dir);
   const mount = doc.issues.filter((i) => i.category === "mount");
-  check(tag + " ⑦ doctor error=0 且无 dangling/missing-provider",
-    doc.summary.error === 0 && !mount.some((i) => i.id === "provider.dangling-reference") && !mount.some((i) => i.id === "provider.missing-provider"),
-    JSON.stringify(mount.map((i) => i.id)));
-  check(tag + " ⑧ 双渲染器入口仅软卸载",
-    reactR.hasUninstallButtons(reactR.p24Of(r.byDir("search-router"))) === true
-    && !htmlR.p24SectionHtml(r.snap.plugins.find((p) => p.dir === "web-search-local")).includes("真卸载"));
+  check(tag + " doctor error=0、无 dangling、无 missing-provider",
+    doc.summary.error === 0 && !mount.some((i) => i.id === "provider.dangling-reference") && !mount.some((i) => i.id === "provider.missing-provider"), JSON.stringify(mount.map((i) => i.id)));
+  assertNoRestoreNoMount(tag, r, "search-router");
 }
 
 // ---------- C1 联动全软 ----------
@@ -899,7 +975,7 @@ async function assertTrueUninstallDownlisted(tag, dir) {
   check(tag + " ⑥ doctor 回 0/0/0", runDoctor(dir).summary.error === 0);
 }
 
-// ---------- C2 极端组合（三软 + 两真请求被拒）----------
+// ---------- C2 极端组合（三软 + 两真·销毁式）----------
 {
   const tag = "C2";
   const dir = makeCopy("c2", { withPresetBridge: true });
@@ -908,55 +984,87 @@ async function assertTrueUninstallDownlisted(tag, dir) {
     const x = await uninstall(api, p, "soft");
     check(tag + " 软卸载 " + p + " ok", x.planned.json.ok === true && x.executed.json.ok === true);
   }
-  const t1 = await api.uninstallPlan("search-router", "true", ["search-router", "search-router"]);
-  const t2 = await api.uninstallPlan("web-search-local", "true", ["web-search-local", "web-search-local"]);
-  check(tag + " 真卸载两搜索均被拒（下架）",
-    t1.json.code === "true-uninstall-withdrawn" && t2.json.code === "true-uninstall-withdrawn",
-    JSON.stringify([t1.json, t2.json]));
+  // 「开源后重新下载」的源码暂存（放**副本仓之外**——避免被 doctor 当作在案本体重复登记）
+  const stash = join(work, "c2-reinstall-stash");
+  cpSync(join(dir, "lib", "search-router"), join(stash, "search-router"), { recursive: true });
+  cpSync(join(dir, "lib", "web-search-local"), join(stash, "web-search-local"), { recursive: true });
+
+  const ea = await destroyTrue(tag + "·search-router", api, "search-router");
+  const eb = await destroyTrue(tag + "·web-search-local", api, "web-search-local");
+  assertDestroyHard(tag + "·search-router", dir, "search-router", ea);
+  assertDestroyHard(tag + "·web-search-local", dir, "web-search-local", eb);
+
   const r = await renderCase(dir);
   assertCards(tag, r, {
     "rate-throttle": "soft-unmounted", "compact-router": "soft-unmounted", "agent-memory": "soft-unmounted",
-    "search-router": "mounted", "web-search-local": "mounted",
+    "search-router": "true-uninstalled", "web-search-local": "true-uninstalled",
   });
+  check(tag + " 五卡全为缺席态（三软二真）",
+    r.snap.plugins.filter((p) => p.status === "soft-unmounted").length === 3
+    && r.snap.plugins.filter((p) => p.status === "true-uninstalled").length === 2,
+    JSON.stringify(r.snap.plugins.map((p) => [p.dir, p.status])));
   const after = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
-  check(tag + " ④ patch 无三软插件行 + 两搜索行与宿主键均在",
+  check(tag + " ④ patch 无四插件行 + :7/:8 回缺省",
     !/- id: rate-throttle/.test(after) && !/- id: agent-memory-runtime/.test(after)
-    && /- id: web-search-router/.test(after) && /- id: web-search-local/.test(after)
-    && /^    searchProvider:/m.test(after) && /^    fetchProvider:/m.test(after));
+    && !/- id: web-search-router/.test(after) && !/- id: web-search-local/.test(after)
+    && !/^    searchProvider:/m.test(after) && !/^    fetchProvider:/m.test(after));
   const presetState = JSON.parse(readFileSync(join(dir, "preset-patch-state.json"), "utf8"));
   check(tag + " ④ 四预设均非 patched", Object.keys(presetState).every((id) => shaFile(presetState[id].file) === shaFile(presetState[id].backup)));
   const doc = runDoctor(dir);
-  check(tag + " ⑤ doctor error=0（三缺席仅提示级）", doc.summary.error === 0 && doc.issues.filter((i) => i.category === "mount").every((i) => i.severity !== "error"), JSON.stringify(doc.summary));
+  check(tag + " ⑤ doctor error=0（五插件缺席仅提示级）", doc.summary.error === 0 && doc.issues.filter((i) => i.category === "mount").every((i) => i.severity !== "error"), JSON.stringify(doc.summary));
   check(tag + " ⑥ 面板管理页仍可操作（/snapshot 与 /custody 均 200）", (await api.snapshot()).status === 200 && (await api.custody()).status === 200);
-  check(tag + " ⑥ 缺席态 = 三 soft-unmounted，无 true-uninstalled",
-    r.snap.plugins.filter((p) => p.status === "soft-unmounted").length === 3
-    && r.snap.plugins.filter((p) => p.status === "true-uninstalled").length === 0,
-    JSON.stringify(r.snap.plugins.map((p) => [p.dir, p.status])));
 
-  // ---------- C3 极端组合恢复（三软）----------
+  // ---------- C3 三软恢复 + 两真「重装 → 挂载」（销毁式唯一恢复途径）----------
   const tag3 = "C3";
-  const before = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
   for (const p of ["rate-throttle", "compact-router", "agent-memory"]) {
     const x = await restore(api, p);
-    check(tag3 + " ① 恢复 " + p + " RPC ok", x.planned.json.ok === true && !!x.executed && x.executed.json.ok === true, "planned=" + JSON.stringify(x.planned.json) + " executed=" + JSON.stringify(x.executed && x.executed.json));
+    check(tag3 + " ① 软恢复 " + p + " RPC ok", x.planned.json.ok === true && !!x.executed && x.executed.json.ok === true, JSON.stringify(x.planned.json));
   }
-  check(tag3 + " ② cordis.patch.yml sha 回基线",
-    shaFile(join(dir, "cordis.patch.yml")) === BASE_SHA_EXPECT,
-    firstDiff("patch", readFileSync(patchPath, "utf8"), readFileSync(join(dir, "cordis.patch.yml"), "utf8")));
-  check(tag3 + " ② 四预设回 patched（逐预设 sha）",
-    Object.keys(presetState).every((id) => shaFile(presetState[id].file) === presetState[id].patchedSha),
-    JSON.stringify(Object.keys(presetState).map((id) => [id, shaFile(presetState[id].file) === presetState[id].patchedSha])));
+  {
+    const mid = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
+    check(tag3 + " ② 三软恢复后：三软行块已插回",
+      /- id: rate-throttle/.test(mid) && /- id: agent-memory-runtime/.test(mid));
+    check(tag3 + " ② 三软恢复后：两搜索仍缺席（**销毁式不可恢复**，符合语义）",
+      !/- id: web-search-router/.test(mid) && !/- id: web-search-local/.test(mid)
+      && !/^    searchProvider:/m.test(mid) && !/^    fetchProvider:/m.test(mid));
+    check(tag3 + " ② 三软恢复后 sha ≠ 基线（两搜索未回）", shaFile(join(dir, "cordis.patch.yml")) !== BASE_SHA_EXPECT);
+  }
+
+  // 模拟重装：把源码从暂存放回 lib（= 用户开源后重新下载安装）
+  cpSync(join(stash, "search-router"), join(dir, "lib", "search-router"), { recursive: true });
+  cpSync(join(stash, "web-search-local"), join(dir, "lib", "web-search-local"), { recursive: true });
+  const r2 = await renderCase(dir);
+  const sr2 = r2.snap.plugins.find((p) => p.dir === "search-router");
+  const wl2 = r2.snap.plugins.find((p) => p.dir === "web-search-local");
+  check(tag3 + " ③ 重装后两搜索卡 = installed-unmounted 且 canMount=true",
+    sr2.status === "installed-unmounted" && wl2.status === "installed-unmounted" && sr2.canMount === true && wl2.canMount === true,
+    JSON.stringify([sr2.status, wl2.status, sr2.canMount, wl2.canMount]));
+  check(tag3 + " ③ 两渲染器均出现「挂载（重装后）」入口",
+    reactR.p24Of(r2.byDir("search-router")) !== null
+    && htmlR.p24SectionHtml(r2.snap.plugins.find((p) => p.dir === "search-router")).includes("挂载（重装后）"));
+
+  // 挂载走真实 /mount API（复用插回算子 + 宿主键回写）
+  for (const p of ["search-router", "web-search-local"]) {
+    const mp = await api.call("/api/toolkit-panel/mount/plan", { method: "POST", body: { plugin: p } });
+    check(tag3 + " ④ mount/plan(" + p + ") 200 + ok", mp.status === 200 && mp.json.ok === true, JSON.stringify(mp.json));
+    const me = await api.call("/api/toolkit-panel/mount/execute", { method: "POST", body: { token: mp.json.plan.token } });
+    check(tag3 + " ④ mount/execute(" + p + ") ok", me.status === 200 && me.json.ok === true, JSON.stringify(me.json));
+  }
+  const c3After = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
+  check(tag3 + " ⑤ 两搜索挂载后 sha 回基线（字节级）", shaFile(join(dir, "cordis.patch.yml")) === BASE_SHA_EXPECT,
+    firstDiff("patch", readFileSync(patchPath, "utf8"), c3After));
+  check(tag3 + " ⑤ 宿主键 :7 searchProvider 回原值", /^    searchProvider: auto-search/m.test(c3After));
+  check(tag3 + " ⑤ 宿主键 :8 fetchProvider 回原值", /^    fetchProvider: local-fetch/m.test(c3After));
   const r3 = await renderCase(dir);
-  assertCards(tag3 + "（注：preset-patched 后 cordis.patch.yml 为基线副本）", r3, {
+  assertCards(tag3 + "·全恢复后", r3, {
     "rate-throttle": "mounted", "agent-memory": "mounted", "compact-router": "mounted", "search-router": "mounted", "web-search-local": "mounted",
   });
-  check(tag3 + " ④ doctor 0/0/0", (() => { const d = runDoctor(dir); return d.summary.error === 0 && d.summary.warning === 0 && d.summary.info === 0; })(), (() => { const d = runDoctor(dir); return JSON.stringify(d.summary) + " issues=" + JSON.stringify(d.issues.map((i) => [i.id || i.category, i.severity, i.message, i.file])); })());
-  check(tag3 + " ⑥ 恢复后 5 卡 mounted 且无 dependency-broken", r3.snap.plugins.every((p) => p.status === "mounted"),
-    JSON.stringify(r3.snap.plugins.map((p) => [p.dir, p.status])));
-  // 面板级恢复横幅（§2.9 完成后）
+  check(tag3 + " ⑥ doctor 0/0/0", (() => { const d = runDoctor(dir); return d.summary.error === 0 && d.summary.warning === 0 && d.summary.info === 0; })(), (() => { const d = runDoctor(dir); return JSON.stringify(d.summary) + " issues=" + JSON.stringify(d.issues.map((i) => [i.id || i.category, i.severity, i.message, i.file])); })());
+  check(tag3 + " ⑥ 四预设回 patched", Object.keys(presetState).every((id) => shaFile(presetState[id].file) === presetState[id].patchedSha));
+  check(tag3 + " ⑥ 收据仍保留（对账账本不清档）", existsSync(join(dir, ".panel-custody", ea.custodyId, "manifest.json")) && existsSync(join(dir, ".panel-custody", eb.custodyId, "manifest.json")));
+  check(tag3 + " ⑥ 挂载后真卸载态卡片回 mounted，无 dependency-broken", r3.snap.plugins.every((p) => p.status === "mounted"));
   const p24El = reactR.p24Of(r3.byDir("rate-throttle"));
-  check(tag3 + " ⑥ 面板恢复入口在恢复后隐藏（restoreAvailable=false）", htmlR.p24SectionHtml(r3.snap.plugins.find((p) => p.dir === "rate-throttle")).includes(">恢复<") === false);
-  check(tag3 + " p24Controls 仍在（软卸载入口可见）", !!p24El);
+  check(tag3 + " p24Controls 仍在（软/真卸载入口可见）", !!p24El && reactR.hasUninstallButtons(p24El) === true);
 }
 
 // ════════════════════════════════════════════════════════════

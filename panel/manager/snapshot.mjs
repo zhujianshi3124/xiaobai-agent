@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -141,35 +141,67 @@ function presetPatchedAny(toolkitRoot) {
 }
 
 /**
- * P2.4 缺席态判定（p24-design.md §5.3 六态）：
+ * P2.4 缺席态判定（**销毁式 v2** 口径，p24-design-v2-destroy.md §4/§6.2）：
  *   mounted                —— 本体在 + 挂载在（patch 行 / 预设 patched）
- *   soft-unmounted         —— 本体在 + 行不在 + 面板软卸载台账在案（面板发起，可一键恢复）
- *   true-uninstalled       —— 本体不在 + 保管区存档在案（面板真卸载，可一键恢复）
- *   installed-unmounted    —— 本体在 + 行不在 + 无面板台账（面板外摘除，doctor 提「已安装未挂载」）
- *   dangling-mount         —— 行在 + 本体不在（无存档；doctor 提「挂载行存在但本体缺失」）
+ *   soft-unmounted         —— 本体在 + 行不在 + 面板软卸载台账在案（面板发起，**可一键恢复**）
+ *   true-uninstalled       —— 本体不在 + 行不在 + **收据在案**（面板销毁式真卸载，**无副本、不可恢复**）
+ *   installed-unmounted    —— 本体在 + 行不在 + 无面板台账（重装后 / 面板外摘除 ⇒ doctor 提「已安装未挂载」，**可挂载**）
+ *   dangling-mount         —— 行在 + 本体不在（无收据；doctor 提「挂载行存在但本体缺失」）
  *   dependency-broken      —— mounted 修饰态：依赖的本地搜索缺席（搜索功能不可用）
  */
-function determineAbsenceState({ dir, meta, bodyPresent, rowPresent, softRecord, custodyArchived, presetState }) {
+function determineAbsenceState({ dir, meta, bodyPresent, rowPresent, softRecord, receiptOnFile, presetState }) {
   if (meta.managedBy === "preset") {
     if (bodyPresent && presetState.patched) return "mounted";
     if (bodyPresent && !presetState.patched) return softRecord ? "soft-unmounted" : "installed-unmounted";
-    if (!bodyPresent && custodyArchived) return "true-uninstalled";
+    if (!bodyPresent && receiptOnFile) return "true-uninstalled";
     return "unknown-absent";
   }
   if (bodyPresent && rowPresent) return "mounted";
   if (bodyPresent && !rowPresent) return softRecord ? "soft-unmounted" : "installed-unmounted";
   if (!bodyPresent && rowPresent) return "dangling-mount";
-  if (!bodyPresent && !rowPresent) return custodyArchived ? "true-uninstalled" : "unknown-absent";
+  if (!bodyPresent && !rowPresent) return receiptOnFile ? "true-uninstalled" : "unknown-absent";
   return "unknown-absent";
+}
+
+/**
+ * 目录体量（**只 stat、不读内容**）：供真卸载确认页展示「将删 N 个文件 / M 字节」
+ * （p24-design-v2-destroy.md §6.1 两补强之 b；判定侧 2026-09-19 采纳）。
+ */
+function dirStats(absDir) {
+  let files = 0;
+  let bytes = 0;
+  const walk = (d) => {
+    let es;
+    try {
+      es = readdirSync(d, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of es) {
+      const p = join(d, e.name);
+      if (e.isDirectory()) walk(p);
+      else {
+        files++;
+        try {
+          bytes += statSync(p).size;
+        } catch {
+          /* 单项不可读不影响体量展示 */
+        }
+      }
+    }
+  };
+  if (existsSync(absDir)) walk(absDir);
+  return { files, bytes };
 }
 
 const ABSENCE_COPY = {
   "mounted": null,
   "soft-unmounted": "已软卸载 · 本体保留 · 可一键恢复",
-  "true-uninstalled": "已卸载（真）· 本体已移入保管区 · 可一键恢复",
+  // 销毁式 v2（Q2'-a）：真卸载无副本、不可恢复；恢复途径 = 开源后重新安装 → 挂载
+  "true-uninstalled": "已卸载（无副本）· 重新安装后面板可挂载",
   "installed-unmounted": "已安装未挂载（不是面板卸载的）· 可从面板重新挂载",
   "dangling-mount": "挂载行存在，但本体缺失 · 异常态",
-  "unknown-absent": "未安装",
+  "unknown-absent": "未安装 · 本体与挂载行都不在",
 };
 
 /**
@@ -275,20 +307,23 @@ export async function buildSnapshot({ toolkitRoot, hotRouterPath = join(homedir(
     const bodyPresent = existsSync(manifestPath);
     const patchRow = meta.rowId ? rows.find((r) => r.id === meta.rowId) : undefined;
     const softRecord = meta.rowId ? getSoftRecord(toolkitRoot, meta.rowId) : getSoftRecord(toolkitRoot, dir);
-    const custodyArchived = custodyEntries.some((e) => e.plugin === dir && e.kind === "true-uninstall");
+    const receiptOnFile = custodyEntries.some(
+      (e) => e.plugin === dir && (e.kind === "true-uninstall-receipt" || e.kind === "true-uninstall"),
+    );
     rawByDir[dir] = {
       meta,
       bodyPresent,
+      bodyStats: dirStats(join(toolkitRoot, "lib", dir)),
       patchRow: patchRow || null,
       softRecord,
-      custodyArchived,
+      receiptOnFile,
       status: determineAbsenceState({
         dir,
         meta,
         bodyPresent,
         rowPresent: !!patchRow,
         softRecord,
-        custodyArchived,
+        receiptOnFile,
         presetState,
       }),
     };
@@ -327,6 +362,7 @@ export async function buildSnapshot({ toolkitRoot, hotRouterPath = join(homedir(
       dir,
       name: (manifest && manifest.name) || meta.pkg,
       bodyPresent: raw.bodyPresent,
+      bodyStats: raw.bodyStats,
       origin: (ORIGINS[dir] || { origin: "unknown" }).origin,
       upstream: (ORIGINS[dir] || {}).upstream || null,
       author: (ORIGINS[dir] || {}).author || null,
@@ -347,15 +383,19 @@ export async function buildSnapshot({ toolkitRoot, hotRouterPath = join(homedir(
       status,
       statusCopy: status === "dependency-broken" ? (dependency && dependency.note) || "依赖缺失" : ABSENCE_COPY[status],
       mounted,
-      custodyArchived: raw.custodyArchived,
+      // 收据在案（销毁式 v2）：真卸载对账账本，亦为「重装后挂载」的行块事实来源
+      receiptOnFile: raw.receiptOnFile,
       softRecorded: !!raw.softRecord,
       dependency,
       defaultUninstallMode: meta.defaultMode,
-      restoreAvailable:
-        status === "soft-unmounted" ||
-        status === "true-uninstalled" ||
-        (status === "installed-unmounted" && raw.bodyPresent) ||
-        (meta.managedBy === "preset" && !mounted && (raw.bodyPresent || raw.custodyArchived)),
+      // 恢复（**软卸载专有**）：本体在、行不在、面板台账在案 ⇒ 一键恢复
+      restoreAvailable: status === "soft-unmounted",
+      // 挂载（**重装后**）：本体在、行不在、无面板台账；patch 插件需收据提供行块事实，
+      // 预设插件（compact-router）凭重新 apply 预设即可，无需收据。
+      canMount:
+        status === "installed-unmounted" &&
+        raw.bodyPresent &&
+        (meta.managedBy === "preset" || raw.receiptOnFile),
       // ---- P2.3 配置编辑（卸载态隐藏多余操作，状态照常渲染）----
       configPanel: mounted
         ? buildConfigPanel(dir, raw.patchRow ? raw.patchRow.id : null, patchText, { hotRouterPath, envMode })
