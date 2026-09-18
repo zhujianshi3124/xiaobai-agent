@@ -1304,4 +1304,9 @@ HEAD = `f6d99eb`。
   - **登记**：`HANDOFF-MASTER.md`（头部时间戳 13:42 / 附录 B U3·U8·U12 / 附录 C 新行）· `handoff-restart.md` §11.14 · `api-notes.md` §③.3 · 本条。
   - **本轮磁盘动作 = 零**（扫描全程只读；被扫文件未改；`cordis.patch.yml` 基准 sha 未变 `ce0b0b81…`）。
   - **P2.3 放行**：前置 ①②③④ **全齐** ⇒ **开工**。第一动作 = **`config.enabled` 五插件源码消费点证据**（谁读、做什么、改值后生效路径 —— 含是否需重启），先证后写；白名单 `enabled` 布尔 / 限流数值范围 / 路由模式枚举；服务端校验不信任前端；写路由 `{change:true}` + 配对校验；apply-engine 唯一通道 + 写前备份；**U9 marker 刷新随首个写盘批次**。节奏：证据核查阶段零写盘，攒批 reload 原则不变，UI 出来后再报用户目视。
-- **P2（进行中）**：P2.0① ✅（`193bdd8`）→ P2.0② ✅（`2b05777`）→ P2.1 ✅（`a27da81`）→ **P2.2 ✅ 已关账（2026-09-18 12:48；`c91de92` + `558e62f` + `41ad40c` + `22fde85` + `10ebcef` + `c51ae58`）** → **P2.3 配置编辑（下一阶段 · 已放行）** → P2.4 doctor+回滚。**P2.1 起每个写操作须附真实备份产物与 SHA 记录。**
+- **L-040（P2.3 第一动作 · `config.enabled` 五插件源码消费点证据，先证后写）**：P2.3 放行后**第一动作**完成（**全程只读、零写盘**）。证据落 `api-notes.md` 新节「**P2.3 前置 · config.enabled 五插件源码消费点证据**」。
+  - **核心结论**：**`config.enabled` 消费点 = 仅 rate-throttle**（5 插件中唯一）—— `:157` 激活时快照（缺省 true）/ `:167` routing 子闸 / **`:224` throttle() 主功能闸**（`!cfg.enabled → 不节流`）/ `:656` `:781` 路由短 路；`cfg` 激活时构建 ⇒ **改值需重启**（bundle patch 不热重载）。**agent-memory / compact-router / search-router / web-search-local 均 0 消费**（`enabled` 全 lib 仅 8 处命中，逐条定性：5 消费 + 3 注释）。
+  - **两条会遮蔽 patch 值的活通道（新发现，P2.3 设计必须处理）**：search-router = **热 JSON `~/.dsh/dsh-search-router.json` 每次调用热读**（seed < 热 JSON < env `DSH_WEB_SEARCH_ROUTER_MODE`；`mode` 枚举 `auto/official/local` @ `:38`）；web-search-local = **settings section 活配置**（Schemastery `Config` 注册 settings 服务，改后下一次 search/fetch 立即生效且**覆盖 patch 值**）。
+  - **对 P2.3 设计的三条直接影响**：① 层 2 `enabled` 开关仅 rate-throttle 真实消费 ⇒ 其余 4 卡层 2 须标注「插件不读此字段」或不提供可写入口；② 路由模式枚举 = search-router `mode`，写 patch 前须读热 JSON 并呈现遮蔽关系；③ patch 侧写入生效 = 重启（与确认页文案一致），确认页须如实提示两条活通道遮蔽。
+  - **白名单取值域**（rate-throttle 数值字段范围等）属 P2.3 施工设计，不在本证据范围（如实申报）。
+- **P2（进行中）**：P2.0① ✅（`193bdd8`）→ P2.0② ✅（`2b05777`）→ P2.1 ✅（`a27da81`）→ **P2.2 ✅ 已关账（2026-09-18 12:48；`c91de92` + `558e62f` + `41ad40c` + `22fde85` + `10ebcef` + `c51ae58`）** → **P2.3 配置编辑（下一阶段 · 已放行，第一动作证据已交）** → P2.4 doctor+回滚。**P2.1 起每个写操作须附真实备份产物与 SHA 记录。**
