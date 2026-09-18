@@ -242,7 +242,7 @@ export function readRowDisabledLiteral(text, rowId) {
  * `!!js <表达式>` 这类平台条件写法，本面板既无法正确呈现它，改写又会把条件
  * 抹成硬布尔 —— 两个方向都错。此时 fail-closed，让用户手工编辑。
  */
-export function createTogglePlan({ file, rowId, enabled, backupRoot, ttlMs = DEFAULT_PLAN_TTL_MS, alsoMatch = [] }) {
+export function createTogglePlan({ file, rowId, enabled, backupRoot, ttlMs = DEFAULT_PLAN_TTL_MS, alsoMatch = [], reason = null, note = null }) {
   if (typeof enabled !== "boolean") {
     throw new PlanError("value-invalid", "启停值必须是布尔（true / false）");
   }
@@ -277,6 +277,12 @@ export function createTogglePlan({ file, rowId, enabled, backupRoot, ttlMs = DEF
     key: "disabled",
     value: enabled ? "false" : "true",
     targetEnabled: enabled,
+    // manifest 可读原因（修复「reason/note 恒为 null」）：
+    // 备份必须自解释「为什么备份」，否则回滚时无法判断该恢复点对应哪次操作。
+    reason: reason != null ? reason : "panel-toggle",
+    note: note != null
+      ? note
+      : rowId + " " + (enabled ? "启用" : "停用") + "（patch-row.disabled " + (enabled ? "= false" : "= true") + "）",
     backupRoot: backupRoot || null,
     expectedSha: sha256Of(text),
     nextSha: sha256Of(result.nextText),
@@ -359,7 +365,7 @@ export function pruneBackups(
  * @param {number} [args.ttlMs]         有效期
  * @returns plan 对象（含 token、期望 SHA、diff 预览、有效期）
  */
-export function createPlan({ file, rowId, key, value, backupRoot, ttlMs = DEFAULT_PLAN_TTL_MS }) {
+export function createPlan({ file, rowId, key, value, backupRoot, ttlMs = DEFAULT_PLAN_TTL_MS, reason = null, note = null }) {
   if (!existsSync(file)) {
     throw new PlanError("target-missing", "目标文件不存在：" + file);
   }
@@ -375,6 +381,9 @@ export function createPlan({ file, rowId, key, value, backupRoot, ttlMs = DEFAUL
     rowId,
     key,
     value: String(value),
+    // manifest 可读原因（见 createTogglePlan 同名注释）。
+    reason: reason != null ? reason : "panel-plan",
+    note: note != null ? note : rowId + "." + key + " = " + String(value),
     backupRoot: backupRoot || null,
     expectedSha: sha256Of(text),
     nextSha: sha256Of(result.nextText),
@@ -455,7 +464,12 @@ export function executePlan(token, { now = Date.now() } = {}) {
   let backupDir = null;
   if (plan.backupRoot) {
     mkdirSync(plan.backupRoot, { recursive: true });
-    backupDir = createBackup({ backupRoot: plan.backupRoot, files: [plan.file] });
+    backupDir = createBackup({
+      backupRoot: plan.backupRoot,
+      files: [plan.file],
+      reason: plan.reason ?? null,
+      note: plan.note ?? null,
+    });
   }
 
   // 6. 落盘

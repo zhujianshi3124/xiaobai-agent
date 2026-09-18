@@ -7,7 +7,7 @@
 // 以及安全模型其它项：锚点唯一、有效期、保留策略、并发防线。
 //
 // 全部操作发生在 OS 临时目录的副本上，**绝不触碰真实 cordis.patch.yml**。
-import { mkdtempSync, readFileSync, writeFileSync, existsSync, readdirSync, rmSync, mkdirSync, utimesSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync, existsSync, readdirSync, rmSync, mkdirSync, utimesSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -110,11 +110,28 @@ function freshPatch() {
   check("manifest records the target abs path", manifest.files[0].abs === file, manifest.files[0].abs);
   check("manifest sha256 == pre-write file sha (byte-identical proof)", manifest.files[0].sha256 === beforeSha,
     manifest.files[0].sha256.slice(0, 16) + " vs " + beforeSha.slice(0, 16));
-  const savedCopy = join(result.backupDir, manifest.files[0].savedAs);
-  check("backup copy exists", existsSync(savedCopy));
-  check("backup copy is byte-identical to pre-write content", readFileSync(savedCopy, "utf8") === beforeText);
+  // manifest 必须自解释：reason / note 非 null（防「恒为 null」回归）
+  check("manifest records a reason (non-null)", typeof manifest.reason === "string" && manifest.reason.length > 0, JSON.stringify(manifest.reason));
+  check("manifest records a note (non-null)", typeof manifest.note === "string" && manifest.note.length > 0, JSON.stringify(manifest.note));
+
+  // ---- D-01 防复发：**不依赖 manifest.savedAs**，独立按目录实体核验副本 ----
+  // 旧缺陷的教训：测试若用与实现相同的路径构造方式读回，就照不出「内容落进 NTFS ADS、
+  // 目录只剩 0 字节文件」这类问题。因此这里改从目录实体独立取证：
+  //   ① 目录里恰有 1 个非 manifest 条目；② 没有任何 0 字节文件；③ 名字不含 ':'
+  //   （Windows 会把 `D:...` 当 ADS 说明符）；④ 真字节 > 0 且 sha 与写前一致。
+  const entries = readdirSync(result.backupDir).filter((n) => n !== "manifest.json");
+  check("backup dir has exactly one payload file", entries.length === 1, JSON.stringify(entries));
+  const zeroByte = entries.filter((n) => statSync(join(result.backupDir, n)).size === 0);
+  check("no zero-byte payload (ADS-defect fingerprint)", zeroByte.length === 0, JSON.stringify(zeroByte));
+  check("payload name contains no ':' (NTFS ADS specifier)", !entries.some((n) => n.includes(":")), JSON.stringify(entries));
+  const savedCopy = join(result.backupDir, entries[0]);
+  const copyBytes = readFileSync(savedCopy);
+  check("backup payload is non-empty on disk", copyBytes.length > 0, "bytes=" + copyBytes.length);
+  check("backup payload sha == pre-write sha", sha(copyBytes) === beforeSha, sha(copyBytes).slice(0, 16));
+  check("manifest.savedAs matches the real payload name", manifest.files[0].savedAs === entries[0], manifest.files[0].savedAs);
+  check("backup copy is byte-identical to pre-write content", copyBytes.toString("utf8") === beforeText);
   // 反向验证：备份能用于回滚 —— 恢复后逐字节等于原内容
-  writeFileSync(file, readFileSync(savedCopy, "utf8"), "utf8");
+  writeFileSync(file, copyBytes.toString("utf8"), "utf8");
   check("rollback from backup restores byte-identical sha", sha(readFileSync(file, "utf8")) === beforeSha);
   writeFileSync(file, afterText, "utf8"); // 还原到 execute 后状态，便于后续断言
 }
