@@ -298,6 +298,8 @@ SHIPPED_PRESET_ROOT (trust: system)  →  config.roots  →  $DSH_HOME/.agent-pr
 **实测结论（替代「四层栈」的准确表述）**：
 > DSH 启动时把 patch 层按 **bundle（可 N 个，`dsh.profile.bundles` 顺序）→ profile `cordis.patch.yml` → home `cordis.patch.yml` → `--patch` overlays（可 N 个）** 的顺序**拍平成一个列表**，对 base 配置做**同一次** `applyEntryPatches`（`profile-boot:242-247` 用 `composeEntries`；`renderConfigDump:1253` 用 `layers.slice(0,count).flatMap(l=>l.patches)`）——**后者按 id 覆盖前者，且是浅层赋值/整块替换而非深合并**。另有 base(`[]`) 与 env(`.env`) 两个非 patch 面，以及 agent-preset 独立平面（该平面同 id 为**首根胜**）。
 
+> **📌 第 14 轮改判**：「四层 patch 栈」命题**改判为「内容为真、出处未落盘」** —— 上列三条复核理由中，**①（overlay 通名当专名）③（bundle 层措辞歧义）属精度问题、②（未覆盖注入面全集）属完备性问题，均未证伪四层内容本身**：其四层内容与 loader 源码**一致**（本节全表即其落盘出处）。核心定性由「内容失真」改为「**出处缺失**」。**归档口径（新）**：「**事实必须落盘出处，否则与失真不可分辨**」—— 出处缺失与内容失真在台账上分立两类（前者补出处，后者改口径）。四层表述以本节全表为准。
+
 ### ③.4 未覆盖项（如实申报，不猜测）
 
 - **`$DSH_HOME/cordis.patch.yml`（注入点 3）未读取**。它落在红线目录 `~/.dsh` 内，本轮授权只到 `~/.dsh/.agent-presets`（只读）。若该文件存在，它就是一个**能覆盖 profile 层、且优先级高于 profile 层**的 patch 层 —— 理论上可携带 toolkit 任意 id 行。**建议**：若要穷尽，「home 层文件是否存在 + 是否含 toolkit 行」需单独授权后补扫。

@@ -1,0 +1,56 @@
+════════════════════════════════════════════════════════════════════════════
+乙程序首批例行只读读取 —— 注入点全表红线内 4 点 + 注入点 5 env（第 14 轮 · 可重放）
+生成脚本 scripts/q2-released-scan.mjs  生成时刻(UTC) 2026-09-18T05:39:43.706Z
+授权依据 第 14 轮判定侧：① U8+同族一次性只读授权 ② U12=乙（窄版既定只读程序，已落账）
+判据 每点落一个结论：「无 toolkit id / 无覆盖声明」或「文件不存在」皆结论；#4 不适用已注
+════════════════════════════════════════════════════════════════════════════
+
+── #0 profile 根配置（base，启动重写）
+    路径：C:\Users\LENOVO\.dsh\profiles\web\cordis.yml
+    存在 ✓  size=223 B  sha256=c300dcf2ebc5…  mtime=2026-09-18T04:22:10.854Z
+    - id: 行（0）：无
+    toolkit 关联标识命中：无
+    覆盖/遮蔽声明特征命中：无
+    结论：无 toolkit id / 无覆盖声明
+
+── #2 profile 用户 patch 层
+    路径：C:\Users\LENOVO\.dsh\profiles\web\cordis.patch.yml
+    存在 ✓  size=217 B  sha256=ef189a8c27db…  mtime=2026-09-12T09:14:28.177Z
+    - id: 行（0）：无
+    toolkit 关联标识命中：无
+    覆盖/遮蔽声明特征命中（1，附上下文待判归属）：
+      L3 [override] …entries (id-targeted config⏎# overrides, disables, and insert lists; `…
+    结论：无 toolkit id / 无覆盖声明
+
+── #3 home 用户 patch 层（原 U8）
+    路径：C:\Users\LENOVO\.dsh\cordis.patch.yml
+    结论：文件不存在 ⇒ 该注入点本机不携带任何内容（无 toolkit id / 无覆盖声明 —— 载体不存在）
+
+── E1 环境层 .env
+    路径：C:\Users\LENOVO\.dsh\.env
+    结论：文件不存在 ⇒ 该注入点本机不携带任何内容（无 toolkit id / 无覆盖声明 —— 载体不存在）
+
+── #0 附加注记（判定侧点名）：「启动重写为 []」的当前实际值
+    文件头注释自陈："Edit cordis.patch.yml, not this file."
+    当前实际值 = "# dsh profile root — an empty entry list. The tree is composed as patches:\n# each bundle in package.json's dsh.profile.bundles, then cordis.patch.yml, then any\n# --patch overlays. Edit cordis.patch.yml, not this file.\n[]"
+    ⇒ 与源码定案一致（profile-boot:124-130 重写为 []；:209 无条件 writeFileSync），当前为空 entry 列表。
+
+── #5 注入点 5 · telemetry 合成补丁开关（env）
+    process.env.DSH_TELEMETRY_DISABLED = undefined（本进程 env 继承自 DSH 启动链）
+    语义（api-notes §③.1 #5 / profile-boot:184-190,249-250）：仅当该值非空且组合含 session-telemetry-otel 行时生成合成补丁。
+    结论：取值为 空（undefined）⇒ telemetry 合成补丁不生成，注入点 5 本机无效。
+
+── #4 注入点 4 · --patch overlay：无磁盘载体（CLI 参数），本次运行未使用 ⇒ 不适用（已注，不扫描）。
+
+────────────────────────────────────────────────────────────────────────────
+RESULT: 6 项结论落档（#0 / #2 / #3 / E1 / #5 五个扫描点 + #4 不适用注记）
+  · #0 profile 根配置（base，启动重写） = 无 toolkit id / 无覆盖声明
+  · #2 profile 用户 patch 层 = 无 toolkit id / 无覆盖声明
+  · #3 home 用户 patch 层（原 U8） = 文件不存在
+  · E1 环境层 .env = 文件不存在
+  · #5 DSH_TELEMETRY_DISABLED = undefined ⇒ 注入点 5 无效
+  · #4 --patch = 不适用（已注）
+总评：至此 Q2 注入点全表穷尽 ✓ —— 红线外此前已扫（#1 全扫 / E2 定案 / E3 / E4），
+      红线内 4 点本轮全落结论：无任何一处携带 toolkit id 行或覆盖声明（#3 / E1 载体不存在，#0 = []，#2 = []）。
+      本脚本全程只读；未改任何被扫文件。
+────────────────────────────────────────────────────────────────────────────
