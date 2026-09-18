@@ -1,0 +1,68 @@
+P2.1 两段式框架 —— 真实写操作证据
+生成时刻: 2026-09-17T15:43:18.746Z
+
+[0] 真实 cordis.patch.yml 全程只读
+    路径 : D:\dsh-plugins\dsh-toolkit\cordis.patch.yml
+    sha  : ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9
+
+[1] 目标副本（模拟被管理的文件）
+    路径 : D:\dsh-plugins\dsh-toolkit\.panel-backups\p21-evidence-2026-09-17T15-43-18-742Z\cordis.patch.yml
+    sha  : ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9   ← 与真实文件一致
+
+[2] 第一段 plan（只读，不落盘）
+    token        : 4f9fefcef9646dbd8a6b40409e2f370a
+    目标文件     : D:\dsh-plugins\dsh-toolkit\.panel-backups\p21-evidence-2026-09-17T15-43-18-742Z\cordis.patch.yml
+    锚点行       : 第 14 行  (`- id: rate-throttle`)
+    改动键       : disabled = true
+    diff 预览    : ["+       disabled: true"]
+    expectedSha  : ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9
+    nextSha      : 3d711ad899d05ac8a16b285992677967d1aa5f5fc5627820af2891a4fbb22337
+    有效期至     : 2026-09-17T15:48:18.747Z
+    落盘校验     : 文件 sha 未变 = true
+
+[3] 第二段 execute（落盘）
+    ok           : true
+    shaBefore    : ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9
+    shaAfter     : 3d711ad899d05ac8a16b285992677967d1aa5f5fc5627820af2891a4fbb22337
+    sha 变化     : true
+
+[4] 写前备份产物（硬要求：每次写操作有备份为证）
+    备份目录     : D:\dsh-plugins\dsh-toolkit\.panel-backups\p21-evidence-2026-09-17T15-43-18-742Z\write-backups\2026-09-17T15-43-18-768Z
+    目录存在     : true
+    manifest     : {
+                         "stamp": "2026-09-17T15-43-18-768Z",
+                         "createdAt": "2026-09-17T15:43:18.769Z",
+                         "reason": null,
+                         "note": null,
+                         "files": [
+                               {
+                                     "abs": "D:\\dsh-plugins\\dsh-toolkit\\.panel-backups\\p21-evidence-2026-09-17T15-43-18-742Z\\cordis.patch.yml",
+                                     "savedAs": "D:__dsh-plugins__dsh-toolkit__.panel-backups__p21-evidence-2026-09-17T15-43-18-742Z__cordis.patch.yml",
+                                     "sha256": "ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9"
+                               }
+                         ]
+                   }
+    备份副本     : D:\dsh-plugins\dsh-toolkit\.panel-backups\p21-evidence-2026-09-17T15-43-18-742Z\write-backups\2026-09-17T15-43-18-768Z\D:__dsh-plugins__dsh-toolkit__.panel-backups__p21-evidence-2026-09-17T15-43-18-742Z__cordis.patch.yml
+    副本存在     : true
+    副本 sha     : ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9
+    == 写前 sha  : true
+
+[5] 回滚能力（用备份还原）
+    还原后 sha   : ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9
+    == 写前 sha  : true
+
+[6] SHA 冲突检测（篡改后 execute）
+    抛错 code    : sha-conflict
+    人话信息     : 文件在方案生成后被改动过（期望 ce0b0b81c91c…，实际 afea1e279885…），已拒绝写入
+    映射 HTTP    : 409
+    文件未被覆盖 : true
+
+[7] 落盘后的实际内容（rate-throttle 块前 4 行）
+     14 |     - id: rate-throttle
+     15 |       disabled: true
+     16 |       name: '@local/dsh-toolkit/rate-throttle'
+     17 |       config:
+
+[8] 真实文件终态校验
+    sha          : ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9
+    仍等于初始   : true

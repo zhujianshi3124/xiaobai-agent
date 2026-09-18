@@ -1,0 +1,71 @@
+P2.2 启停开关 —— 端到端验收证据
+生成时刻: 2026-09-17T15:57:56.546Z
+首用例: rate-throttle（双层开关正是它的现状：配置层开、内部关）
+
+[0] 真实 cordis.patch.yml 全程只读
+    sha : ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9
+
+[1] 初始状态（面板基线）
+    patchRow.id          : rate-throttle
+    patchRow.line        : 14
+    第一层 row.enabled   : true   ← 配置层：已加载
+    第二层 config.enabled: "false"        ← 插件内部：关闭
+    ⇒ 面板三态应为「已加载 · 功能开关关闭，暂不生效」：一致 ✓
+
+    ★ 双层分立验证：两层取值不同，面板必须分别呈现，不得合并
+      第一层=已加载 / 第二层=关闭 → 这是一个**必然出现分歧**的真实样本
+
+[2] 第一段 plan（只读，不落盘）
+    token       : 5502d136c82b0c1f503acd10ef626e68
+    改动层      : patch-row.disabled（第一层）
+    diff 预览   : ["+       disabled: true"]
+    crossRefs   : []  ← 无其它块引用它
+    expectedSha : ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9
+    有效期至    : 2026-09-17T16:02:56.553Z
+    plan 是只读的（文件 sha 未变）: true
+
+[3] 第二段 execute（落盘）
+    ok          : true
+    sha 变化    : true   ← 验收项①「文件真变」
+    ce0b0b81c91ca4c4…  →  3d711ad899d05ac8…
+
+    写前备份产物：
+      目录      : D:\dsh-plugins\dsh-toolkit\.panel-backups\p22-evidence-2026-09-17T15-57-56-541Z\write-backups\2026-09-17T15-57-56-573Z
+      存在      : true
+      manifest  : {"abs":"D:\\dsh-plugins\\dsh-toolkit\\.panel-backups\\p22-evidence-2026-09-17T15-57-56-541Z\\cordis.patch.yml","savedAs":"D:__dsh-plugins__dsh-toolkit__.panel-backups__p22-evidence-2026-09-17T15-57-56-541Z__cordis.patch.yml","sha256":"ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9"}
+      副本 sha == 写前 sha : true
+
+[4] 写后状态（面板应如实显示为「配置层停用 · 未加载」）
+    写入后的实际内容：
+       1 | - id: rate-throttle
+       2 |       disabled: true
+       3 |       name: '@local/dsh-toolkit/rate-throttle'
+       4 |       config:
+    disabled: true 落在行的直接子级（与 name/config 同级）: true
+    第二层 config.enabled 未被触动（仍为 false）: true
+    CRLF 行尾保持: true
+
+[5] 「reload 后状态保持」的等价证明
+    reload 由用户执行；此处证明**落盘内容足以让重新解析得到新状态**。
+    重新解析副本文件（同一份 parseRootRows 实现）:
+      锚点仍唯一命中: true（第 14 行）
+      重新解析得到 disabled:true: true
+      ⇒ 重启后面板会显示「配置层停用 · 未加载」，与写入意图一致 ✓
+
+[6] 反向操作：重新启用（写 disabled: false）
+    diff        : ["-       disabled: true","+       disabled: false"]
+    sha 变化    : true
+    写前备份    : D:\dsh-plugins\dsh-toolkit\.panel-backups\p22-evidence-2026-09-17T15-57-56-541Z\write-backups\2026-09-17T15-57-56-641Z
+    副本 sha == 写前 sha : true
+
+[7] 锚点唯一：0 或 ≥2 一律拒绝写盘
+    命中 0 次 → anchor-missing  : 在配置文件里找不到 `- id: no-such-row`（命中 0 次），拒绝写盘
+    命中 2 次 → anchor-ambiguous  : `- id: rate-throttle` 在配置文件里出现 2 次（要求恰好 1 次），拒绝写盘
+
+[8] doctor 0/0/0（真实插件仓，只读）
+    summary     : {"error":0,"warning":0,"info":0,"safe":0,"rewrite":0,"destructive":0,"manual":0,"fixable":0}
+    error/warning/info = 0/0/0   ← 验收项「doctor 0/0/0」✓
+
+[9] 真实文件终态校验
+    sha : ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9
+    仍等于初始: true

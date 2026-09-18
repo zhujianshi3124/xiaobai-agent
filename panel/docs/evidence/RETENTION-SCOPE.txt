@@ -1,0 +1,25 @@
+PASS E1a engine default backupRoot is derived from toolkitRoot (panel/index.js) -- panel/index.js 出现 join(toolkitRoot, ".panel-write-backups")
+PASS E1b engine default backupRoot != manual archive dir -- D:\dsh-plugins\dsh-toolkit\.panel-write-backups  vs  D:\dsh-plugins\dsh-toolkit\.panel-backups
+PASS E1c neither dir is a parent/child of the other -- 二者为同级目录
+PASS E1d manual archive dir is git-ignored (raw archives never enter git) -- .gitignore 含 .panel-backups/
+PASS E1e manual archive dir exists on disk (so this is a real, non-hypothetical exclusion)
+PASS E2a listBackups only counts subdirs that carry manifest.json -- backup.mjs listBackups 过滤器命中
+PASS E2b listBackups on a nonexistent root returns empty (no throw, nothing to prune)
+PASS E3a pruning actually ran on the engine root -- removed=5 left=40 (45 -> 40, maxTotal=40)
+PASS E3b manual archive unchanged byte-for-byte after pruning -- manual files=3
+PASS E3c manual archive entry count unchanged -- entries=pre-p22b-fullcard-20260918,restart-logs
+PASS E3d manual archive still exists as a directory (not removed recursively)
+PASS E3e every changed path is under write-backups/ (no out-of-root deletion) -- 差异集合 ⊆ write-backups/
+PASS E3f pruning created nothing outside the engine root
+PASS E4a engine default backupRoot does not exist on disk => pruning has never run in production -- D:\dsh-plugins\dsh-toolkit\.panel-write-backups 不存在
+PASS E4b manual archive dir is therefore trivially intact -- manual archive entries=17
+
+15/15 PASS
+
+=== 裁剪排除证据（存档用） ===
+引擎默认 backupRoot      : D:\dsh-plugins\dsh-toolkit\.panel-write-backups  (exists=false)
+人工留档目录             : D:\dsh-plugins\dsh-toolkit\.panel-backups  (exists=true, entries=17)
+两者关系                 : 同级目录，非同一、非父子
+listBackups 过滤条件     : 只认含 manifest.json 的子目录
+运行时装裁剪 45 份 ->     : kept=40 removed=5
+同父目录下 manual-archive: 3 个文件，逐字节不变

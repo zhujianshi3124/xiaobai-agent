@@ -1,0 +1,86 @@
+P2.2b 全卡覆盖 + Q1(disabled 平台行为) + Q2(层间覆盖) —— 验收证据
+生成时刻: 2026-09-18T00:13:52.629Z
+首用例仍是 rate-throttle；本轮补齐全部可 toggle 卡。
+
+[0] 真实 cordis.patch.yml 全程只读
+    sha : ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9
+
+[1] 卡片口径（权威）
+    面板卡片数 = 5（= lib/ 下带 dsh.plugin.json 的目录）
+      - agent-memory      包名 @local/dsh-toolkit/agent-memory        patch 行 agent-memory-runtime 第 74 行  toggle 开放
+      - compact-router    包名 @local/dsh-toolkit/compact-router      patch 行 （无）          toggle 不开放
+      - rate-throttle     包名 @local/dsh-toolkit/rate-throttle       patch 行 rate-throttle        第 14 行  toggle 开放
+      - search-router     包名 @local/dsh-toolkit/search-router       patch 行 web-search-router    第 64 行  toggle 开放
+      - web-search-local  包名 @local/dsh-toolkit/web-search-local    patch 行 web-search-local     第 58 行  toggle 开放
+    self = {"id":"toolkit-manager","name":"file:///D:/dsh-plugins/dsh-toolkit/panel/index.js","managedBy":"patch","enabled":true}  ← toolkit-manager 只出现在页头元信息行，不成卡
+
+[2] 全卡 toggle dry-run（每卡真跑一次 plan，只读）
+    agent-memory      锚点第 74 行 | diff ["+       disabled: true"] | 交叉引用 0 处 | plan 只读 true
+    compact-router : 无 toggle（不适用）
+    rate-throttle     锚点第 14 行 | diff ["+       disabled: true"] | 交叉引用 0 处 | plan 只读 true
+    search-router     锚点第 64 行 | diff ["+       disabled: true"] | 交叉引用 0 处 | plan 只读 true
+    web-search-local  锚点第 58 行 | diff ["+       disabled: true"] | 交叉引用 0 处 | plan 只读 true
+    强制对它走 toggle 的探针 : anchor-missing（文件里没有这一行，锚点唯一性把它挡下）
+
+[3] 真实写操作（agent-memory 卡，用户实际点击的那张）
+    目标行      : 第 74 行 - id: agent-memory-runtime
+    SHA 变化    : true   ce0b0b81c91ca4c4… → 77279ccbb15b8c85…
+    备份目录    : D:\dsh-plugins\dsh-toolkit\.panel-backups\p22b-evidence-2026-09-18T00-13-52-624Z\write-backups\2026-09-18T00-13-52-654Z
+    副本 sha == 写前 sha : true
+    写入后的实际内容：
+        74 |     - id: agent-memory-runtime
+        75 |       disabled: true
+        76 |       name: '@local/dsh-toolkit/agent-memory/plugin'
+        77 |       config:
+    disabled 与 name/config 同级（未写进 config 子树）: true
+    第二层 config 未被触动: true
+    CRLF 保持  : true
+
+[4] Q1：disabled 的平台条件写法（!!js）
+    框架事实（源码级）：
+      · YAML 方言自定义标签 !!js → tag:yaml.org,2002:js
+        dsh-app-boot/lib/index.js:17  JsExpr.construct = (data) => ({ __jsExpr: data })
+      · Loader 在条目激活时求值：
+        cordis-plugin-loader/lib/index.js:378
+          isJsExpr(options.disabled) ? Boolean(this.evaluate(options.disabled.__jsExpr)) : Boolean(options.disabled)
+        cordis-plugin-loader/lib/index.js:289  evaluate = new Function("ctx","expr","with(ctx){return eval(expr)}")
+      · disabled 还会**沿父条目继承**（_disabled 向上遍历 parent）
+      · 生态内真实用例：dsh-liangshen/presets/liangshen/agent.cordis.yml:144,179
+          disabled: !!js process.platform === 'win32'  /  !== 'win32'
+          dsh-better-sidebar/cordis.patch.yml:49
+    本仓现状：cordis.patch.yml 里 disabled 全部是字面量（web-search-deepseek: false）或缺失，**没有 !!js**。
+    危害（已实测，不是推断）：
+      ① 读侧：parseRootRows 把该行报成 enabled=true（不是 true/false 就当开着）
+         → 而 loader 在 win32 上会**真的停用**它 ⇒ 面板呈现与事实相反
+      ② 写侧：改写会把表达式抹成硬布尔
+         readRowDisabledLiteral → {"line":15,"raw":"!!js process.platform === 'win32'","literal":false}
+         createTogglePlan → value-not-literal（拒绝写盘）
+         文件未被改动: true
+         （若不加闸，diff 会是 ["- disabled: !!js process.platform === 'win32'", "+ disabled: true"]）
+
+[5] Q2：层间覆盖检查
+    结论：两层**正交、无覆盖**；层 1 管「有没有被加载」，层 2 管「加载了但自己关掉」。
+          层 1 关闭时层 2 的取值不再被读取（插件根本没加载），但两者不互相改写。
+    ① 改写层 1 后，每一行的层 2（config 子树）逐字节不变: true
+    ② 目标行层 2 仍为 false: true
+    ③ 连带效应：插入一行使后续锚点位移 74 → 75（已记录）
+    ④ 位移后的陈旧 plan 被 SHA 拦下: sha-conflict（插入行 → SHA 变 → 拒绝）
+
+[6] doctor dry-run（真实插件仓，只读）
+    summary = {"error":0,"warning":0,"info":0,"safe":0,"rewrite":0,"destructive":0,"manual":0,"fixable":0}
+    error/warning/info = 0/0/0   issues=0
+
+[7] 真实文件终态
+    sha = ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9
+    仍等于初始: true
+
+[8] 测试全绿
+    p22-verify.mjs     98/98   （含全卡覆盖 / compact-router 无 toggle / 注释负例 / !!js 闸 / 层间真值表）
+    p22-cards-ui.mjs   71/71   （把 5 张卡分别喂给两套真实渲染器）
+    p21-verify.mjs     46/46
+    p1-smoke.mjs      185/185  （167 → 185）
+    p2-smoke.mjs       16/16
+    node --test        92/92
+    pluggable-lint     通过
+
+备份根目录（本次真实写操作产物所在）: D:\dsh-plugins\dsh-toolkit\.panel-backups\p22b-evidence-2026-09-18T00-13-52-624Z\write-backups

@@ -498,4 +498,155 @@ body-too-large                                   → 413
 
 **一条真实文件的注释负例（顺带发现，值得留档）**：`cordis.patch.yml` **第 2 行注释**里写着 `web-search-local`。若「跳过注释行」这条规则失效，`web-search-local` 就会凭空多出一条交叉引用告警。现已双向断言：**该注释行确实存在**（前提）+ **规则确实抑制了它**（结论）+ **去掉 `#` 后规则就会命中**（反证抑制来自注释规则而非别的原因）。
 
+### 11.11 「故障」警报解除 + 三条新事实 + 转述失真教训 + Q4–Q7 收口（2026-09-18 08:53）
+
+#### 一、「故障」警报解除（**撤销**上轮的故障排查二选一问题）
+
+上轮判定者侧把 `rate-throttle` 的**黄色双层不一致状态**概括成了「**故障**」。用户口述确认：
+**UI 上没有任何「故障」字样。** 实际含义是 ——
+
+> 黄色「已加载，功能开关关闭，暂不生效」= **设计内展示**。`rate-throttle` 正是「两层取值相反」的样本卡
+> （层 1 `row.enabled=true` / 层 2 `config.enabled="false"`），合并显示会得到一个无意义的中间态，
+> 所以必须分立两行、各带色标（见 11.9 约定 1）。
+
+**结论：面板无故障。上轮发出的「故障排查二选一」问题撤销，不答复。** 口径记入 `HANDOFF-MASTER.md` §7 目视清单。
+
+#### 二、三条新事实入账
+
+| # | 事实 | 意义 |
+|---|---|---|
+| **a** | 该黄色状态**自 P2.2 reload 后持续存在**，且用户称今日有过一次重启、跨日复看仍一致 | 「**reload 后状态保持**」再添旁证 —— 这是 P2.2 验收标准里唯一命令行无法自证的一条 |
+| **b** | doctor UI 显示「**没有发现任何问题**」，与服务端 `0/0/0`（`issues: []`）一致 | **读侧对账通过**：呈现层与计算层一致，无口径漂移 |
+| **c** | P2.2 落库后经用户侧重启，**系统整体健康**（面板可用、5 卡正常、体检干净） | P2.2 的真实环境终态成立 |
+
+#### 三、教训留档：**图片转述链路两次失真**（本轮判定者踩了自己立的规矩）
+
+本轮「图片→文字转述→判定」这条链路**两次失真**：
+
+1. **「compact-memory」串读** —— 5 张卡里根本没有这个名字；实为 `agent-memory` 与 `compact-router` 两个独立插件被读成一个（见 11.10 §一）。
+2. **「故障」误读** —— 把设计内的黄色双层不一致状态读成了故障（见本节一）。
+
+**两条失真都不是面板的问题，而是转述环节丢了字面。** 教训（即刻生效）：
+
+> **今后验收关键状态词，一律要用户念原文，或放大截图逐字读，不得以图片转述内容作为判定依据。**
+> 转述只能用来**定位问题区域**，不能用来**确认状态字符串**。
+
+**这条规矩此前是本任务自己立下的，本轮由判定者自己踩破，一并记录在案。**
+（对应 `HANDOFF-MASTER.md` §1 优先级：用户当轮指令 > 口径节 > 阶段表 > 台账。）
+
+#### 四、Q4 —— 证据正本入库 + 裁剪排除证据
+
+**问题**：验收证据此前只存在于 `.panel-backups/`，而该目录被 `.gitignore` 排除 ⇒ **仓库自身无法自证**。
+
+**处置**：
+1. **证据正本入库** —— 新建 `panel/docs/evidence/`，把三份证据**逐字节复制**进去（复制后比对 sha256 一致才落盘）：
+
+   | 归档文件 | 来源 | sha256 |
+   |---|---|---|
+   | `P2.1-EVIDENCE.txt` | `.panel-backups/p21-evidence-2026-09-17T15-43-18-742Z/` | `e9cdaa74…0a6fcb05` |
+   | `P2.2-EVIDENCE.txt` | `.panel-backups/p22-evidence-2026-09-17T15-57-56-541Z/` | `166162917bd2bda9…29092d90` |
+   | `P2.2b-EVIDENCE.txt` | `.panel-backups/p22b-evidence-2026-09-18T00-13-52-624Z/` | `b802c99b…5472b681` |
+
+2. **裁剪排除证据**（新增脚本 `scripts/p22b-retention-scope.mjs`，**15/15 PASS**，输出存档 `panel/docs/evidence/RETENTION-SCOPE.txt`）。
+   命题：保留策略 `pruneBackups()` **只在自己收到的 `backupRoot` 内裁剪**，绝不删除人工留档目录、绝不改动根外文件。四路独立证据：
+
+   | 路 | 证据 | 结果 |
+   |---|---|---|
+   | E1 目录不同源 | 引擎默认 `backupRoot = <toolkitRoot>/.panel-write-backups`（`panel/index.js:175`）；人工留档 `<toolkitRoot>/.panel-backups` | 同级、非同一、非父子；后者在 `.gitignore` 内 |
+   | E2 清单过滤 | `listBackups()` 只认含 `manifest.json` 的子目录（`backup.mjs:25-31`）；根不存在 → `[]` | 裸目录天然不在视野；根不存在时裁剪是**空操作**（不抛错） |
+   | E3 运行时隔离 | 同父目录并排 `write-backups/`(45) 与 `manual-archive/`，对前者跑裁剪 | 45→40（`removed=5`）；`manual-archive/` **逐字节不变**；**差异集合 ⊆ `write-backups/`**，根外零增删 |
+   | E4 生产实况 | 默认根 `.panel-write-backups` **不存在** | 生产**从未跑过裁剪**；人工留档 17 条目完好 |
+
+   **E3 刻意在人工归档里也放了一个 `manifest.json` 作诱饵** —— 证明即便有 manifest，也因「不在 backupRoot 之内」而不会被越界删除（不依赖"没有 manifest 所以看不见"这个脆前提）。
+
+3. **一条必须知道的生产事实**：默认 `backupRoot` **从未被创建** ⇒ **用户尚未通过面板真实执行过任何 toggle/plan 落盘**，
+   生产 `cordis.patch.yml` 至今未被面板改过（sha `ce0b0b81…` 自 P2 起点未变）。此前「真实写操作」证据都是在
+   **脚本显式指定 `backupRoot`** 的条件下产生的。
+
+#### 五、Q5 —— `change: true` 一致性（引 guard 代码行）
+
+| 路由 | `path:` 行 | 写守卫 | 方法 | 性质 |
+|---|---|---|---|---|
+| `/api/toolkit-panel/ui` | 225 | —（只读） | GET | 读 |
+| `/api/toolkit-panel/snapshot` | 238 | —（只读） | GET | 读 |
+| `/api/toolkit-panel/doctor/dry-run` | 250 | **`{ change: true }` @259** | POST | ⚠️ **见下** |
+| `/api/toolkit-panel/plan` | 265 | **`{ change: true }` @306** | POST | 写（签发令牌） |
+| `/api/toolkit-panel/toggle/plan` | 314 | **`{ change: true }` @360** | POST | 写（签发令牌） |
+| `/api/toolkit-panel/execute` | 365 | **`{ change: true }` @381** | POST | 写（唯一落盘） |
+| `/api/toolkit-panel/plan/status` | 386 | —（只读） | GET | 读 |
+
+**guard 代码行**：`isAllowedRead` @180 · `isAllowedWrite` @191（**禁 fallback**）· `guard()` @200 ·
+`const isWrite = options.change === true` @201。
+
+**结论**：**会改状态/签发令牌的 3 条路由全部正确标了 `{ change: true }`；3 条只读路由全部未标。一致性成立。**
+
+**⚠️ 一处如实标注的「过度收口」**：`doctor/dry-run`（@259）并**不改变状态、不签发令牌**，
+按 11.8 约定 1 的判据本可标只读，但它标了 `{ change: true }`。
+**这是 fail-closed 方向的偏差**（更严，不是更松）：该路由因此要求严格配对 + CSRF 安全来源。
+在桌面 loopback 场景无功能影响（`isLoopbackHost` 直接放行），远程配对场景仍可正常走服务校验。
+**建议保留**；若用户要求与判据完全对齐，再降为只读 —— **本轮不擅自改动**。
+
+#### 六、Q6 —— `git status` 全量 + 两提交 diff 摘要
+
+**`git status --porcelain=v1 -uall`（全量）**：
+
+```
+ M cordis.patch.yml
+```
+
+> **唯一未提交改动 = 运行配置的 4 行**（`- insert:` / `- id: toolkit-manager` / `name: 'file:///D:/dsh-plugins/dsh-toolkit/panel/index.js'`）。
+> 这不是本轮新增，**L-023-① 结论 2 已逐版对账过**（19:55 由 P2 行名改 path-like 产生，有据可查），
+> 按 11 节程序**待重启验收后单独处置**，故仍处未提交态。**除它之外工作区干净，无 untracked。**
+
+**两提交 diff 摘要**：
+
+| commit | 标题 | 变更 |
+|---|---|---|
+| `558e62f` | feat(toolkit): P2.2b 全卡覆盖 + Q1 非字面量 disabled 安全闸 + 确认页人话 | 8 文件，**+719 / −8**：`client/index.js`(+41) · `client/panel.html`(+29) · `panel/index.js`(+2) · `manager/apply-engine.mjs`(+35) · `manager/snapshot.mjs`(+9) · `scripts/p1-smoke.mjs`(+41) · **`scripts/p22-cards-ui.mjs`(+343 新增)** · `scripts/p22-verify.mjs`(+227) |
+| `f6d99eb` | docs(toolkit): 台账 L-030 + handoff 11.10 —— 卡片口径 / 覆盖缺口闭合 / Q1 与 Q2 证据 | 2 文件，**+169 / −3**：`panel/docs/handoff-restart.md`(+94) · `panel/docs/ledger.md`(+78/−3) |
+
+**HEAD** = `f6d99eb`。
+
+#### 七、Q7 —— 实际文案字符串（逐字）
+
+**用词是「两层开关」，不是「两层数据」。**
+
+- `panel/client/index.js:210` = `"⚠ 两层开关不一致，所以现在没生效"`
+- `panel/client/panel.html:178` = 同上（**两套渲染器逐字一致**）
+
+设计意图：这两层的分歧发生在**开关（`enabled` / `disabled`）**上，说「数据」会让用户以为是配置值不同。
+**结论：用词正确，属设计内，不改。**
+
+#### 八、用户截图文案确认（用户第 5 点）
+
+用户截图见 `web-search-local` 卡开关旁有「两层，改第一层」类说明，问是否设计内、4 张开放卡是否一致。**答复：是设计内，且逐字一致。**
+
+| 逐字文案 | `client/index.js` | `client/panel.html` |
+|---|---|---|
+| `启停开关（两层分开，改的是第一层）` | 390 | 245 |
+| `停用（改第一层）` | 414 | 258 |
+
+**已并入 reload 目视清单**（`HANDOFF-MASTER.md` §7 的 C1/C2/C3）。
+
+#### 九、Q2 / Q3 状态（未闭环，需用户）
+
+- **Q2 四层 patch 栈扫描** —— **受阻于授权**。四层分别是：① `cordis.patch.yml`（顶层 patch）② `lib/*/dsh.plugin.json`（5 份）③ `panel/dsh.plugin.json` ④ `scripts/apply-preset-patch.mjs`（预设改写器）。其中①②③**全在仓内、本轮已扫完**；**第④层会触达 `~/.dsh`**（`USER_PRESETS_DIR = ~/.dsh/.agent-presets`，`apply-preset-patch.mjs:31`；另 `panel/index.js:96` 的只读兜底读 `~/.dsh/remote-web-ui-devices.json`）。**按用户「涉 ~/.dsh 先申请只读授权」的要求，未擅自读取，待授权。**
+  另注：`preset-backups/` 与 `preset-patch-state.json` **已存在于仓内** ⇒ 该脚本**曾被执行过**（可据此复核，无需读 `~/.dsh` 即可部分对账）。
+- **Q3 `HANDOFF-MASTER.md`** —— **磁盘上此前不存在**（正本仓 + 沙箱均 0 命中）。本轮**按用户点名的三要素新建**：`panel/docs/HANDOFF-MASTER.md`（头部时间戳 / §3「5 行 / 5 卡」口径 / §4 常驻进度行），并顺带纳入 §7 用户可见文案口径。**若所指另有其文，请指出即迁。**
+
+#### 十、本轮复跑计数（全绿）
+
+| 脚本 | 结果 |
+|---|---|
+| `scripts/p22-verify.mjs` | **98/98** |
+| `scripts/p22-cards-ui.mjs` | **71/71** |
+| `scripts/p1-smoke.mjs` | **185/185** |
+| `scripts/p21-verify.mjs` | **46/46** |
+| `scripts/p2-smoke.mjs` | **16/16** |
+| `node --test` | **92/92** |
+| `scripts/p22b-retention-scope.mjs` | **15/15**（新增） |
+| `pluggable-lint` | 通过 |
+| doctor | **0/0/0** |
+| 真实 `cordis.patch.yml` | **sha 未变**：`ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9`（size 3097） |
+
 
