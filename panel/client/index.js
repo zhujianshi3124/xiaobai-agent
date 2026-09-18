@@ -42,6 +42,31 @@ window.__ModuleLoader__.load({
 			return cn ? en + "（" + cn + "）" : en;
 		}
 
+		// ---- P2.4 缺席态六态（服务端 statusCopy 为权威；此处只作兜底）----
+		var ABSENCE_COPY_FALLBACK = {
+			"soft-unmounted": "已软卸载 · 本体保留 · 可一键恢复",
+			"true-uninstalled": "已卸载（真）· 本体已移入保管区 · 可一键恢复",
+			"installed-unmounted": "已安装未挂载（不是面板卸载的）· 可从面板重新挂载",
+			"dangling-mount": "挂载行存在，但本体缺失 · 异常态",
+			"unknown-absent": "未安装"
+		};
+		// §2 用的中文名。注意与卡片副标题的 CN_NAMES **不同源**（§2 里 compact-router 叫
+		// 「压缩」，副标题叫「上下文压缩」）—— 弹窗一律以 panel/docs/p24-test-plan-batch1.md
+		// §2 为准，一字不改。
+		var P24_CN = {
+			"agent-memory": "记忆",
+			"compact-router": "压缩",
+			"rate-throttle": "限流",
+			"search-router": "搜索路由",
+			"web-search-local": "本地搜索"
+		};
+		function p24Name(plugin) {
+			var cn = P24_CN[(plugin && plugin.dir) || ""];
+			return (cn ? cn + " " : "") + originalName(plugin);
+		}
+		// §2.9 完成后页面横幅（逐字）
+		var RESTORE_DONE_BANNER = "恢复完成，重启后生效";
+
 		var styles = {
 			root: { fontFamily: "system-ui, \"Segoe UI\", sans-serif", color: "#e6e6e6" },
 			title: { fontSize: 20, margin: "0 0 4px" },
@@ -117,7 +142,28 @@ window.__ModuleLoader__.load({
 			cfgInput: { width: 110, padding: "2px 6px", borderRadius: 4, border: "1px solid #2c3c36", background: "#101413", color: "#d7e2dc", fontSize: 12, fontFamily: "ui-monospace, Consolas, monospace" },
 			cfgSave: { padding: "2px 8px", borderRadius: 4, border: "1px solid #2c5a4a", background: "#12241e", color: "#9fd8c0", cursor: "pointer", fontSize: 11 },
 			modeBox: { marginTop: 10, padding: "8px 10px", borderRadius: 6, background: "#161a22", border: "1px solid #2a2f36" },
-			modeLine: { fontSize: 11.5, color: "#a9aeb5", lineHeight: 1.8 }
+			modeLine: { fontSize: 11.5, color: "#a9aeb5", lineHeight: 1.8 },
+			// ---- P2.4 缺席态（六态）----
+			absBox: { margin: "0 0 10px", padding: "8px 10px", borderRadius: 6, background: "#1a1f27", border: "1px solid #3a3f47" },
+			absBoxWarn: { margin: "0 0 10px", padding: "8px 10px", borderRadius: 6, background: "#2a2210", border: "1px solid #6b5a1e" },
+			absHead: { fontSize: 12, fontWeight: 700, marginBottom: 4, color: "#c8cdd4" },
+			absHeadWarn: { fontSize: 12, fontWeight: 700, marginBottom: 4, color: "#fbbf24" },
+			absLine: { fontSize: 12, color: "#d7dae0", lineHeight: 1.7 },
+			// ---- P2.4 卸载 / 恢复 ----
+			uninBox: { marginTop: 10, padding: "8px 10px", borderRadius: 6, background: "#1d1a1c", border: "1px solid #4a3236" },
+			uninHead: { fontSize: 12, fontWeight: 700, color: "#eba0a0", marginBottom: 6 },
+			uninRow: { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 6 },
+			btnOpen: { padding: "4px 10px", borderRadius: 4, border: "1px solid #4a4048", background: "#221d22", color: "#e0cfe0", cursor: "pointer", fontSize: 12 },
+			btnRest: { padding: "4px 10px", borderRadius: 4, border: "1px solid #2c5a4a", background: "#12241e", color: "#9fd8c0", cursor: "pointer", fontSize: 12 },
+			dlgBox: { marginTop: 8, padding: "8px 10px", borderRadius: 6, background: "#1b2028", border: "1px solid #4a4048" },
+			dlgTitle: { fontSize: 12.5, fontWeight: 700, color: "#e8d9b0", marginBottom: 6 },
+			dlgKey: { fontSize: 11.5, fontWeight: 700, color: "#8f959d", marginTop: 6 },
+			dlgLine: { fontSize: 11.5, color: "#cfd4da", lineHeight: 1.8, wordBreak: "break-word" },
+			dlgLineBold: { fontSize: 11.5, color: "#cfd4da", lineHeight: 1.8, fontWeight: 700, wordBreak: "break-word" },
+			dlgInput: { width: "100%", boxSizing: "border-box", padding: "3px 6px", borderRadius: 4, border: "1px solid #3a4048", background: "#101413", color: "#e6e6e6", fontSize: 12, fontFamily: "ui-monospace, Consolas, monospace", marginTop: 3 },
+			dlgWarn: { marginTop: 6, padding: "6px 8px", borderRadius: 4, background: "#2a2210", border: "1px solid #6b5a1e", fontSize: 11.5, color: "#e0d5b7", lineHeight: 1.8 },
+			dlgErr: { fontSize: 11.5, color: "#f2a6a0" },
+			banner: { margin: "12px 0", padding: "10px 12px", borderRadius: 6, background: "#12241e", border: "1px solid #2c5a4a", color: "#9fd8c0", fontSize: 13 }
 		};
 
 		function Badge(props) {
@@ -185,6 +231,18 @@ window.__ModuleLoader__.load({
 		}
 		function stateOf(plugin, patchText) {
 			var row = plugin.patchRow;
+			// ---- P2.4 缺席态优先：服务端 status/statusCopy 为权威，不在场就不该再报「运行中」----
+			if (plugin.status === "dependency-broken") {
+				return { kind: "dependency-broken", label: plugin.statusCopy || "依赖缺失", style: styles.stateWarn, dot: styles.dotWarn };
+			}
+			if (plugin.status && plugin.status !== "mounted") {
+				return {
+					kind: plugin.status,
+					label: plugin.statusCopy || ABSENCE_COPY_FALLBACK[plugin.status] || "状态未知",
+					style: styles.stateOff,
+					dot: styles.dotOff
+				};
+			}
 			if (plugin.dir === "compact-router") {
 				// compact-router 由预设脚本管理，不在 patch 里；视为已加载且在生效
 				return { kind: "running", label: "运行中 · 正在生效", style: styles.stateOn, dot: styles.dotOn };
@@ -291,6 +349,7 @@ window.__ModuleLoader__.load({
 				cn ? react.createElement("div", { style: styles.subtitle }, cn) : null,
 				react.createElement("div", { style: styles.desc }, desc),
 				react.createElement(StateRow, { state: state }),
+				react.createElement(AbsenceBanner, { plugin: plugin }),
 				react.createElement(DualSwitchNotice, { plugin: plugin, patchText: patchText }),
 				react.createElement(ToggleControls, {
 					plugin: plugin,
@@ -300,6 +359,11 @@ window.__ModuleLoader__.load({
 				plugin.dir === "search-router"
 					? react.createElement(SearchRouterModeRow, { plugin: plugin })
 					: react.createElement(ConfigEditor, { plugin: plugin, onChanged: props.onChanged }),
+				react.createElement(P24Controls, {
+					plugin: plugin,
+					onChanged: props.onChanged,
+					showBanner: props.showBanner
+				}),
 				react.createElement(TechDetails, { plugin: plugin })
 			);
 		}
@@ -665,6 +729,428 @@ window.__ModuleLoader__.load({
 			);
 		}
 
+		// ============================================================
+		// P2.4 卸载 / 恢复（施工批 1 UI 收尾）
+		//
+		// 文案逐句来自 panel/docs/p24-test-plan-batch1.md §2 —— **一字不改**
+		// （markdown 的 ** 强调符按排版处理，字面文本原样保留）。
+		// 快照接线字段：status / statusCopy / restoreAvailable / defaultUninstallMode /
+		// conflict（冲突三态由 /restore/plan 返回的 host-key-conflict 结构化数据驱动）。
+		//
+		// ⚠ 如实申报：§2 未给「真卸载 rate-throttle / agent-memory」文案（§2.6–2.8 只给了
+		// 搜索路由 / 本地搜索 / 压缩）。此处按 §2.6 的 ①③ 句 + §2.8 的 ② 句逐句拼装
+		// （仅替换插件名与专属句），已在报判中申报，待判定侧补稿/追认。
+		// ============================================================
+		var UNINSTALL_COPY = {
+			"rate-throttle": {
+				soft: {
+					title: "软卸载「限流 rate-throttle」",
+					del: "让 DSH 下次启动时不再加载「限流」功能模块（不删除磁盘上的源代码文件，源码保留在本地）。",
+					consequence: "重启后，平台不再按当前面板里的限流参数进行限速；重启前仍按当前状态运行。",
+					timing: "本次执行后，将于下次重启时停用；重启前仍按当前状态运行。",
+					archive: "无需存档，源代码文件保留。",
+					restorePath: "面板 →「限流 rate-throttle」卡片 → 点「恢复」。",
+					restart: "恢复后需要重启才生效。",
+					confirm: "请手动输入 rate-throttle 后点「确认软卸载」，或点「取消」。"
+				},
+				true: {
+					title: "真卸载「限流 rate-throttle」——删除本体，先自动存档并校验",
+					del: "确认执行后：① 把磁盘上的限流源代码文件完整复制到面板保管区并逐文件校验；② 让 DSH 下次启动时不再加载该功能模块；③ 校验通过后再删除磁盘上的源代码文件。",
+					consequence: "重启后，平台不再按当前面板里的限流参数进行限速；重启前仍按当前状态运行。",
+					timing: "确认执行并校验通过后，删除立即完成；对运行中的系统，将在下次重启时停止使用；重启前仍按当前状态运行。",
+					archive: "将自动存档（确认执行后、删除前）：先把源码复制到面板保管区并逐文件校验，校验通过后才删除；校验失败则中止，不删除。",
+					restorePath: "面板 →「限流 rate-throttle」卡片 → 点「恢复」，即可从保管区一键恢复。",
+					restart: "恢复后需要重启才生效。",
+					confirm: "请手动输入 rate-throttle 两次并点「确认真卸载」，或点「取消」。"
+				}
+			},
+			"agent-memory": {
+				soft: {
+					title: "软卸载「记忆 agent-memory」",
+					del: "让 DSH 下次启动时不再加载「记忆」功能模块（不删除磁盘上的源代码文件，源码与已有记忆数据都保留）。",
+					consequence: "重启后，记忆内容在压缩结果里不再显示；重启前仍按当前状态运行。",
+					timing: "本次执行后，将于下次重启时停用；重启前仍按当前状态运行。",
+					archive: "无需存档，源代码与已有记忆数据保留。",
+					restorePath: "面板 →「记忆 agent-memory」卡片 → 点「恢复」。",
+					restart: "恢复后需要重启才生效。",
+					confirm: "请手动输入 agent-memory 后点「确认软卸载」，或点「取消」。"
+				},
+				true: {
+					title: "真卸载「记忆 agent-memory」——删除本体，先自动存档并校验",
+					del: "确认执行后：① 把磁盘上的记忆源代码文件完整复制到面板保管区并逐文件校验；② 让 DSH 下次启动时不再加载该功能模块；③ 校验通过后再删除磁盘上的源代码文件。",
+					consequence: "重启后，记忆内容在压缩结果里不再显示；重启前仍按当前状态运行。",
+					timing: "确认执行并校验通过后，删除立即完成；对运行中的系统，将在下次重启时停止使用；重启前仍按当前状态运行。",
+					archive: "将自动存档（确认执行后、删除前）：先把源码复制到面板保管区并逐文件校验，校验通过后才删除；校验失败则中止，不删除。",
+					restorePath: "面板 →「记忆 agent-memory」卡片 → 点「恢复」，即可从保管区一键恢复。",
+					restart: "恢复后需要重启才生效。",
+					confirm: "请手动输入 agent-memory 两次并点「确认真卸载」，或点「取消」。"
+				}
+			},
+			"compact-router": {
+				soft: {
+					title: "软卸载「压缩 compact-router」",
+					del: "让 DSH 下次启动时不再加载「压缩」功能模块的增强版本，恢复为系统自带版本（不删除磁盘上的源代码文件，源码保留在本地）。",
+					consequence: "重启后，平台使用系统自带的压缩功能；限流的自动换源降级功能会退化；记忆功能本身不受影响；重启前仍按当前状态运行。",
+					timing: "本次执行后，将于下次重启时停用本面板的压缩增强；重启前仍按当前状态运行。",
+					archive: "无需存档，源代码文件保留。",
+					restorePath: "面板 →「压缩 compact-router」卡片 → 点「恢复」。",
+					restart: "恢复后需要重启才生效。",
+					confirm: "请手动输入 compact-router 后点「确认软卸载」，或点「取消」。"
+				},
+				true: {
+					title: "真卸载「压缩 compact-router」——删除本体，先自动存档并校验",
+					del: "确认执行后：① 让 DSH 下次启动时恢复为系统自带压缩版本；② 把磁盘上的压缩源代码文件完整复制到面板保管区并逐文件校验；③ 校验通过后再删除磁盘上的源代码文件。",
+					consequence: "重启后，平台使用系统自带的压缩功能；限流的自动换源降级功能会退化；记忆功能本身不受影响；重启前仍按当前状态运行。",
+					timing: "确认执行并校验通过后，删除立即完成；对运行中的系统，将在下次重启时停止使用；重启前仍按当前状态运行。",
+					archive: "将自动存档（确认执行后、删除前）：先把源码复制到面板保管区并逐文件校验，校验通过后才删除；校验失败则中止，不删除。",
+					restorePath: "面板 →「压缩 compact-router」卡片 → 点「恢复」，即可从保管区一键恢复。",
+					restart: "恢复后需要重启才生效。",
+					confirm: "请手动输入 compact-router 两次并点「确认真卸载」，或点「取消」。"
+				}
+			},
+			"search-router": {
+				soft: {
+					title: "软卸载「搜索路由 search-router」",
+					del: "让 DSH 下次启动时不再加载「搜索路由」功能模块；把面板里一项网页搜索系统设置改回「系统默认（未指定）」（不删除磁盘上的源代码文件，源码保留在本地）。",
+					consequence: "重启后，网页搜索退回到系统默认行为：有哪个可用就用哪个，而不是指定本面板的搜索路由；重启前仍按当前状态运行。",
+					timing: "本次执行后，将于下次重启时停用；重启前仍按当前状态运行。",
+					archive: "无需存档，源代码文件保留。",
+					restorePath: "面板 →「搜索路由 search-router」卡片 → 点「恢复」。恢复时若那项系统设置已被其他程序改掉，面板会先提示你选择「保留当前值」还是「恢复成卸载前的值」，不会自动覆盖。",
+					restart: "恢复后需要重启才生效。",
+					confirm: "请手动输入 search-router 后点「确认软卸载」，或点「取消」。"
+				},
+				true: {
+					title: "真卸载「搜索路由 search-router」——删除本体，先自动存档并校验",
+					del: "确认执行后：① 把磁盘上的搜索路由源代码文件完整复制到面板保管区并逐文件校验；② 让 DSH 下次启动时不再加载该功能模块；③ 把面板里一项网页搜索系统设置改回「系统默认（未指定）」；④ 校验通过后再删除磁盘上的源代码文件。",
+					consequence: "重启后，网页搜索退回到系统默认行为；重启前仍按当前状态运行。你随时可以从面板保管区恢复。",
+					timing: "确认执行并校验通过后，删除立即完成；对运行中的系统，将在下次重启时停止使用；重启前仍按当前状态运行。",
+					archive: "将自动存档（确认执行后、删除前）：先把源码复制到面板保管区并逐文件校验，校验通过后才删除；校验失败则中止，不删除。",
+					restorePath: "面板 →「搜索路由 search-router」卡片 → 点「恢复」，即可从保管区一键恢复。",
+					restart: "恢复后需要重启才生效。",
+					confirm: "请手动输入 search-router 两次并点「确认真卸载」，或点「取消」。"
+				}
+			},
+			"web-search-local": {
+				soft: {
+					title: "软卸载「本地搜索 web-search-local」",
+					del: "让 DSH 下次启动时不再加载「本地搜索」功能模块；把面板里一项网页抓取系统设置改回「系统默认（未指定）」（不删除磁盘上的源代码文件，源码保留在本地）。",
+					consequence: "重启后，网页抓取退回到系统默认行为；「搜索路由」的搜索功能将不可用（它依赖本插件）；若需搜索请同时卸载或保留其一；重启前仍按当前状态运行。",
+					timing: "本次执行后，将于下次重启时停用；重启前仍按当前状态运行。",
+					archive: "无需存档，源代码文件保留。",
+					restorePath: "面板 →「本地搜索 web-search-local」卡片 → 点「恢复」。恢复时若那项系统设置已被其他程序改掉，面板会先提示你选择「保留当前值」还是「恢复成卸载前的值」，不会自动覆盖。",
+					restart: "恢复后需要重启才生效。",
+					confirm: "请手动输入 web-search-local 后点「确认软卸载」，或点「取消」。"
+				},
+				true: {
+					title: "真卸载「本地搜索 web-search-local」——删除本体，先自动存档并校验",
+					del: "确认执行后：① 把磁盘上的本地搜索源代码文件完整复制到面板保管区并逐文件校验；② 让 DSH 下次启动时不再加载该功能模块；③ 把面板里一项网页抓取系统设置改回「系统默认（未指定）」；④ 校验通过后再删除磁盘上的源代码文件。",
+					consequence: "重启后，网页抓取退回到系统默认行为；「搜索路由」的搜索功能将不可用（它依赖本插件）；若需搜索请同时卸载或保留其一；重启前仍按当前状态运行。",
+					timing: "确认执行并校验通过后，删除立即完成；对运行中的系统，将在下次重启时停止使用；重启前仍按当前状态运行。",
+					archive: "将自动存档（确认执行后、删除前）：先把源码复制到面板保管区并逐文件校验，校验通过后才删除；校验失败则中止，不删除。",
+					restorePath: "面板 →「本地搜索 web-search-local」卡片 → 点「恢复」，即可从保管区一键恢复。",
+					restart: "恢复后需要重启才生效。",
+					confirm: "请手动输入 web-search-local 两次并点「确认真卸载」，或点「取消」。"
+				}
+			}
+		};
+
+		// ---- 缺席态横幅（六态；dependency-broken 用警示色）----
+		function AbsenceBanner(props) {
+			var plugin = props.plugin;
+			if (!plugin.status || plugin.status === "mounted") return null;
+			var copy = plugin.statusCopy || ABSENCE_COPY_FALLBACK[plugin.status] || "状态未知";
+			if (plugin.status === "dependency-broken") {
+				return react.createElement("div", { style: styles.absBoxWarn },
+					react.createElement("div", { style: styles.absHeadWarn }, "⚠ 依赖缺失"),
+					react.createElement("div", { style: styles.absLine }, copy)
+				);
+			}
+			return react.createElement("div", { style: styles.absBox },
+				react.createElement("div", { style: styles.absHead }, "当前状态"),
+				react.createElement("div", { style: styles.absLine }, copy)
+			);
+		}
+
+		// ---- §2.9 恢复确认页（真卸载恢复）/ §2.9b 软卸载恢复确认页（无文件回写）----
+		function restoreCopyOf(plugin, mode, custody) {
+			var name = p24Name(plugin);
+			if (mode === "true") {
+				var n = custody && typeof custody.fileCount === "number" ? String(custody.fileCount) : "N";
+				var m = custody && typeof custody.totalBytes === "number" ? String(custody.totalBytes) : "M";
+				return {
+					title: "恢复「" + name + "」",
+					body: "将从面板保管区恢复「" + name + "」：恢复 " + n + " 个文件（共 " + m + " 字节），先逐文件校验，校验通过后才写回磁盘；写回后自动恢复它的启动入口（以及卸载时改动的系统设置项，如有）。"
+				};
+			}
+			return {
+				title: "恢复「" + name + "」（软卸载恢复）",
+				body: "将重新打开面板到「" + name + "」的启动入口，源代码文件一直在本地，不涉及文件恢复；若卸载时改动了系统设置项，将一并恢复。"
+			};
+		}
+
+		function DialogLine(props) {
+			return react.createElement("div", { style: props.bold ? styles.dlgLineBold : styles.dlgLine }, props.text);
+		}
+
+		// 纯呈现组件：不持状态，便于两套渲染器逐字比对文案。
+		function UninstallDialog(props) {
+			var plugin = props.plugin;
+			var mode = props.mode;
+			var set = UNINSTALL_COPY[plugin.dir];
+			var c = set && set[mode];
+			if (!c) return null;
+			var typed = props.typed || {};
+			var kids = [react.createElement("div", { key: "t", style: styles.dlgTitle }, c.title)];
+			var rows = [
+				["删什么", c.del, false],
+				["后果（重启后）", c.consequence, false],
+				["生效时间", c.timing, false],
+				[mode === "true" ? "存档安排" : "已存档", c.archive, true],
+				["恢复路径", c.restorePath, false],
+				["重启", c.restart, true],
+				["确认操作", c.confirm, false]
+			];
+			for (var i = 0; i < rows.length; i++) {
+				kids.push(react.createElement("div", { key: "k" + i, style: styles.dlgKey }, rows[i][0]));
+				kids.push(react.createElement(DialogLine, { key: "v" + i, text: rows[i][1], bold: rows[i][2] }));
+			}
+			var count = mode === "true" ? 2 : 1;
+			var inputs = [];
+			for (var j = 0; j < count; j++) {
+				inputs.push(react.createElement("input", {
+					key: "i" + j,
+					style: styles.dlgInput,
+					value: typed[j] === undefined ? "" : typed[j],
+					placeholder: plugin.dir,
+					onChange: function (idx) {
+						return function (e) { if (props.onTyped) props.onTyped(idx, e.target.value); };
+					}(j)
+				}));
+			}
+			kids.push(react.createElement("div", { key: "inputs" }, inputs));
+			kids.push(react.createElement("div", { key: "row", style: styles.uninRow },
+				react.createElement("button", { style: styles.btnOpen, disabled: !!props.busy, onClick: props.onConfirm },
+					mode === "true" ? "确认真卸载" : "确认软卸载"),
+				react.createElement("button", { style: styles.btnOpen, disabled: !!props.busy, onClick: props.onCancel }, "取消"),
+				props.error ? react.createElement("span", { style: styles.dlgErr }, props.error) : null
+			));
+			return react.createElement("div", { style: styles.dlgBox }, kids);
+		}
+
+		function RestoreDialog(props) {
+			var plugin = props.plugin;
+			var mode = props.mode;
+			var c = restoreCopyOf(plugin, mode, props.custody);
+			var kids = [
+				react.createElement("div", { key: "t", style: styles.dlgTitle }, c.title),
+				react.createElement(DialogLine, { key: "b", text: c.body })
+			];
+			if (props.conflict) {
+				var cur = props.conflict.currentValue === undefined || props.conflict.currentValue === null ? "" : String(props.conflict.currentValue);
+				var bak = props.conflict.backupValue === undefined || props.conflict.backupValue === null ? "" : String(props.conflict.backupValue);
+				var labels = props.choices && props.choices.length === 3 ? props.choices : null;
+				kids.push(react.createElement("div", { key: "cf", style: styles.dlgWarn },
+					"若恢复时发现某项系统设置已被其他程序改掉（当前值是 " + cur + "，卸载前是 " + bak
+					+ "），弹窗三选一：A. 保留当前值（不覆盖）；B. 恢复成卸载前的值；C. 取消本次恢复。面板不会自动覆盖。"));
+				kids.push(react.createElement("div", { key: "cfrow", style: styles.uninRow },
+					react.createElement("button", { style: styles.btnRest, onClick: function () { if (props.onChoose) props.onChoose("keep-current"); } }, labels ? labels[0].label : "保留当前值（不覆盖）"),
+					react.createElement("button", { style: styles.btnRest, onClick: function () { if (props.onChoose) props.onChoose("restore-backup"); } }, labels ? labels[1].label : "恢复成卸载前的值"),
+					react.createElement("button", { style: styles.btnOpen, onClick: props.onCancel }, labels ? labels[2].label : "取消本次恢复")
+				));
+			} else {
+				kids.push(react.createElement("div", { key: "rk", style: styles.dlgKey }, "重启"));
+				kids.push(react.createElement(DialogLine, { key: "rv", text: "恢复完成后需要重启才生效。", bold: true }));
+				kids.push(react.createElement("div", { key: "ck", style: styles.dlgKey }, "确认操作"));
+				kids.push(react.createElement(DialogLine, { key: "cv", text: "点「确认恢复」，或点「取消」。" }));
+				kids.push(react.createElement("div", { key: "row", style: styles.uninRow },
+					react.createElement("button", { style: styles.btnRest, disabled: !!props.busy, onClick: props.onConfirm }, "确认恢复"),
+					react.createElement("button", { style: styles.btnOpen, disabled: !!props.busy, onClick: props.onCancel }, "取消"),
+					props.error ? react.createElement("span", { style: styles.dlgErr }, props.error) : null
+				));
+			}
+			return react.createElement("div", { style: styles.dlgBox }, kids);
+		}
+
+		// 恢复完成横幅（§2.9 完成后）
+		function RestoreBanner(props) {
+			if (!props.show) return null;
+			return react.createElement("div", { style: styles.banner }, RESTORE_DONE_BANNER);
+		}
+
+		// ---- P2.4 卸载 / 恢复控制（两段式：plan → 用户确认 → execute）----
+		function P24Controls(props) {
+			var plugin = props.plugin;
+			var onChanged = props.onChanged;
+			var showBanner = props.showBanner;
+			// hook 顺序（测试依赖）：[0] dlg / [1] busy / [2] error / [3] typed
+			var dlgSt = react.useState(null);
+			var dlg = dlgSt[0];
+			var setDlg = dlgSt[1];
+			var busySt = react.useState(false);
+			var busy = busySt[0];
+			var setBusy = busySt[1];
+			var errSt = react.useState("");
+			var error = errSt[0];
+			var setError = errSt[1];
+			var tpSt = react.useState({ 0: "", 1: "" });
+			var typed = tpSt[0];
+			var setTyped = tpSt[1];
+
+			var status = plugin.status || "mounted";
+			// 卸载入口只对「本体在且不是面板已摘除」的态可见；恢复入口**只认快照 restoreAvailable**
+			// （soft-unmounted / true-uninstalled 正是需要恢复的态，绝不能被 gone 抵消——D-UI-01）。
+			var gone = status === "soft-unmounted" || status === "true-uninstalled" || status === "unknown-absent";
+			var canUninstall = !gone;
+			var canRestore = plugin.restoreAvailable === true;
+			if (!canUninstall && !canRestore) return null;
+
+			var openUninstall = function (mode) {
+				setError("");
+				setTyped({ 0: "", 1: "" });
+				setDlg({ kind: "uninstall", mode: mode });
+			};
+
+			var doUninstall = react.useCallback(async function (mode) {
+				setBusy(true);
+				setError("");
+				try {
+					var list = [];
+					for (var i = 0; i < (mode === "true" ? 2 : 1); i++) list.push(String(typed[i] || "").trim());
+					var res = await fetch("/api/toolkit-panel/uninstall/plan", {
+						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
+						body: JSON.stringify({ plugin: plugin.dir, mode: mode, confirm: list })
+					});
+					var body = await res.json();
+					if (!body.ok) { setError(body.error || ("HTTP " + res.status)); return; }
+					var res2 = await fetch("/api/toolkit-panel/uninstall/execute", {
+						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
+						body: JSON.stringify({ token: body.plan.token })
+					});
+					var body2 = await res2.json();
+					if (!body2.ok) { setError(body2.error || ("HTTP " + res2.status)); return; }
+					setDlg(null);
+					if (onChanged) await onChanged();
+				} catch (e) {
+					setError(String(e && e.message || e));
+				} finally {
+					setBusy(false);
+				}
+			}, [plugin.dir, typed, onChanged]);
+
+			var openRestore = react.useCallback(async function () {
+				var mode = plugin.status === "true-uninstalled" ? "true" : "soft";
+				setError("");
+				setBusy(true);
+				var custody = null;
+				try {
+					if (mode === "true") {
+						var res = await fetch("/api/toolkit-panel/custody", { cache: "no-store" });
+						var body = await res.json();
+						if (body.ok && body.custody && Array.isArray(body.custody.entries)) {
+							for (var i = 0; i < body.custody.entries.length; i++) {
+								var e = body.custody.entries[i];
+								if (e.plugin === plugin.dir && e.kind === "true-uninstall") { custody = e; break; }
+							}
+						}
+					}
+				} catch (e) {
+					setError(String(e && e.message || e));
+				} finally {
+					setBusy(false);
+				}
+				setDlg({ kind: "restore", mode: mode, custody: custody });
+			}, [plugin.dir, plugin.status]);
+
+			var doRestore = react.useCallback(async function (choice) {
+				setBusy(true);
+				setError("");
+				try {
+					var payload = { plugin: plugin.dir };
+					if (dlg && dlg.custody) payload.custodyId = dlg.custody.custodyId;
+					if (choice) payload.hostKeyChoice = choice;
+					var res = await fetch("/api/toolkit-panel/restore/plan", {
+						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
+						body: JSON.stringify(payload)
+					});
+					var body = await res.json();
+					if (body.ok === false && body.code === "host-key-conflict") {
+						setDlg({ kind: "restore", mode: dlg.mode, custody: dlg.custody, conflict: body.conflict, choices: body.choices });
+						return;
+					}
+					if (!body.ok) { setError(body.error || ("HTTP " + res.status)); return; }
+					var payload2 = { token: body.plan.token };
+					if (dlg && dlg.custody) payload2.custodyId = dlg.custody.custodyId;
+					var res2 = await fetch("/api/toolkit-panel/restore/execute", {
+						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
+						body: JSON.stringify(payload2)
+					});
+					var body2 = await res2.json();
+					if (!body2.ok) { setError(body2.error || ("HTTP " + res2.status)); return; }
+					setDlg(null);
+					if (showBanner) showBanner(RESTORE_DONE_BANNER);
+					if (onChanged) await onChanged();
+				} catch (e) {
+					setError(String(e && e.message || e));
+				} finally {
+					setBusy(false);
+				}
+			}, [plugin.dir, dlg, showBanner, onChanged]);
+
+			var kids = [];
+			if (canUninstall) {
+				var rec = plugin.defaultUninstallMode === "true" ? "true" : "soft";
+				kids.push(react.createElement("div", { key: "hint", style: styles.dlgLine },
+					"本插件的推荐做法是" + (rec === "true" ? "「真卸载」" : "「软卸载」") + "。两种都可以选，弹窗会写清各删什么、能不能恢复。"));
+				kids.push(react.createElement("div", { key: "row", style: styles.uninRow },
+					react.createElement("button", { style: styles.btnOpen, disabled: busy, onClick: function () { openUninstall("soft"); } },
+						"软卸载" + (rec === "soft" ? "（推荐）" : "")),
+					react.createElement("button", { style: styles.btnOpen, disabled: busy, onClick: function () { openUninstall("true"); } },
+						"真卸载" + (rec === "true" ? "（推荐）" : ""))
+				));
+			}
+			if (canRestore) {
+				kids.push(react.createElement("div", { key: "restrow", style: styles.uninRow },
+					react.createElement("button", { style: styles.btnRest, disabled: busy, onClick: openRestore }, "恢复")
+				));
+			}
+			if (dlg && dlg.kind === "uninstall") {
+				kids.push(react.createElement(UninstallDialog, {
+					key: "dlg-u",
+					plugin: plugin,
+					mode: dlg.mode,
+					typed: typed,
+					busy: busy,
+					error: error,
+					onTyped: function (idx, v) {
+						var next = Object.assign({}, typed);
+						next[idx] = v;
+						setTyped(next);
+					},
+					onConfirm: function () { doUninstall(dlg.mode); },
+					onCancel: function () { setDlg(null); setError(""); }
+				}));
+			}
+			if (dlg && dlg.kind === "restore") {
+				kids.push(react.createElement(RestoreDialog, {
+					key: "dlg-r",
+					plugin: plugin,
+					mode: dlg.mode,
+					custody: dlg.custody,
+					conflict: dlg.conflict,
+					choices: dlg.choices,
+					busy: busy,
+					error: error,
+					onConfirm: function () { doRestore(null); },
+					onChoose: function (choice) { doRestore(choice); },
+					onCancel: function () { setDlg(null); setError(""); }
+				}));
+			}
+			return react.createElement("div", { style: styles.uninBox },
+				react.createElement("div", { style: styles.uninHead }, "卸载 / 恢复"),
+				kids
+			);
+		}
+
 		// ---- 体检报告人话化 ----
 		var SEVERITY_TEXT = { error: "必须修", warning: "建议修", info: "提示" };
 		function severityText(sev) {
@@ -695,6 +1181,10 @@ window.__ModuleLoader__.load({
 			var errorState = react.useState("");
 			var doctorError = errorState[0];
 			var setDoctorError = errorState[1];
+			// P2.4：恢复完成横幅（§2.9 完成后「恢复完成，重启后生效」）
+			var bannerState = react.useState("");
+			var banner = bannerState[0];
+			var setBanner = bannerState[1];
 
 			var loadSnapshot = react.useCallback(async function () {
 				try {
@@ -743,7 +1233,7 @@ window.__ModuleLoader__.load({
 
 			var cards = snapshot && Array.isArray(snapshot.plugins)
 				? snapshot.plugins.map(function (p) {
-					return react.createElement(PluginCard, { key: p.dir, plugin: p, patchText: patchText, onChanged: loadSnapshot });
+					return react.createElement(PluginCard, { key: p.dir, plugin: p, patchText: patchText, onChanged: loadSnapshot, showBanner: setBanner });
 				})
 				: [];
 
@@ -782,6 +1272,7 @@ window.__ModuleLoader__.load({
 					react.createElement("button", { style: Object.assign({}, styles.button, doctorRunning ? styles.buttonDisabled : {}), onClick: runDoctor, disabled: doctorRunning }, "一键体检（只查不改）"),
 					react.createElement("span", { style: styles.muted }, doctorStatus)
 				),
+				react.createElement(RestoreBanner, { show: !!banner }),
 				react.createElement("div", { style: styles.cards }, cards),
 				react.createElement("h2", { style: styles.h2 }, "配置文件原文（cordis.patch.yml · 插件开关所在）"),
 				react.createElement("pre", { style: styles.pre }, patchText),
