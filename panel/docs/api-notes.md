@@ -163,3 +163,36 @@
 - 唯一可靠生效路径 = 重启 dsh web（即既有 restart-trigger 流程）。
 - 想让「改完即生效」需要宿主提供 HMR watch；当前环境不具备，不要假装强刷可行。
 - 反例警示：不要把「`/api/toolkit-panel/snapshot` 返回 200 且内容新」误当作「UI 已更新」——那是**实时计算**的 JSON，走另一条路（每次请求 `buildSnapshot`），与静态资源快照无关。本次实测该端点确实立即反映了新状态，容易造成「已生效」的错觉。
+
+## P2.0② 写路由判定：`{ change: true }` 一览表（2026-09-18 落盘）
+
+命题：**只读路径与写路径走两套不同的配对校验**，所以每条路由标不标 `{ change: true }` 是一个安全决策，不是一个风格问题。
+
+| 路由 | `path:` 行 | 守卫 | 方法 | 性质 |
+|---|---|---|---|---|
+| `/api/toolkit-panel/ui` | `panel/index.js:225` | 只读 | GET | 读（直连后备页 HTML） |
+| `/api/toolkit-panel/snapshot` | `:238` | 只读 | GET | 读（实时快照） |
+| `/api/toolkit-panel/doctor/dry-run` | `:250` | **`{ change: true }` @ `:259`** | POST | ⚠️ **有意过度收口**（见下） |
+| `/api/toolkit-panel/plan` | `:265` | **`{ change: true }` @ `:306`** | POST | 写（只读计算**但签发写令牌**） |
+| `/api/toolkit-panel/toggle/plan` | `:314` | **`{ change: true }` @ `:360`** | POST | 写（同上，另含停用前交叉引用扫描） |
+| `/api/toolkit-panel/execute` | `:365` | **`{ change: true }` @ `:381`** | POST | 写（**唯一落盘入口**） |
+| `/api/toolkit-panel/plan/status` | `:386` | 只读 | GET | 读（方案查询） |
+
+**guard 实现行号**：`isAllowedRead` @ `:180`（loopback AND (Host loopback OR 配对服务 OR `devicesFile` hasOwn 兜底)）·
+`isAllowedWrite` @ `:191`（loopback AND (Host loopback OR `pairedByServiceStrict`) —— **禁 fallback**）·
+`guard(handler, options)` @ `:200` · `const isWrite = options.change === true` @ `:201`。
+
+**判定判据**（P2.1 踩坑后固化）：**只要会签发令牌或改变状态，就是写路由。**
+
+### ⚠️ 一处有意偏离判据：`doctor/dry-run` 标了写路由
+
+`doctor/dry-run` **不改变任何状态、不签发令牌**，按上述判据本可标只读；但它标了 `{ change: true }`。
+
+**这是有意为之，方向是 fail-closed（更严，不是更松）**，请勿当作 bug「修正」：
+
+- 后果只是**多要求一道严格配对 + CSRF 安全来源**，不会放松任何限制；
+- 桌面 loopback 场景无功能影响（`isLoopbackHost` 直接放行）；
+- 远程场景仍可正常走 `remoteWebUiPairing` 服务校验，功能不受损；
+- 反面代价若发生（误降为只读）：它会退化成「服务缺席时走 `devicesFile` hasOwn 兜底放行」——而 doctor dry-run 会**执行外部 CLI 进程**（`panel/manager/doctor-runner.mjs`），把「起进程」这种有副作用的动作放在兜底放行的只读路径上，是整个 P2.0②「写操作禁 fallback」原则的破口。
+
+**结论：保留现状。** 若将来要严格对齐判据，必须先为 doctor dry-run 定义一套「只读但可起进程」的第三类守卫，而不是简单地把 `{ change: true }` 删掉。
