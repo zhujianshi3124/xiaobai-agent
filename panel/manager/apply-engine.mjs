@@ -423,6 +423,112 @@ export function createConfigPlan({ file, rowId, path, value, backupRoot, ttlMs =
   };
 }
 
+// ---------------- P2.4 卸载/恢复：行块摘除与插回 + web 宿主键 ----------------
+
+function topLevelEndBefore(lines, fromIndex) {
+  let i = fromIndex + 1;
+  for (; i < lines.length; i++) {
+    if (/^\S/.test(lines[i])) break;
+  }
+  return i - 1;
+}
+
+export function locateRowBlock(text, rowId) {
+  const { lines, hasCrlf } = splitLines(text);
+  const anchor = locateRowAnchor(text, rowId);
+  let start = anchor.lineIndex;
+  if (anchor.indent > 0) {
+    let insertLine = -1;
+    for (let j = anchor.lineIndex - 1; j >= 0; j--) {
+      if (/^(\s*)- insert:\s*$/.test(lines[j])) {
+        insertLine = j;
+        break;
+      }
+      if (/^\S/.test(lines[j])) break;
+    }
+    if (insertLine < 0) {
+      throw new PlanError("row-block-not-found", "找不到 " + rowId + " 所属的 - insert: 块，拒绝摘除");
+    }
+    start = insertLine;
+  }
+  const end = topLevelEndBefore(lines, start);
+  // 行级 id 计数：只数与锚点**同缩进**的 `- id:` 行（行 = insert 块的直接行项）。
+  // 块内更深的嵌套 id（如 rate-throttle 的 staticGroups 下的 `- id: v4-pro`）不是行，
+  // 误计会把正常单行块误判为多行块而拒绝操作（p24-verify 实测抓出的半成品缺陷）。
+  const rowLineRe = new RegExp("^ {" + anchor.indent + "}- id:");
+  let idCount = 0;
+  for (let k = start; k <= end; k++) {
+    if (rowLineRe.test(lines[k])) idCount++;
+  }
+  if (idCount !== 1) {
+    throw new PlanError("row-block-multiple", "该 insert 块包含 " + idCount + " 个行，面板只支持单行块摘除，拒绝操作");
+  }
+  const block = lines.slice(start, end + 1).join(hasCrlf ? "\r\n" : "\n");
+  return { lines, hasCrlf, start, end, block, anchor };
+}
+
+export function planRemoveRow(text, rowId) {
+  const located = locateRowBlock(text, rowId);
+  const next = located.lines.slice();
+  next.splice(located.start, located.end - located.start + 1);
+  return {
+    nextText: joinLines(next, located.hasCrlf),
+    anchorLine: located.anchor.lineIndex + 1,
+    block: located.block,
+    insertAt: located.start,
+    removedLines: located.end - located.start + 1,
+    changed: true,
+  };
+}
+
+export function planInsertRow(text, { block, insertAt }) {
+  const { lines, hasCrlf } = splitLines(text);
+  const blockLines = block.split(/\r?\n/);
+  const next = lines.slice();
+  next.splice(insertAt, 0, ...blockLines);
+  return {
+    nextText: joinLines(next, hasCrlf),
+    changed: true,
+  };
+}
+
+export function locateWebConfigKey(text, key) {
+  return locateConfigKeyLine(text, "web", key);
+}
+
+export function planWebConfigRemove(text, key) {
+  const located = locateConfigKeyLine(text, "web", key);
+  if (!located.target) {
+    return { nextText: text, changed: false, removedRaw: null, removedLineIndex: -1 };
+  }
+  const { lines, hasCrlf } = splitLines(text);
+  const next = lines.slice();
+  next.splice(located.target.lineIndex, 1);
+  return {
+    nextText: joinLines(next, hasCrlf),
+    changed: true,
+    removedRaw: located.target.raw,
+    removedLineIndex: located.target.lineIndex,
+  };
+}
+
+export function planWebConfigRestore(text, { key, raw, lineIndex }) {
+  const located = locateConfigKeyLine(text, "web", key);
+  if (located.target) {
+    throw new PlanError("host-key-occupied", "web 宿主键 " + key + " 当前已有值（" + located.target.value + "），拒绝自动覆盖");
+  }
+  const { lines, hasCrlf } = splitLines(text);
+  const next = lines.slice();
+  const cleanRaw = raw.replace(/\r?\n$/, "");
+  // 语义定位插回：`config:` 行正下方（第一个子键位置，与 planConfigEdit 插入约定一致）。
+  // 不采用调用方传入的历史行号——卸载后文件可能合法漂移，历史行号不可信（p24-verify 实测教训）。
+  void lineIndex;
+  next.splice(located.sectionLine.lineIndex + 1, 0, cleanRaw);
+  return {
+    nextText: joinLines(next, hasCrlf),
+    changed: true,
+  };
+}
 // ---------------- 备份保留策略 ----------------
 
 /**
@@ -582,9 +688,13 @@ export function executePlan(token, { now = Date.now() } = {}) {
   }
 
   // 4. 锚点复验（即便 SHA 一致也不跳过 —— 防的是"plan 本身构造有误"）
-  const anchor = locateRowAnchor(currentText, plan.rowId);
-  if (anchor.lineIndex + 1 !== plan.anchorLine) {
-    throw new PlanError("anchor-moved", "锚点行位置与方案记录不一致，已拒绝写入");
+  //    例外：恢复向计划（skipAnchorCheck）的目标行本就不在文件里（行块插回），
+  //    无锚可验；其正确性由 SHA 闸 + 插回位置的现读锚定（revalidateInsertAt）保证。
+  if (!plan.skipAnchorCheck) {
+    const anchor = locateRowAnchor(currentText, plan.rowId);
+    if (anchor.lineIndex + 1 !== plan.anchorLine) {
+      throw new PlanError("anchor-moved", "锚点行位置与方案记录不一致，已拒绝写入");
+    }
   }
 
   // 5. 写前备份

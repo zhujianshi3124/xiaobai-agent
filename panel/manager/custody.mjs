@@ -67,8 +67,7 @@ export function archiveForTrueUninstall({
   pkg,
   rowBlock,
   insertAt,
-  hostKeyRaw,
-  hostKeyLineIndex,
+  hostKey,
   prevTopRaw,
   nextTopRaw,
   presetStateSnapshot,
@@ -113,9 +112,7 @@ export function archiveForTrueUninstall({
       insertAt: typeof insertAt === "number" ? insertAt : null,
       prevTopRaw: prevTopRaw || null,
       nextTopRaw: nextTopRaw || null,
-      hostKey: hostKeyRaw
-        ? { raw: hostKeyRaw, lineIndex: typeof hostKeyLineIndex === "number" ? hostKeyLineIndex : null }
-        : null,
+      hostKey: hostKey || null,
       presetStateSnapshot: presetStateSnapshot || null,
     },
   };
