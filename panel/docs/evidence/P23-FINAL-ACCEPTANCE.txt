@@ -1,0 +1,55 @@
+P2.3 终验取证 · 两段式真实写入-复原闭环
+================================================
+
+结论：P2.3 最终验收 PASS（2026-09-18 18:0x GMT+8）
+naming note: 本文件内时刻带 Z 为 UTC；本地 = UTC + 8。
+
+终验样本：rate-throttle.routing.tpmCooldownMs
+  合法域：0–86400000（validateConfigValue 返回 ok:true）
+  往返：45000 → 46000 → 45000
+
+基准（唯一硬判据）
+  cordis.patch.yml sha256 = ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9
+  3097 B / CRLF / 82 行
+
+段1：45000 → 46000（用户面板操作）
+  写前备份目录: .panel-write-backups/2026-09-18T10-01-41-305Z
+  manifest reason: panel-config-edit
+  manifest note: rate-throttle.routing.tpmCooldownMs = 46000（P2.3 配置编辑）
+  manifest 写前 sha256 == 备份文件实测 == ce0b0b81… ✓
+  savedAs: D____dsh-plugins__dsh-toolkit__cordis.patch.yml（无盘符冒号，无 ADS）✓
+  写后 cordis.patch.yml sha256 = 539ba66d22bfe0624d30250302c2d736924e6da2b2342f16ec08e7211894742f
+  字节/行尾: 3097 B / CRLF / 82 行
+  diff（备份 45000 态 → 写后 46000 态）: 仅第 33 行
+      -          tpmCooldownMs: 45000
+      +          tpmCooldownMs: 46000
+  面板显示: /api/toolkit-panel/snapshot HTTP 200
+      5 卡齐全；rate-throttle.configPanel.values.routing.tpmCooldownMs = 46000 ✓
+  doctor dry-run: error 0 / warning 0 / info 0（issues: []）✓
+
+段2：46000 → 45000（用户面板操作）
+  写前备份目录: .panel-write-backups/2026-09-18T10-09-10-045Z
+  manifest reason: panel-config-edit
+  manifest note: rate-throttle.routing.tpmCooldownMs = 45000（P2.3 配置编辑）
+  manifest 写前 sha256 == 备份文件实测 == 539ba66d… ✓
+  savedAs: D____dsh-plugins__dsh-toolkit__cordis.patch.yml（无盘符冒号，无 ADS）✓
+  写后 cordis.patch.yml sha256 = ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9
+  字节/行尾: 3097 B / CRLF / 82 行
+  diff（备份 46000 态 → 写后 45000 态）: 仅第 33 行
+      -          tpmCooldownMs: 46000
+      +          tpmCooldownMs: 45000
+  面板显示: /api/toolkit-panel/snapshot HTTP 200
+      5 卡齐全；rate-throttle.configPanel.values.routing.tpmCooldownMs = 45000 ✓
+  doctor dry-run: error 0 / warning 0 / info 0（issues: []）✓
+
+sha 链（终验两段式）
+  ce0b0b81…（45000 基准）
+    → 539ba66d…（46000，段1 写后）
+    → ce0b0b81…（45000，段2 写后）
+
+硬判据：最终 sha == ce0b0b81…（字节复原）== TRUE ✓
+
+说明
+  - 已存在字段原地替换（第 33 行替换），字节自动复原；与 P2.2 toggle 残留（插入 disabled:false）形成对照。
+  - manifest reason/note 传真值（D-01 修复后首批真实使用证据）。
+  - 本终验真实写盘 2 次，均经 panel 两段式 config/plan 通道；本证据由本侧零写盘同步取证生成。

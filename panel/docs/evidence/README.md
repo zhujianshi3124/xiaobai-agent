@@ -36,6 +36,7 @@
 | `Q2-RELEASED-SCAN.txt` | 由 `scripts/q2-released-scan.mjs` 生成（可重放，全程只读）—— **乙程序首批例行只读读取**（U12=乙 首批）：红线内 4 点 + 注入点 5 env 全落结论 ⇒ **Q2 全表穷尽 ✓** | 4477 | `d4839418e5d41f253ab269f15a54b1c4e3c5f77e75614e591d771be6947e6fad` |
 | `P23-SHADOW-SCAN.txt` | 由 `scripts/p23-shadow-scan.mjs` 生成（可重放，全程只读）—— **P2.3 设计前置遮蔽补扫**（第 15 轮授权段）：T1 热 JSON 现有 `mode` 键（auto）⇒ patch 编辑无效；T2 settings 无 `web-search-local` 节；T3/T4 env 空。**尾注含越界申报**（`dsh-rate-throttle.json` 授权段外手工只读一次，列 U13-1 追认） | 2773 | `ab707cc2c4d258d5a4d717edd45a63d469e5534529929fa8e800399dee13198c` |
 | `P23-EVIDENCE.txt` | 本侧撰写 —— **P2.3 施工验证证据**（第 19 轮批准后首个写盘批次）：交付清单 + p23-verify **107/107** + 一键回归全绿 + doctor 0/0/0 + 基准 sha 未变 + **U9 marker 刷新记录** | 4814 | `32e2dd8b9bd94522fd06e0db4e31f396f829119530734d4808a3bd3e18410546` |
+| `P23-FINAL-ACCEPTANCE.txt` | 本侧撰写 —— **P2.3 终验取证正本**（新会话第 2 轮放行后）：两段式真实写入 `tpmCooldownMs` 45000→46000→45000；段1/段2 各 1 备份 + manifest `reason/note` 传真值；sha 链 `ce0b0b81→539ba66d→ce0b0b81`；最终 **sha==ce0b0b81**（字节复原硬判据达标）+ 两段 doctor 0/0/0 | 2881 | `8ded9474f9baf952bb25e66046f0390c080f38b0a508f26d4367cad77c1e7782` |
 
 前三份为**逐字节复制**（复制后比对 sha256 一致才落盘），未经改写。
 
@@ -54,6 +55,7 @@
 - **`TERMINAL-ACCEPTANCE-ROUND10.txt`** —— 第 10 轮终验取证 **a–e** 正本（**只读**）：以 4 份写前备份的载荷做 **LCS 重建**，还原出 `ce0b0b81`(3097) →写#1→ `77279ccb`(3119) →写#2→ `54345b4f`(3120) →写#3→ `2620280b`(3142) →写#4→ `c03e2c81`(3143) 的完整链（**链式 `shaBefore` 互证** ⇒ 均走 `executePlan` 唯一通道）。**该报告结论为 (c)✗ / (d)✗ / (a) 部分✗** —— 正是据此**喊停、未进关账**；第 11 轮裁决后以**授权恢复**达成基准。
 - **`D01-MANIFEST-FIX.diff`** —— D-01（备份副本落 NTFS **ADS**、目录只留 0 字节 `D` 载体）修复 + `manifest.reason`/`note` 恒 null 修复的 diff 留痕（**安全关键脚本 `backup.mjs` 的改动须留痕**）。
 - **`ROUND12-SUPPLEMENTARY-ACCEPTANCE.md`** —— 第 12 轮关账后**保留事项**的执行正本：把**催收三项**（`api-notes` 两新节 / 附录 B U1–U11 / 3 项归一枚举 + 全文 diff 说明）的**正文摘要**呈判定者补验收；附 **U8/U9 呈报**与**新增 U12（授权语义澄清）**。**关账已被接受，本件不改结论**；本轮**磁盘动作 = 零**。
+- **`P23-FINAL-ACCEPTANCE.txt`** —— P2.3 最终验收取证正本：两段式真实写入 `tpmCooldownMs` 45000→46000→45000；段1/段2 各产生 1 份生产 `.panel-write-backups` 备份（manifest `reason/note` 传真值 + `savedAs` 无冒号/无 ADS）；sha 链 `ce0b0b81→539ba66d→ce0b0b81`；最终 **sha==ce0b0b81`（字节复原硬判据达标）`**；两段 reload 后 snapshot 5 卡齐全、面板仍显对应新值、doctor 0/0/0。
 
 ## 裁剪（保留策略）排除证据 —— 对应用户 Q4
 
@@ -181,6 +183,7 @@ node scripts/p22b-retention-scope.mjs > panel/docs/evidence/RETENTION-SCOPE.txt 
 | 2026-09-18 13:25（第 13 轮） | 补验收判定（第 12 轮四块 ✓ + 全文 diff 申报接受）；**判定侧盲抽 8 句 8/8 逐字命中**（代偿自选探针偏选风险）；**尾②注入点全表**补呈并**补登同族缺口 #0/#2/E1**（红线内未扫，随 U8 一并补扫）；U9 已批准（随下个写盘批次刷新 marker） | 新增 `MASTER-BLIND-PROBE-8.txt`（5137 B）、`ROUND13-SUPPLEMENTARY-2.md`（10057 B） |
 | 2026-09-18 13:42（第 14 轮） | 用户两项裁决落账（**U8+同族授权 ✓ / U12=乙**）；**「四层栈」改判**（内容为真、出处未落盘；归档口径 =「事实必须落盘出处，否则与失真不可分辨」）；**乙程序首批例行只读读取** —— 红线内 4 点全落结论（#3/E1 文件不存在、#0/#2 = `[]`、#5 env undefined）⇒ **Q2 全表穷尽 ✓**；「重发原文 diff」可选项关闭 | 新增 `Q2-RELEASED-SCAN.txt`（4477 B） |
 | 2026-09-18 16:00（第 19 轮） | 设计稿正式批准 → **P2.3 施工批次**：服务端白名单 18 字段（13 字段域对齐不放宽）+ config/plan 路由（仅 rate-throttle）+ 引擎 config 子树编辑 + snapshot configPanel（mode 只读三分支，方案 1）+ 两渲染器参数编辑 UI + **U9 marker 刷新**（`acf18889…`）；**测试一律走副本，真实 patch 零写入**（基准 `ce0b0b81…` 未变）；p23-verify **107/107** + 一键回归全绿 + doctor 0/0/0 | 新增 `P23-EVIDENCE.txt`（4814 B） |
+| 2026-09-18 18:0x（新会话第 2 轮） | 三项取证全绿 + 目视通过补记 + **P2.3 终验放行并完成**：两段式真实写入 `tpmCooldownMs` 45000→46000→45000 往返闭环；最终 sha==`ce0b0b81`（字节复原硬判据达标）+ 两段 doctor 0/0/0 | 新增 `P23-FINAL-ACCEPTANCE.txt`（2881 B） |
 
 > **本目录的两条硬约定**：① **只增不改** —— 已入库的归档文件**永不覆盖**；与脚本产生时序差时，**加注记、以脚本重放为准**。
 > ② **每份证据必须可重放** —— 上表所有「由 `scripts/*.mjs` 生成」者，重放命令即其生成命令。

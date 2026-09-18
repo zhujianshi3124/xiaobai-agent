@@ -49,8 +49,8 @@ for (const [name, rel] of scripts) {
   let out = "", code = 0;
   try { out = execFileSync(NODE, ["--test"], { cwd: ROOT, maxBuffer: 1 << 26, encoding: "utf8" }); }
   catch (e) { out = String(e.stdout || ""); code = e.status ?? 1; }
-  const pass = (out.match(/# pass (\d+)/) || [])[1];
-  const fail = (out.match(/# fail (\d+)/) || [])[1];
+  const pass = (out.match(/[#ℹ]\s*pass\s+(\d+)/) || [])[1];
+  const fail = (out.match(/[#ℹ]\s*fail\s+(\d+)/) || [])[1];
   const ok = code === 0 && fail === "0";
   if (!ok) bad++;
   console.log((ok ? "  ✓ " : "  ✗ ") + "node --test".padEnd(22) + "pass=" + pass + " fail=" + fail);

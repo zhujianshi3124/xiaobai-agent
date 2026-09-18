@@ -1,4 +1,4 @@
-﻿# Ledger — dsh-test-sandbox 项目台账
+# Ledger — dsh-test-sandbox 项目台账
 
 > ⚠️ **本文件已非正本（2026-09-17 21:40 起）。**
 > **正本位置：`D:\dsh-plugins\dsh-toolkit\panel\docs\ledger.md`**
@@ -1328,4 +1328,16 @@ HEAD = `f6d99eb`。
   - **测试（要求 ⑥）**：**真实 `cordis.patch.yml` 全程零写入**（基准 sha 未变 `ce0b0b81…`）；全部落盘测试走 `os.tmpdir` 副本。**p23-verify 107/107**；一键回归**全部通过**（p1 190/0（路由计数 7→8 与期望表同步更新）· p2 16/0 · p21 53/53 · p22 104/104 · p22-cards-ui 79/79 · p22b 17/17 · q2-layer 14/14 · q2-shipped 21/21 · fidelity 38/38 · backup-write 23/23 · lint 通过 · node --test 93/0）；**doctor 0/0/0**。
   - **#12 行号补齐（要求 ③，非阻断）**：`routing.tpmCooldownMs` 消费点 `:1003-1019` 已补入 §八（判定侧批文写「#12（tpmTurnSkip）」——本表 #11 tpmTurnSkip 原已具行号，缺的是 #12；两处均齐）。
   - **待办（下一轮）**：**reload 一次**（restart-trigger）→ 目视验收（清单届时判定侧出）：rate-throttle 卡「参数编辑」18 字段、逐字段两段式与确认页文案、search-router mode 只读行、三卡「无内部开关」、U10 黄警告新文案一并生效。首次**真实** config 写入 = 用户在面板操作并确认之时（两段式）。
-- **P2（进行中）**：P2.0① ✅（`193bdd8`）→ P2.0② ✅（`2b05777`）→ P2.1 ✅（`a27da81`）→ **P2.2 ✅ 已关账（2026-09-18 12:48；`c91de92` + `558e62f` + `41ad40c` + `22fde85` + `10ebcef` + `c51ae58`）** → **P2.3 配置编辑（✅ 施工完成、回归全绿，待 reload 目视验收）** → P2.4 doctor+回滚。**P2.1 起每个写操作须附真实备份产物与 SHA 记录。**
+- **L-046（新会话第 2 轮 · 三项取证全绿 + 目视通过补记 + 终验放行）**：判定侧三项取证**全绿**，目视**通过**（补记），**终验放行**。证据链：a) sha 链闭合 `ce0b0b81→b6ebb2c0→ce0b0b81`；写#2 diff 仅 1 行（`cordis.patch.yml:33` 原地替换）——用户意外往返 = 真实写入-复原闭环（已存在字段原地替换天然字节复原，与 P2.2 toggle 残留形成对照）；b) manifest `reason`/`note` 传真值（D-01 修复后首批真实使用证据）+`savedAs` 无冒号、无 ADS 复发 ✓；c) 18/18 已存在——插入型用例当前环境不存在，复原语义声明保留为假设条款。
+  - **目视通过补记**：用户体感确认 + 截图佐证——参数编辑区 / 顶层与换源分区 / 字段当前值 / 「重启后生效」提示，判定侧在案。
+  - **终验放行（两段式）**：样本 `routing.tpmCooldownMs` **45000→46000→45000**（46000 已经 `config-whitelist.mjs` 服务端校验合法：ok, value=46000；域 0–86400000）。段1 = 改值→确认写入→面板显新值→reload→五卡正常＋doctor 0/0/0＋面板仍显新值；段2 = 改回→确认写入→reload→同上。本侧同步取证 = 两段各一笔备份＋manifest＋sha 链＋最终 **sha==ce0b0b81**（字节复原硬判据）＋doctor 0/0/0。
+  - **本轮磁盘动作**：仅补登记台账；`cordis.patch.yml` 基准 sha 未变 `ce0b0b81…`。
+
+- **L-047（新会话第 2 轮 · P2.3 终验通过 → 关账）**：终验放行后两段式全流程 PASS，**P2.3 正式关账**。
+  - **段1（45000→46000）**：真实写入备份 `.panel-write-backups/2026-09-18T10-01-41-305Z`（manifest `panel-config-edit` / note `… = 46000` / 写前 sha `ce0b0b81…` == 备份文件）；写后 sha `539ba66d…`；diff 仅 `:33` 45000→46000；reload 后 snapshot 5 卡齐全、`configPanel…tpmCooldownMs = 46000`；doctor **0/0/0**。
+  - **段2（46000→45000）**：真实写入备份 `.panel-write-backups/2026-09-18T10-09-10-045Z`（manifest `panel-config-edit` / note `… = 45000` / 写前 sha `539ba66d…` == 备份文件）；写后 sha **`ce0b0b81…`**（**字节复原硬判据达标**）；diff 仅 `:33` 46000→45000；reload 后 snapshot 5 卡齐全、`configPanel…tpmCooldownMs = 45000`；doctor **0/0/0**。
+  - **sha 链**：`ce0b0b81 → 539ba66d → ce0b0b81`；每步 3097 B / CRLF / 82 行；`savedAs` 无冒号、无 ADS。
+  - **关账一包**：`HANDOFF-MASTER.md`（头部时间戳 / §四叠加4.1+4.8 / 附录B U9·U10 / 附录C）· 本条 · `evidence/P23-FINAL-ACCEPTANCE.txt`（2881 B）+ `evidence/README.md` 清单 · `handoff-restart.md` §12 更新。
+  - **顺带修复**：`scripts/regression-all.mjs` 对 `node --test` 输出格式兼容（旧 RE 只认 `# pass`，现行输出为 `ℹ pass`）⇒ 一键回归恢复全绿（本批实测 `pass=93 fail=0`）。
+  - **下一阶段**：P2.4 doctor 操作台 + 双回滚（排队；前置证据同规：先证后写，第一动作 = doctor 操作台 / 双回滚源码消费点与 rollback 语义证据）。
+- **P2（进行中）**：P2.0① ✅（`193bdd8`）→ P2.0② ✅（`2b05777`）→ P2.1 ✅（`a27da81`）→ **P2.2 ✅ 已关账（2026-09-18 12:48；`c91de92` + `558e62f` + `41ad40c` + `22fde85` + `10ebcef` + `c51ae58`）** → **P2.3 配置编辑（✅ 已关账，新会话第 2 轮终验通过；`bf106df` 施工 + 终验往返闭环 sha 回 `ce0b0b81…`）** → **P2.4 doctor 操作台 + 双回滚（排队）**。**P2.1 起每个写操作须附真实备份产物与 SHA 记录。**
