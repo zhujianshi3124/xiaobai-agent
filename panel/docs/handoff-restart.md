@@ -866,20 +866,22 @@ body-too-large                                   → 413
 
 ---
 
-## 12. 会话交接卡（10 行 · 关账硬前置，2026-09-18 新会话第 5 轮续 · 需求变更【真卸载改销毁式】设计修订版）
+## 12. 会话交接卡（10 行 · 关账硬前置，2026-09-19 新会话第 5 轮续 · **批 1 关账版**）
 
-> ⚠️ **闸门**：用户正式确认「开源前删除不可恢复」空窗期前，**不改任何代码**；**终验暂停**。本轮只出设计修订稿。
+> ✅ **批 1 已关账**（范围＝软卸载/恢复 ＋ 引擎 ＋ UI ＋ doctor；依据＝用户亲验 ＋ 账 b 字节级取证 ＋ L-056 全绿）。真卸载产品面（**存档式**）**已下架**；**销毁式 v2 为独立批**——待施工后经判定侧验收 ＋ 用户目视文案方可上架。
 
-1. **当前状态**：批 1【引擎+UI】已于上轮**全绿报判**（L-056）；随后**用户需求变更**——真卸载改**销毁式**，本轮交付**设计修订稿 v2**（L-057，零代码）。**判定侧已补两账裁定**（L-058）：**账 b ✅** 用户软卸载往返**字节级复原 ✓**；**账 a ❌** 销毁式 v2 **未开工**（Q1 闸门）；复跑 **622/623**（1 项测试守卫假阳性）。⇒ **关账前置未满足，批 1 未关账**。**终验暂停**。
-2. **基准事实**：cordis.patch.yml = ce0b0b81…（3097 B / CRLF / 82 行，全程零写入，head+tail SHA 双断言）；p24-verify 40/40；**p24-ui-matrix 623/0**；全套回归 14 项全绿（p1 215／p2 16／p21 53／p22 104／p22-cards 79／p22b 17／q2-layer 14／q2-shipped 21／fidelity 38／backup-write 23／pluggable-lint 通过／node --test 93）；doctor 0/0/0。**`.panel-custody/` 不存在**（真实仓从未执行真卸载，落盘测试全走 tmpdir 副本）⇒ 无旧存档需迁移。
-3. **下一步**：**待裁决三项 →** ① **Q1** 用户正式确认「开源前删除不可恢复」空窗期（v2 施工总闸门）；② **Q1'** 是否放行「矩阵守卫白名单补 `row-adjacency.json`」这一**测试侧**改动（解 622→623 全绿，未擅动）；③ **Q2'** 关账口径（①「引擎+UI 全绿」基础关账＋销毁式列独立受闸工作流【豁免条款须重写为「销毁式未施工」】／② 等 v2 施工＋全绿后一并关账）。**关账包 6 项待启封**（豁免条款重写版、《用户日后实测指引》依赖 v2 落地故暂不落笔、U 项、总文档 §4、ledger、证据入库）。
-4. **已定案**：软/真卸载语义＋宿主键方案 A＋冲突三态；真卸载确认后存档式；compact-router 预设桥只调既有脚本＋双层留痕；**UI 弹窗文案以 p24-test-plan-batch1.md §2 全稿为准（软卸载输名一次 / 真卸载输名两次）**；dependency-broken = `mounted` 修饰态（仅对仍挂载插件生效）。
-5. **硬验收口径**：p24-verify 40 断言＋**p24-ui-matrix 623 断言（A0 前置基线 + A1–A5/B1/C1–C3 真实 API 全链 + 两渲染器渲染断言）**；doctor 缺席/缺依赖仅 info/warning；面板 5 卡恒渲染；恢复后 sha 回 ce0b0b81。
-6. **待用户/判定侧**：**Q1 空窗期书面确认（闸门）**；判定侧重点核空窗期警告表述与知情确认交互；Q2 收据携 `rowBlock`+`hostKey` 元数据边界；Q4 真恢复 API 删除或转只读；Q5 警示强化两项；Q3/Q6/Q7 目录名·旧存档·滚动窗口。原「UI 渲染层归属待裁」已由方案 a 闭合。
-7. **正本索引 ①**：HANDOFF-MASTER.md（总索引 + 附录 C）。
-8. **正本索引 ②**：handoff-restart.md（本文）、ledger.md（最新 L-056）、api-notes.md；**doctor 仓**（D:/dsh-test-sandbox/projects/doctor，提交 20a38fe+3a03138+edf0445，engine 三检查＋signals 驱动）。
-9. **正本索引 ③**：实现 panel/manager/{plugin-registry,custody,uninstall,snapshot}.mjs；panel/index.js 13 路由；**panel/client/index.js ＋ panel/client/panel.html 两渲染器**；doctor-signals.json；脚本 scripts/{p24-verify,p24-ui-matrix,regression-all}.mjs（可重放）；**设计正本 panel/docs/p24-design.md（v1，§13 指向）＋ p24-design-v2-destroy.md（v2 销毁式，本稿）＋ p24-test-plan-batch1.md（§2 文案全稿）**。
-10. **红线（现行为）**：五子插件源码目录可知情确认删除；~/.dsh 与 cloudflared 不变；预设写入仅 §4 口径（只调脚本＋双层备份＋缺 .bak fail-closed）；写前必备份；写盘/重启先授权；「先申报后读」；每批次同步本卡。**新增：真卸载＝销毁式＝不可逆**——`rmSync(force)` 绕过回收站、面板零副本；删除前「收据写入成功」为 fail-closed 前置；**Q1 闸门未过 ⇒ 零代码**。
+1. **当前状态**：批 1 **已关账（L-059）**；存档式真卸载入口**已下架**（UI 摘按钮 ＋ API 拒 `true-uninstall-withdrawn`）；**销毁式 v2 已获放行、待施工**（Q1 维持已确认；判定侧并认领上轮裁决**搬运掉环**，本侧守闸不动为正确）。**下一动作 ＝ v2 施工。**
+2. **基准事实**：cordis.patch.yml = ce0b0b81…（3097 B / CRLF，全程零写入）；关账时点全绿——p24-verify 40 · **p24-ui-matrix 546/0**（真卸载段改下架断言：623→546 ＝**口径收缩**非通过率变化）· 回归 14 项（p1 215／p2 16／p21 53／p22 104／p22-cards 79／p22b 17／q2-layer 14／q2-shipped 21／fidelity 38／backup-write 23／pluggable-lint 通过／node --test 93）；doctor 0/0/0。
+3. **下一步**：**销毁式 v2 施工**（`p24-design-v2-destroy.md` §11 冻结版 ＋ 文案 v2 含两补强）→ 矩阵＋回归全绿 → 报判 → **判定侧验收 ＋ 用户目视新弹窗文案（空窗期警告／收据透明句／回收站句）** → **真卸载上架** → 批 2（doctor 操作台＋双回滚）先证后写。
+4. **已定案**：软卸载语义（摘行＋本体保留＋一键恢复）＋宿主键方案 A＋冲突三态；**真卸载＝销毁式**（彻底删除不留副本；收据仅对账；恢复＝重装后挂载）；compact-router 预设桥只调既有脚本＋双层留痕；dependency-broken = `mounted` 修饰态。
+5. **硬验收口径**：p24-verify 40 ＋ **p24-ui-matrix 546（A0 前置基线 ＋ A1–A3/C1–C3 真实链路 ＋ A4/A5/B1/C2 下架断言 ＋ 两渲染器渲染断言）**；doctor 缺席/缺依赖仅 info/warning；面板 5 卡恒渲染；恢复后 sha 回 ce0b0b81。**v2 上架后该段重建为销毁式用例并重跑全套。**
+6. **待用户/判定侧**：**U14** 真卸载上架前置（判定侧验收 ＋ 用户目视三句文案）／**U15** 矩阵守卫改「运行期增量 diff」（批 2）／**U16**《实测指引》推迟至 v2 后落笔／**U17 ⚠ 上架前请在仓外人工备份五插件源码**（不可逆唯一兜底）。
+7. **正本索引 ①**：HANDOFF-MASTER.md（总索引 ＋ **叠加 4.9 批 1 关账记录** ＋ 附录 A/B/C）。
+8. **正本索引 ②**：handoff-restart.md（本文）、ledger.md（最新 **L-059**）、api-notes.md；**doctor 仓**（D:/dsh-test-sandbox/projects/doctor，提交 20a38fe+3a03138+edf0445）。
+9. **正本索引 ③**：实现 panel/manager/{plugin-registry,custody,uninstall,snapshot}.mjs；panel/index.js 13 路由；**panel/client/index.js ＋ panel/client/panel.html 两渲染器**；doctor-signals.json；脚本 scripts/{p24-verify,p24-ui-matrix,regression-all}.mjs；设计正本 panel/docs/{p24-design.md（v1，§13 指向）· **p24-design-v2-destroy.md（销毁式 v2 施工依据）** · p24-test-plan-batch1.md}；**关账正本 evidence/P24-BATCH1-CLOSURE.md**。
+10. **红线（现行为）**：五子插件源码目录可知情确认删除；~/.dsh 与 cloudflared 不变；预设写入仅 §4 口径（只调脚本＋双层备份＋缺 .bak fail-closed）；写前必备份；写盘/重启先授权；「先申报后读」；每批次同步本卡。**新增：真卸载＝销毁式＝不可逆**——`rmSync(force)` **绕过回收站**、面板零副本；删除前「收据写入成功」为 fail-closed 前置；**v2 上架须过判定侧验收 ＋ 用户目视三句文案**。
+
+> 📌 **新会话第 5 轮续更新（批 1 关账版 · L-059）**：上面 10 行已按「**批 1 关账 + 存档式下架 + 销毁式 v2 待施工**」口径**重写为当前版本**。同轮内三项执行：**Q1' 守卫白名单补 `row-adjacency.json`（622→623）**、**Q2'-a 下架存档式真卸载产品面**、**Q2'-b 关账成立**。**下方「需求变更版」「第 4 轮报判版」「P2.3 关账版」三组 10 行均降级为历史记录**，不再表达当前状态。
 
 > 📌 **新会话第 5 轮续更新（判定补两账）**：**账 b ✅ 用户软卸载事后取证完成**（两笔 `.panel-write-backups` manifest 如实、摘行 diff **删 7 增 0**、LCS 严格重建 **YES**、当前 sha **回 ce0b0b81＝完整往返 ✓**、本体保留、台账清账、邻接留痕实机首用、doctor **0/0/0**）；**账 a ❌ 销毁式 v2 未开工**（Q1 闸门，零代码）；**回归 622/623**（唯一 FAIL 为测试守卫假阳性——白名单漏 `row-adjacency.json`，**非产品缺陷**）。⇒ **判定侧自定条件「两份账齐＋全绿」未满足，本轮未执行关账**。**下一动作改为裁决 Q1/Q1'/Q2'（见第 3 行）。**
 
