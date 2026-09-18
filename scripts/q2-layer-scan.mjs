@@ -191,37 +191,33 @@ const git = (args) => execFileSync("git", args, { cwd: root, maxBuffer: 1e8 }).t
 const touch = git(["log", "--oneline", "--", "cordis.patch.yml"]);
 console.log("  git log -- cordis.patch.yml ：");
 console.log((touch || "(空)").split("\n").map((s) => "      " + s).join("\n"));
+// --- 2026-09-18 修订：该行已按第 11 轮裁决**语义化提交**（commit 22fde85）---
+// 原断言的「从未提交」前提已失效；按新现实重写（不复述旧结论）。
 const pickaxeFile = git(["log", "-S", "toolkit-manager", "--oneline", "--", "cordis.patch.yml"]);
-check("④ toolkit-manager 从未出现在该文件的 git 历史中（即该行从未被提交）",
-  pickaxeFile === "", pickaxeFile === "" ? "pickaxe 无命中" : "命中: " + pickaxeFile);
+check("④ toolkit-manager 行已进入该文件 git 历史（第 11 轮语义化提交）",
+  pickaxeFile !== "", "pickaxe 命中: " + (pickaxeFile.split("\n")[0] || ""));
 
 const headBlob = execFileSync("git", ["show", "HEAD:cordis.patch.yml"], { cwd: root });
 const diskText = readFileSync(join(root, "cordis.patch.yml"), "utf8");
 console.log("\n  HEAD blob  sha256=" + sha256(headBlob) + "  size=" + headBlob.length);
 console.log("  disk(工作区) sha256=" + sha256(Buffer.from(diskText, "utf8")) + "  size=" + Buffer.byteLength(diskText));
-check("④ HEAD 版本完全不含 toolkit-manager 行", !headBlob.toString("utf8").includes("toolkit-manager"),
+check("④ HEAD 版本含 toolkit-manager 行", headBlob.toString("utf8").includes("toolkit-manager"),
   "HEAD 末尾行: " + JSON.stringify(headBlob.toString("utf8").split(/\r?\n/).filter(Boolean).slice(-1)[0]));
 
-// --- 字节级对账：磁盘 == HEAD + 追加块（证明「除该行外零漂移」）---
+// --- 字节级对账：LF 归一后 磁盘 == HEAD（⇒ 除行尾风格外零漂移）---
 const headStr = headBlob.toString("utf8");
 const diskLf = diskText.replace(/\r\n/g, "\n");
-const prefixOnly = diskLf.startsWith(headStr);
-const suffix = prefixOnly ? diskLf.slice(headStr.length) : "";
-check("④ 磁盘去掉追加块后与 HEAD 逐字节一致（⇒ 除该行外无任何其它漂移）", prefixOnly && suffix.includes("toolkit-manager"),
-  prefixOnly ? "HEAD 是磁盘的前缀" : "前缀关系不成立");
-if (prefixOnly) {
+check("④ 磁盘（LF 归一）与 HEAD 逐字节一致（⇒ 除行尾风格外无任何漂移）",
+  diskLf === headStr, diskLf === headStr ? "归一后完全相同" : "归一后仍有差异");
+if (diskLf === headStr) {
   const numCRLF = (diskText.match(/\r\n/g) || []).length;
-  const suffixBytes = Buffer.byteLength(suffix, "utf8");
   const headBytes = headBlob.length;
-  console.log("\n  追加块（git diff 的 4 个 + 行）：");
-  console.log(suffix.split("\n").slice(0, -1).map((l) => "      + " + JSON.stringify(l)).join("\n"));
-  console.log("\n  字节账（解释 3097 − 2914 = 183）：");
+  console.log("\n  字节账：");
   console.log("      HEAD blob（git 库内存 LF）        : " + headBytes);
-  console.log("      追加块（LF）                      : " + suffixBytes);
   console.log("      磁盘 CRLF 行数（每行 +1 字节）    : " + numCRLF);
-  check("④ 字节账完全闭合：HEAD + 追加块 + CRLF 增量 = 磁盘 size",
-    headBytes + suffixBytes + numCRLF === Buffer.byteLength(diskText, "utf8"),
-    headBytes + " + " + suffixBytes + " + " + numCRLF + " = " + (headBytes + suffixBytes + numCRLF)
+  check("④ 字节账闭合：HEAD(LF) + CRLF 增量 = 磁盘 size",
+    headBytes + numCRLF === Buffer.byteLength(diskText, "utf8"),
+    headBytes + " + " + numCRLF + " = " + (headBytes + numCRLF)
       + "  vs 磁盘 " + Buffer.byteLength(diskText, "utf8"));
 }
 
@@ -230,8 +226,10 @@ const trapPath = join(root, ".panel-backups", "pre-p2-toolkit-manager-20260917-2
 if (existsSync(trapPath)) {
   const trap = readFileSync(trapPath);
   const trapStr = trap.toString("utf8");
-  check("④ 回滚陷阱：pre-p2-toolkit-manager 快照 == git HEAD（LF、**不含** toolkit-manager 行）",
-    sha256(trap) === sha256(headBlob),
+  // 2026-09-18 修订：HEAD 已前移（含该行）；本快照是**固定的历史状态**，故按自身属性断言。
+  check("④ 回滚陷阱：pre-p2-toolkit-manager 快照 = P2 之前态（2914 B / LF / **不含** toolkit-manager 行）",
+    !/id:\s*toolkit-manager/.test(trapStr) && trap.length === 2914
+      && sha256(trap) === "7541c05aaaec808f8e6500356bed3b25550998ef7a1bcf560b0c167bcb351b97",
     "size=" + trap.length + "  sha256=" + sha256(trap).slice(0, 12) + "…  含 toolkit-manager=" + /id:\s*toolkit-manager/.test(trapStr));
   console.log("      ⇒ 恢复它不仅会**删掉 4 行**（面板入口消失），还会把行尾从 CRLF 变成 LF。");
   console.log("      ⇒ 该快照**不是**「保留面板」的回滚目标，而是「P2 之前」的目标。回滚必须按目标语义选快照。");
@@ -250,6 +248,7 @@ for (const name of readdirSync(bkRoot).sort()) {
 }
 console.log("\n  结论：该行的**首次创建时刻未留档**；可归因的最早证据是 10:59 arm-manifest 快照（已含该行、旧名 @local/dsh-toolkit/panel），");
 console.log("        19:55:50 被改写为 path-like（ledger 逐版对账表 :72）。");
+console.log("        2026-09-18 第 11 轮**语义化提交**（commit `22fde85`）⇒ 该行已入 git 历史，溯源缺口就此封闭。");
 
 // ============================================================
 // §5 第④层：~/.dsh/.agent-presets（需 --agent-presets，用户一次性只读授权）

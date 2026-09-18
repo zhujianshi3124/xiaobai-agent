@@ -214,7 +214,11 @@ window.__ModuleLoader__.load({
 						"第二层（插件内部）：", react.createElement("span", { style: styles.dualCode }, "关闭"), " —— 功能被自己关掉了。",
 						react.createElement("br"),
 						"要让它真正工作，需要把插件配置里的 ", react.createElement("span", { style: styles.dualCode }, "enabled"),
-						" 改为 ", react.createElement("span", { style: styles.dualCode }, "true"), "。"
+						" 改为 ", react.createElement("span", { style: styles.dualCode }, "true"), "。",
+						react.createElement("br"),
+						"提示：本面板只负责第一层（加载与否），第二层是插件自己的配置，面板暂不修改 —— ",
+						react.createElement("span", { style: styles.dualCode }, "P2.3 配置编辑"),
+						"上线后可在此直接改。"
 					)
 				);
 			}
@@ -224,7 +228,9 @@ window.__ModuleLoader__.load({
 					react.createElement("div", { style: styles.dualLine },
 						"插件当前", react.createElement("span", { style: styles.dualCode }, "完全没有被加载"),
 						"，相关功能不会工作。要恢复需把配置行里的 ", react.createElement("span", { style: styles.dualCode }, "disabled"),
-						" 去掉或设为 ", react.createElement("span", { style: styles.dualCode }, "false"), "。"
+						" 去掉或设为 ", react.createElement("span", { style: styles.dualCode }, "false"), "。",
+						react.createElement("br"),
+						"提示：本卡的启停开关改的就是这一层 —— 直接把开关打开即可恢复。"
 					)
 				);
 			}

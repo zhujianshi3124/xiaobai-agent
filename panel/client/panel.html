@@ -178,12 +178,14 @@ function dualSwitchNotice(p) {
     return '<div class="dualBox"><div class="dualHead">⚠ 两层开关不一致，所以现在没生效</div>'
       + '<div class="dualLine">第一层（配置文件）：<span class="dualCode">已启用</span> —— 插件已被加载。<br>'
       + '第二层（插件内部）：<span class="dualCode">关闭</span> —— 功能被自己关掉了。<br>'
-      + '要让它真正工作，需要把插件配置里的 <span class="dualCode">enabled</span> 改为 <span class="dualCode">true</span>。</div></div>';
+      + '要让它真正工作，需要把插件配置里的 <span class="dualCode">enabled</span> 改为 <span class="dualCode">true</span>。<br>'
+      + '提示：本面板只负责第一层（加载与否），第二层是插件自己的配置，面板暂不修改 —— <span class="dualCode">P2.3 配置编辑</span>上线后可在此直接改。</div></div>';
   }
   if (p.patchRow && p.patchRow.enabled !== true) {
     return '<div class="dualBox"><div class="dualHead">⚠ 在配置文件中被停用</div>'
       + '<div class="dualLine">插件当前<span class="dualCode">完全没有被加载</span>，相关功能不会工作。'
-      + '要恢复需把配置行里的 <span class="dualCode">disabled</span> 去掉或设为 <span class="dualCode">false</span>。</div></div>';
+      + '要恢复需把配置行里的 <span class="dualCode">disabled</span> 去掉或设为 <span class="dualCode">false</span>。<br>'
+      + '提示：本卡的启停开关改的就是这一层 —— 直接把开关打开即可恢复。</div></div>';
   }
   return "";
 }

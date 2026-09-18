@@ -213,6 +213,43 @@ check("react renderer: never emits a merged layer value",
   !cards.some((c) => { const t = reactR.toggleOf(c); return t && /layer\s*[:=]\s*["']merged/.test(textOf(t.type(t.props)).join(" ")); }));
 
 // ============================================================
+// A2. 黄警告「恢复指引」文案（第 11 轮 ⑤ 文案优化）
+//   —— 两类警告都必须给出人话恢复路径，并点明面板的责任边界。
+// ============================================================
+{
+  const pRt = snap.plugins.find((x) => x.dir === "rate-throttle");
+
+  // ① react：DualSwitchNotice 是**函数组件**，且只存在于 `PluginCard` 的**渲染产物**里
+  //    （整页树里只有 PluginCard 元素本身，其 children 不在树中）。
+  //    所以要：先调用 PluginCard → 在产物里找到 DualSwitchNotice 元素 → 再用它当次的
+  //    真实 props 调一次取文本。（与「headless createElement 陷阱」同族：不调用无文本。）
+  const rtEl = cards.find((c) => c.props.plugin.dir === "rate-throttle");
+  const cardTree = rtEl ? rtEl.type(rtEl.props) : null;
+  const noticeEls = cardTree
+    ? findAll(cardTree, (n) => typeof n.type === "function" && n.type.name === "DualSwitchNotice")
+    : [];
+  const whole = noticeEls.map((el) => textOf(el.type(el.props)).join(" ")).join(" ");
+  check("[rate-throttle] react 卡内存在 DualSwitchNotice 元素", noticeEls.length > 0, "count=" + noticeEls.length);
+  check("[rate-throttle] react 黄警告含恢复指引（要让它真正工作 + enabled）",
+    whole.includes("要让它真正工作") && whole.includes("enabled"));
+  check("[rate-throttle] react 恢复指引点明「本面板只负责第一层」", whole.includes("本面板只负责第一层"));
+  check("[rate-throttle] react 恢复指引指向「P2.3 配置编辑」", whole.includes("P2.3 配置编辑"));
+
+  // ② html：同一段文案必须同步
+  const notice = htmlR.dualSwitchNotice(pRt);
+  check("[rate-throttle] html 黄警告含恢复指引", notice.includes("要让它真正工作"));
+  check("[rate-throttle] html 恢复指引点明「本面板只负责第一层」", notice.includes("本面板只负责第一层"));
+  check("[rate-throttle] html 恢复指引指向「P2.3 配置编辑」", notice.includes("P2.3 配置编辑"));
+
+  // ③ 停用态警告的恢复指引（人工构造一次「层1关闭」验证另一分支）
+  const offP = JSON.parse(JSON.stringify(pRt));
+  offP.patchRow.enabled = false;
+  const offNotice = htmlR.dualSwitchNotice(offP);
+  check("[停用态] html 恢复指引点明「启停开关改的就是这一层」",
+    offNotice.includes("本卡的启停开关改的就是这一层"), offNotice.slice(0, 0) || undefined);
+}
+
+// ============================================================
 // B. 层间真值表（Q2）：两套渲染器对 (层1, 层2) 四种组合的判定
 // ============================================================
 const base = snap.plugins.find((x) => x.dir === "rate-throttle");

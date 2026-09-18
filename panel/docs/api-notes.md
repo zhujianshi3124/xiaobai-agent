@@ -303,3 +303,45 @@ SHIPPED_PRESET_ROOT (trust: system)  →  config.roots  →  $DSH_HOME/.agent-pr
 - **`$DSH_HOME/cordis.patch.yml`（注入点 3）未读取**。它落在红线目录 `~/.dsh` 内，本轮授权只到 `~/.dsh/.agent-presets`（只读）。若该文件存在，它就是一个**能覆盖 profile 层、且优先级高于 profile 层**的 patch 层 —— 理论上可携带 toolkit 任意 id 行。**建议**：若要穷尽，「home 层文件是否存在 + 是否含 toolkit 行」需单独授权后补扫。
 - **注入点 4（`--patch`）在本次运行中未使用**（`dsh` 以默认参数启动），无法从磁盘取证；其语义已由源码定案。
 - **注入点 5（telemetry 补丁）** 仅在 `DSH_TELEMETRY_DISABLED` 非空且组合含 `session-telemetry-otel` 行时生成（`profile-boot:184-190`），本环境未验证实际取值。
+
+---
+
+## P2.2 启停开关 · **设计语义定案**（2026-09-18 关账，第 11 轮裁决）
+
+**定案命题**：本面板的「启用」= **写入显式 `disabled: false`**，**不删键**。
+
+- **源码事实**：`panel/manager/apply-engine.mjs` `planRowFlag()`
+  - 键**已存在** → **原地替换**该行的值（保留缩进与书写风格）；
+  - 键**不存在** → 在锚点行（`- id: <rowId>`）**正下方**插入一行（缩进 = 锚点 + 2）；
+  - **从不删除键** —— 本函数没有任何删除逻辑。
+- **实现自陈**：`createTogglePlan()` 的 JSDoc 原文 ——
+  > `enabled = true` → 写 `disabled: false`（显式声明为启用；**不删键**，语义更明确）
+- **正式声明（口径）**：
+  > **面板 toggle 往返（停用 → 复原）会在文件里留下一条显式 `disabled: false` 行；其运行语义与「原本无该键」完全等价（loader 只在 `Boolean(disabled)` 为真时跳过加载，`false` 与「缺键」同义），但字节上不等价。字节级「无痕」不在面板能力范围内 —— 需走恢复程序（见下）。**
+
+**关账依据（第 10 轮 a–e 取证）**：判据 (c)「复原后 sha 回基准」**在现有引擎下不可达**（结构性原因即「不删键」）。第 11 轮裁决：**(c) 不改判降级，改以授权恢复达成**（目标 = 逐字节基准 `ce0b0b81…`），并把上段语义**正式文档化**（本节 + `HANDOFF-MASTER.md` §三 批注 3.4）。
+证据：`panel/docs/evidence/TERMINAL-ACCEPTANCE-ROUND10.txt`（含 4 次写链的 LCS 重建）。
+
+**恢复程序（字节无痕的唯一路径）**：`node scripts/restore-cordis-baseline.mjs [--apply]`
+—— 从 `git show HEAD:cordis.patch.yml` + toolkit-manager 4 行重建基准，**fail-closed**（重建 sha ≠ 期望值则不写盘），写前备份到 `.panel-backups/restore-baseline-<stamp>/`，写后复验 sha / size / CRLF。
+
+**暂缓（明确不做）**：**给引擎加「复原时删键」能力** —— `apply-engine.mjs` 是安全核心，关账前不加能力；且「删键」存在**歧义**（删掉的是**上游原生键**还是**面板自己加的行**？需 plan 快照区分，复杂度上升）；显式 `false` 的自文档价值成立。**P2.3 后有真实需求再立项**（见 `ledger.md` L-036 与 `HANDOFF-MASTER.md` §四 叠加 4.6）。
+
+---
+
+## Q2 尾① · **shipped presets 补扫结论（正文）**（2026-09-18，21/21 PASS）
+
+**范围**：DSH 安装目录下三个 shipped agent-preset 的**当前内容**（`AppData\Roaming\npm\node_modules\@deepseek-ai\dsh\node_modules\@deepseek-ai\dsh-agent-presets\presets\{standard,ptc,cordis,minimal}\agent.cordis.yml`）。该目录**不属于项目红线**（红线仅 `~/.dsh`、cloudflared 进程、五子插件源码目录），故**无需额外授权**。
+
+**结论（三个命题全部为「无」）**：
+1. **toolkit 五个 insert-id 行 = 无**（`rate-throttle` / `web-search-local` / `web-search-router` / `agent-memory-runtime` / `toolkit-manager` 在四份 preset 里**一处也没有**）。
+2. **覆盖 / 遮蔽声明 = 无**（`disabled` / `override` / `merge` 类命中**全部是 upstream 自带内容**，与 toolkit 无关）。
+3. **`minimal` 未被改动**（0 处 `compact-router`，无 marker —— 与 `apply-preset-patch.mjs` 的明文「设计上不动 minimal」一致）。
+
+**唯一命中项的定性（关键）**：`standard` / `ptc` / `cordis` **各含 1 行** `- id: compact-router` / `name: '@local/dsh-toolkit/compact-router'`。
+这**不是泄漏、也不是旧名残留**，而是 `scripts/apply-preset-patch.mjs` 把 upstream 的 `- id: compaction-basic` / `@deepseek-ai/dsh-compaction-basic` **原位替换**的结果（三份一致：Δ **+5 行 / +142 B**），且 `cordis.patch.yml:3` 的注释**自陈**此事 ⇒ 属**文档化的预设改写注入路径**。
+
+**sha 对账**：`standard a5e4d871…` / `ptc 7d9aff86…` / `cordis 9525c9a6…` **逐份 == `preset-patch-state.json.patchedSha`**；upstream 残留与旧名 `@local/dsh-compact-router` 残留**均为 0**。
+
+**证据**：`panel/docs/evidence/Q2-SHIPPED-PRESET-SCAN.txt`（**21/21 PASS**）、`Q2-SHIPPED-PRESET-DIFF.txt`（55 KB 逐行 diff）；脚本 `scripts/q2-shipped-scan.mjs` / `q2-shipped-diff.mjs`。
+**Q2 尾②（loader 源码定案）**见本文 **§P2.0③**（注入点全集 + 分平面合并语义 + 对「四层栈」的裁决）。
