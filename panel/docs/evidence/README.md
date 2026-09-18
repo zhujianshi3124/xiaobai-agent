@@ -45,6 +45,8 @@
 | `P24-BATCH1-REGRESSION-PREFLIGHT.txt` | 由 `scripts/regression-all.mjs` 生成（可重放）—— 关账前置核验时点回归原文：**13 项绿 + p24-ui-matrix 622/623（1 FAIL）**，如实留档（**未为凑绿而改测试**） | 1437 | `23115ca108d17280187bc71315e23dc0167b0c856e548f186d115081981ccfa1` |
 | `P24-BATCH1-CLOSURE.md` | 本侧撰写 —— **P2.4 施工批 1 关账记录正本**（判定侧 Q2'-b 执行）：关账范围（软卸载/恢复＋引擎＋UI＋doctor）· 三源依据（用户亲验／账 b 字节级取证／L-056 全绿）· **豁免条款重写版**（原「真机验证推迟」作废）· 下架记录 · 全绿快照 · 后续顺序 | 7143 | `c9b7574ef81152bcdc63c2a0a7c3d20727eadb138202e24bda1cf2d7db57ed43` |
 | `P24-BATCH1-CLOSURE-REGRESSION.txt` | 由 `scripts/regression-all.mjs` 生成（可重放）—— **关账时点全套回归原文**：14 项 ＋ node --test 93 **全绿**（p24-ui-matrix **546/0**，真卸载段改下架断言后的新口径） | 1414 | `aa6fadd0c884fa2a7d567b308f8156608037b21c0dbb171ff309436243d81202` |
+| `P24-V2-DESTROY-REPORT.md` | 本侧撰写 —— **销毁式 v2 施工全绿报判**（L-060）：交付清单（引擎去存档步→收据先行／挂载算子／快照 v2／两渲染器文案 v2 三句必含＋两补强／矩阵重建＋5 条硬判据／C3 重装挂载用户故事）· 施工中显影的 2 处回归与修法 · **1 处实施偏差申报**（§5.3 无收据改为拒绝）· 呈验请求 | 8602 | `f07413c7f04bf159464aa399ed6d6b5d79e8aaede69d3fb08cc3b5e3f6030cd2` |
+| `P24-V2-DESTROY-REGRESSION.txt` | 由 `scripts/regression-all.mjs` 生成（可重放）—— **销毁式 v2 报判时点全套回归原文**：14 项 ＋ node --test 93 **全绿**（p24-verify 53/0 · p24-ui-matrix 666/0 · p1-smoke 225） | 1414 | `8aca80b1c727ed406cd7e56544ceb432d896fa89b97a9a9398aa20a1dfdfe48a` |
 
 前三份为**逐字节复制**（复制后比对 sha256 一致才落盘），未经改写。
 
@@ -198,6 +200,7 @@ node scripts/p22b-retention-scope.mjs > panel/docs/evidence/RETENTION-SCOPE.txt 
 | 2026-09-18 23:20（新会话第 5 轮续） | **需求变更受理：真卸载改销毁式 → 设计修订稿 v2**（L-057，零代码）：`p24-design-v2-destroy.md` 落档（收据口径/重装挂载/文案 v2 含空窗期警告/矩阵改造/不可逆风险 R1–R5/待裁决 Q1–Q8） | 无本目录新增（设计稿在 `panel/docs/`） |
 | 2026-09-19 00:20（新会话第 5 轮续 · 判定补账） | **账 b 取证 + 账 a/关账前置核验**（L-058）：用户软卸载**往返字节级复原 ✓**；复跑暴露 **1 项测试守卫假阳性**（白名单漏 `row-adjacency.json`）⇒ **622/623 如实留档**；**关账前置未满足 ⇒ 未执行关账**（销毁式 v2 受 Q1 闸门未开工） | 新增 `P24-BATCH1-SOFT-ROUNDTRIP-FORENSICS.md`（7452 B）、`P24-BATCH1-CLOSURE-PREFLIGHT.md`（7689 B）、`P24-BATCH1-REGRESSION-PREFLIGHT.txt`（1437 B） |
 | 2026-09-19 00:5x（新会话第 5 轮续 · 判定三裁执行） | **批 1 关账成立**（L-059）：Q1' 守卫白名单补 `row-adjacency.json`（622→623）；**Q2'-a 下架存档式真卸载产品面**（UI 摘按钮＋API 拒 `true-uninstall-withdrawn`）；Q2'-b 关账（范围＝软卸载/恢复＋引擎＋UI＋doctor）；豁免条款**重写版**。矩阵真卸载段改下架断言 ⇒ **546/0**（口径收缩）；关账时点回归全绿＋doctor 0/0/0 | 新增 `P24-BATCH1-CLOSURE.md`（7143 B）、`P24-BATCH1-CLOSURE-REGRESSION.txt`（1414 B） |
+| 2026-09-19 01:0x（新会话第 5 轮续 · 销毁式 v2 施工） | **销毁式 v2 施工完成、全绿报判**（L-060）：真卸载**去存档步改收据先行**（**无 body/ 副本**）＋**挂载算子**（复用插回算子，无收据拒绝）＋快照 v2（`receiptOnFile`／「无副本」文案／`canMount`／`bodyStats`）＋两渲染器**文案 v2**（三句必含＋两补强）；矩阵 **A4/A5/B1/C2/C3 重建＋5 条销毁式硬判据**（C3＝真删→重装→挂载→复原完整故事）；**p24-verify 53/0 · p24-ui-matrix 666/0 · 回归 14 项＋node --test 93 · doctor 0/0/0 · 真实 patch 零写入** | 新增 `P24-V2-DESTROY-REPORT.md`（8602 B）、`P24-V2-DESTROY-REGRESSION.txt`（1414 B） |
 
 > **本目录的两条硬约定**：① **只增不改** —— 已入库的归档文件**永不覆盖**；与脚本产生时序差时，**加注记、以脚本重放为准**。
 > ② **每份证据必须可重放** —— 上表所有「由 `scripts/*.mjs` 生成」者，重放命令即其生成命令。
