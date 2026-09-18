@@ -508,6 +508,47 @@ check("client keeps defensive fallback", clientSrc.includes("rowAnchorFromPatch"
   check("P2.2 fallback page shows a confirm step before writing", htmlSrc2.includes("confirmBox") && htmlSrc2.includes("确认写入"));
   check("P2.2 client surfaces cross-reference warnings", clientSrc2.includes("有其它配置引用这个插件"));
   check("P2.2 fallback page surfaces cross-reference warnings", htmlSrc2.includes("有其它配置引用这个插件"));
+
+  // ---- P2.2b 确认页人话（生效时机 + disabled 解释）----
+  check("P2.2b client states WHEN the change takes effect (disable direction)",
+    clientSrc2.includes("执行后此插件将于下次重启时停用（当前仍运行）。"));
+  check("P2.2b fallback page states WHEN the change takes effect (disable direction)",
+    htmlSrc2.includes("执行后此插件将于下次重启时停用（当前仍运行）。"));
+  check("P2.2b client states the enable direction too",
+    clientSrc2.includes("执行后此插件将于下次重启时启用"));
+  check("P2.2b fallback page states the enable direction too",
+    htmlSrc2.includes("执行后此插件将于下次重启时启用"));
+  check("P2.2b client explains what disabled: true means",
+    clientSrc2.includes("下次启动时跳过加载") && clientSrc2.includes("要重启才会生效"));
+  check("P2.2b fallback page explains what disabled: true means",
+    htmlSrc2.includes("下次启动时跳过加载") && htmlSrc2.includes("要重启才会生效"));
+
+  // ---- P2.2b Q1：条件开关（!!js）不解释、不改写 ----
+  const panelSrc2 = readFileSync(join(panelDir, "index.js"), "utf8");
+  const snapshotSrc2 = readFileSync(join(panelDir, "manager", "snapshot.mjs"), "utf8");
+  check("P2.2b engine exports readRowDisabledLiteral", engineSrc.includes("export function readRowDisabledLiteral"));
+  check("P2.2b engine refuses to clobber a non-literal disabled",
+    engineSrc.includes("value-not-literal") && engineSrc.includes("面板不解释平台条件表达式"));
+  check("P2.2b server maps value-not-literal → 400", /"value-not-literal":\s*400/.test(panelSrc2));
+  check("P2.2b snapshot surfaces a conditional disabled instead of guessing a boolean",
+    snapshotSrc2.includes("disabledExpr"));
+  check("P2.2b client says the conditional switch is not interpreted",
+    clientSrc2.includes("条件开关（面板不解释）"));
+  check("P2.2b fallback page says the conditional switch is not interpreted",
+    htmlSrc2.includes("条件开关（面板不解释）"));
+  check("P2.2b client tells the user to edit a conditional row by hand",
+    clientSrc2.includes("请手工编辑"));
+  check("P2.2b fallback page tells the user to edit a conditional row by hand",
+    htmlSrc2.includes("请手工编辑"));
+
+  // ---- P2.2b 全卡覆盖：4 张可 toggle 卡的锚点行号与真实文件对账 ----
+  // （agent-memory 的 74 行是用户实际点击时看到的行号，必须逐字对上）
+  const patchLines = readFileSync(join(root, "cordis.patch.yml"), "utf8").split(/\r?\n/);
+  const CARD_LINES = [["rate-throttle", 14], ["web-search-local", 58], ["web-search-router", 64], ["agent-memory-runtime", 74]];
+  for (const [id, line] of CARD_LINES) {
+    const found = patchLines.findIndex((l) => new RegExp("^\\s*- id:\\s*" + id + "\\s*$").test(l));
+    check("P2.2b anchor line reconciled for " + id, found + 1 === line, "line " + (found + 1) + " (expected " + line + ")");
+  }
 }
 
 if (baseUrl) {

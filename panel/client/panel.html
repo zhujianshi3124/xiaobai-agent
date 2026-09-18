@@ -53,6 +53,11 @@
   .crossLine { font-size: 11px; color: #e0d5b7; font-family: ui-monospace, Consolas, monospace; line-height: 1.7; word-break: break-all; }
   .crossFoot { font-size: 11px; color: #c9bd9a; margin-top: 3px; }
   .errBox { margin-top: 6px; padding: 6px 8px; border-radius: 4px; background: #2b1719; border: 1px solid #6b2226; font-size: 11.5px; color: #f2a6a0; }
+  /* 确认页：生效时机说明 + 字段人话解释 */
+  .confirmEffect { font-size: 12px; font-weight: 600; color: #fbbf24; line-height: 1.7; margin-bottom: 4px; }
+  .confirmNote { font-size: 11.5px; color: #a9aeb5; line-height: 1.75; margin-top: 4px; }
+  .noteCode { font-family: ui-monospace, Consolas, monospace; color: #d9c58a; }
+  .condNote { margin-top: 4px; font-size: 11px; color: #e0d5b7; line-height: 1.7; }
   pre { white-space: pre-wrap; background: #12151a; border: 1px solid #2a2f36; border-radius: 6px; padding: 10px; font-size: 12px; max-height: 340px; overflow: auto; }
   .issues { max-height: 320px; overflow: auto; border: 1px solid #2a2f36; border-radius: 6px; }
   .issue { border-bottom: 1px solid #23272d; padding: 8px; font-size: 12px; line-height: 1.6; }
@@ -161,6 +166,9 @@ var PATCH_TEXT = "";
 function stateOf(p) {
   if (p.dir === "compact-router") return { label: "运行中 · 正在生效", cls: "on" };
   if (!p.patchRow) return { label: "配置层停用 · 未加载", cls: "off" };
+  // Q1：disabled 是条件写法（如 !!js ...）时，实际是否加载取决于该表达式，
+  // 面板不解释，因此不能报"运行中"。
+  if (p.patchRow.disabledExpr) return { label: "配置层是条件开关 · 实际是否加载取决于该表达式，面板不解释", cls: "warn" };
   if (p.patchRow.enabled !== true) return { label: "配置层停用 · 未加载", cls: "off" };
   if (innerSwitchValue(p, PATCH_TEXT) === false) return { label: "已加载 · 功能开关关闭，暂不生效", cls: "warn" };
   return { label: "运行中 · 正在生效", cls: "on" };
@@ -231,14 +239,22 @@ function toggleHtml(p) {
   if (p.dir === "compact-router" || !row) return "";
   var currentEnabled = row.enabled === true;
   var inner = innerSwitchValue(p, PATCH_TEXT);
+  // Q1：条件写法（!!js ...）不解释、也不改写 —— 服务端同样会拒绝（双保险）。
+  var conditional = !!row.disabledExpr;
   return '<div class="toggleBox" data-toggle-for="' + esc(row.id) + '">'
     + '<div class="toggleHead">启停开关（两层分开，改的是第一层）</div>'
     + layerRowHtml("第一层 · 配置文件（patch-row.disabled）",
-        currentEnabled ? "已加载" : "未加载（被配置层停用）", currentEnabled ? "on" : "off")
+        conditional ? "条件开关（面板不解释）" : (currentEnabled ? "已加载" : "未加载（被配置层停用）"),
+        conditional ? "warn" : (currentEnabled ? "on" : "off"))
     + layerRowHtml("第二层 · 插件内部（config.enabled）",
         inner === null ? "该插件没有内部开关" : (inner ? "开启" : "关闭"),
         inner === null ? "off" : (inner ? "on" : "warn"))
-    + '<div class="toggleRow"><button class="tglAsk" data-row="' + esc(row.id) + '" data-next="' + (currentEnabled ? "0" : "1") + '">'
+    + (conditional
+        ? '<div class="condNote">这一行的 <span class="noteCode">disabled</span> 是条件写法（<span class="noteCode">'
+          + esc(row.disabledExpr) + '</span>）。实际是否加载由该表达式决定，面板不解释、也不会改写它 —— 请手工编辑。</div>'
+        : "")
+    + '<div class="toggleRow"><button class="tglAsk" data-row="' + esc(row.id) + '" data-next="' + (currentEnabled ? "0" : "1") + '"'
+    + (conditional ? " disabled" : "") + ">"
     + (currentEnabled ? "停用（改第一层）" : "启用（改第一层）")
     + "</button><span class=\"muted tglMsg\"></span></div>"
     + '<div class="tglConfirm"></div>'
@@ -289,9 +305,18 @@ function renderConfirm(host, askBtn, p) {
   }
   host.innerHTML = '<div class="confirmBox">'
     + '<div class="confirmHead">确认后才会写入，下面是具体改动</div>'
+    // 生效时机（人话）：改的是配置文件，不影响当前进程
+    + '<div class="confirmEffect">'
+    + (plan.targetEnabled
+        ? "执行后此插件将于下次重启时启用（当前未加载的不会立刻加载）。"
+        : "执行后此插件将于下次重启时停用（当前仍运行）。")
+    + "</div>"
     + '<div class="confirmLine">目标文件：<span class="dualCode">' + esc(plan.file) + "</span></div>"
     + '<div class="confirmLine">改动位置：第 ' + esc(String(plan.anchorLine)) + " 行的 <span class=\"dualCode\">- id: " + esc(plan.rowId) + "</span></div>"
     + '<pre class="diffPre">' + esc((plan.diff || []).join("\n")) + "</pre>"
+    // disabled 字段本身的人话解释（紧挨 diff）
+    + '<div class="confirmNote"><span class="noteCode">disabled: true</span> 的意思是：让 DSH 在下次启动时跳过加载这个插件。'
+    + "它写在配置文件里，不会影响正在运行的进程 —— 所以要重启才会生效。</div>"
     + crossHtml
     + '<div class="confirmRow"><button class="tglGo">确认写入</button><button class="tglNo">取消</button></div>'
     + "</div>";

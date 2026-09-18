@@ -29,6 +29,28 @@ const sha = (t) => createHash("sha256").update(t).digest("hex");
 // 真实 patch 是 CRLF；断言前统一归一化（上轮已提，勿漏）
 const lf = (t) => String(t).replace(/\r\n/g, "\n");
 
+/** 抽出某个行块的原文（从 `- id:` 行到下一个行块之前）。 */
+function blockOf(text, rowId) {
+  const lines = lf(text).split("\n");
+  const start = lines.findIndex((l) => new RegExp("^\\s*- id:\\s*" + rowId + "\\s*$").test(l));
+  if (start < 0) return "";
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) {
+    if (/^\s*- id:/.test(lines[i])) { end = i; break; }
+  }
+  return lines.slice(start, end).join("\n");
+}
+
+/**
+ * 抽出某行「第二层」的原文 —— 即 `config:` 子树。
+ * 用来断言改写第一层（patch 行 disabled）不会动到第二层（config.enabled）的任何一个字节。
+ */
+function layerTwoOf(text, rowId) {
+  const block = blockOf(text, rowId);
+  const m = /\n\s*config:\n([\s\S]*)$/.exec(block);
+  return m ? m[1] : "";
+}
+
 const REAL_PATCH = join(root, "cordis.patch.yml");
 const realText = readFileSync(REAL_PATCH, "utf8");
 const realShaBefore = sha(realText);
@@ -222,7 +244,210 @@ function freshPatch() {
     !/layer\s*[:=]\s*["']merged/.test(clientSrc));
 }
 
-// ---------- 7. 真实 cordis.patch.yml 全程未被触碰 ----------
+// ---------- 7. 全卡覆盖：每张**可 toggle 卡**各跑一次 toggle plan ----------
+//
+// 起因：上轮只证过 rate-throttle 一张，而面板开放 toggle 的是 4 张卡。
+// 「只证 1 张」等于没证 —— 本段把每一张都真跑一遍，并对齐锚点行号。
+const CARDS = [
+  { dir: "rate-throttle", rowId: "rate-throttle", line: 14, pkg: "@local/dsh-toolkit/rate-throttle" },
+  { dir: "web-search-local", rowId: "web-search-local", line: 58, pkg: "@local/dsh-toolkit/web-search-local" },
+  { dir: "search-router", rowId: "web-search-router", line: 64, pkg: "@local/dsh-toolkit/search-router" },
+  { dir: "agent-memory", rowId: "agent-memory-runtime", line: 74, pkg: "@local/dsh-toolkit/agent-memory" },
+];
+{
+  for (const card of CARDS) {
+    const file = freshPatch();
+    const before = readFileSync(file, "utf8");
+    const beforeSha = sha(before);
+
+    // (a) 锚点唯一 + 行号对账
+    let hitLine = null;
+    try { hitLine = eng.locateRowAnchor(before, card.rowId).lineIndex + 1; } catch { /* 下面断言会报 */ }
+    check("card " + card.dir + ": anchor unique and at the reconciled line " + card.line,
+      hitLine === card.line, "line " + hitLine);
+
+    // (b) 交叉引用检查（真实文件上应当无引用）
+    const refs = eng.findCrossReferences(before, { rowId: card.rowId, alsoMatch: [card.pkg] });
+    check("card " + card.dir + ": cross-ref check runs and finds 0 on the real file",
+      Array.isArray(refs) && refs.length === 0, JSON.stringify(refs));
+
+    // (c) toggle plan 真跑 + 只读
+    const plan = eng.createTogglePlan({ file, rowId: card.rowId, enabled: false, backupRoot, alsoMatch: [card.pkg] });
+    check("card " + card.dir + ": toggle plan is read-only (file sha unchanged)",
+      sha(readFileSync(file, "utf8")) === beforeSha);
+    check("card " + card.dir + ": toggle plan changed=true and targets the right line",
+      plan.changed === true && plan.anchorLine === card.line,
+      "changed=" + plan.changed + " anchorLine=" + plan.anchorLine);
+    check("card " + card.dir + ": diff preview shows disabled: true",
+      plan.diff.some((l) => /^\+\s+disabled: true$/.test(l)), JSON.stringify(plan.diff));
+
+    // (d) 确认页元数据齐备（UI 确认页逐项消费这些字段）
+    const metaOk = typeof plan.file === "string" && plan.file === file
+      && plan.rowId === card.rowId
+      && plan.anchorLine > 0
+      && typeof plan.token === "string" && plan.token.length === 32
+      && plan.expectedSha === beforeSha
+      && Number.isFinite(Date.parse(plan.expiresAt)) && Date.parse(plan.expiresAt) > Date.now()
+      && plan.crossRefs.length === 0
+      && plan.targetEnabled === false;
+    check("card " + card.dir + ": confirm-page metadata complete (file/rowId/line/token/sha/expiry/diff)", metaOk,
+      JSON.stringify({ file: !!plan.file, rowId: plan.rowId, anchorLine: plan.anchorLine, tokenLen: plan.token.length, expiry: plan.expiresAt }));
+
+    // (e) 落盘后：只在**该行**加了 disabled，其它层不动
+    eng.putPlan(plan);
+    eng.executePlan(plan.token);
+    const after = lf(readFileSync(file, "utf8"));
+    check("card " + card.dir + ": disabled: true landed as a sibling of the row's own keys",
+      new RegExp("- id: " + card.rowId + "\\n {6}disabled: true\\n").test(after));
+    check("card " + card.dir + ": layer 2 (config.enabled) byte-identical after toggle",
+      layerTwoOf(before, card.rowId) === layerTwoOf(after, card.rowId),
+      JSON.stringify(layerTwoOf(after, card.rowId)));
+  }
+}
+
+// ---------- 8. compact-router：没有配置行 ⇒ 没有 toggle（fail-closed）----------
+{
+  const snapMod2 = await import(new URL("../panel/manager/snapshot.mjs", import.meta.url).href);
+  const snap = await snapMod2.buildSnapshot({ toolkitRoot: root });
+  const cr = snap.plugins.find((p) => p.dir === "compact-router");
+  check("snapshot: compact-router has no patch row", !!cr && cr.patchRow === null);
+  check("snapshot: compact-router is managed by the preset script", !!cr && cr.managedBy === "preset-script");
+
+  // 引擎侧：对它发起 toggle 必须被锚点唯一性挡下（而不是误写别的行）
+  const file = freshPatch();
+  let e = null;
+  try { eng.createTogglePlan({ file, rowId: "compact-router", enabled: false, backupRoot }); } catch (err) { e = err; }
+  check("engine refuses to toggle compact-router (no such row → anchor-missing)",
+    e && e.code === "anchor-missing", e && e.code);
+
+  // 两套渲染器都必须把它排除在 toggle 之外
+  const clientSrc = readFileSync(join(root, "panel", "client", "index.js"), "utf8");
+  const htmlSrc = readFileSync(join(root, "panel", "client", "panel.html"), "utf8");
+  check("react client gates toggle off for compact-router / row-less cards",
+    /plugin\.dir === "compact-router" \|\| !row/.test(clientSrc));
+  check("fallback page gates toggle off for compact-router / row-less cards",
+    /p\.dir === "compact-router" \|\| !row/.test(htmlSrc));
+}
+
+// ---------- 9. 真实文件的注释行负例：交叉引用不得误报 ----------
+//
+// 真实 patch 的第 2 行注释里确实写着 "web-search-local"。
+// 若「跳过注释行」这条规则失效，web-search-local 就会凭空多出一条交叉引用告警。
+{
+  const lines = lf(realText).split("\n");
+  const commentHit = lines.findIndex((l) => /^\s*#/.test(l) && /web-search-local/.test(l));
+  check("premise: a real comment line really does mention web-search-local", commentHit >= 0,
+    "line " + (commentHit + 1) + ": " + (lines[commentHit] || "").trim().slice(0, 60));
+  check("…and the comment rule suppresses it (0 cross-refs for web-search-local)",
+    eng.findCrossReferences(realText, { rowId: "web-search-local" }).length === 0);
+  // 反向对照：把那一条注释的 `#` 去掉，规则就应当命中 —— 证明抑制确实来自注释规则
+  const targetLine = lines[commentHit];
+  const uncommented = realText.replace(targetLine, targetLine.replace(/^\s*#\s?/, ""));
+  check("control: un-commenting THAT line makes the same row produce a hit",
+    uncommented !== realText && eng.findCrossReferences(uncommented, { rowId: "web-search-local" }).length > 0,
+    JSON.stringify(eng.findCrossReferences(uncommented, { rowId: "web-search-local" }).slice(0, 2)));
+}
+
+// ---------- 10. Q1 安全闸：非字面量 disabled（!!js 条件写法）拒绝改写 ----------
+{
+  const jsExpr = "!!js process.platform === 'win32'";
+  const file = freshPatch();
+  const withExpr = readFileSync(file, "utf8").replace(
+    "    - id: rate-throttle\r\n",
+    "    - id: rate-throttle\r\n      disabled: " + jsExpr + "\r\n",
+  );
+  writeFileSync(file, withExpr, "utf8");
+  const beforeSha = sha(readFileSync(file, "utf8"));
+
+  // 读侧：必须把表达式如实报出来，而不是当成布尔
+  const lit = eng.readRowDisabledLiteral(readFileSync(file, "utf8"), "rate-throttle");
+  check("readRowDisabledLiteral flags a !!js expression as non-literal",
+    lit && lit.literal === false && /!!js/.test(lit.raw), JSON.stringify(lit));
+  check("readRowDisabledLiteral line number points at the disabled line", !!lit && lit.line > 0, "line " + (lit && lit.line));
+
+  // 写侧：必须 fail-closed
+  let e = null;
+  try { eng.createTogglePlan({ file, rowId: "rate-throttle", enabled: false, backupRoot }); } catch (err) { e = err; }
+  check("Q1 guard: toggle on a !!js row is REFUSED (value-not-literal)", e && e.code === "value-not-literal", e && e.code);
+  check("Q1 guard: the platform expression was NOT clobbered (file untouched)",
+    sha(readFileSync(file, "utf8")) === beforeSha);
+
+  // 字面量行仍然正常放行（闸门不能误伤正常路径）
+  const okFile = freshPatch();
+  const okLit = eng.readRowDisabledLiteral(readFileSync(okFile, "utf8"), "rate-throttle");
+  check("literal-absent row: readRowDisabledLiteral returns null (no disabled key yet)", okLit === null);
+  const okPlan = eng.createTogglePlan({ file: okFile, rowId: "rate-throttle", enabled: false, backupRoot });
+  check("Q1 guard does not block the normal path (literal/absent disabled still toggles)", okPlan.changed === true);
+
+  // 已显式写了 disabled: false 的行，属于字面量，必须放行
+  const falseFile = freshPatch();
+  writeFileSync(falseFile, readFileSync(falseFile, "utf8").replace(
+    "    - id: rate-throttle\r\n",
+    "    - id: rate-throttle\r\n      disabled: false\r\n",
+  ), "utf8");
+  const falseLit = eng.readRowDisabledLiteral(readFileSync(falseFile, "utf8"), "rate-throttle");
+  check("explicit `disabled: false` counts as literal (togglable)", falseLit && falseLit.literal === true, JSON.stringify(falseLit));
+
+  // 错误码映射
+  const idx = readFileSync(join(root, "panel", "index.js"), "utf8");
+  check("server maps value-not-literal → 400",
+    /"value-not-literal":\s*400/.test(idx));
+}
+
+// ---------- 11. Q2 层间覆盖检查：两层互不改写，且行插入的连带位移被 SHA 兜住 ----------
+//
+// 结论要证的是：第一层（patch 行 disabled）与第二层（config.enabled）**没有覆盖关系**，
+// 改写任一层都不会动到另一层的字节；但**插入行会位移后续锚点**，这一连带效应由
+// SHA 比对拦住（execute 前重读，SHA 变了就拒）。
+{
+  const file = freshPatch();
+  const before = lf(readFileSync(file, "utf8"));
+  const anchorBefore = eng.locateRowAnchor(before, "agent-memory-runtime").lineIndex + 1;
+
+  // 改写 rate-throttle 这一层
+  const plan = eng.createTogglePlan({ file, rowId: "rate-throttle", enabled: false, backupRoot });
+  eng.putPlan(plan);
+  eng.executePlan(plan.token);
+  const after = lf(readFileSync(file, "utf8"));
+
+  // (a) 每一行的 config 子树逐字节不变（两层无覆盖）
+  const cfgKeys = ["rate-throttle", "web-search-local", "web-search-router", "agent-memory-runtime"];
+  let allCfgSame = true;
+  for (const id of cfgKeys) {
+    if (layerTwoOf(before, id) !== layerTwoOf(after, id)) allCfgSame = false;
+  }
+  check("Q2: toggling layer 1 leaves EVERY row's layer-2 (config subtree) byte-identical", allCfgSame);
+
+  // (b) 第二层取值本身也没变（rate-throttle 仍是 false）
+  check("Q2: rate-throttle's config.enabled still reads false after layer-1 toggle",
+    /- id: rate-throttle[\s\S]{0,400}?config:\n\s+enabled: false/.test(after));
+
+  // (c) 连带效应：插入一行使后续锚点位移 —— 记录在案，并证明 SHA 会拦住陈旧 plan
+  const anchorAfter = eng.locateRowAnchor(after, "agent-memory-runtime").lineIndex + 1;
+  check("Q2: inserting a line shifts later anchors (documented consequence)",
+    anchorAfter === anchorBefore + 1, anchorBefore + " → " + anchorAfter);
+
+  const stale = eng.createTogglePlan({ file, rowId: "agent-memory-runtime", enabled: false, backupRoot });
+  eng.putPlan(stale);
+  const third = readFileSync(file, "utf8").replace("    - id: web-search-local\r\n", "    - id: web-search-local\r\n      disabled: false\r\n");
+  writeFileSync(file, third, "utf8");
+  let e = null;
+  try { eng.executePlan(stale.token); } catch (err) { e = err; }
+  check("Q2: a stale plan (file changed meanwhile) is rejected by SHA — covers the shift",
+    e && e.code === "sha-conflict", e && e.code);
+
+  // (d) 面板呈现依据的原则：层 1 是「有没有加载」，层 2 是「加载了但自己关掉」
+  //     两套渲染器都必须先判层 1、再判层 2（顺序即优先级），且不合并成一个值
+  const clientSrc = readFileSync(join(root, "panel", "client", "index.js"), "utf8");
+  const htmlSrc = readFileSync(join(root, "panel", "client", "panel.html"), "utf8");
+  const l1 = (src, a, b) => { const i = src.indexOf(a); const j = src.indexOf(b); return i >= 0 && j >= 0 && i < j; };
+  check("Q2: react client resolves layer 1 BEFORE layer 2 (gating order)",
+    l1(clientSrc, "row.enabled !== true", "innerSwitchValue(plugin, patchText) === false"));
+  check("Q2: fallback page resolves layer 1 BEFORE layer 2 (gating order)",
+    l1(htmlSrc, "p.patchRow.enabled !== true", "innerSwitchValue(p, PATCH_TEXT) === false"));
+}
+
+
 check("REAL cordis.patch.yml sha unchanged by this test", sha(readFileSync(REAL_PATCH, "utf8")) === realShaBefore);
 
 if (passed === 0 && failed === 0) {

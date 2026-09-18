@@ -209,6 +209,26 @@ export function findCrossReferences(text, { rowId, alsoMatch = [] }) {
   return hits;
 }
 
+/** `disabled` 能被本面板安全改写的**字面量**取值。其它形态一律拒绝改写。 */
+export const LITERAL_DISABLED_VALUES = ["true", "false"];
+
+/**
+ * 读出某行现有的 `disabled` 原始文本（不存在则返回 null）。
+ *
+ * 存在的意义是把「字面量」与「表达式」区分开：`disabled` 在 DSH 里除了
+ * `true` / `false`，还可以写 `!!js <表达式>`（由 cordis Loader 在条目激活时
+ * 用 `Boolean(eval(expr))` 求值，见 cordis-plugin-loader 的 `_disabled`）。
+ * 这类条件表达式**本面板不解释**，改写会抹掉条件，因此必须拒绝。
+ */
+export function readRowDisabledLiteral(text, rowId) {
+  const { lines } = splitLines(text);
+  const anchor = locateRowAnchor(text, rowId);
+  const own = readRowOwnKeys(lines, anchor);
+  const hit = own.find((entry) => entry.key === "disabled");
+  if (!hit) return null;
+  return { line: hit.lineIndex + 1, raw: hit.value, literal: LITERAL_DISABLED_VALUES.includes(hit.value) };
+}
+
 /**
  * 生成「启停某插件行」的 plan（**只读**）。
  *
@@ -217,6 +237,10 @@ export function findCrossReferences(text, { rowId, alsoMatch = [] }) {
  *
  * 停用（`enabled = false`）时会附带交叉引用报告；**报告非空不自动阻止**，
  * 而是把决定权交给调用方（UI 需展示并要求用户确认）。
+ *
+ * **非字面量 disabled 一律拒绝**（Q1 安全闸）：若该行现有的 `disabled` 是
+ * `!!js <表达式>` 这类平台条件写法，本面板既无法正确呈现它，改写又会把条件
+ * 抹成硬布尔 —— 两个方向都错。此时 fail-closed，让用户手工编辑。
  */
 export function createTogglePlan({ file, rowId, enabled, backupRoot, ttlMs = DEFAULT_PLAN_TTL_MS, alsoMatch = [] }) {
   if (typeof enabled !== "boolean") {
@@ -226,6 +250,17 @@ export function createTogglePlan({ file, rowId, enabled, backupRoot, ttlMs = DEF
     throw new PlanError("target-missing", "目标文件不存在：" + file);
   }
   const text = readFileSync(file, "utf8");
+
+  // Q1 安全闸：先看现有 disabled 是不是字面量。不是就停手，绝不覆盖。
+  const existing = readRowDisabledLiteral(text, rowId);
+  if (existing && !existing.literal) {
+    throw new PlanError(
+      "value-not-literal",
+      "该行第 " + existing.line + " 行的 disabled 不是普通布尔值，而是条件写法（`" + existing.raw + "`）。"
+        + "面板不解释平台条件表达式，直接改写会抹掉条件，故拒绝写盘。请手工编辑这一行。",
+    );
+  }
+
   // 锚点唯一性由 planRowFlag → locateRowAnchor 保证（0 或 ≥2 都会抛）
   const result = planRowFlag(text, { rowId, key: "disabled", value: enabled ? "false" : "true" });
   const crossRefs = enabled ? [] : findCrossReferences(text, { rowId, alsoMatch });
