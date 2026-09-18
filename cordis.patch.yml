@@ -76,3 +76,7 @@
       config:
         dataRoot: C:\Users\LENOVO\.agent-memory
         defaultWorkspace: null
+
+- insert:
+    - id: toolkit-manager
+      name: 'file:///D:/dsh-plugins/dsh-toolkit/panel/index.js'
