@@ -1098,14 +1098,13 @@ window.__ModuleLoader__.load({
 
 			var kids = [];
 			if (canUninstall) {
-				var rec = plugin.defaultUninstallMode === "true" ? "true" : "soft";
+				// Q2'-a 下架（L-059）：真卸载入口摘除——存档式设计已被「销毁式」推翻，不得留产品面。
+				// （真卸载弹窗组件与 §2 文案暂保留但已不可达；v2 施工时以「文案 v2」整体替换后重新上架。）
 				kids.push(react.createElement("div", { key: "hint", style: styles.dlgLine },
-					"本插件的推荐做法是" + (rec === "true" ? "「真卸载」" : "「软卸载」") + "。两种都可以选，弹窗会写清各删什么、能不能恢复。"));
+					"本插件当前提供「软卸载」：摘除挂载行、本体保留，之后可从面板一键恢复。"));
 				kids.push(react.createElement("div", { key: "row", style: styles.uninRow },
 					react.createElement("button", { style: styles.btnOpen, disabled: busy, onClick: function () { openUninstall("soft"); } },
-						"软卸载" + (rec === "soft" ? "（推荐）" : "")),
-					react.createElement("button", { style: styles.btnOpen, disabled: busy, onClick: function () { openUninstall("true"); } },
-						"真卸载" + (rec === "true" ? "（推荐）" : ""))
+						"软卸载")
 				));
 			}
 			if (canRestore) {

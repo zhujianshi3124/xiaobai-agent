@@ -306,10 +306,10 @@ function loadReactClient(initialPatchText) {
     p24Body,
     /** P24Controls 在默认态下是否渲染出「恢复」按钮（恢复入口接线断言）。 */
     hasRestoreButton: (p24El) => buttonsOf(p24Body(p24El)).some((b) => textOf(b).join("") === "恢复"),
-    /** P24Controls 在默认态下是否渲染出卸载入口（软卸载 / 真卸载）。 */
+    /** P24Controls 下架期口径（Q2'-a / L-059）：须有「软卸载」入口，且**不得**出现「真卸载」入口。 */
     hasUninstallButtons: (p24El) => {
       const labels = buttonsOf(p24Body(p24El)).map((b) => textOf(b).join(""));
-      return labels.some((t) => t.indexOf("软卸载") === 0) && labels.some((t) => t.indexOf("真卸载") === 0);
+      return labels.some((t) => t.indexOf("软卸载") === 0) && !labels.some((t) => t.indexOf("真卸载") === 0);
     },
     absenceOf: (cardEl) => {
       const el = cardEl ? namedOf(render1(cardEl), "AbsenceBanner")[0] || null : null;
@@ -643,7 +643,7 @@ section("缺席态六态渲染（两渲染器逐态）");
     const sec = htmlR.p24SectionHtml(plugin);
     const p24El = cardEl ? reactR.p24Of(cardEl) : null;
     check("六态[" + c.status + "] 两渲染器都渲染出 p24 区块", sec !== "" && !!p24El, "html=" + (sec !== "") + " react=" + !!p24El);
-    check("六态[" + c.status + "] html 卸载入口可见 == " + (!c.gone), (sec.includes("软卸载") && sec.includes("真卸载")) === !c.gone);
+    check("六态[" + c.status + "] html 卸载入口可见（软卸载有／真卸载无） == " + (!c.gone), (sec.includes("软卸载") && !sec.includes("真卸载")) === !c.gone);
     check("六态[" + c.status + "] react 卸载入口可见 == " + (!c.gone), reactR.hasUninstallButtons(p24El) === !c.gone);
     check("六态[" + c.status + "] html 恢复入口可见 == restoreAvailable(" + c.restore + ")", sec.includes(">恢复<") === c.restore, sec.slice(0, 90));
     check("六态[" + c.status + "] react 恢复入口可见 == restoreAvailable(" + c.restore + ")", reactR.hasRestoreButton(p24El) === c.restore);
@@ -688,6 +688,35 @@ function assertCards(tag, r, expect) {
     check(tag + "[" + dir + "] react 恢复入口 == restoreAvailable(" + wantRestore + ")",
       (() => { const el = r.byDir(dir); const p24 = el ? reactR.p24Of(el) : null; return (p24 ? reactR.hasRestoreButton(p24) : false) === wantRestore; })());
   }
+}
+
+// ---------- 下架期共用断言（Q2'-a / L-059）----------
+// 真卸载（存档式）为**已推翻设计**，不得留产品面。本组断言锁死「下架」这一产品事实：
+//   ① 真实 API `uninstall/plan` 对 mode:"true" 一律拒绝（码 true-uninstall-withdrawn）；
+//   ② 拒绝时不下发任何 token（execute 无从触达）；
+//   ③ 两渲染器卸载入口**只剩软卸载**，不得出现「真卸载」按钮/文案；
+//   ④ 拒绝后副本 cordis.patch.yml 零写入；⑤ doctor 仍 error=0；⑥ 无任何缺席态副作用。
+// v2 施工（销毁式）上架时，本组将被替换为销毁式真卸载用例；此处保留用例位 A4/A5/B1/C2 以便对照。
+async function assertTrueUninstallDownlisted(tag, dir) {
+  const api = makeApi(dir);
+  const beforeSha = shaFile(join(dir, "cordis.patch.yml"));
+  const p = await api.uninstallPlan("search-router", "true", ["search-router", "search-router"]);
+  check(tag + " ① plan(mode:true) 被拒且码 = true-uninstall-withdrawn",
+    p.status !== 200 && p.json && p.json.ok === false && p.json.code === "true-uninstall-withdrawn",
+    "status=" + p.status + " " + JSON.stringify(p.json));
+  check(tag + " ② 拒绝信息为人话且含「已下架」", !!(p.json && /已下架/.test(String(p.json.error || ""))), p.json && p.json.error);
+  check(tag + " ③ 拒绝时不下发 token（execute 无从触达）", !(p.json && p.json.plan && p.json.plan.token));
+  const r = await renderCase(dir);
+  const el = reactR.p24Of(r.byDir("search-router"));
+  check(tag + " ④ react 卸载入口 = 仅软卸载（无「真卸载」按钮）", reactR.hasUninstallButtons(el) === true);
+  const sec = htmlR.p24SectionHtml(r.snap.plugins.find((x) => x.dir === "search-router"));
+  check(tag + " ⑤ html 卸载入口 = 仅软卸载（无「真卸载」按钮）", sec.includes("软卸载") && !sec.includes("真卸载"), sec.slice(0, 120));
+  check(tag + " ⑥ 拒绝后 cordis.patch.yml 零写入", shaFile(join(dir, "cordis.patch.yml")) === beforeSha);
+  check(tag + " ⑦ lib/search-router 未被动（下架≠删除）", existsSync(join(dir, "lib", "search-router")));
+  check(tag + " ⑧ doctor error=0（下架后仓态如常）", runDoctor(dir).summary.error === 0);
+  check(tag + " ⑨ 无任何缺席态副作用（无 true-uninstalled / soft-unmounted）",
+    r.snap.plugins.every((x) => x.status !== "true-uninstalled" && x.status !== "soft-unmounted"),
+    JSON.stringify(r.snap.plugins.map((x) => [x.dir, x.status])));
 }
 
 // ---------- A0 前置基线（§3.2 每例前置：基线 sha / doctor 0/0/0 / 5 卡 mounted）----------
@@ -802,100 +831,45 @@ function assertCards(tag, r, expect) {
   assertCards(tag + "·恢复后", await renderCase(dir), { "agent-memory": "mounted" });
 }
 
-// ---------- A4 单删 search-router（真）----------
+// ---------- A4 真卸载入口下架（原「单删 search-router（真）」位；销毁式上架后重建）----------
 {
-  const tag = "A4";
-  const dir = makeCopy("a4");
-  const api = makeApi(dir);
-  const before = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
-  const { planned, executed } = await uninstall(api, "search-router", "true");
-  check(tag + " uninstall ok + 保管区 id", planned.json.ok === true && !!executed.json.custodyId, JSON.stringify(executed && executed.json));
-  check(tag + " ① 保管区 manifest 存在 + 逐文件 sha 与源一致",
-    existsSync(join(dir, ".panel-custody", executed.json.custodyId, "manifest.json")));
-  const cm = JSON.parse(readFileSync(join(dir, ".panel-custody", executed.json.custodyId, "manifest.json"), "utf8"));
-  check(tag + " ① manifest.body 逐文件 sha 齐", Array.isArray(cm.body) && cm.body.length > 0 && cm.body.every((f) => f.sha256));
-  check(tag + " ② lib/search-router 目录不存在", !existsSync(join(dir, "lib", "search-router")));
-  const after = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
-  check(tag + " ③ patch 无 search-router 行", !/- id: web-search-router/.test(after));
-  check(tag + " ④ 宿主键 searchProvider 已 unset", !/^    searchProvider:/m.test(after));
-  const r = await renderCase(dir);
-  assertCards(tag, r, { "search-router": "true-uninstalled", "web-search-local": "mounted" });
-  check(tag + " ⑥ 保管区清单 API 有该条目", (await api.custody()).json.custody.entries.some((e) => e.plugin === "search-router" && e.kind === "true-uninstall"));
-  const doc = runDoctor(dir);
-  const mount = doc.issues.filter((i) => i.category === "mount");
-  check(tag + " ⑦ doctor error=0 + 缺席提示非 error", doc.summary.error === 0 && mount.every((i) => i.severity !== "error"));
-  check(tag + " ⑦ 无 dangling provider 警告", !mount.some((i) => i.id === "provider.dangling-reference"));
-  const { executed: re } = await restore(api, "search-router");
-  check(tag + " ⑧ 本体还原 + sha 回基线 + 宿主键回原值",
-    re.json.ok === true && existsSync(join(dir, "lib", "search-router")) && shaFile(join(dir, "cordis.patch.yml")) === sha(before) && /^    searchProvider: auto-search/m.test(readFileSync(join(dir, "cordis.patch.yml"), "utf8")));
-  assertCards(tag + "·恢复后", await renderCase(dir), { "search-router": "mounted" });
+  await assertTrueUninstallDownlisted("A4", makeCopy("a4"));
 }
 
-// ---------- A5 单删 web-search-local（真）→ dependency-broken ----------
+// ---------- A5 真卸载入口下架（原「单删 web-search-local（真）→ dependency-broken」位）----------
 {
-  const tag = "A5";
-  const dir = makeCopy("a5");
-  const api = makeApi(dir);
-  const before = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
-  const { planned, executed } = await uninstall(api, "web-search-local", "true");
-  check(tag + " uninstall ok", planned.json.ok === true && executed.json.ok === true);
-  check(tag + " ① 保管区 manifest 齐", existsSync(join(dir, ".panel-custody", executed.json.custodyId, "manifest.json")));
-  check(tag + " ② lib/web-search-local 不存在", !existsSync(join(dir, "lib", "web-search-local")));
-  const after = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
-  check(tag + " ③ patch 无 web-search-local 行", !/- id: web-search-local/.test(after));
-  check(tag + " ④ 宿主键 fetchProvider 已 unset", !/^    fetchProvider:/m.test(after));
-  const r = await renderCase(dir);
-  const sr = r.snap.plugins.find((p) => p.dir === "search-router");
-  check(tag + " ⑤ web-search-local = true-uninstalled", r.snap.plugins.find((p) => p.dir === "web-search-local").status === "true-uninstalled");
-  check(tag + " ⑤ search-router = dependency-broken 且 mounted=true", sr.status === "dependency-broken" && sr.mounted === true, sr.status);
-  check(tag + " ⑤ dependency-broken 文案逐字命中", sr.statusCopy === "已加载，但依赖的本地搜索未安装——搜索功能不可用", sr.statusCopy);
-  assertCards(tag, r, { "web-search-local": "true-uninstalled", "search-router": "dependency-broken" });
-  const doc = runDoctor(dir);
-  const mount = doc.issues.filter((i) => i.category === "mount");
-  check(tag + " ⑥ doctor error=0", doc.summary.error === 0);
-  check(tag + " ⑥ missing-provider warning 在案（severity=warning）", mount.some((i) => i.id === "provider.missing-provider" && i.severity === "warning"));
-  check(tag + " ⑦ 无 dangling provider 警告", !mount.some((i) => i.id === "provider.dangling-reference"));
-  const { executed: re } = await restore(api, "web-search-local");
-  check(tag + " ⑧ 本体还原 + sha 回基线 + 宿主键回原值 + search-router 回 mounted",
-    re && re.json.ok === true && shaFile(join(dir, "cordis.patch.yml")) === sha(before)
-    && /^    fetchProvider: local-fetch/m.test(readFileSync(join(dir, "cordis.patch.yml"), "utf8")),
-    JSON.stringify(re && re.json));
-  assertCards(tag + "·恢复后", await renderCase(dir), { "search-router": "mounted", "web-search-local": "mounted", "compact-router": "mounted" });
+  await assertTrueUninstallDownlisted("A5", makeCopy("a5"));
 }
 
-// ---------- B1 搜索对同删（真）----------
+// ---------- B1 双真卸载请求均被拒（原「搜索对同删（真）」位；销毁式上架后重建为对同删）----------
 {
   const tag = "B1";
   const dir = makeCopy("b1");
   const api = makeApi(dir);
-  const before = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
-  const a = await uninstall(api, "search-router", "true");
-  const b = await uninstall(api, "web-search-local", "true");
-  check(tag + " 两插件真卸载 ok", a.executed.json.ok === true && b.executed.json.ok === true);
-  check(tag + " ① 两条 manifest 并存", [a, b].every((x) => existsSync(join(dir, ".panel-custody", x.executed.json.custodyId, "manifest.json"))));
-  check(tag + " ② 两 lib 目录均不存在", !existsSync(join(dir, "lib", "search-router")) && !existsSync(join(dir, "lib", "web-search-local")));
+  const before = shaFile(join(dir, "cordis.patch.yml"));
+  const a = await api.uninstallPlan("search-router", "true", ["search-router", "search-router"]);
+  const b = await api.uninstallPlan("web-search-local", "true", ["web-search-local", "web-search-local"]);
+  check(tag + " ① 两插件真卸载请求均被拒（下架）",
+    a.status !== 200 && b.status !== 200 && a.json.code === "true-uninstall-withdrawn" && b.json.code === "true-uninstall-withdrawn",
+    JSON.stringify([a.json, b.json]));
+  check(tag + " ② 两 lib 目录均未被动", existsSync(join(dir, "lib", "search-router")) && existsSync(join(dir, "lib", "web-search-local")));
   const after = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
-  check(tag + " ③④ 两行 + 两宿主键均清", !/- id: web-search-router/.test(after) && !/- id: web-search-local/.test(after) && !/^    searchProvider:/m.test(after) && !/^    fetchProvider:/m.test(after));
+  check(tag + " ③④ 两行 + 两宿主键均未动",
+    /- id: web-search-router/.test(after) && /- id: web-search-local/.test(after)
+    && /^    searchProvider:/m.test(after) && /^    fetchProvider:/m.test(after));
+  check(tag + " ⑤ cordis.patch.yml sha 零写入", shaFile(join(dir, "cordis.patch.yml")) === before);
   const r = await renderCase(dir);
-  assertCards(tag, r, { "search-router": "true-uninstalled", "web-search-local": "true-uninstalled", "rate-throttle": "mounted", "compact-router": "mounted" });
-  // D-UI-02 回归位：本体自己已真卸载 ⇒ 不得被依赖缺席翻成 dependency-broken（否则「可一键恢复」被吞）
-  check(tag + " ⑤ 两搜索卡均为 true-uninstalled，无 dependency-broken",
-    r.snap.plugins.filter((p) => ["search-router", "web-search-local"].includes(p.dir)).every((p) => p.status === "true-uninstalled"),
-    JSON.stringify(r.snap.plugins.filter((p) => ["search-router", "web-search-local"].includes(p.dir)).map((p) => [p.dir, p.status])));
-  check(tag + " ⑤ 其余 3 卡 mounted（含 compact-router，预设挂载面）", r.snap.plugins.filter((p) => !["search-router", "web-search-local"].includes(p.dir)).every((p) => p.status === "mounted"));
+  assertCards(tag, r, { "search-router": "mounted", "web-search-local": "mounted" });
+  check(tag + " ⑥ 无 dependency-broken（未发生任何卸载）", !r.snap.plugins.some((p) => p.status === "dependency-broken"),
+    JSON.stringify(r.snap.plugins.map((p) => [p.dir, p.status])));
   const doc = runDoctor(dir);
   const mount = doc.issues.filter((i) => i.category === "mount");
-  check(tag + " ⑥ doctor error=0、无 dangling、无 missing-provider",
-    doc.summary.error === 0 && !mount.some((i) => i.id === "provider.dangling-reference") && !mount.some((i) => i.id === "provider.missing-provider"), JSON.stringify(mount.map((i) => i.id)));
-  const ra = await restore(api, "search-router", { custodyId: a.executed.json.custodyId });
-  const rb = await restore(api, "web-search-local", { custodyId: b.executed.json.custodyId });
-  const b1After = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
-  check(tag + " ⑦ 恢复执行均 ok", !!ra.executed && ra.executed.json.ok === true && !!rb.executed && rb.executed.json.ok === true,
-    "ra=" + JSON.stringify(ra.executed && ra.executed.json) + " rb=" + JSON.stringify(rb.executed && rb.executed.json));
-  check(tag + " ⑦ cordis.patch.yml sha 回基线（字节级）", shaFile(join(dir, "cordis.patch.yml")) === sha(before), firstDiff("patch", before, b1After));
-  check(tag + " ⑦ 宿主键 :7 searchProvider 回原值", /^    searchProvider: auto-search/m.test(b1After));
-  check(tag + " ⑦ 宿主键 :8 fetchProvider 回原值", /^    fetchProvider: local-fetch/m.test(b1After));
-  assertCards(tag + "·恢复后", await renderCase(dir), { "search-router": "mounted", "web-search-local": "mounted" });
+  check(tag + " ⑦ doctor error=0 且无 dangling/missing-provider",
+    doc.summary.error === 0 && !mount.some((i) => i.id === "provider.dangling-reference") && !mount.some((i) => i.id === "provider.missing-provider"),
+    JSON.stringify(mount.map((i) => i.id)));
+  check(tag + " ⑧ 双渲染器入口仅软卸载",
+    reactR.hasUninstallButtons(reactR.p24Of(r.byDir("search-router"))) === true
+    && !htmlR.p24SectionHtml(r.snap.plugins.find((p) => p.dir === "web-search-local")).includes("真卸载"));
 }
 
 // ---------- C1 联动全软 ----------
@@ -925,7 +899,7 @@ function assertCards(tag, r, expect) {
   check(tag + " ⑥ doctor 回 0/0/0", runDoctor(dir).summary.error === 0);
 }
 
-// ---------- C2 极端组合（三软二真）----------
+// ---------- C2 极端组合（三软 + 两真请求被拒）----------
 {
   const tag = "C2";
   const dir = makeCopy("c2", { withPresetBridge: true });
@@ -934,30 +908,36 @@ function assertCards(tag, r, expect) {
     const x = await uninstall(api, p, "soft");
     check(tag + " 软卸载 " + p + " ok", x.planned.json.ok === true && x.executed.json.ok === true);
   }
-  const t1 = await uninstall(api, "search-router", "true");
-  const t2 = await uninstall(api, "web-search-local", "true");
-  check(tag + " 真卸载两搜索 ok", t1.executed.json.ok === true && t2.executed.json.ok === true);
+  const t1 = await api.uninstallPlan("search-router", "true", ["search-router", "search-router"]);
+  const t2 = await api.uninstallPlan("web-search-local", "true", ["web-search-local", "web-search-local"]);
+  check(tag + " 真卸载两搜索均被拒（下架）",
+    t1.json.code === "true-uninstall-withdrawn" && t2.json.code === "true-uninstall-withdrawn",
+    JSON.stringify([t1.json, t2.json]));
   const r = await renderCase(dir);
   assertCards(tag, r, {
     "rate-throttle": "soft-unmounted", "compact-router": "soft-unmounted", "agent-memory": "soft-unmounted",
-    "search-router": "true-uninstalled", "web-search-local": "true-uninstalled",
+    "search-router": "mounted", "web-search-local": "mounted",
   });
-  check(tag + " ③ 保管区两条 manifest 完整", [t1, t2].every((x) => existsSync(join(dir, ".panel-custody", x.executed.json.custodyId, "manifest.json"))));
   const after = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
-  check(tag + " ④ patch 无四插件行 + :7/:8 回缺省", !/- id: rate-throttle/.test(after) && !/- id: agent-memory-runtime/.test(after) && !/- id: web-search-router/.test(after) && !/- id: web-search-local/.test(after) && !/^    searchProvider:/m.test(after) && !/^    fetchProvider:/m.test(after));
+  check(tag + " ④ patch 无三软插件行 + 两搜索行与宿主键均在",
+    !/- id: rate-throttle/.test(after) && !/- id: agent-memory-runtime/.test(after)
+    && /- id: web-search-router/.test(after) && /- id: web-search-local/.test(after)
+    && /^    searchProvider:/m.test(after) && /^    fetchProvider:/m.test(after));
   const presetState = JSON.parse(readFileSync(join(dir, "preset-patch-state.json"), "utf8"));
   check(tag + " ④ 四预设均非 patched", Object.keys(presetState).every((id) => shaFile(presetState[id].file) === shaFile(presetState[id].backup)));
   const doc = runDoctor(dir);
-  check(tag + " ⑤ doctor error=0（五插件缺席仅提示级）", doc.summary.error === 0 && doc.issues.filter((i) => i.category === "mount").every((i) => i.severity !== "error"), JSON.stringify(doc.summary));
+  check(tag + " ⑤ doctor error=0（三缺席仅提示级）", doc.summary.error === 0 && doc.issues.filter((i) => i.category === "mount").every((i) => i.severity !== "error"), JSON.stringify(doc.summary));
   check(tag + " ⑥ 面板管理页仍可操作（/snapshot 与 /custody 均 200）", (await api.snapshot()).status === 200 && (await api.custody()).status === 200);
-  check(tag + " ⑥ 五卡全为缺席态文案（三软二真）", r.snap.plugins.filter((p) => p.status === "soft-unmounted").length === 3 && r.snap.plugins.filter((p) => p.status === "true-uninstalled").length === 2);
+  check(tag + " ⑥ 缺席态 = 三 soft-unmounted，无 true-uninstalled",
+    r.snap.plugins.filter((p) => p.status === "soft-unmounted").length === 3
+    && r.snap.plugins.filter((p) => p.status === "true-uninstalled").length === 0,
+    JSON.stringify(r.snap.plugins.map((p) => [p.dir, p.status])));
 
-  // ---------- C3 极端组合恢复 ----------
+  // ---------- C3 极端组合恢复（三软）----------
   const tag3 = "C3";
   const before = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
-  for (const p of ["rate-throttle", "compact-router", "agent-memory", "search-router", "web-search-local"]) {
-    const extra = p === "search-router" ? { custodyId: t1.executed.json.custodyId } : p === "web-search-local" ? { custodyId: t2.executed.json.custodyId } : undefined;
-    const x = await restore(api, p, extra);
+  for (const p of ["rate-throttle", "compact-router", "agent-memory"]) {
+    const x = await restore(api, p);
     check(tag3 + " ① 恢复 " + p + " RPC ok", x.planned.json.ok === true && !!x.executed && x.executed.json.ok === true, "planned=" + JSON.stringify(x.planned.json) + " executed=" + JSON.stringify(x.executed && x.executed.json));
   }
   check(tag3 + " ② cordis.patch.yml sha 回基线",
@@ -971,13 +951,12 @@ function assertCards(tag, r, expect) {
     "rate-throttle": "mounted", "agent-memory": "mounted", "compact-router": "mounted", "search-router": "mounted", "web-search-local": "mounted",
   });
   check(tag3 + " ④ doctor 0/0/0", (() => { const d = runDoctor(dir); return d.summary.error === 0 && d.summary.warning === 0 && d.summary.info === 0; })(), (() => { const d = runDoctor(dir); return JSON.stringify(d.summary) + " issues=" + JSON.stringify(d.issues.map((i) => [i.id || i.category, i.severity, i.message, i.file])); })());
-  check(tag3 + " ⑤ .panel-custody 恢复档仍保留（策略内不清档）", existsSync(join(dir, ".panel-custody", t1.executed.json.custodyId, "manifest.json")));
-  check(tag3 + " ⑥ 恢复后 5 卡 mounted 且无 dependency-broken", r3.snap.plugins.every((p) => p.status === "mounted"));
+  check(tag3 + " ⑥ 恢复后 5 卡 mounted 且无 dependency-broken", r3.snap.plugins.every((p) => p.status === "mounted"),
+    JSON.stringify(r3.snap.plugins.map((p) => [p.dir, p.status])));
   // 面板级恢复横幅（§2.9 完成后）
-  const rtCard = r3.byDir("rate-throttle");
-  const p24El = reactR.p24Of(rtCard);
+  const p24El = reactR.p24Of(r3.byDir("rate-throttle"));
   check(tag3 + " ⑥ 面板恢复入口在恢复后隐藏（restoreAvailable=false）", htmlR.p24SectionHtml(r3.snap.plugins.find((p) => p.dir === "rate-throttle")).includes(">恢复<") === false);
-  check(tag3 + " p24Controls 仍在（卸载入口可见）", !!p24El);
+  check(tag3 + " p24Controls 仍在（软卸载入口可见）", !!p24El);
 }
 
 // ════════════════════════════════════════════════════════════
@@ -985,7 +964,13 @@ function assertCards(tag, r, expect) {
 // ════════════════════════════════════════════════════════════
 section("收尾");
 check("真实 cordis.patch.yml 全程零写入（基准 ce0b0b81… 不变）", sha(readFileSync(patchPath, "utf8")) === BASE_SHA, sha(readFileSync(patchPath, "utf8")).slice(0, 12));
-check("真实仓无 .panel-custody 残留（本矩阵只动 tmpdir 副本）", !existsSync(join(root, ".panel-custody")) || readdirSync(join(root, ".panel-custody")).filter((n) => n !== "soft-uninstalls.json").length === 0);
+// 守卫口径（Q1' 修正，L-059）：放行「面板运行期合法的长期落痕」，只拦本矩阵**新增**产物。
+//   soft-uninstalls.json —— 软卸载台账（面板发起）
+//   row-adjacency.json    —— 行块邻接留痕（D-UI-05 长期证据，与清账解耦、只增不减）
+// 此前白名单只列 soft-uninstalls.json，用户真机操作产生 row-adjacency.json 后误报（真机验收抓到
+// 的覆盖盲区）。批 2 候选改进：改为「矩阵运行前后快照 diff」以根治同类白名单遗漏。
+const RUNTIME_ARTIFACTS = new Set(["soft-uninstalls.json", "row-adjacency.json"]);
+check("真实仓 .panel-custody 无矩阵新增产物（放行运行期落痕 soft-uninstalls/row-adjacency）", !existsSync(join(root, ".panel-custody")) || readdirSync(join(root, ".panel-custody")).filter((n) => !RUNTIME_ARTIFACTS.has(n)).length === 0);
 rmSync(work, { recursive: true, force: true });
 
 console.log("\n════════════════════════════════");
