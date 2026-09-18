@@ -15,6 +15,8 @@ const scripts = [
   ["p22-verify", "scripts/p22-verify.mjs"],
   ["p22-cards-ui", "scripts/p22-cards-ui.mjs"],
   ["p22b-retention-scope", "scripts/p22b-retention-scope.mjs"],
+  ["p24-verify", "scripts/p24-verify.mjs"],
+  ["p24-ui-matrix", "scripts/p24-ui-matrix.mjs"],
   ["q2-layer-scan", "scripts/q2-layer-scan.mjs"],
   ["q2-shipped-scan", "scripts/q2-shipped-scan.mjs"],
   ["master-merge-fidelity", "scripts/master-merge-fidelity.mjs"],
