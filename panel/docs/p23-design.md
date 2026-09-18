@@ -185,3 +185,22 @@
 
 - 跨字段校验（`maxIntervalMs ≥ minIntervalMs`）为服务端 plan 校验**新增项**，进测试计划 §六-1。
 - 插件自身的容错层（`posNum` / `!== false` / `Number()`）继续作为第二道防线；面板白名单是**第一道**（写前拒绝），两层独立。
+
+---
+
+## 十、第 18 轮重发对账（四点，判定侧要求逐点落档）
+
+**a) 字段总数 17 vs 18 —— 差异是「行」，不是「字段」**。设计稿 §二原表 **17 行**，因 `clearCooldownOnUserSwitch` 与 `syncSelectionOnFailover` 被合并在同一行呈现；白名单实际字段数 = **18**（顶层 6 + routing 12）。**判定侧「顶层 6 + routing 11」与本方「18」的差 = 这对合并行拆开**，无任何新增字段；本表（§八）为拆开后的全量口径。
+
+**b) 无源码校验字段 4 vs 5 —— 差异是 `routing.maxDowngradeCompactsPerTurn`**。判定侧第 15 轮「4 个」= **顶层 4 个**（`minIntervalMs` / `maxRequestsPerMinute` / `maxIntervalMs` / `backoffFactor`）；第 5 处 = routing 块内 `:178`（`Number(routingCfg.maxDowngradeCompactsPerTurn ?? 1)`，无任何范围校验）。两口径**兼容**：4（顶层）+ 1（routing）= 5 处，§九全量覆盖。
+
+**c) `declaredLimits` 不构成遮蔽 —— 源码依据（逐行，含反证）**：
+
+1. **白名单字段唯一来源 = 激活快照**：`cfg` 在 `:156-190` 一次性构建，全部白名单字段只从 `config`（patch）读这一次（顶层 `:157-163`、routing `:167-182`），此后只读。
+2. **热 JSON 的调用点全量仅 3 处**（`grep -n "hotConfig()"` 全文件）：`:418`（取 `declaredLimits`）、`:425`（取 `excludeProviders`）、`:431`（取 `aliases`）——**不存在第 4 个热读取入口**。
+3. **`declaredLimits` 的唯一消费链**：`limitData()` `:479-489`（产出 `{tpm, rpm, quality, source}`，quality 2/1/0 = declared/learned/none）→ **唯一调用点 `rankEligible()` `:698-699`** → 仅作**排序比较器**输入（`:693` 注释自陈 *"ranking: declared > learned > none"*；`:708` stable sort）。`limitData` 的返回值**不写入任何 `cfg` 字段、任何 state 数值**——它只决定候选顺序（**选谁**），不决定节流参数（**怎么等**）。
+4. **白名单数值字段的消费点全部独立于热通道**：`minIntervalMs` → `:220/:234/:280`；`maxRequestsPerMinute` → `:240`；`maxIntervalMs` → `:279`；`backoffFactor` → `:234/:280`。这些行**没有一行引用 `hotConfig()`/`limitData()`**。
+5. **反证（结构性）**：全文件 `grep "Object.assign"` **0 命中**、展开语法 `...hot` **0 命中**、`hotCache.data` 仅 `:411` 一处（函数内返回值）；⇒ **不存在「热数据 → `cfg`」的合并或改写代码路径**，热通道在结构上不可能触及白名单字段的生效值。
+6. **唯一热合并字段** = `excludeProviders`（`excludeSet()` `:424-429`，patch ∪ 热 JSON 的并集）——**不在白名单**（§二明列不开放），故白名单 18 字段无一被聚合/改写。
+
+**d) 跨字段校验实现位置 —— 服务端白名单校验器（预认可已收，正式入档）**：`maxIntervalMs ≥ minIntervalMs` 在 **P2.3 施工时实现于 panel 服务端 plan 校验层**（与类型/范围/枚举校验同层，**不信任前端**），写 plan 前拒绝倒置值（409/400）；测试计划 §六-1 覆盖正/反两用例。
