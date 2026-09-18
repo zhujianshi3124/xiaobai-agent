@@ -1363,3 +1363,17 @@ HEAD = `f6d99eb`。
   - **测试**：新增 scripts/p24-verify.mjs **40/40**（§3.4 七单测＋A1/A3/A4/A5/B1 引擎级等价＋宿主键冲突三态＋滚动窗口＋保管区篡改 fail-closed＋A2⑥ 前后留痕＋doctor 三信号正反例；全走 os.tmpdir 副本）；全套回归全绿 p1 215/p2 16/p21 53/p22 104/p22-cards 79/p22b 17/q2-layer 14/q2-shipped 21/fidelity 38/backup-write 23/node --test 93；doctor dry-run **0/0/0**；真实 cordis.patch.yml 全程零写入（基准 **ce0b0b81…** 未变）。
   - **呈验附**：2.9b 软恢复确认页文案全文随施工报告呈判定侧（上轮承诺兑现）；UI 渲染层（两渲染器卸载/恢复按钮与确认页）未在本批实现——快照/引擎/doctor 就绪，UI 属批 1 收尾与批 2 之间，待判定侧裁定归属。
   - **待判**：报判定侧验收 → 用户 reload 目视（重点：缺席态渲染/dependency-broken 文案/恢复入口）→ 施工批 2（doctor 操作台+双回滚 UI）。
+- **L-056（新会话第 5 轮 · 施工批 1 UI 收尾 → 全绿报判）**：恢复状态 = HANDOFF-MASTER.md ＋交接卡 §12 ＋ L-055 ＋ git log（前任 f95b751/979ae0d/542f89b ＋ doctor 仓 20a38fe/3a03138）；基线复跑全绿（p1 215/p22-cards 79/p24 40/node --test 93）。
+  - **UI 层交付（单元1，53cbed4）**：两渲染器同步——`panel/client/index.js`（React bundle）＋`panel/client/panel.html`（内联脚本）：P24Controls（软/真卸载入口＋恢复入口）、UninstallDialog、RestoreDialog（含冲突三态 A/B/C）、AbsenceBanner（六态，dependency-broken 警示样式）、RestoreBanner；快照字段 `status/statusCopy/restoreAvailable/conflict` 全部接线；文案按 `p24-test-plan-batch1.md` §2 全稿**逐句**实现（输入插件名确认：软一次/真两次）。
+  - **面板级完整矩阵（单元3，cf51570）**：新增 `scripts/p24-ui-matrix.mjs` **623 断言全绿**——进程内跑真实 `panel/index.js` 注册的**四条 API**（真 guard／真 body 解析／真 executePlan 唯一通道），叠加**两套真实渲染器**的渲染断言：§2 六场景弹窗逐句、§2.9/2.9b 恢复确认页＋冲突三态＋完成横幅、缺席态六态两渲染器逐态、A0 前置基线、A1–A5/B1/C1–C3 全链路、**真实 cordis.patch.yml 零写入自证**（首尾基准 `ce0b0b81…` 双断言）。`regression-all.mjs` 接入 p24-verify ＋ p24-ui-matrix（回归底座扩到 14 项）。
+  - **矩阵暴露并修补的引擎/doctor 七缺陷（单元2，c3bf522 ＋ doctor 仓 edf0445）**——均为**面板级/真实链路**才现形，引擎级 p24-verify 40/40 未能覆盖：
+    - **D-UI-01（渲染器）**：恢复入口条件写成 `restoreAvailable && !gone`，而 `gone` 恰含 `soft-unmounted`/`true-uninstalled`——**正需要恢复的两态被隐藏**；改为只认快照 `restoreAvailable`（唯一真源）。
+    - **D-UI-02（快照）**：dependency-broken 未加 `mounted` 守卫，本体自己已真卸载时也被依赖缺席翻转，吞掉「可一键恢复」语义（B1 回归位）。
+    - **D-UI-03（引擎）**：`relOffsetWithinConfig` 取现读位次，同段兄弟键先被摘除会偏小（fetchProvider 由 2 掉到 1），逐条恢复插到 searchProvider 之前 ⇒ 回基线失败；改为按面板台账（软卸载账＋保管区 manifest）里已摘兄弟键的 `afterKeys` 补偿原始位次。
+    - **D-UI-04/05（引擎）**：行块插回位仅凭前后两锚，同批多摘时两锚都已不在场 ⇒ 乱序恢复错位；改为**邻接证据图**定位（`order-successor`/`order-predecessor`），并新增**长期邻接留痕** `.panel-custody/row-adjacency.json`（与软卸载清账解耦，只增不减）。
+    - **D-UI-06（doctor）**：保管区归档里的 `dsh.plugin.json` 被当作在案本体重复登记 ⇒ 真卸载＋恢复后 `reg.name-collision` 误报 error（C3④ 要求 0/0/0）；新增 `isPanelArchiveRel`，归档目录不再作为注册面。
+    - **D-UI-07（doctor）**：`presetMountedFor` 原口径「任一预设 patched ⇒ 任何本体都算已挂载」把 body-vs-mount 检查整体压哑，A1⑦/A3⑥「软卸载后仍产出缺席提示」不成立；收窄为只覆盖 `doctor-signals.json` 新字段 `presetManagedNames`（零硬编码、signals 信号驱动不变）。
+    - **D-UI-08（路由）**：`panel/index.js` 漏 import `createPresetRestorePlan` ⇒ compact-router 恢复 500 internal（ReferenceError）。
+  - **矩阵夹具修正**：副本预设桥默认开启（对齐真实基线——compact-router 由预设补丁挂载），否则副本里落 `installed-unmounted` 且 doctor 不回 0/0/0；另修 harness 自身两处（`textOf` 需渲染纯呈现组件、`direct()` 需清 `indexOverrides`）。
+  - **测试**：p24-ui-matrix **623/0**；p24-verify **40/40**；全套回归 14 项全绿（p1 215／p2 16／p21 53／p22 104／p22-cards 79／p22b 17／**p24-verify 40**／**p24-ui-matrix 623**／q2-layer 14／q2-shipped 21／fidelity 38／backup-write 23／pluggable-lint／node --test 93）；真实仓 doctor dry-run **0/0/0**；真实 cordis.patch.yml 全程零写入。
+  - **待判**：报判定侧验收（批 1 闭环：引擎＋UI＋完整矩阵）→ 用户 reload 目视（重点：六态卡片、dependency-broken、恢复入口、确认弹窗文案）→ 批 1 关账 → 批 2（doctor 操作台）先证后写。
