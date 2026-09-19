@@ -866,20 +866,22 @@ body-too-large                                   → 413
 
 ---
 
-## 12. 会话交接卡（10 行 · 关账硬前置，2026-09-19 新会话第 6 轮 · **真卸载可用＋批 2 证据批版**）
+## 12. 会话交接卡（10 行 · 关账硬前置，2026-09-19 新会话第 6 轮续 · **批 2 设计稿呈验版**）
 
-> ✅ **批 1 已关账**（L-059，范围＝软卸载/恢复 ＋ 引擎 ＋ UI ＋ doctor）。**销毁式 v2 已施工完成并全绿（L-060）→ 独立复核全绿（L-061）→ 三条件闭环（判定侧验收＋用户目视三句「如图都有」＋U17 用户备份口头确认）⇒ 真卸载正式可用（L-062）**。
+> ✅ **批 1 已关账**（L-059）→ **销毁式 v2 全绿＋独立复核**（L-060/L-061）→ **真卸载正式可用**（L-062，三条件闭环）→ **批 2 证据批验收通过＋Q-A/B/C 三裁＋两历史项销项**（L-064）。
 
-1. **当前状态**：**真卸载（销毁式）正式可用（L-062）**——彻底删除不留副本、收据仅对账、恢复＝重装后面板「挂载」；两渲染器三句文案已过用户目视。**批 2 已启动（先证后写，L-063）**：doctor 操作台＋双回滚**证据批已呈判**（`evidence/P24-BATCH2-CONSOLE-EVIDENCE.md`：①可执行操作全集 ②双回滚方案 ③操作台 UI 范围＋确认页框架＋设计前置 Q-A/B/C）。**零代码**；回归口径 p24-verify 53/0 · p24-ui-matrix 666/0 · 回归 14 项＋node --test 93 · doctor 0/0/0 · 真实 patch 零写入。
-2. **基准事实**：cordis.patch.yml = ce0b0b81…（3097 B / CRLF，全程零写入）；v2 时点全绿——**p24-verify 53/0** · **p24-ui-matrix 666/0**（真卸载段＝销毁式全链路＋5 条硬判据；546→666＝口径重建）· 回归 14 项（p1 225／p2 16／p21 53／p22 104／p22-cards 79／p22b 17／q2-layer 14／q2-shipped 21／fidelity 38／backup-write 23／pluggable-lint 通过／node --test 93）；doctor 0/0/0；**本机 `~/.dsh` 无 doctor-patch-state.json／doctor-backups／doctor-apply.lock（doctor 写路径从未触发，如实）**。
-3. **下一步**：**批 2 证据批 → 判定侧验收（①②③＋Q-A 执行通道／Q-B 回滚 UI 批次／Q-C 确认强度）→ 设计稿 → 用户批准 → 施工**（先证后写，测试照旧 tmpdir 副本＋全套回归＋零写入自证）。**另待裁决**：L-060 ⑨（`mount-no-receipt`）＋ L-061 ⑤（备份目录硬判据逐例化与否）。
-4. **已定案**：软卸载语义（摘行＋本体保留＋一键恢复）＋宿主键方案 A＋冲突三态；**真卸载＝销毁式＝不可逆＝正式可用**（彻底删除不留副本；收据仅对账；恢复＝重装后挂载；三句文案过目视）；compact-router 预设桥只调既有脚本＋双层留痕；dependency-broken = `mounted` 修饰态。
-5. **硬验收口径**：**p24-verify 53 ＋ p24-ui-matrix 666**（A0 前置基线 ＋ 软卸载往返 ＋ **A4/A5/B1/C2 销毁式全链路含 5 条硬判据 ＋ C3 真删→重装→挂载完整故事** ＋ 两渲染器渲染断言）；doctor 缺席/缺依赖仅 info/warning；面板 5 卡恒渲染；恢复/挂载后 sha 回 ce0b0b81（字节级）。
-6. **待用户/判定侧**：**U15** 矩阵守卫改「运行期增量 diff」（批 2 候选）／**U16 《实测指引》已解锁待令**（v2 已上架，落笔无未实现功能风险）／**U17 ⚠ 转常态**：销毁式不可逆唯一兜底，请长期妥善保管仓外备份（判定侧已另行提醒）。**新增呈判**：批 2 证据批 Q-A/B/C。
-7. **正本索引 ①**：HANDOFF-MASTER.md（总索引 ＋ 叠加 4.9 批 1 关账记录 ＋ 附录 A/B/C）。
-8. **正本索引 ②**：handoff-restart.md（本文）、ledger.md（最新 **L-063**）、api-notes.md；**doctor 仓**（D:/dsh-test-sandbox/projects/doctor，提交 20a38fe+3a03138+edf0445；**批 2 取证正本 `src/{cli,engine,executor}.mjs`**）。
-9. **正本索引 ③**：实现 panel/manager/{plugin-registry,custody,uninstall,snapshot}.mjs；panel/index.js 15 路由；**panel/client/index.js ＋ panel/client/panel.html 两渲染器**；doctor-signals.json；脚本 scripts/{p24-verify,p24-ui-matrix,regression-all}.mjs；设计正本 panel/docs/{p24-design.md（v1，§13 指向）· **p24-design-v2-destroy.md（销毁式 v2 施工依据）** · p24-test-plan-batch1.md}；**批 2 证据批 evidence/P24-BATCH2-CONSOLE-EVIDENCE.md**。
-10. **红线（现行为）**：五子插件源码目录可知情确认删除；~/.dsh 与 cloudflared 不变；预设写入仅 §4 口径（只调脚本＋双层备份＋缺 .bak fail-closed）；写前必备份；写盘/重启先授权；「先申报后读」；每批次同步本卡。**真卸载＝销毁式＝不可逆**——`rmSync(force)` 绕过回收站、面板零副本；删除前「收据写入成功」为 fail-closed 前置；**真实 cordis.patch.yml 写入仅经用户面板操作**；批 2 施工前须过「证据批验收 → 设计稿 → 用户批准」。
+1. **当前状态**：**批 2 设计稿已呈验（L-064，零代码）**——`p24-design-batch2-console.md`：通道分域图（Q-A 落地）／操作台 UI／**确认页文案全稿逐句**（3.1–3.5）／双回滚 UI（Q-B 同批）／**确认强度分级惯例**（Q-C 固化）／**待上架禁用态惯例**（流程瑕疵教训固化）／测试计划 D1–D9／设计决策 D1（CLI `--only`＋`--yes` 澄清）·D2（只读 patch-state）·D3（`restoreSnapshot` 算子，备选不做）。**U16 已落笔**：`user-true-uninstall-guide.md` 随稿呈预审。回归口径 p24-verify 53/0 · p24-ui-matrix 666/0 · 回归 14 项＋node --test 93 · doctor 0/0/0 · 真实 patch 零写入。
+2. **基准事实**：cordis.patch.yml = ce0b0b81…（3097 B / CRLF，全程零写入）；v2 时点全绿——**p24-verify 53/0** · **p24-ui-matrix 666/0**（销毁式全链路＋5 条硬判据＋C3 完整故事）· 回归 14 项（p1 225／p2 16／p21 53／p22 104／p22-cards 79／p22b 17／q2-layer 14／q2-shipped 21／fidelity 38／backup-write 23／pluggable-lint 通过／node --test 93）；doctor 0/0/0；**本机 `~/.dsh` 无 doctor 三件套（doctor 写路径从未触发，如实）**。
+3. **下一步**：**判定侧验收（§3 文案逐句预审＋D1/D2/D3 设计决策＋两项设计惯例入档＋U16 指引）→ 用户批准 → 施工**（两仓提交互引：doctor 域改动在 doctor 仓；测试照旧 tmpdir 副本＋全套回归＋零写入自证）→ 报判。**历史项已清**：L-060 ⑨ 与 L-061 ⑤ 均已裁销（勿再呈）。
+4. **已定案**：软卸载语义＋宿主键方案 A＋冲突三态；**真卸载＝销毁式＝不可逆＝正式可用**；compact-router 预设桥只调既有脚本；dependency-broken = `mounted` 修饰态；**确认强度分级**（0 只读／1 可回滚写=两步＋单次确认＋预览／2 不可逆=输名两次）与**待上架禁用态**为全项目设计惯例。
+5. **硬验收口径**：**p24-verify 53 ＋ p24-ui-matrix 666**（销毁式全链路含 5 条硬判据＋C3 完整故事＋两渲染器断言）；批 2 施工后新增 D1–D9 段（设计稿 §7）；doctor 缺席/缺依赖仅 info/warning；面板 5 卡恒渲染；恢复/挂载后 sha 回 ce0b0b81（字节级）。
+6. **待用户/判定侧**：**批 2 设计稿验收**（文案逐句＋D1/D2/D3）→ **用户批准** → 施工／**U15** 矩阵守卫改「运行期增量 diff」（候选）／**U16 已交付待预审**／**U17 ⚠ 常态**：请长期妥善保管仓外备份（不可逆唯一兜底）。
+7. **正本索引 ①**：HANDOFF-MASTER.md（总索引 ＋ 叠加 4.9 批 1 关账记录 ＋ **叠加 8.2 上架阻断态教训** ＋ 附录 A/B/C）。
+8. **正本索引 ②**：handoff-restart.md（本文）、ledger.md（最新 **L-064**）、api-notes.md；**doctor 仓**（D:/dsh-test-sandbox/projects/doctor，提交 20a38fe+3a03138+edf0445；批 2 取证正本 `src/{cli,engine,executor}.mjs`，**D1 两处小改施工时在此仓提交**）。
+9. **正本索引 ③**：实现 panel/manager/{plugin-registry,custody,uninstall,snapshot}.mjs；panel/index.js 15 路由（批 2 后 21）；**两渲染器** panel/client/{index.js,panel.html}；doctor-signals.json；脚本 scripts/{p24-verify,p24-ui-matrix,regression-all}.mjs；设计正本 panel/docs/{p24-design.md · p24-design-v2-destroy.md · **p24-design-batch2-console.md（批 2 施工依据）** · **user-true-uninstall-guide.md（U16）**}；批 2 证据批 evidence/P24-BATCH2-CONSOLE-EVIDENCE.md。
+10. **红线（现行为）**：五子插件源码目录可知情确认删除；~/.dsh 与 cloudflared 不变；预设写入仅 §4 口径；写前必备份；写盘/重启先授权；「先申报后读」；每批次同步本卡。**真卸载＝销毁式＝不可逆**（rmSync 绕过回收站、面板零副本、收据先行 fail-closed）；**真实 cordis.patch.yml 写入仅经用户面板操作**；**新功能未过上架前置 ⇒ 入口一律禁用/待激活态**；施工前须过「设计稿验收 → 用户批准」。
+
+> 📌 **新会话第 6 轮续更新（批 2 设计稿呈验＋U16 落笔 · L-064，零代码）**：判定裁决经用户转达，执行侧**确认收讫**——①②③ 证据批验收通过；**Q-A/B/C 全数同意**（spawn CLI 双域各自唯一／回滚 UI 同批红线级／确认强度分级固化）；**两历史项销项**（L-060 ⑨、L-061 ⑤ 均已裁，勿再呈）；**流程瑕疵留痕**（L-060 入口未挂待上架阻断态——窗口期无伤害；教训固化入 HANDOFF-MASTER 叠加 8.2＋设计稿 §2.3＋L-062 补注）。**交付两件**：批 2 设计稿（含通道分域图＋文案全稿逐句＋双回滚 UI＋强度分级＋D1/D2/D3＋测试计划 D1–D9）＋ U16《用户日后实测指引》（用户文档）。本卡顶部 10 行已按「**批 2 设计稿呈验版**」重写；上一「真卸载可用＋批 2 证据批版」降级历史。
 
 > 📌 **新会话第 6 轮更新（上架落账＋批 2 证据批 · L-062/L-063，零代码）**：判定三条件闭环裁决经用户转达，执行侧**确认收讫**——**真卸载正式可用（U14 关闭）**：①判定侧验收（前轮）✓；②用户目视三句「如图都有」（红色警告条／彻底删除／不可恢复见于截图）✓；③U17 用户备份口头确认 ✓（判定侧已另行提醒妥善保管）。上架为治理态变更（代码入口 v2 时已恢复，无开关）——本卡顶部 10 行已按「**真卸载可用＋批 2 证据批**」口径重写；旧「批 1 关账版」及更早各组 10 行均降级历史。**批 2 证据批同轮呈判**（`P24-BATCH2-CONSOLE-EVIDENCE.md`）：doctor 五算子＋22 问题 id 全集（可执行仅 2 类 rewrite）、双回滚正本（doctor-patch-state/doctor-backups 既有面＋面板六项恢复面）、操作台一键范围＋确认页框架＋设计前置 Q-A/B/C；**本机 doctor 写路径从未触发（三件套零产物，如实）**。
 
