@@ -36,7 +36,7 @@ function selfPluginOfTestFile(abs) {
 
 // P0 裁决 N1：contract/registry/doctor 是全桶共享基础模块（非兄弟插件），
 // 任何 lib 插件与 test 用例都允许静态 import。（P3 doctor 落地后加入列表。）
-const SHARED_MODULES = ['contract', 'registry'];
+const SHARED_MODULES = ['contract', 'registry', 'doctor'];
 
 function isSibling(spec, fromFile, selfPlugin) {
   if (spec === '@local/dsh-toolkit') return false;

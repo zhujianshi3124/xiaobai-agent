@@ -1,0 +1,9 @@
+{
+  "id": "fixture/consumer",
+  "displayName": "依赖 fixture/needed 服务的消费者",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "requires": {
+    "services": ["fixture/needed"]
+  }
+}

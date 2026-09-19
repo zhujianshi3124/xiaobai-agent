@@ -23,8 +23,12 @@ node_modules/*
 # P1 契约模块构建产物（tsc dist，test 门禁自动构建），不入库
 contract/dist/
 
-# P2 registry 构建产物（同上）
+# P2 registry / P3 doctor 构建产物（同上）
 registry/dist/
+doctor/dist/
+
+# 测试运行期产物（S4 夹具标记，由测试自建自删）
+test/fixtures/registry/contract-plugin/marker.flag
 
 # 临时快照
 _nm-before.txt
