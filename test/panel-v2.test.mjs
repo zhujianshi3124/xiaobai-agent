@@ -336,3 +336,21 @@ test('config 写回：POST /config → entry.config 更新且持久层可见', a
   assert.equal(registry.get('fixture/contract-plugin').config.hello, 'world')
   assert.equal(registry.get('fixture/contract-plugin').status, 'active', '配置写回后重载仍 active')
 })
+
+test('snapshot：schemastery Config 的 refs 间接引用形态解引用为内联定义（T0：真实插件 dsh-repo-spec 即此形态，不解引用则面板配置表单空白）', async (t) => {
+  setMarker(true)
+  const { registry, base } = await makeStack(t)
+  // region 必填：无配置预检会按设计阻断；本测试只验证快照的 schema 解引用，用 force 装入
+  assert.equal((await registry.install({ kind: 'local', path: fixtureDir('schema-plugin') }, { force: true })).ok, true)
+  const response = await fetch(base + '/api/toolkit-panel/v2/snapshot')
+  const data = await response.json()
+  const entry = data.plugins.find((p) => p.id === 'dsh/schema-plugin')
+  assert.ok(entry, 'schema-plugin 在快照')
+  const schema = entry.configSchemaJSON
+  assert.ok(schema && typeof schema === 'object' && schema.type, 'configSchemaJSON 为内联定义')
+  assert.ok(!('uid' in schema && schema.refs), 'refs 间接引用已解引用')
+  assert.equal(schema.type, 'object')
+  assert.equal(schema.dict.region.type, 'string', 'dict 值为内联定义（递归表单可直接渲染）')
+  assert.equal(schema.dict.retries.type, 'number')
+  assert.ok(schema.dict.region.meta && schema.dict.region.meta.required, '必填标注保留')
+})

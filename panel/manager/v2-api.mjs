@@ -82,16 +82,55 @@ function registryErrorToCode(error) {
 }
 
 /** configSchema 的可序列化视图：函数型 Schema 走 toJSON，纯对象直出，其余 null。 */
+/**
+ * schemastery v3 的 toJSON() 会输出 refs 间接引用形态（{uid, refs}：dict 值/inner/list
+ * 元素是 ref id 而非内联定义）。面板递归表单只认内联定义——此处统一解引用（T0：
+ * 真实插件 dsh-repo-spec 的 Config 即此形态，不解引用配置表单整块空白）。
+ */
+function dereferenceSchemaJSON(json) {
+  if (!json || typeof json !== 'object' || !json.refs || typeof json.uid === 'undefined') return json
+  const refs = json.refs
+  const resolve = (node, seen) => {
+    if (typeof node === 'number') {
+      if (seen.has(node)) return undefined
+      const def = refs[node]
+      if (!def || typeof def !== 'object') return undefined
+      return expand(def, new Set([...seen, node]))
+    }
+    if (node && typeof node === 'object' && !Array.isArray(node)) return expand(node, seen)
+    return undefined
+  }
+  const expand = (def, seen) => {
+    const out = { ...def }
+    if (out.dict && typeof out.dict === 'object') {
+      const dict = {}
+      for (const key of Object.keys(out.dict)) {
+        const r = resolve(out.dict[key], seen)
+        if (r) dict[key] = r
+      }
+      out.dict = dict
+    }
+    if ('inner' in out) {
+      const r = resolve(out.inner, seen)
+      if (r) out.inner = r
+      else delete out.inner
+    }
+    if (Array.isArray(out.list)) out.list = out.list.map((v) => resolve(v, seen)).filter(Boolean)
+    return out
+  }
+  return resolve(json.uid, new Set()) || json
+}
+
 function schemaToJSON(schema) {
   if (schema === undefined || schema === null) return null
   if (typeof schema === 'function' && typeof schema.toJSON === 'function') {
     try {
-      return schema.toJSON()
+      return dereferenceSchemaJSON(schema.toJSON())
     } catch {
       return null
     }
   }
-  if (typeof schema === 'object') return schema
+  if (typeof schema === 'object') return dereferenceSchemaJSON(schema)
   return null
 }
 

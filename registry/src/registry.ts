@@ -64,8 +64,9 @@ function errorOf(error: unknown): { code: string; message: string } {
 /**
  * 来源类错误的针对性修复建议（T0 裁决：不许出现"按消息修复后重试"式循环表述；
  * message 本身已写明找到了什么/缺什么，这里给可执行的下一步）。
+ * doctor.precheck 的错误翻译共用本函数（doctor 依赖 registry，见 doctor.ts import）。
  */
-function sourceFixAdvice(code: string): { summary: string; steps: string[] } {
+export function sourceFixAdvice(code: string): { summary: string; steps: string[] } {
   switch (code) {
     case 'source/path-not-found':
       return {
@@ -358,7 +359,7 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
           code: i.code,
           level: 'error' as const,
           message: `${i.path}: ${i.message}`,
-          fix: { summary: '按字段路径修复 manifest 后重试安装' },
+          fix: { summary: '按 message 中的字段路径修正 dsh.plugin.json 对应字段后重装' },
         }))
       : [
           {

@@ -455,8 +455,48 @@ test('安装向导 E2E：预检报告 → 确认安装 → 真实 registry 装�
   }
 })
 
-test('启停 confirm E2E：未勾选不可执行；勾选后 registry 真实生效并反馈', async (t) => {
+test('config 保存 E2E：真实客户端按钮写回 registry（T0 回归：/config 是写路由，confirm 必须逐字带插件 id）', async (t) => {
   setMarker(true)
+  const stack = await makeV2Stack(t)
+  assert.equal((await stack.registry.install({ kind: 'local', path: contractPlugin })).ok, true)
+  const router = makeRouter()
+  baseRoutes(router)
+  const realFetch = globalThis.fetch
+  let lastConfigResponse = null
+  router.routes.push({
+    match: '/api/toolkit-panel/v2/',
+    handler: async (body, u) => {
+      const path = u.slice(u.indexOf('/api/toolkit-panel/v2/'))
+      const res = await realFetch(stack.base + path, {
+        method: body === undefined ? 'GET' : 'POST',
+        headers: body === undefined ? {} : { 'content-type': 'application/json' },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      })
+      const json = await res.json()
+      if (path === '/api/toolkit-panel/v2/config') lastConfigResponse = json
+      return { status: res.status, json: async () => json }
+    },
+  })
+  const panel = mountUnifiedPanel({ router })
+  try {
+    await panel.done()
+    const cfgBtn = buttonOf(panel.tree, '配置')
+    assert.ok(cfgBtn, '配置按钮')
+    cfgBtn.props.onClick()
+    await panel.done()
+    const save = buttonOf(panel.tree, '保存配置（写回 registry）')
+    assert.ok(save, '保存按钮渲染')
+    save.props.onClick()
+    await panel.done(16)
+    assert.ok(lastConfigResponse, '/config 请求已发出')
+    assert.equal(lastConfigResponse.ok, true, '保存成功（修复前：400 confirm-missing）')
+    assert.ok(!text(panel.tree).includes('confirm-missing'), '无 confirm-missing 反馈')
+  } finally {
+    panel.dispose()
+  }
+})
+
+test('启停 confirm E2E：未勾选不可执行；勾选后 registry 真实生效并反馈', async (t) => {  setMarker(true)
   const stack = await makeV2Stack(t)
   assert.equal((await stack.registry.install({ kind: 'local', path: contractPlugin })).ok, true)
   const router = makeRouter()

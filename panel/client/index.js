@@ -1842,7 +1842,9 @@ window.__ModuleLoader__.load({
 					form,
 					react.createElement("button", {
 						style: { marginTop: "6px" },
-						onClick: act(function () { return v2Api("/config", { id: p.id, config: schemaJSON && schemaJSON.type === "object" ? (Object.keys(draft).length ? draft : p.config) : p.config }); })
+						// T0 修复（P6 潜伏 bug）：/config 是写路由，confirm 必须逐字等于插件 id，
+						// 缺失时 v2 API 一律 400 confirm-missing（真实插件闭环实测暴露）。
+						onClick: act(function () { return v2Api("/config", { id: p.id, config: schemaJSON && schemaJSON.type === "object" ? (Object.keys(draft).length ? draft : p.config) : p.config, confirm: p.id }); })
 					}, "保存配置（写回 registry）"));
 			}
 			var confirmBox = null;

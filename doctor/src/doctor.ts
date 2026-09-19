@@ -31,7 +31,7 @@ import type {
   PrecheckReport,
   ToolkitDoctor,
 } from '@local/dsh-toolkit/contract'
-import { resolveLocalSource, SourceError } from '@local/dsh-toolkit/registry'
+import { resolveLocalSource, sourceFixAdvice, SourceError } from '@local/dsh-toolkit/registry'
 import { defaultProbes } from './probes.js'
 import { synthesizeRules } from './rules.js'
 import type { DoctorLogger, DoctorOptions, DoctorRule as DoctorRuleType, HealthItem as HealthItemType, Probes, RuleRuntime } from './types.js'
@@ -190,20 +190,21 @@ export class DoctorService implements ToolkitDoctor {
             code: i.code,
             level: 'error' as const,
             message: `${i.path}: ${i.message}`,
-            fix: { summary: '按字段路径修复 manifest 后重试安装' },
+            fix: { summary: '按 message 中的字段路径修正 dsh.plugin.json 对应字段后重装' },
           })),
           warnings: [],
           changes: [],
           legacyMode: false,
         }
       }
+      const sourceCode = error instanceof SourceError ? `source/${error.code}` : 'source-error'
       return {
         pass: false,
         blocking: [{
-          code: error instanceof SourceError ? `source/${error.code}` : 'source-error',
+          code: sourceCode,
           level: 'error',
           message: String((error as Error).message ?? error),
-          fix: { summary: '按消息修复后重试安装' },
+          fix: sourceFixAdvice(sourceCode),
         }],
         warnings: [],
         changes: [],
