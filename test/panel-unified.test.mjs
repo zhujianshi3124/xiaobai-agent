@@ -496,6 +496,59 @@ test('config 保存 E2E：真实客户端按钮写回 registry（T0 回归：/co
   }
 })
 
+test('config 表单多字段编辑累积（T0 回归：表单以 p.config+draft 合并值为基准，多字段编辑不互相覆盖）', async (t) => {
+  setMarker(true)
+  const stack = await makeV2Stack(t)
+  // region 必填：预检会按设计阻断，本测试只验证表单编辑累积，用 force 装入
+  assert.equal((await stack.registry.install({ kind: 'local', path: fixtureDir('schema-plugin') }, { force: true })).ok, true)
+  const router = makeRouter()
+  baseRoutes(router)
+  const realFetch = globalThis.fetch
+  let lastConfigBody = null
+  router.routes.push({
+    match: '/api/toolkit-panel/v2/',
+    handler: async (body, u) => {
+      const path = u.slice(u.indexOf('/api/toolkit-panel/v2/'))
+      const res = await realFetch(stack.base + path, {
+        method: body === undefined ? 'GET' : 'POST',
+        headers: body === undefined ? {} : { 'content-type': 'application/json' },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      })
+      const json = await res.json()
+      if (path === '/api/toolkit-panel/v2/config') lastConfigBody = body
+      return { status: res.status, json: async () => json }
+    },
+  })
+  const panel = mountUnifiedPanel({ router })
+  try {
+    await panel.done()
+    const cfgBtn = buttonOf(panel.tree, '配置')
+    cfgBtn.props.onClick()
+    await panel.done()
+    // 打开配置后，按 label 定位 schema 表单输入（region/retries；patch 域参数编辑不干扰）
+    const labeledInput = (label) => {
+      const labs = findAll(panel.tree, (n) => n.type === 'label' && textOf(n).join('').indexOf(label) === 0)
+      return labs.map((l) => findAll(l, (n) => n.type === 'input')[0]).filter(Boolean)[0] || null
+    }
+    const regionInput = labeledInput('region：')
+    const retriesInput = labeledInput('retries：')
+    assert.ok(regionInput && retriesInput, 'schema 表单 region/retries 输入在场')
+    regionInput.props.onChange({ target: { value: 'cn' } })
+    await panel.done()
+    // 编辑后重新定位（与真实浏览器一致：每次 action 都拿到最新渲染的闭包）
+    const retriesInput2 = labeledInput('retries：')
+    retriesInput2.props.onChange({ target: { value: '5' } })
+    await panel.done()
+    const save = buttonOf(panel.tree, '保存配置（写回 registry）')
+    save.props.onClick()
+    await panel.done(16)
+    assert.ok(lastConfigBody, '/config 请求已发出')
+    assert.deepEqual(lastConfigBody.config, { region: 'cn', retries: 5 }, '两个字段都保留（修复前只剩最后编辑的 lockTimeout 式覆盖）')
+  } finally {
+    panel.dispose()
+  }
+})
+
 test('启停 confirm E2E：未勾选不可执行；勾选后 registry 真实生效并反馈', async (t) => {  setMarker(true)
   const stack = await makeV2Stack(t)
   assert.equal((await stack.registry.install({ kind: 'local', path: contractPlugin })).ok, true)
