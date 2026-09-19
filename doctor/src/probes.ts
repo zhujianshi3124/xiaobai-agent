@@ -4,10 +4,28 @@
  */
 
 import { accessSync, constants as fsConstants } from 'node:fs'
+import { execFile } from 'node:child_process'
 import { createRequire } from 'node:module'
 import net from 'node:net'
 import { delimiter, join } from 'node:path'
 import type { Probes } from './types.js'
+
+function probeBinaryVersion(name: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    try {
+      execFile(name, ['--version'], { timeout: 3000, windowsHide: true }, (error, stdout) => {
+        if (error && !stdout) {
+          resolve(null)
+          return
+        }
+        const m = /(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)/.exec(String(stdout ?? ''))
+        resolve(m?.[1] ?? null)
+      })
+    } catch {
+      resolve(null)
+    }
+  })
+}
 
 export function defaultProbes(hasService: (name: string) => boolean): Probes {
   return {
@@ -45,6 +63,8 @@ export function defaultProbes(hasService: (name: string) => boolean): Probes {
       }
       return false
     },
+
+    binaryVersion: probeBinaryVersion,
 
     portFree: (port) =>
       new Promise((resolve) => {

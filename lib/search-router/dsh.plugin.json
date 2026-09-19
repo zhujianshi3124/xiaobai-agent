@@ -1,6 +1,28 @@
 {
   "manifestVersion": 1,
   "name": "@local/dsh-toolkit/search-router",
+  "id": "dsh/search-router",
+  "displayName": "搜索路由（按会话模型选后端）",
+  "version": "0.1.0",
+  "contract": "^1.0",
+  "configSchema": {
+    "type": "object",
+    "meta": {},
+    "dict": {
+      "mode": { "type": "union", "meta": {}, "list": [
+        { "type": "const", "meta": {}, "value": "auto" },
+        { "type": "const", "meta": {}, "value": "official" },
+        { "type": "const", "meta": {}, "value": "local" }
+      ] },
+      "officialProviders": { "type": "array", "meta": {}, "inner": { "type": "string", "meta": {} } },
+      "officialProviderPatterns": { "type": "array", "meta": {}, "inner": { "type": "string", "meta": {} } },
+      "officialModelPatterns": { "type": "array", "meta": {}, "inner": { "type": "string", "meta": {} } },
+      "defaultWhenUnknown": { "type": "union", "meta": {}, "list": [
+        { "type": "const", "meta": {}, "value": "official" },
+        { "type": "const", "meta": {}, "value": "local" }
+      ] }
+    }
+  },
   "requirements": {
     "runtime": {
       "node": ">=22",

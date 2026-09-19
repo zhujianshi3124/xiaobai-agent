@@ -22,7 +22,26 @@ import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { validateManifest } from '@local/dsh-toolkit/contract'
 import type { DshSubPluginManifest, ManifestIssue, PluginSource } from '@local/dsh-toolkit/contract'
-import type { ResolvedPlugin } from './types.js'
+import type { PluginRegisters, ResolvedPlugin } from './types.js'
+
+/** 归一提取注册面：新契约 requires.services + 旧 requirements.registers.{services,commands,providers}。 */
+function extractRegisters(m: Record<string, unknown> | undefined): PluginRegisters | undefined {
+  if (!m) return undefined
+  const requires = m['requires'] as Record<string, unknown> | undefined
+  const contractServices = Array.isArray(requires?.['services']) ? (requires!['services'] as string[]) : undefined
+  const legacyRequirements = m['requirements'] as Record<string, unknown> | undefined
+  const legacyRegisters = legacyRequirements?.['registers'] as Record<string, unknown> | undefined
+  const legacyServices = legacyRegisters && Array.isArray(legacyRegisters['services']) ? (legacyRegisters['services'] as string[]) : undefined
+  const commands = legacyRegisters && Array.isArray(legacyRegisters['commands']) ? (legacyRegisters['commands'] as string[]) : undefined
+  const providers = legacyRegisters && Array.isArray(legacyRegisters['providers']) ? (legacyRegisters['providers'] as string[]) : undefined
+  const services = contractServices ?? legacyServices
+  if (!services && !commands && !providers) return undefined
+  return {
+    ...(services ? { services } : {}),
+    ...(commands ? { commands } : {}),
+    ...(providers ? { providers } : {}),
+  }
+}
 
 export class SourceError extends Error {
   readonly code: 'source-not-supported' | 'path-not-found' | 'entry-not-found' | 'module-load-failed' | 'plugin-shape-invalid'
@@ -88,8 +107,7 @@ function normalizePlugin(mod: unknown, entryPath: string): unknown {
   throw new SourceError('plugin-shape-invalid', `${entryPath} 未导出可识别的插件形态（default/apply/register）`)
 }
 
-function synthLegacyManifest(dir: string, entryPath: string, mod: unknown, source: PluginSource): DshSubPluginManifest {
-  const pkg = readJson(join(dir, 'package.json'))
+function synthLegacyManifest(dir: string, entryPath: string, mod: unknown, source: PluginSource): DshSubPluginManifest {  const pkg = readJson(join(dir, 'package.json'))
   const rawName = typeof pkg?.['name'] === 'string' && pkg['name'] !== ''
     ? pkg['name']
     : entryPath.replace(/\\/g, '/').split('/').pop()!.replace(/\.(js|mjs)$/, '')
@@ -146,7 +164,7 @@ export async function resolveLocalSource(input: PluginSource): Promise<ResolvedP
     if (runtimeSchema !== undefined && manifest.configSchema === undefined) {
       manifest.configSchema = runtimeSchema
     }
-    return { manifest, plugin, legacy: false, source: input, entryPath }
+    return { manifest, plugin, legacy: false, source: input, entryPath, registers: extractRegisters(manifestRaw) }
   }
 
   const legacyManifest = synthLegacyManifest(baseDir, entryPath, plugin, input)
@@ -156,5 +174,5 @@ export async function resolveLocalSource(input: PluginSource): Promise<ResolvedP
     const first = check.errors[0]!
     throw new SourceError('plugin-shape-invalid', `legacy 合成 manifest 校验失败：${first.path} ${first.message}`, check.errors)
   }
-  return { manifest: check.manifest, plugin, legacy: true, source: input, entryPath }
+  return { manifest: check.manifest, plugin, legacy: true, source: input, entryPath, registers: extractRegisters(manifestRaw) }
 }

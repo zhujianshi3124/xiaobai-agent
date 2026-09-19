@@ -43,7 +43,7 @@ const fakeCtx = {
 };
 const panelMod = await import(pathToFileURL(join(panelDir, "index.js")).href);
 panelMod.apply(fakeCtx, { toolkitRoot: root, doctorCli, devicesFile: fixtureFile });
-check("routes count == 22 (P2.4 +7 卸载/恢复/挂载 +批2 7 条操作台/双回滚路由)", routes.length === 22, String(routes.length));
+check("routes count == 33 (P2.4 22 条 + P4 v2 管理 API 9 条 + ui/connector 2 条)", routes.length === 33, String(routes.length));
 check("P2.1 plan route registered", routes.some((r) => r.path === "/api/toolkit-panel/plan"));
 check("P2.1 execute route registered", routes.some((r) => r.path === "/api/toolkit-panel/execute"));
 check("P2.1 plan/status route registered", routes.some((r) => r.path === "/api/toolkit-panel/plan/status"));
@@ -79,6 +79,18 @@ const expectedWhenAllowed = {
   "/api/toolkit-panel/doctor/rollback/execute": ["GET", 405],
   "/api/toolkit-panel/snapshot-restore/plan": ["GET", 405],
   "/api/toolkit-panel/snapshot-restore/execute": ["GET", 405],
+  // P4/P5 泛化线：v2 管理 API（写路由非 GET → 405；读路由 200/400）
+  "/api/toolkit-panel/v2/snapshot": ["GET", 200],
+  "/api/toolkit-panel/v2/health": ["GET", 400],
+  "/api/toolkit-panel/v2/install/precheck": ["GET", 405],
+  "/api/toolkit-panel/v2/install/confirm": ["GET", 405],
+  "/api/toolkit-panel/v2/uninstall": ["GET", 405],
+  "/api/toolkit-panel/v2/enabled": ["GET", 405],
+  "/api/toolkit-panel/v2/reload": ["GET", 405],
+  "/api/toolkit-panel/v2/config": ["GET", 405],
+  "/api/toolkit-panel/v2/events": ["GET", 200],
+  "/api/toolkit-panel/v2/ui": ["GET", 200],
+  "/api/toolkit-panel/v2/connector.js": ["GET", 200],
 };
 
 // 写路径（options.change === true）路由集合：tunneled 无服务一律 403。
@@ -102,6 +114,12 @@ const WRITE_ROUTES = new Set([
   "/api/toolkit-panel/doctor/rollback/execute",
   "/api/toolkit-panel/snapshot-restore/plan",
   "/api/toolkit-panel/snapshot-restore/execute",
+  // P4/P5 泛化线：v2 管理 API 写路由（registry 操作，guard change:true）
+  "/api/toolkit-panel/v2/install/confirm",
+  "/api/toolkit-panel/v2/uninstall",
+  "/api/toolkit-panel/v2/enabled",
+  "/api/toolkit-panel/v2/reload",
+  "/api/toolkit-panel/v2/config",
 ]);
 
 // 每个场景独立 apply 一次，通过 ctx.get 注入不同形态的 remoteWebUiPairing。

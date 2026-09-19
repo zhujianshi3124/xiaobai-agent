@@ -50,6 +50,13 @@ export interface RegistryOptions {
   timers?: Timers
 }
 
+/** 插件对外注册面（用于注册冲突检查；从 manifest 新旧两种形态归一提取）。 */
+export interface PluginRegisters {
+  services?: string[] | undefined
+  commands?: string[] | undefined
+  providers?: string[] | undefined
+}
+
 /** 解析来源得到的模块与 manifest（legacy 已合成）。 */
 export interface ResolvedPlugin {
   manifest: DshSubPluginManifest
@@ -60,6 +67,8 @@ export interface ResolvedPlugin {
   source: PluginSource
   /** 实际入口说明（诊断用）。 */
   entryPath: string
+  /** 注册面（P5 注册冲突检查用；legacy 从旧 manifest.requirements.registers 提取）。 */
+  registers?: PluginRegisters | undefined
 }
 
 /** 持久化单插件记录。 */
@@ -81,6 +90,8 @@ export interface RegistryEntry extends PluginEntry {
   source: PluginSource
   /** 解析得到的插件对象（原样传给 host.plugin，不改写——保持宿主语义）。 */
   pluginObject?: unknown | undefined
+  /** 注册面（注册冲突检查用）。 */
+  registers?: PluginRegisters | undefined
   fiber?: FiberLike | undefined
   /** 当前已尝试装入次数（含首次）；手动 enable/reload 时清零。 */
   retryAttempts?: number | undefined

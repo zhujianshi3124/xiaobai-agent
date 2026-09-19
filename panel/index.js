@@ -472,7 +472,7 @@ export function apply(ctx, config = {}) {
       }, { change: true }),
     },
     // ---------- P2.3 配置编辑（判定侧第 19 轮批准的设计稿 p23-design.md）----------
-    // 白名单标量编辑：仅 rate-throttle（CONFIG_EDITABLE_ROW）、仅 18 个白名单字段、
+    // 白名单标量编辑：仅开放 config-whitelist 声明的唯一可编辑行与字段集合，
     // 仅标量（布尔/数值）。服务端权威校验（不信任前端）：类型 / 范围 / 跨字段
     // （maxIntervalMs ≥ minIntervalMs，读当前 patch 值）/ 拒绝换行与 YAML 结构字符。
     // 生效路径已钉死（设计稿 §八）：18/18 = patch 激活快照 ⇒ 重启 dsh web 生效，无遮蔽。
@@ -660,7 +660,7 @@ export function apply(ctx, config = {}) {
         sendJson(response, 200, { ok: true, custody: { entries, presetState: presetState || null } });
       }),
     },
-    // 恢复 plan：软（台账）/ 真（保管区）/ 预设（compact-router）。
+    // 恢复 plan：软（台账）/ 真（保管区）/ 预设挂载面（managedBy: preset）。
     // 宿主键被占用 ⇒ 返回 2.9 冲突三态（A 保留当前值 / B 恢复卸载前 / C 取消），不自动覆盖。
     {
       kind: "exact",
@@ -1160,7 +1160,12 @@ export function apply(ctx, config = {}) {
       }, { change: true }),
     },
     // ── P4 泛化线：v2 管理 API（registry/doctor 数据源 + SSE 实时）────────
-    ...toPanelRoutes(v2.routes),
+    // 全部套既有 guard（loopback/配对/CSRF）；change:true 的写路由走严格校验。
+    ...toPanelRoutes(v2.routes).map((route) => ({
+      kind: "exact",
+      path: route.path,
+      handler: guard(route.handler, { change: route.change === true }),
+    })),
     {
       kind: "exact",
       path: "/api/toolkit-panel/v2/ui",

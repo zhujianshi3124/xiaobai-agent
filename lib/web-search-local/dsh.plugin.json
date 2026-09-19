@@ -1,6 +1,17 @@
 {
   "manifestVersion": 1,
   "name": "@local/dsh-toolkit/web-search-local",
+  "id": "dsh/web-search-local",
+  "displayName": "本地网页搜索与抓取",
+  "version": "0.1.0",
+  "contract": "^1.0",
+  "configSchema": {
+    "type": "object",
+    "meta": {},
+    "dict": {
+      "engines": { "type": "array", "meta": {}, "inner": { "type": "string", "meta": {} } }
+    }
+  },
   "requirements": {
     "runtime": {
       "node": ">=22",

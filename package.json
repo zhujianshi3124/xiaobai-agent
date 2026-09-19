@@ -11,7 +11,7 @@
     "test:registry": "node --test --test-force-exit test/registry.test.mjs",
     "test:doctor": "node --test --test-force-exit test/doctor.test.mjs",
     "test:panel": "node --test --test-force-exit test/panel-v2.test.mjs",
-    "test": "npm run build:contract && npm run build:registry && npm run build:doctor && node scripts/pluggable-lint.mjs && npm run typecheck && node --test --test-force-exit"
+    "test": "npm run build:contract && npm run build:registry && npm run build:doctor && node scripts/pluggable-lint.mjs && node scripts/p4-no-subplugin-import-check.mjs && npm run typecheck && node --test --test-force-exit"
   },
   "type": "module",
   "description": "本地 DSH 套件：rate-throttle / compact-router / agent-memory / search-router / web-search-local 五合一入口；一个版本号管全部。",

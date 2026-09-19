@@ -1,0 +1,15 @@
+{
+  "manifestVersion": 1,
+  "name": "@local/dsh-toolkit/schema-plugin",
+  "id": "dsh/schema-plugin",
+  "displayName": "带必填配置的夹具",
+  "version": "0.1.0",
+  "contract": "^1.0",
+  "requirements": {
+    "runtime": { "node": ">=20" },
+    "binaries": [],
+    "packages": {},
+    "registers": { "inject": [], "events": [], "services": [], "commands": [], "providers": [] },
+    "exports": { ".": "./index.js" }
+  }
+}

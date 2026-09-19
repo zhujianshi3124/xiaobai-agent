@@ -18,6 +18,7 @@
 import {
   contractEventName,
   contractServiceName,
+  validateConfigAgainstSchema,
 } from '@local/dsh-toolkit/contract'
 import type {
   AuditEvent,
@@ -32,7 +33,7 @@ import type {
 import { resolveLocalSource, SourceError } from './loader.js'
 import { contractPrecheck } from './precheck.js'
 import { emptyState, loadState, saveState } from './state.js'
-import type { FiberLike, HostContext, RegistryEntry, RegistryLogger, RegistryOptions, ResolvedPlugin } from './types.js'
+import type { FiberLike, HostContext, PluginRegisters, RegistryEntry, RegistryLogger, RegistryOptions, ResolvedPlugin } from './types.js'
 
 const FIBER_ACTIVE = 2
 const FIBER_FAILED = 3
@@ -158,6 +159,11 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
     return entry ? this.toEntry(entry) : undefined
   }
 
+  /** 注册面查询（doctor 注册冲突检查用）。 */
+  registersOf(id: string): PluginRegisters | undefined {
+    return this.entries.get(id)?.registers
+  }
+
   private toEntry(e: RegistryEntry): PluginEntry {
     return {
       manifest: e.manifest,
@@ -225,13 +231,23 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
 
   /**
    * 写回插件配置（REQ-5 面板配置表单的落点；契约接口之外的实现扩展）。
-   * active 的插件以重载方式应用新配置（cordis fiber 配置更新面在 R2 结论下
-   * 不跨 fiber 复用，重载语义最直白）。
+   * 写回前按插件的 configSchema 真校验（REQ-9 债务 #2：schemastery 调用 /
+   * zod safeParse / toJSON JSON 重建，见 contract.validateConfigAgainstSchema）；
+   * active 的插件以重载方式应用新配置。
    */
   async setConfig(id: string, config: unknown): Promise<void> {
     await this.withLock(id, async () => {
       const entry = this.entries.get(id)
       if (!entry) throw new Error(`插件不存在：${id}`)
+      const schema = entry.manifest.configSchema
+        ?? ((entry.pluginObject ?? {}) as Record<string, unknown>)['Config']
+        ?? ((entry.pluginObject ?? {}) as Record<string, unknown>)['configSchema']
+      const result = await validateConfigAgainstSchema(schema, config)
+      if (!result.ok) {
+        const error = new Error(`配置未通过 configSchema 校验：${result.issues.map((i) => `${i.path}: ${i.message}`).join('；')}`)
+        ;(error as Error & { code?: string }).code = 'value-invalid'
+        throw error
+      }
       entry.config = config
       this.persist(entry)
       if (entry.fiber && entry.status === 'active') {
@@ -272,6 +288,7 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
         legacy: resolved.legacy,
         source: resolved.source,
         pluginObject: resolved.plugin,
+        registers: resolved.registers,
       }
       this.entries.set(id, entry)
       this.emitAdded(entry)

@@ -51,6 +51,9 @@ export {
 export type { ManifestIssue, IssueSeverity, ManifestValidation } from './validate.js'
 export { validateManifest, validateModuleExports, KNOWN_LEGACY_FIELDS } from './validate.js'
 
+export type { ConfigSchemaIssue, ConfigSchemaResult } from './config-schema.js'
+export { validateConfigAgainstSchema } from './config-schema.js'
+
 export type { ContractEventName, ContractServiceName } from './naming.js'
 export {
   CONTRACT_EVENT_NAMES,

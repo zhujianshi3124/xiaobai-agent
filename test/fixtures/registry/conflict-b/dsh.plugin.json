@@ -1,0 +1,11 @@
+{
+  "manifestVersion": 1,
+  "name": "@local/dsh-toolkit/conflict-b",
+  "requirements": {
+    "runtime": { "node": ">=20" },
+    "binaries": [],
+    "packages": {},
+    "registers": { "inject": [], "events": [], "services": [], "commands": ["fixture.shared-cmd"], "providers": [] },
+    "exports": { ".": "./index.js" }
+  }
+}

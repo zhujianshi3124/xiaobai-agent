@@ -28,6 +28,13 @@ export function createToolkitServices(ctx, config = {}, logger = console) {
   )
 
   const host = cordisHost(ctx)
+  // 最小宿主容错（如并行线 ui-matrix 的 mock ctx 无 reflect/on）：无服务面时跳过
+  // 服务注册，无事件面时不启动周期巡检（避免留下悬挂定时器）。
+  const hasRealHost = !!(ctx.reflect && typeof ctx.reflect.provide === 'function')
+  const hasEvents = typeof ctx.on === 'function'
+  if (!hasRealHost) {
+    host.provideService = () => {}
+  }
   const registry = new ToolkitRegistryCore(host, {
     servicePrefix,
     statePath,
@@ -51,12 +58,14 @@ export function createToolkitServices(ctx, config = {}, logger = console) {
   // 接线（REQ-3/REQ-4）：安装预检走 doctor；健康报告回落到 registry 条目，
   // 供面板快照直接呈现（面板不另开旁路状态，用户要求 3）。
   registry.setPrecheck((source) => doctor.precheck(source))
-  ctx.on?.(`${servicePrefix}/registry:health-changed`, (payload) => {
-    if (payload && payload.id && payload.report) registry.setHealth(payload.id, payload.report)
-  })
+  if (hasEvents) {
+    ctx.on(`${servicePrefix}/registry:health-changed`, (payload) => {
+      if (payload && payload.id && payload.report) registry.setHealth(payload.id, payload.report)
+    })
+  }
 
   registry.start()
-  if ((doctorCfg.watchInterval ?? 30000) > 0) doctor.startWatch()
+  if (hasEvents && (doctorCfg.watchInterval ?? 30000) > 0) doctor.startWatch()
 
   return {
     registry,
