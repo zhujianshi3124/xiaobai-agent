@@ -740,8 +740,14 @@ function uninstallDialogHtml(p, mode) {
   }
   html += '<div class="dlgKey">恢复路径</div><div class="dlgLine">' + esc(c.restorePath) + "</div>"
     + '<div class="dlgKey">重启</div><div class="dlgLine"><span class="dlgBold">' + esc(isTrue ? TRUE_COMMON.restart : c.restart) + "</span></div>"
-    + '<div class="dlgKey">确认操作</div><div class="dlgLine">' + esc(c.confirm) + "</div>"
-    + inputs
+    + '<div class="dlgKey">确认操作</div><div class="dlgLine">' + esc(c.confirm) + "</div>";
+  // §3.6(a)（判定 2026-09-19）：真卸载可选「删除原因」——位置＝将删清单之后、输名之前，
+  // 不挤占两次输名之间的空窗期警告；选填，空 ⇒ 收据如实记「（未填写）」。
+  if (isTrue) {
+    html += '<div class="dlgKey">删除原因（可不填）</div><div class="dlgLine">' + esc("可以写一句你自己的话，比如「不再需要这个功能」。它会原样写进删除收据，将来帮你想起当时为什么删的。不填也可以，收据会如实记「（未填写）」。") + "</div>"
+      + '<input class="dlgInput" data-reason="1" maxlength="200" placeholder="可选：写一句话，最多 200 字">';
+  }
+  html += inputs
     + '<div class="uninRow"><button class="uninGo" data-mode="' + mode + '">'
     + (isTrue ? "确认彻底删除" : "确认软卸载") + "</button>"
     + '<button class="uninNo">取消</button><span class="muted uninMsg"></span></div></div>';
@@ -867,7 +873,11 @@ function wireP24Dialog(host, p) {
     }
     go.disabled = true;
     msg.innerHTML = '<span class="muted">正在生成改动方案…</span>';
-    var planned = await p24Post("/api/toolkit-panel/uninstall/plan", { plugin: p.dir, mode: mode, confirm: typed });
+    // §3.6(a)：真卸载附带可选删除原因（plan 时入账，删除前落收据；空 ⇒ 收据记 null）
+    var reasonInput = host.querySelector("input[data-reason]");
+    var planPayload = { plugin: p.dir, mode: mode, confirm: typed };
+    if (mode === "true" && reasonInput) planPayload.reason = String(reasonInput.value || "").trim().slice(0, 200);
+    var planned = await p24Post("/api/toolkit-panel/uninstall/plan", planPayload);
     if (!planned.body.ok) {
       go.disabled = false;
       msg.innerHTML = '<span class="error">没能开始：' + esc(planned.body.error || planned.status) + "</span>";

@@ -940,6 +940,23 @@ window.__ModuleLoader__.load({
 					bold: true
 				}));
 			}
+			// §3.6(a)（判定 2026-09-19）：真卸载可选「删除原因」——位置＝将删清单之后、输名之前，
+			// 不挤占两次输名之间的空窗期警告；选填，空 ⇒ 收据如实记「（未填写）」。
+			if (isTrue) {
+				kids.push(react.createElement("div", { key: "rsk", style: styles.dlgKey }, "删除原因（可不填）"));
+				kids.push(react.createElement(DialogLine, {
+					key: "rsv",
+					text: "可以写一句你自己的话，比如「不再需要这个功能」。它会原样写进删除收据，将来帮你想起当时为什么删的。不填也可以，收据会如实记「（未填写）」。"
+				}));
+				kids.push(react.createElement("input", {
+					key: "rsi",
+					style: styles.dlgInput,
+					value: props.reason === undefined || props.reason === null ? "" : props.reason,
+					maxLength: 200,
+					placeholder: "可选：写一句话，最多 200 字",
+					onChange: function (e) { if (props.onReason) props.onReason(e.target.value); }
+				}));
+			}
 			var count = isTrue ? 2 : 1;
 			var inputs = [];
 			for (var j = 0; j < count; j++) {
@@ -1012,7 +1029,7 @@ window.__ModuleLoader__.load({
 			var plugin = props.plugin;
 			var onChanged = props.onChanged;
 			var showBanner = props.showBanner;
-			// hook 顺序（测试依赖）：[0] dlg / [1] busy / [2] error / [3] typed
+			// hook 顺序（测试依赖）：[0] dlg / [1] busy / [2] error / [3] typed / [4] reason（§3.6a，追加在尾不扰动既有序）
 			var dlgSt = react.useState(null);
 			var dlg = dlgSt[0];
 			var setDlg = dlgSt[1];
@@ -1025,6 +1042,9 @@ window.__ModuleLoader__.load({
 			var tpSt = react.useState({ 0: "", 1: "" });
 			var typed = tpSt[0];
 			var setTyped = tpSt[1];
+			var reasonSt = react.useState("");
+			var reason = reasonSt[0];
+			var setReason = reasonSt[1];
 
 			var status = plugin.status || "mounted";
 			// 三入口各认快照字段（唯一真源）：
@@ -1039,6 +1059,7 @@ window.__ModuleLoader__.load({
 			var openUninstall = function (mode) {
 				setError("");
 				setTyped({ 0: "", 1: "" });
+				setReason("");
 				setDlg({ kind: "uninstall", mode: mode });
 			};
 
@@ -1048,9 +1069,12 @@ window.__ModuleLoader__.load({
 				try {
 					var list = [];
 					for (var i = 0; i < (mode === "true" ? 2 : 1); i++) list.push(String(typed[i] || "").trim());
+					// §3.6(a)：真卸载附带可选删除原因（plan 时入账，删除前落收据；空 ⇒ 收据记 null）
+					var planPayload = { plugin: plugin.dir, mode: mode, confirm: list };
+					if (mode === "true") planPayload.reason = String(reason || "").trim().slice(0, 200);
 					var res = await fetch("/api/toolkit-panel/uninstall/plan", {
 						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
-						body: JSON.stringify({ plugin: plugin.dir, mode: mode, confirm: list })
+						body: JSON.stringify(planPayload)
 					});
 					var body = await res.json();
 					if (!body.ok) { setError(body.error || ("HTTP " + res.status)); return; }
@@ -1067,7 +1091,7 @@ window.__ModuleLoader__.load({
 				} finally {
 					setBusy(false);
 				}
-			}, [plugin.dir, typed, onChanged]);
+			}, [plugin.dir, typed, reason, onChanged]);
 
 			// 恢复（**软卸载专有**，§2.9b 文案）：副作用 = 行块插回 + 宿主键写回。
 			var openRestore = react.useCallback(function () {
@@ -1171,6 +1195,7 @@ window.__ModuleLoader__.load({
 					mode: dlg.mode,
 					willDelete: plugin.bodyStats || null,
 					typed: typed,
+					reason: reason,
 					busy: busy,
 					error: error,
 					onTyped: function (idx, v) {
@@ -1178,6 +1203,7 @@ window.__ModuleLoader__.load({
 						next[idx] = v;
 						setTyped(next);
 					},
+					onReason: function (v) { setReason(String(v || "").slice(0, 200)); },
 					onConfirm: function () { doUninstall(dlg.mode); },
 					onCancel: function () { setDlg(null); setError(""); }
 				}));
