@@ -1,0 +1,23 @@
+{
+  "id": "dsh/bad-requires",
+  "displayName": "requires 各子段非法的反面样例",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "requires": {
+    "dshRuntime": "latest",
+    "services": ["llm", ""],
+    "subPlugins": ["rate-throttle"],
+    "envVars": [
+      { "key": "BAD KEY", "required": "yes" }
+    ],
+    "ports": [
+      { "port": 99999, "protocol": "sctp" }
+    ],
+    "fsPaths": [
+      { "path": "~/.dsh", "access": "rw+" }
+    ],
+    "externalApis": [
+      { "name": "gw", "url": "ftp://bad.example", "authEnv": "9KEY" }
+    ]
+  }
+}

@@ -1,0 +1,248 @@
+/**
+ * DSH Sub-Plugin Contract v1 —— 公共类型单一出口（REQ-1 / 规格 §4）。
+ *
+ * - 桶（宿主）与子插件使用同一份契约；嵌入场景（G4）不另造接口（D1）。
+ * - 磁盘 manifest 是本类型的 JSON 子集；`configSchema` / `panels` / `healthCheck`
+ *   属于模块运行时导出，JSON manifest 缺省它们是合法的（见 validate.ts 的绑定校验）。
+ * - 与存量 `dsh.plugin.json`（manifestVersion:1）的关系：旧字段属于
+ *   KNOWN_LEGACY_FIELDS（见 validate.ts），迁移期（REQ-9）内被容忍并标记。
+ *
+ * 本模块零依赖（不 import node 内建），可在任何 ≥ES2022 运行时使用。
+ */
+
+/** 契约版本，semver 管理；破坏性变更必须升主版本并提供适配层（规格 §8）。 */
+export const PLUGIN_CONTRACT_VERSION = '1.0.0'
+
+// ── manifest ──────────────────────────────────────────────────────────────
+
+/** `requires.envVars[]`：只声明存在性，禁止在任何日志/报告中输出变量值（规格 §9）。 */
+export interface ManifestEnvVar {
+  key: string
+  required: boolean
+  describe?: string
+  example?: string
+}
+
+export interface ManifestBinary {
+  name: string
+  minVersion?: string
+  describe?: string
+}
+
+export interface ManifestPort {
+  port: number
+  protocol?: 'tcp' | 'udp'
+  purpose?: string
+  /** shared: true 表示可与其他组件共用，预检仅提示不阻断（REQ-3 §8）。 */
+  shared?: boolean
+}
+
+export interface ManifestFsPath {
+  path: string
+  access: 'r' | 'rw'
+  purpose?: string
+}
+
+export interface ManifestExternalApi {
+  name: string
+  url?: string
+  /** 存放鉴权凭据的环境变量名；同样只声明名字，不出现值。 */
+  authEnv?: string
+}
+
+export interface ManifestRequirements {
+  /** DSH 运行时版本范围，如 ">=0.1.2-rc.1 <0.2.0"。 */
+  dshRuntime?: string
+  node?: string
+  /** 依赖的 cordis 服务名（inject 面）。 */
+  services?: string[]
+  /** 依赖的其他子插件 id（全局唯一 id，非路径）。 */
+  subPlugins?: string[]
+  envVars?: ManifestEnvVar[]
+  binaries?: ManifestBinary[]
+  ports?: ManifestPort[]
+  fsPaths?: ManifestFsPath[]
+  externalApis?: ManifestExternalApi[]
+}
+
+/**
+ * 自定义面板片段描述符。挂载方式（组件约定/插槽）由 P4 按现有面板栈定夺，
+ * P1 只固定最小结构：`id` 必填，其余为开放键值。
+ */
+export interface PanelDescriptor {
+  id: string
+  title?: string
+  [key: string]: unknown
+}
+
+/** 自定义健康检查的执行上下文。ctx 为宿主派生 cordis ctx（结构由宿主侧收敛）。 */
+export interface HealthCheckCtx {
+  config: unknown
+  ctx: unknown
+}
+
+/**
+ * 子插件契约 manifest。字段语义见规格 §4；与规格的偏差（已裁决允许的微调）：
+ * `requires` 整体可选（零需求的插件不必写空对象），其余字段名未变。
+ */
+export interface DshSubPluginManifest {
+  /** 全局唯一，命名空间式 `<scope>/<name>`，如 `dsh/rate-throttle`。 */
+  id: string
+  displayName: string
+  /** semver。 */
+  version: string
+  /** 兼容的契约版本范围，如 "^1.0"。 */
+  contract: string
+  requires?: ManifestRequirements
+  /** 沿用项目现有 Schema 体系（schemastery）；面板据此自动生成配置表单（REQ-5）。 */
+  configSchema?: unknown
+  panels?: PanelDescriptor[]
+  healthCheck?: (c: HealthCheckCtx) => Promise<HealthItem[]>
+}
+
+// ── 健康 / 预检 ───────────────────────────────────────────────────────────
+
+export type PluginStatus =
+  | 'installed'
+  | 'loading'
+  | 'active'
+  | 'error'
+  | 'disabled'
+  | 'quarantined'
+
+export interface HealthItemFix {
+  summary: string
+  steps?: string[]
+  docsUrl?: string
+  autoFixId?: string
+}
+
+export interface HealthItem {
+  code: string
+  level: 'ok' | 'warn' | 'error'
+  message: string
+  fix?: HealthItemFix
+}
+
+export interface HealthReport {
+  pluginId: string
+  status: 'healthy' | 'degraded' | 'unhealthy' | 'unknown'
+  checkedAt: number
+  items: HealthItem[]
+}
+
+export interface PrecheckChange {
+  target: 'manifest' | 'config' | 'env' | 'deps' | 'code'
+  summary: string
+  detail: string
+}
+
+export interface PrecheckReport {
+  pass: boolean
+  /** 不修复则拒绝安装。 */
+  blocking: HealthItem[]
+  /** 可继续但需提示。 */
+  warnings: HealthItem[]
+  /** 可执行修复指引：直接回答"缺什么环境、哪些地方要改"（REQ-3）。 */
+  changes: PrecheckChange[]
+  /** 被检插件是否为 legacy 包装。 */
+  legacyMode: boolean
+}
+
+// ── 来源 / 注册中心 ───────────────────────────────────────────────────────
+
+/**
+ * 安装来源。Q1 裁决（2026-09-19）：P2 仅实现 `local`；`npm` 为预留判别分支，
+ * 后续追加必须保持纯增量——不改本契约、不改 registry 主流程。
+ */
+export type PluginSource =
+  | { kind: 'local'; path: string }
+  | { kind: 'npm'; spec: string }
+
+export interface PluginEntryLastError {
+  code: string
+  message: string
+  at: number
+}
+
+export interface PluginEntry {
+  manifest: DshSubPluginManifest
+  status: PluginStatus
+  config: unknown
+  lastError?: PluginEntryLastError
+  health?: HealthReport
+  legacy: boolean
+}
+
+export interface InstallOk {
+  ok: true
+  entry: PluginEntry
+}
+
+export interface InstallBlocked {
+  ok: false
+  precheck: PrecheckReport
+}
+
+export type InstallResult = InstallOk | InstallBlocked
+
+/**
+ * 注册中心服务（服务名 `${servicePrefix}/registry`，见 naming.ts）。
+ * 实现在 P2（REQ-2）；本契约只固定接口面。
+ */
+export interface ToolkitRegistry {
+  list(): PluginEntry[]
+  get(id: string): PluginEntry | undefined
+  install(source: PluginSource, opts?: { force?: boolean }): Promise<InstallResult>
+  uninstall(id: string): Promise<void>
+  setEnabled(id: string, on: boolean): Promise<void>
+  reload(id: string): Promise<void>
+}
+
+// ── Doctor ────────────────────────────────────────────────────────────────
+
+export interface DoctorRuleContext {
+  pluginId: string
+  manifest?: DshSubPluginManifest
+  config: unknown
+  ctx: unknown
+}
+
+/** doctor 规则扩展点（REQ-4）：内置规则 / manifest 合成规则 / 第三方规则同构。 */
+export interface DoctorRule {
+  id: string
+  description?: string
+  check(c: DoctorRuleContext): Promise<HealthItem[]>
+}
+
+export interface InspectionReport {
+  generatedAt: number
+  reports: HealthReport[]
+}
+
+/**
+ * Doctor 服务（服务名 `${servicePrefix}/doctor`，见 naming.ts）。
+ * 实现在 P3（REQ-3/4）；本契约只固定接口面。
+ */
+export interface ToolkitDoctor {
+  /** 安装前预检（只读、幂等、带超时）。 */
+  precheck(source: PluginSource): Promise<PrecheckReport>
+  /** 运行时检查；缺省全量。 */
+  inspect(pluginId?: string): Promise<InspectionReport>
+  /** 规则扩展点。 */
+  registerRule(rule: DoctorRule): void
+}
+
+// ── 审计（REQ-10）─────────────────────────────────────────────────────────
+
+export const AUDIT_EVENTS = [
+  'installed',
+  'removed',
+  'enabled',
+  'disabled',
+  'reloaded',
+  'quarantined',
+  'config-changed',
+] as const
+
+export type AuditEvent = (typeof AUDIT_EVENTS)[number]

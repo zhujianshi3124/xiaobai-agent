@@ -36,6 +36,9 @@ function selfPluginOfTestFile(abs) {
 
 function isSibling(spec, fromFile, selfPlugin) {
   if (spec === '@local/dsh-toolkit') return false;
+  // 契约模块（P1，docs/p0-recon.md §6 N1 裁决）是全桶共享基础模块，不是兄弟插件：
+  // 任何 lib 插件与 test 用例都允许静态 import @local/dsh-toolkit/contract。
+  if (spec === '@local/dsh-toolkit/contract' || spec.startsWith('@local/dsh-toolkit/contract/')) return false;
   const aliasRe = /^@local\/dsh-toolkit\/([^/]+)(?:\/|$)/;
   const alias = aliasRe.exec(spec);
   if (alias) return alias[1] !== selfPlugin;

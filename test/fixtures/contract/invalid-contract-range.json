@@ -1,0 +1,6 @@
+{
+  "id": "dsh/future-contract",
+  "displayName": "契约范围不兼容当前契约版本",
+  "version": "1.0.0",
+  "contract": "^2.0"
+}

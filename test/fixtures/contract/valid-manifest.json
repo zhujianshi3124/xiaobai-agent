@@ -1,0 +1,32 @@
+{
+  "id": "dsh/rate-throttle",
+  "displayName": "速率限制与换源路由",
+  "version": "1.2.0",
+  "contract": "^1.0",
+  "requires": {
+    "dshRuntime": ">=0.1.2-rc.1 <0.2.0",
+    "node": ">=22",
+    "services": ["llm", "tokenMeter"],
+    "subPlugins": ["dsh/web-search-local"],
+    "envVars": [
+      { "key": "DSH_THROTTLE_LOG", "required": false, "describe": "结构化日志开关", "example": "1" }
+    ],
+    "binaries": [
+      { "name": "node", "minVersion": "22.0.0", "describe": "运行时" }
+    ],
+    "ports": [
+      { "port": 3080, "protocol": "tcp", "purpose": "web 面板", "shared": true }
+    ],
+    "fsPaths": [
+      { "path": "~/.dsh", "access": "rw", "purpose": "学习限额持久化" }
+    ],
+    "externalApis": [
+      { "name": "sensenova-gateway", "url": "https://api.sensenova.example/v1", "authEnv": "SENSENOVA_API_KEY" }
+    ]
+  },
+  "panels": [
+    { "id": "main", "title": "限流概览" }
+  ],
+  "manifestVersion": 1,
+  "name": "@local/dsh-toolkit/rate-throttle"
+}
