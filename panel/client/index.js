@@ -1170,13 +1170,21 @@ window.__ModuleLoader__.load({
 
 			var kids = [];
 			if (canUninstall) {
-				// 销毁式 v2：软 / 真两入口并存。真卸载**不可逆**（弹窗三句必含 + 输入两次）。
-				kids.push(react.createElement("div", { key: "hint", style: styles.dlgLine },
-					"「软卸载」摘除挂载行、本体保留、可一键恢复；「真卸载」彻底删除本体、不留副本、不可恢复。"));
-				kids.push(react.createElement("div", { key: "row", style: styles.uninRow },
-					react.createElement("button", { style: styles.btnOpen, disabled: busy, onClick: function () { openUninstall("soft"); } }, "软卸载"),
-					react.createElement("button", { style: styles.btnOpen, disabled: busy, onClick: function () { openUninstall("true"); } }, "真卸载")
-				));
+				// P6 容错：托管文案缺失（插件不在 UNINSTALL_COPY 清单内）→ 降级提示，
+				// 不渲染点了没反应的死按钮（hook 序不变，纯渲染分支）。
+				var copyMissing = !(UNINSTALL_COPY[plugin.dir] && UNINSTALL_COPY[plugin.dir].soft);
+				if (copyMissing) {
+					kids.push(react.createElement("div", { key: "hint", style: styles.dlgLine },
+						"该插件不在本面板的托管清单内，卸载确认文案缺失——已降级：请在上方「插件管理」区操作，或手动处理。"));
+				} else {
+					// 销毁式 v2：软 / 真两入口并存。真卸载**不可逆**（弹窗三句必含 + 输入两次）。
+					kids.push(react.createElement("div", { key: "hint", style: styles.dlgLine },
+						"「软卸载」摘除挂载行、本体保留、可一键恢复；「真卸载」彻底删除本体、不留副本、不可恢复。"));
+					kids.push(react.createElement("div", { key: "row", style: styles.uninRow },
+						react.createElement("button", { style: styles.btnOpen, disabled: busy, onClick: function () { openUninstall("soft"); } }, "软卸载"),
+						react.createElement("button", { style: styles.btnOpen, disabled: busy, onClick: function () { openUninstall("true"); } }, "真卸载")
+					));
+				}
 			}
 			if (canRestore) {
 				kids.push(react.createElement("div", { key: "restrow", style: styles.uninRow },
@@ -1612,6 +1620,11 @@ window.__ModuleLoader__.load({
 					react.createElement("span", { style: styles.muted }, doctorStatus)
 				),
 				react.createElement(RestoreBanner, { show: !!banner }),
+				// P6 归一：registry 通用管理区（自适应 · 新装插件免刷新自动出现）——原 v2 标签页整体并入
+				react.createElement(V2Section, { key: "v2-section" }),
+				// P6 归一：旧 5 卡片区降级为「内置插件工具区」，插件特有入口（两层开关/参数编辑/
+				// 卸载恢复/技术详情）原样保留在本区，入口可达（P6 映射表见 P6 报告）
+				react.createElement("h2", { style: styles.h2 }, "内置插件工具区（patch 域 · 开关 / 参数 / 卸载恢复）"),
 				react.createElement("div", { style: styles.cards }, cards),
 				react.createElement("h2", { style: styles.h2 }, "配置文件原文（cordis.patch.yml · 插件开关所在）"),
 				react.createElement("pre", { style: styles.pre }, patchText),
@@ -1621,8 +1634,9 @@ window.__ModuleLoader__.load({
 			);
 		}
 
-		// ════ P5 泛化线：registry 驱动的插件管理 tab（REQ-5 / 债务 #9）════════
-		// 数据源仅为 /api/toolkit-panel/v2/*（registry/doctor 服务与事件流），
+		// ════ P5 泛化线 → P6 归一：registry 驱动的通用管理区（REQ-5 / 债务 #9 / P6 面板归一）════════
+		// P6 起本区块并入唯一 toolkit-panel 标签页（ToolkitPanel 顶部），不再是独立标签页；
+		// 数据源仅为 /api/toolkit-panel/v2/*（registry/doctor 服务与带前缀事件流），
 		// 零具体子插件模块引用——新装插件免刷新自适应（no-subplugin-import-check 守卫）。
 		var V2_API = "/api/toolkit-panel/v2";
 		var V2_EVENT_NAMES = ["plugin-added", "plugin-removed", "status-changed", "health-changed", "issue-found",
@@ -1665,6 +1679,44 @@ window.__ModuleLoader__.load({
 				});
 			});
 			return { close: function () { stopPolling(); es.close(); } };
+		}
+
+		// P6 归一：客户端传输复用 realtime-connector——主路径动态 import 服务端直出的
+		// ESM 模块（/v2/connector.js，即 panel/manager/realtime-connector.mjs，panel-v2
+		// 测试覆盖的同一模块文件）；受限环境（无模块加载器 / Node 测试桩）自动回退到
+		// 上方同语义内联实现。两条路径语义一致，且都有测试覆盖（panel-v2 覆盖 ESM 模块，
+		// panel-unified 覆盖内联孪生与归一面板实际接线）。
+		// 注意两种形态差异：内联实现创建即连接；ESM 模块返回 {start,stop}，必须显式
+		// start()——工厂在此统一适配为「create(handlers) → {close}」单一形态。
+		var connectorModulePromise = null;
+		function v2ConnectorFactory() {
+			if (!connectorModulePromise) {
+				try {
+					connectorModulePromise = Promise.resolve(import(V2_API + "/connector.js")).then(
+						function (m) {
+							var create = m && typeof m.createRealtimeConnector === "function" ? m.createRealtimeConnector : null;
+							if (!create) return createV2Connector;
+							return function (handlers) {
+								var c = create({
+									sseUrl: V2_API + "/events",
+									snapshotUrl: V2_API + "/snapshot",
+									eventNames: V2_EVENT_NAMES,
+									pollIntervalMs: 3000,
+									onSnapshot: handlers.onSnapshot,
+									onEvent: handlers.onEvent,
+									onModeChange: handlers.onMode,
+								});
+								c.start();
+								return { close: function () { c.stop(); } };
+							};
+						},
+						function () { return createV2Connector; }
+					);
+				} catch (e) {
+					connectorModulePromise = Promise.resolve(createV2Connector);
+				}
+			}
+			return connectorModulePromise;
 		}
 
 		// schemastery 纯定义（dsh.plugin.json configSchema 落盘形态）→ 表单控件（债务 #8）
@@ -1748,7 +1800,7 @@ window.__ModuleLoader__.load({
 				};
 			};
 			var toggleHealth = function () {
-				if (open === "health") { setOpen(""); return; }
+				if (open === "health" || open === "health-error") { setOpen(""); return; }
 				setOpen("health");
 				v2Api("/health?id=" + encodeURIComponent(p.id)).then(function (data) {
 					var items = (data.report && data.report.items) || [];
@@ -1758,10 +1810,14 @@ window.__ModuleLoader__.load({
 						items: items,
 						history: (data.history || []).map(function (h) { return h.status; })
 					}));
-				}).catch(function () { setOpen("health:加载失败"); });
+				}).catch(function () { setOpen("health-error"); });
 			};
 			var healthDetail = null;
-			if (open && open.indexOf("health:") === 0) {
+			// P6 容错：健康详情拉取失败 → 降级提示（旧实现解析失败静默渲染 null，用户点了没反应）
+			if (open === "health-error") {
+				healthDetail = react.createElement("div", { style: { borderTop: "1px dashed #8886", marginTop: "6px", paddingTop: "6px", fontSize: "13px", color: "#8a6d00" } },
+					"⚠ 健康详情暂不可用（doctor 服务不可达或网络异常），已降级显示。");
+			} else if (open && open.indexOf("health:") === 0) {
 				try {
 					var parsed = JSON.parse(open.slice(7));
 					healthDetail = react.createElement("div", { style: { borderTop: "1px dashed #8886", marginTop: "6px", paddingTop: "6px" } },
@@ -1821,53 +1877,86 @@ window.__ModuleLoader__.load({
 					"　", healthLine),
 				p.lastError ? react.createElement("div", { style: { fontSize: "12px", color: "#cf222e" } }, "最近错误 ", react.createElement("b", null, p.lastError.code), "：", p.lastError.message) : null,
 				react.createElement("div", { style: { margin: "6px 0" } },
+					// P6 修复（P5 潜伏 bug）①：askConfirm 必须惰性调用（点击时才 setState），
+					// 原写法在渲染期执行 setState（每次新对象），真实 React 下无限重渲染。
+					// P6 修复（P5 潜伏 bug）②：/enabled /reload /uninstall 必须携带
+					// confirm（逐字等于插件 id），否则 v2 API 一律 400 confirm-missing。
 					(p.status === "disabled" || p.status === "error" || p.status === "quarantined")
-						? react.createElement("button", { onClick: askConfirm("确认启用 " + p.id + "？", function () { return v2Api("/enabled", { id: p.id, enabled: true }); }) }, "启用")
-						: react.createElement("button", { onClick: askConfirm("确认停用 " + p.id + "？", function () { return v2Api("/enabled", { id: p.id, enabled: false }); }) }, "停用"),
-					react.createElement("button", { onClick: askConfirm("确认重载 " + p.id + "？", function () { return v2Api("/reload", { id: p.id }); }) }, "重载"),
-					react.createElement("button", { onClick: askConfirm("确认卸载 " + p.id + "？（将移除安装记录并卸出运行时）", function () { return v2Api("/uninstall", { id: p.id }); }) }, "卸载"),
+						? react.createElement("button", { onClick: function () { askConfirm("确认启用 " + p.id + "？", function () { return v2Api("/enabled", { id: p.id, enabled: true, confirm: p.id }); }); } }, "启用")
+						: react.createElement("button", { onClick: function () { askConfirm("确认停用 " + p.id + "？", function () { return v2Api("/enabled", { id: p.id, enabled: false, confirm: p.id }); }); } }, "停用"),
+					react.createElement("button", { onClick: function () { askConfirm("确认重载 " + p.id + "？", function () { return v2Api("/reload", { id: p.id, confirm: p.id }); }); } }, "重载"),
+					react.createElement("button", { onClick: function () { askConfirm("确认卸载 " + p.id + "？（将移除安装记录并卸出运行时）", function () { return v2Api("/uninstall", { id: p.id, confirm: p.id }); }); } }, "卸载"),
 					react.createElement("button", { onClick: toggleHealth }, "健康详情"),
 					react.createElement("button", { onClick: openConfig }, "配置")),
 				confirmBox, healthDetail, configDetail);
 		}
 
-		function RegistryTab() {
+		// ── P6 归一：registry 管理区（原 v2 标签页 RegistryTab）并入唯一 toolkit-panel 标签页 ──
+		// 数据源仅 /api/toolkit-panel/v2/*（registry/doctor 服务与带前缀事件流），零具体
+		// 子插件模块引用（no-subplugin-import-check 守卫）。新装插件免刷新自动出现。
+		// 容错：本区任何数据失败/渲染异常只降级本区，不影响下方 patch 域工具区。
+		function V2Section() {
 			var snapSt = react.useState(null);
 			var snapshot = snapSt[0];
 			var setSnapshot = snapSt[1];
 			var modeSt = react.useState("connecting");
+			var mode = modeSt[0];
 			var setMode = modeSt[1];
 			var pathSt = react.useState("");
 			var setPath = pathSt[1];
 			var wizardSt = react.useState(null);
+			var wizardState = wizardSt[0];
 			var setWizard = wizardSt[1];
 			var msgSt = react.useState(null);
+			var msg = msgSt[0];
 			var setMsg = msgSt[1];
+			var errSt = react.useState("");
+			var loadError = errSt[0];
+			var setLoadError = errSt[1];
 
 			var reload = react.useCallback(function () {
-				v2Api("/snapshot").then(function (data) { if (data.ok) setSnapshot(data); }).catch(function () {});
+				v2Api("/snapshot").then(function (data) {
+					if (data.ok) { setSnapshot(data); setLoadError(""); }
+					else setLoadError(data.error || "registry 快照不可用");
+				}).catch(function (e) { setLoadError(String(e && e.message || e)); });
 			}, []);
 			react.useEffect(function () {
 				reload();
-				var connector = createV2Connector({
-					onSnapshot: function (data) { setSnapshot(data); },
-					onMode: function (m) { setMode(m); },
-					onEvent: function (name, payload) {
-						if (name === "status-changed" || name === "plugin-added" || name === "plugin-removed") reload();
-						else if (name === "issue-found" && payload && payload.item) setMsg({ ok: false, code: payload.item.code, error: payload.item.message });
-						else if (name.indexOf("audit:") === 0) setMsg({ ok: true, code: name.slice(6), error: payload && payload.pluginId });
-					}
+				// 传输复用 realtime-connector：主路径 ESM 模块，受限环境回退内联孪生（见 v2ConnectorFactory）
+				var disposed = false;
+				var connector = null;
+				v2ConnectorFactory().then(function (create) {
+					if (disposed) return;
+					connector = create({
+						onSnapshot: function (data) { if (data && data.ok) { setSnapshot(data); setLoadError(""); } },
+						onMode: function (m) { setMode(m); },
+						onEvent: function (name, payload) {
+							if (name === "status-changed" || name === "plugin-added" || name === "plugin-removed") reload();
+							else if (name === "issue-found" && payload && payload.item) setMsg({ ok: false, code: payload.item.code, error: payload.item.message });
+							else if (name.indexOf("audit:") === 0) setMsg({ ok: true, code: name.slice(6), error: payload && payload.pluginId });
+						}
+					});
 				});
-				return function () { connector.close(); };
+				return function () {
+					disposed = true;
+					if (connector) connector.close();
+				};
 			}, [reload]);
 
-			if (!snapshot) {
-				return react.createElement("div", null, "读取 registry 状态中…");
-			}
-			var wizard = null;
-			if (wizardSt && wizardSt.precheck) {
-				var pc = wizardSt.precheck;
-				wizard = react.createElement("div", { style: { border: "1px dashed #8886", borderRadius: "8px", padding: "8px 10px", margin: "8px 0" } },
+			var body = null;
+			if (!snapshot && !loadError) {
+				body = react.createElement("div", null, "读取 registry 状态中…");
+			} else if (!snapshot && loadError) {
+				// P6 容错：registry 数据面不可达 → 降级提示；不抛错、不影响面板其余区块
+				body = react.createElement("div", { style: { border: "1px solid #b5890088", background: "#b5890018", color: "#8a6d00", padding: "6px 10px", borderRadius: "6px", margin: "6px 0", fontSize: "13px" } },
+					"⚠ 插件管理（registry）数据暂不可用，已降级：" + loadError + "。下方 patch 域工具区不受影响。");
+			} else {
+			// 向导：状态（wizardState）与渲染产物（wizardBox）分名——原 RegistryTab 用单一
+			// var 重赋值 + 引用 wizardSt.path；归一时若状态/元素同名自引用会拿到 undefined。
+			var wizardBox = null;
+			if (wizardState && wizardState.precheck) {
+				var pc = wizardState.precheck;
+				wizardBox = react.createElement("div", { style: { border: "1px dashed #8886", borderRadius: "8px", padding: "8px 10px", margin: "8px 0" } },
 					react.createElement("div", { style: { fontSize: "13px", color: pc.pass ? "#1a7f37" : "#cf222e" } }, "预检结论：", react.createElement("b", null, pc.pass ? "通过，可以安装" : "存在阻断项"), pc.legacyMode ? "（legacy 模式）" : ""),
 					pc.blocking.map(function (i, idx) {
 						return react.createElement("div", { key: "b" + idx, style: { fontSize: "12px", color: "#cf222e" } }, "【阻断】", react.createElement("b", null, i.code), " ", i.message, i.fix ? "　修复：" + i.fix.summary : null);
@@ -1881,21 +1970,23 @@ window.__ModuleLoader__.load({
 					react.createElement("button", {
 						disabled: !pc.pass,
 						onClick: function () {
-							v2Api("/install/confirm", { source: { kind: "local", path: wizardSt.path } }).then(function (result) {
+							v2Api("/install/confirm", { source: { kind: "local", path: wizardState.path } }).then(function (result) {
 								if (result.ok) { setMsg({ ok: true, code: "installed", error: result.entry.id }); setWizard(null); reload(); }
-								else { setWizard({ path: wizardSt.path, precheck: result.precheck }); setMsg({ ok: false, code: "install-blocked", error: "预检未通过，报告已刷新" }); }
+								else { setWizard({ path: wizardState.path, precheck: result.precheck }); setMsg({ ok: false, code: "install-blocked", error: "预检未通过，报告已刷新" }); }
 							}).catch(function (error) { setMsg({ ok: false, code: error.code || "error", error: error.error || String(error) }); });
 						}
 					}, "确认安装"));
 			}
-			var banner = msgSt && msgSt.code ? react.createElement("div", {
-				style: { border: "1px solid " + (msgSt.ok ? "#1a7f3788" : "#cf222e88"), background: msgSt.ok ? "#1a7f3714" : "#cf222e14", color: msgSt.ok ? "#1a7f37" : "#cf222e", padding: "4px 10px", borderRadius: "6px", margin: "6px 0", fontSize: "13px" }
-			}, msgSt.ok ? "已" + msgSt.code + "：" + msgSt.error : react.createElement("b", null, msgSt.code), msgSt.ok ? null : " " + msgSt.error) : null;
-			return react.createElement("div", null,
+			var banner = msg && msg.code ? react.createElement("div", {
+				style: { border: "1px solid " + (msg.ok ? "#1a7f3788" : "#cf222e88"), background: msg.ok ? "#1a7f3714" : "#cf222e14", color: msg.ok ? "#1a7f37" : "#cf222e", padding: "4px 10px", borderRadius: "6px", margin: "6px 0", fontSize: "13px" }
+			}, msg.ok ? "已" + msg.code + "：" + msg.error : react.createElement("b", null, msg.code), msg.ok ? null : " " + msg.error) : null;
+			body = react.createElement("div", null,
+				react.createElement("h2", { style: styles.h2 }, "插件管理（registry · 自适应）"),
 				react.createElement("div", { style: { fontSize: "12px", color: "#888", margin: "4px 0" } },
 					"数据源：registry/doctor 服务与事件流（",
 					react.createElement("b", { style: { color: mode === "sse" ? "#1a7f37" : "#8a6d00" } }, mode === "sse" ? "实时 SSE" : mode === "poll" ? "轮询降级" : "连接中"),
 					"）；新装插件自动出现，无需刷新"),
+				loadError ? react.createElement("div", { style: { fontSize: "12px", color: "#8a6d00", margin: "2px 0" } }, "⚠ " + loadError + "（旧数据仍显示，操作可能失败）") : null,
 				snapshot.doctorAvailable === false ? react.createElement("div", { style: { border: "1px solid #b5890088", background: "#b5890018", color: "#8a6d00", padding: "4px 10px", borderRadius: "6px", margin: "6px 0", fontSize: "13px" } }, "⚠ doctor 不可用：预检与健康巡检受限") : null,
 				banner,
 				react.createElement("div", { style: { border: "1px dashed #8886", borderRadius: "8px", padding: "8px 10px", margin: "8px 0" } },
@@ -1907,18 +1998,27 @@ window.__ModuleLoader__.load({
 								if (result.ok) setWizard({ path: pathSt[0], precheck: result.precheck });
 								else setMsg({ ok: false, code: "precheck-failed", error: result.error || "预检失败" });
 							}).catch(function (error) { setMsg({ ok: false, code: error.code || "error", error: error.error || String(error) }); });
-						} }, "① 预检")),
-					wizard),
+					} }, "① 预检")),
+				wizardBox),
 				snapshot.plugins.length === 0 ? react.createElement("div", { style: { color: "#888", fontSize: "13px" } }, "暂无已注册插件——用上方向导装入第一个。") :
 					snapshot.plugins.map(function (p) {
 						return react.createElement(RegistryPluginCard, { key: p.id, plugin: p, onChanged: reload, onError: function (result) { setMsg({ ok: false, code: result.code || result.error?.code || "error", error: result.error || result.message || String(result) }); } });
 					}));
+			}
+			// P6 容错闸：本区数据形状异常只降级本区（工具区/体检操作台不受影响，不许崩）
+			try {
+				return body;
+			} catch (e) {
+				return react.createElement("div", { style: { border: "1px solid #b5890088", background: "#b5890018", color: "#8a6d00", padding: "6px 10px", borderRadius: "6px", margin: "6px 0", fontSize: "13px" } },
+					"⚠ 插件管理区渲染异常，已降级（不影响下方工具区）：" + String(e && e.message || e));
+			}
 		}
 
 		var inject = ["slots"];
 		function apply(ctx) {
 			try {
-				// P5 泛化线：registry 驱动的插件管理 tab（新装插件自适应，REQ-5 / 债务 #9）
+				// P5 泛化线：registry 驱动的过渡 tab（P6 归一后退役，见阶段报告）；P6 起同一
+				// 管理区已并入下方 toolkit-panel 主标签页，过渡期两者并存、数据同源。
 				ctx.slots.inject("settings.plugins.tab", function () {
 					try {
 						return ctx.slots.register({
@@ -1927,7 +2027,7 @@ window.__ModuleLoader__.load({
 							order: 89,
 							label: function () { return "插件管理（registry · 自适应）"; },
 							inject: function () { return {}; }
-						}, RegistryTab);
+						}, V2Section);
 					} catch (e) {
 						return function () {};
 					}
@@ -1952,6 +2052,10 @@ window.__ModuleLoader__.load({
 		}
 		exports.apply = apply;
 		exports.inject = inject;
+		// 测试接入点（P6）：panel-unified 测试直接驱动内联孪生 connector 的双路径，
+		// 保证 SSE+轮询测试覆盖归一面板的实际客户端传输代码；宿主只消费 apply/inject。
+		exports.createV2Connector = createV2Connector;
+		exports.v2ConnectorFactory = v2ConnectorFactory;
 		return module.exports;
 	}
 });
