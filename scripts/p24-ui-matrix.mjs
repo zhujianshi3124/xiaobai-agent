@@ -30,6 +30,11 @@ if (BASE_SHA !== BASE_SHA_EXPECT) {
 }
 
 const DOCTOR_CLI = "D:\\dsh-test-sandbox\\projects\\doctor\\src\\cli.mjs";
+// 批 2 操作台文案常量（与两渲染器逐字一致；矩阵断言 = 环节在产品面，叠加 8.3 规则）
+const CONSOLE_EMPTY_ROLLBACK = "还没有可以回滚的体检操作——体检操作台还没有改过任何东西。";
+const CONSOLE_EMPTY_SNAPSHOT = "还没有可恢复的配置快照——面板每次改动配置前都会自动留一份，做过改动后这里就有了。";
+const CONSOLE_EMPTY_RECEIPTS = "还没有删除收据——你还没有用面板做过真卸载。";
+const CONSOLE_RECEIPT_NOTE = "收据只是删除的账单：里面只有被删文件的清单、校验值和你填写的原因，没有文件内容，不能用来恢复。";
 const sha = (t) => createHash("sha256").update(t).digest("hex");
 const shaFile = (p) => sha(readFileSync(p, "utf8"));
 
@@ -125,6 +130,9 @@ function makeCopy(name, { withPresetBridge = true } = {}) {
     writeFileSync(join(dir, "preset-patch-state.json"), JSON.stringify(state, null, 2), "utf8");
     for (const id of Object.keys(state)) writeFileSync(join(dir, "presets", id + ".agent.cordis.yml"), readFileSync(join(dir, "presets", id + ".agent.cordis.yml.patched"), "utf8"), "utf8");
   }
+  // 批 2（D2/D1）：doctor 域 config 根（面板经 CLI --config-root 指到副本，真实 ~/.dsh 零触碰）。
+  // 结构同 engine 要求：configRoot 存在 + profiles/web 存在。
+  mkdirSync(join(dir, "doctor-config", "profiles", "web"), { recursive: true });
   return dir;
 }
 
@@ -175,6 +183,7 @@ function makeApi(toolkitRoot) {
     toolkitRoot,
     backupRoot: join(toolkitRoot, ".panel-write-backups"),
     doctorCli: DOCTOR_CLI,
+    doctorConfigRoot: join(toolkitRoot, "doctor-config"),
     devicesFile: join(toolkitRoot, "no-such-devices.json"),
   });
   async function call(path, opts = {}) {
@@ -200,13 +209,21 @@ function makeApi(toolkitRoot) {
     custody: () => call("/api/toolkit-panel/custody"),
     restorePlan: (plugin, extra) => call("/api/toolkit-panel/restore/plan", { method: "POST", body: Object.assign({ plugin }, extra || {}) }),
     restoreExecute: (token, extra) => call("/api/toolkit-panel/restore/execute", { method: "POST", body: Object.assign({ token }, extra || {}) }),
+    // 批 2：操作台/双回滚
+    doctorStates: () => call("/api/toolkit-panel/doctor/states"),
+    doctorApplyPlan: (issueId) => call("/api/toolkit-panel/doctor/apply/plan", { method: "POST", body: { issueId } }),
+    doctorApplyExecute: (token) => call("/api/toolkit-panel/doctor/apply/execute", { method: "POST", body: { token } }),
+    doctorRollbackPlan: (stamp) => call("/api/toolkit-panel/doctor/rollback/plan", { method: "POST", body: { stamp } }),
+    doctorRollbackExecute: (token) => call("/api/toolkit-panel/doctor/rollback/execute", { method: "POST", body: { token } }),
+    snapshotRestorePlan: (stamp) => call("/api/toolkit-panel/snapshot-restore/plan", { method: "POST", body: { stamp } }),
+    snapshotRestoreExecute: (token) => call("/api/toolkit-panel/snapshot-restore/execute", { method: "POST", body: { token } }),
   };
 }
 
-/** 一次完整卸载动作（前端的两段式：输入插件名 → plan → execute）。 */
-async function uninstall(api, plugin, mode) {
+/** 一次完整卸载动作（前端的两段式：输入插件名 → plan → execute；reason=§3.6a 可选删除原因）。 */
+async function uninstall(api, plugin, mode, reason) {
   const confirm = mode === "true" ? [plugin, plugin] : [plugin];
-  const planned = await api.uninstallPlan(plugin, mode, confirm);
+  const planned = await api.uninstallPlan(plugin, mode, confirm, reason);
   if (!planned.json || !planned.json.ok) return { planned, executed: null };
   const executed = await api.uninstallExecute(planned.json.plan.token);
   return { planned, executed };
@@ -534,6 +551,9 @@ for (const dir of Object.keys(S2)) {
       check("§2[" + dir + "/true] html 顶部重复短句「" + exp.topWarning + "」", h.includes(exp.topWarning));
       // 两补强 (b)：将删文件清单 + 总字节数
       check("§2[" + dir + "/true] html 含「将删除」清单行（文件数/字节数）", h.includes("将删除") && /共 \d+ 个文件，合计 \d+ 字节/.test(h));
+      // §3.6(a)：可选「删除原因」格（段标题/说明/占位逐字；位置=输名之前）
+      check("§2[" + dir + "/true] html 含「删除原因（可不填）」段（说明+占位+不填如实记）",
+        h.includes("删除原因（可不填）") && h.includes("可选：写一句话，最多 200 字") && h.includes("不填也可以，收据会如实记「（未填写）」"), "");
     }
 
     // ---- react 渲染器 ----
@@ -548,10 +568,16 @@ for (const dir of Object.keys(S2)) {
       check("§2[" + dir + "/" + mode + "] react 分区名「" + keyName + "」+ 按钮逐字",
         txt.includes(keyName) && txt.includes(exp.button) && txt.includes("取消"), "actual=" + txt.slice(0, 200));
       const inputs = findAll(render1(dlg), (n) => n.type === "input");
-      check("§2[" + dir + "/" + mode + "] react 输入框数 = " + exp.inputs, inputs.length === exp.inputs, String(inputs.length));
+      // §3.6a 口径更新：真卸载输入框 = 输名×2 ＋ 可选原因格×1（软卸载不变）
+      const expInputs = exp.inputs + (mode === "true" ? 1 : 0);
+      check("§2[" + dir + "/" + mode + "] react 输入框数 = " + expInputs + (mode === "true" ? "（含可选原因格）" : ""), inputs.length === expInputs, String(inputs.length));
       if (mode === "true") {
         check("§2[" + dir + "/true] react 顶部重复短句 + 将删清单行",
           txt.includes(exp.topWarning) && /共 \d+ 个文件，合计 \d+ 字节/.test(txt), "actual=" + txt.slice(0, 260));
+        // 占位符是 props 不是可见文本 ⇒ 用 input 元素断言（文本断言只查标题与说明句）
+        const reasonInput = inputs.find((n) => n.props && n.props.placeholder === "可选：写一句话，最多 200 字");
+        check("§2[" + dir + "/true] react 含「删除原因（可不填）」段（标题+说明句+占位 200+不填如实记）",
+          txt.includes("删除原因（可不填）") && txt.includes("不填也可以，收据会如实记「（未填写）」") && !!reasonInput && reasonInput.props.maxLength === 200, "");
       }
     }
   }
@@ -1065,6 +1091,169 @@ function assertNoRestoreNoMount(tag, r, plugin) {
   check(tag3 + " ⑥ 挂载后真卸载态卡片回 mounted，无 dependency-broken", r3.snap.plugins.every((p) => p.status === "mounted"));
   const p24El = reactR.p24Of(r3.byDir("rate-throttle"));
   check(tag3 + " p24Controls 仍在（软/真卸载入口可见）", !!p24El && reactR.hasUninstallButtons(p24El) === true);
+}
+
+// ════════════════════════════════════════════════════════════
+// 5.5 批 2 操作台/双回滚矩阵（设计稿 p24-design-batch2-console.md §7 D1–D10）
+// ════════════════════════════════════════════════════════════
+section("批2 操作台/双回滚（D 段）");
+{
+  const rendererHtml = readFileSync(join(root, "panel", "client", "panel.html"), "utf8");
+  const rendererReact = readFileSync(join(root, "panel", "client", "index.js"), "utf8");
+
+  // ---------- D1 别名修正往返（doctor 域 apply → rollback，经面板两步） ----------
+  const dirD1 = makeCopy("doc-d1");
+  const apiD1 = makeApi(dirD1);
+  // 造 fixable：套件 manifest 加 aliases 表（旧名→新名），把旧名写进 doctor-signals.json（scope 扫描面）
+  const suiteManifest = JSON.parse(readFileSync(join(dirD1, "dsh.plugin.json"), "utf8"));
+  suiteManifest.aliases = Object.assign({}, suiteManifest.aliases, { "@local/dsh-compact-router": "@local/dsh-toolkit/compact-router" });
+  writeFileSync(join(dirD1, "dsh.plugin.json"), JSON.stringify(suiteManifest, null, 2) + "\n", "utf8");
+  const signalsPath = join(dirD1, "doctor-signals.json");
+  const signalsOriginal = readFileSync(signalsPath, "utf8");
+  const signalsModified = signalsOriginal.replace(/\}\s*$/, "  ,\"_legacyNote\": \"migrated from @local/dsh-compact-router\"\n}\n");
+  writeFileSync(signalsPath, signalsModified, "utf8");
+  const doc0 = runDoctor(dirD1);
+  check("D1 前置：夹具触发 ref.unresolvable-local（fixable=rewrite）", doc0.issues.some((i) => i.id === "ref.unresolvable-local" && i.fix.class === "rewrite" && i.fix.plan.length > 0), JSON.stringify(doc0.summary));
+  const planRes = await apiD1.doctorApplyPlan("ref.unresolvable-local");
+  check("D1 plan：ok + steps[0]=replace", planRes.json && planRes.json.ok && planRes.json.plan.steps[0].op === "replace", JSON.stringify(planRes.json && planRes.json.error));
+  check("D1 plan：确认页要素齐（做什么/影响面/回滚/失败表现/确认操作）", planRes.json.plan && typeof planRes.json.plan.message === "string" && Array.isArray(planRes.json.plan.steps));
+  const exRes = await apiD1.doctorApplyExecute(planRes.json.plan.token);
+  check("D1 execute：applied + 有备份根", exRes.json && exRes.json.ok && exRes.json.applied === true && !!exRes.json.backupRoot, JSON.stringify(exRes.json && exRes.json.error));
+  check("D1 execute：目标文件已修正为 新名", !readFileSync(signalsPath, "utf8").includes("@local/dsh-compact-router"), "");
+  check("D1 execute：rescan 回 0 error", exRes.json.rescan && exRes.json.rescan.error === 0, JSON.stringify(exRes.json.rescan));
+  const st1 = await apiD1.doctorStates();
+  check("D1 states：记 1 条 apply（files=1）", st1.json.ok && st1.json.states.length === 1 && st1.json.states[0].action === "apply" && st1.json.states[0].files === 1, JSON.stringify(st1.json.states));
+  const rbPlan = await apiD1.doctorRollbackPlan(st1.json.states[0].stamp);
+  check("D1 rollback plan：ok", rbPlan.json && rbPlan.json.ok, JSON.stringify(rbPlan.json && rbPlan.json.error));
+  const rbEx = await apiD1.doctorRollbackExecute(rbPlan.json.plan.token);
+  // 回滚语义 = 复原到「apply 前」字节（含夹具注入的 _legacyNote），非更早的原始态
+  check("D1 rollback execute：ok + 字节级复原（apply 前态）", rbEx.json && rbEx.json.ok && readFileSync(signalsPath, "utf8") === signalsModified, JSON.stringify(rbEx.json && rbEx.json.error));
+  const st2 = await apiD1.doctorStates();
+  check("D1 states：apply+rollback 两条", st2.json.ok && st2.json.states.length === 2 && st2.json.states[1].action === "rollback", JSON.stringify(st2.json.states.map((s) => s.action)));
+  // id 白名单与未找到（面板侧复刻 CLI 语义）
+  const badId = await apiD1.doctorApplyPlan("bad/id;rm");
+  check("D1 非法 id ⇒ issue-id-invalid", badId.json && badId.json.ok === false && badId.json.code === "issue-id-invalid", JSON.stringify(badId.json));
+  const noId = await apiD1.doctorApplyPlan("no.such.issue");
+  check("D1 未找到 ⇒ issue-not-found", noId.json && noId.json.ok === false && noId.json.code === "issue-not-found", JSON.stringify(noId.json));
+
+  // ---------- D2 补装包往返（file: 本地源） ----------
+  const dirD2 = makeCopy("doc-d2");
+  const apiD2 = makeApi(dirD2);
+  const rtManifestPath = join(dirD2, "lib", "rate-throttle", "dsh.plugin.json");
+  const rtManifest = JSON.parse(readFileSync(rtManifestPath, "utf8"));
+  rtManifest.requirements = rtManifest.requirements || {};
+  rtManifest.requirements.packages = Object.assign({}, rtManifest.requirements.packages, { "@local/dsh-fake": { "$from": "package.json#dependencies" } });
+  writeFileSync(rtManifestPath, JSON.stringify(rtManifest, null, 2) + "\n", "utf8");
+  const rootPkgPath = join(dirD2, "package.json");
+  const rootPkg = JSON.parse(readFileSync(rootPkgPath, "utf8"));
+  rootPkg.dependencies = Object.assign({}, rootPkg.dependencies, { "@local/dsh-fake": "file:./vendor/fake-pkg" });
+  writeFileSync(rootPkgPath, JSON.stringify(rootPkg, null, 2) + "\n", "utf8");
+  mkdirSync(join(dirD2, "vendor", "fake-pkg"), { recursive: true });
+  writeFileSync(join(dirD2, "vendor", "fake-pkg", "package.json"), JSON.stringify({ name: "@local/dsh-fake", version: "1.0.0", main: "index.js" }, null, 2) + "\n", "utf8");
+  writeFileSync(join(dirD2, "vendor", "fake-pkg", "index.js"), "// fake\n", "utf8");
+  const docD2 = runDoctor(dirD2);
+  check("D2 前置：pkg.missing-dependency fixable", docD2.issues.some((i) => i.id === "pkg.missing-dependency" && i.fix.class === "rewrite"), JSON.stringify(docD2.issues.filter((i) => i.id === "pkg.missing-dependency").map((i) => i.message)));
+  const planD2 = await apiD2.doctorApplyPlan("pkg.missing-dependency");
+  check("D2 plan：extra 带本地源/版本/范围", planD2.json && planD2.json.ok && planD2.json.plan.extra && planD2.json.plan.extra.source && planD2.json.plan.extra.version === "1.0.0" && planD2.json.plan.extra.range === "file:./vendor/fake-pkg", JSON.stringify(planD2.json && planD2.json.error));
+  const exD2 = await apiD2.doctorApplyExecute(planD2.json.plan.token);
+  check("D2 execute：包已装到 scope node_modules", exD2.json && exD2.json.ok === true && existsSync(join(dirD2, "node_modules", "@local", "dsh-fake", "package.json")), JSON.stringify(exD2.json && exD2.json.error));
+  const stD2 = await apiD2.doctorStates();
+  check("D2 states：apply 记 packages=1", stD2.json.ok && stD2.json.states.some((s) => s.action === "apply" && s.packages === 1), JSON.stringify(stD2.json.states));
+  const rbD2 = await apiD2.doctorRollbackPlan(stD2.json.states.find((s) => s.action === "apply").stamp);
+  const rbD2x = await apiD2.doctorRollbackExecute(rbD2.json.plan.token);
+  check("D2 rollback：安装目录已移除", rbD2x.json && rbD2x.json.ok && !existsSync(join(dirD2, "node_modules", "@local", "dsh-fake")), JSON.stringify(rbD2x.json && rbD2x.json.error));
+
+  // ---------- D3 无源拒装（面板 plan 即拒，人话如实告知） ----------
+  const dirD3 = makeCopy("doc-d3");
+  const apiD3 = makeApi(dirD3);
+  const rt3 = JSON.parse(readFileSync(join(dirD3, "lib", "rate-throttle", "dsh.plugin.json"), "utf8"));
+  rt3.requirements = rt3.requirements || {};
+  rt3.requirements.packages = Object.assign({}, rt3.requirements.packages, { "@local/dsh-nosource": { "$from": "package.json#dependencies" } });
+  writeFileSync(join(dirD3, "lib", "rate-throttle", "dsh.plugin.json"), JSON.stringify(rt3, null, 2) + "\n", "utf8");
+  const pkg3 = JSON.parse(readFileSync(join(dirD3, "package.json"), "utf8"));
+  pkg3.dependencies = Object.assign({}, pkg3.dependencies, { "@local/dsh-nosource": "^9.9.9" });
+  writeFileSync(join(dirD3, "package.json"), JSON.stringify(pkg3, null, 2) + "\n", "utf8");
+  check("D3 前置：missing-dependency 在案", runDoctor(dirD3).issues.some((i) => i.id === "pkg.missing-dependency"), "");
+  const planD3 = await apiD3.doctorApplyPlan("pkg.missing-dependency");
+  check("D3 无 file: 源 ⇒ plan 拒（issue-not-executable + 不联网人话）", planD3.json && planD3.json.ok === false && planD3.json.code === "issue-not-executable" && String(planD3.json.error).includes("不会联网下载"), JSON.stringify(planD3.json));
+
+  // ---------- D4 protected/id 白名单（CLI 层由 doctor 仓自测覆盖：run-tests-d1 + 既有 protected 负向） ----------
+  check("D4 面板侧：issueId 白名单拦截（跨线佐证：CLI protected 断言见 doctor 仓 run-tests-d1/既有负向）", (await apiD3.doctorApplyPlan("../escape")).json.code === "issue-id-invalid", "");
+
+  // ---------- D5 锚点漂移：plan 后篡改目标 ⇒ step 失败零写入 ----------
+  const dirD5 = makeCopy("doc-d5");
+  const apiD5 = makeApi(dirD5);
+  const suiteM5 = JSON.parse(readFileSync(join(dirD5, "dsh.plugin.json"), "utf8"));
+  suiteM5.aliases = Object.assign({}, suiteM5.aliases, { "@local/dsh-compact-router": "@local/dsh-toolkit/compact-router" });
+  writeFileSync(join(dirD5, "dsh.plugin.json"), JSON.stringify(suiteM5, null, 2) + "\n", "utf8");
+  const sig5 = join(dirD5, "doctor-signals.json");
+  writeFileSync(sig5, readFileSync(sig5, "utf8").replace(/\}\s*$/, "  ,\"_legacyNote\": \"stale @local/dsh-compact-router\"\n}\n"), "utf8");
+  const planD5 = await apiD5.doctorApplyPlan("ref.unresolvable-local");
+  // 篡改 = 把锚点整个移走（出现次数 0 < occurrence 1 ⇒ ANCHOR_DRIFT，而非改位次）
+  const tampered = readFileSync(sig5, "utf8").replace("stale @local/dsh-compact-router", "stale (name removed)");
+  writeFileSync(sig5, tampered, "utf8");
+  const exD5 = await apiD5.doctorApplyExecute(planD5.json.plan.token);
+  // 面板流语义：篡改让引用消失 ⇒ CLI fresh dry-run 直接 issue-not-found（404，比 ANCHOR_DRIFT
+  // 更前置的防错位闸）；纯位次漂移触发的 ANCHOR_DRIFT 由 doctor 仓 run-tests.mjs 既有负向覆盖。
+  check("D5 篡改移除锚点 ⇒ issue-not-found（CLI fresh 闸）", exD5.json && exD5.json.ok === false && exD5.json.code === "issue-not-found", JSON.stringify(exD5.json));
+  check("D5 失败后零写入（文件保持篡改态，无部分改写）", readFileSync(sig5, "utf8") === tampered, "");
+
+  // ---------- D6 配置快照恢复往返（D3 restoreSnapshot 经面板两步） ----------
+  const dirD6 = makeCopy("doc-d6");
+  const apiD6 = makeApi(dirD6);
+  const base6 = readFileSync(join(dirD6, "cordis.patch.yml"), "utf8");
+  const un6 = await uninstall(apiD6, "rate-throttle", "soft");
+  check("D6 前置：软卸载成功", un6.executed && un6.executed.json.ok, JSON.stringify(un6.executed && un6.executed.json.error));
+  const snaps6 = (await apiD6.doctorStates()).json.snapshots;
+  check("D6 快照列表 ≥1（写前备份链）", snaps6.length >= 1, JSON.stringify(snaps6.length));
+  const plan6 = await apiD6.snapshotRestorePlan(snaps6[0].stamp);
+  check("D6 plan：diff 两行（删/增全文）+ nextSha", plan6.json && plan6.json.ok && Array.isArray(plan6.json.plan.diff) && plan6.json.plan.diff.length === 2, JSON.stringify(plan6.json && plan6.json.error));
+  const ex6 = await apiD6.snapshotRestoreExecute(plan6.json.plan.token);
+  check("D6 execute：patch 字节级回该快照（= 卸载前基线）", ex6.json && ex6.json.ok && readFileSync(join(dirD6, "cordis.patch.yml"), "utf8") === base6, firstDiff("D6", base6, readFileSync(join(dirD6, "cordis.patch.yml"), "utf8")));
+  const snaps6b = (await apiD6.doctorStates()).json.snapshots;
+  check("D6 恢复自身再留快照（可再回滚）", snaps6b.length === snaps6.length + 1, JSON.stringify(snaps6b.length));
+  const dup6 = await apiD6.snapshotRestorePlan(snaps6[0].stamp);
+  check("D6 快照=当前 ⇒ snapshot-identical", dup6.json && dup6.json.ok === false && dup6.json.code === "snapshot-identical", JSON.stringify(dup6.json));
+
+  // ---------- D7 体检回滚空态 / 坏态 ----------
+  const dirD7 = makeCopy("doc-d7");
+  const apiD7 = makeApi(dirD7);
+  const empty7 = await apiD7.doctorStates();
+  check("D7 空态：states=[] 且快照 0", empty7.json.ok && empty7.json.states.length === 0 && empty7.json.snapshots.length === 0, JSON.stringify(empty7.json));
+  writeFileSync(join(dirD7, "doctor-config", "doctor-patch-state.json"), "{ broken", "utf8");
+  const bad7 = await apiD7.doctorStates();
+  check("D7 坏态：degraded（不假装可用）", bad7.json.ok === false && bad7.json.degraded === true, JSON.stringify(bad7.json));
+
+  // ---------- D8 禁用/降级 渲染断言（两渲染器逐字，叠加 8.3 规则：环节在产品面） ----------
+  const uiD8 = await (makeApi(makeCopy("doc-d8")).ui());
+  const uiText = uiD8.raw;
+  const reactText = readFileSync(join(root, "panel", "client", "index.js"), "utf8");
+  check("D8 内联渲染器：操作台空态句在产品面（回滚/快照/收据三句）", uiText.includes(CONSOLE_EMPTY_ROLLBACK) && uiText.includes(CONSOLE_EMPTY_SNAPSHOT) && uiText.includes(CONSOLE_EMPTY_RECEIPTS), "");
+  check("D8 React 渲染器：操作台空态句在产品面", reactText.includes(CONSOLE_EMPTY_ROLLBACK) && reactText.includes(CONSOLE_EMPTY_SNAPSHOT) && reactText.includes(CONSOLE_EMPTY_RECEIPTS), "");
+  check("D8 两渲染器：收据定位句逐字一致", reactText.includes(CONSOLE_RECEIPT_NOTE) && uiText.includes(CONSOLE_RECEIPT_NOTE), "");
+  check("D8 面板 h2：体检与操作台（内联）", uiText.includes("体检与操作台"), "");
+
+  // ---------- D9 真实 ~/.dsh doctor 三件套零触碰（收尾还有真实仓 custody 守卫） ----------
+  check("D9 真实 ~/.dsh 无 doctor-patch-state.json / doctor-backups / doctor-apply.lock", ["doctor-patch-state.json", "doctor-backups", "doctor-apply.lock"].every((n) => !existsSync(join("C:", "Users", "LENOVO", ".dsh", n))), "");
+
+  // ---------- D10 删除原因输入（§3.6a：选填/200 截断/null，两渲染器逐字在产品面） ----------
+  const dirD10 = makeCopy("doc-d10");
+  const apiD10 = makeApi(dirD10);
+  const longReason = "很长的原因很长的原因".repeat(30).slice(0, 250);
+  const unR = await uninstall(apiD10, "rate-throttle", "true", longReason);
+  check("D10 真卸载（带原因）成功", unR.executed && unR.executed.json.ok, JSON.stringify(unR.executed && unR.executed.json.error));
+  const rec10 = (await apiD10.custody()).json.custody.entries[0];
+  check("D10 收据 userReason 截到 200 字", rec10 && rec10.userReason && rec10.userReason.length === 200, String(rec10 && rec10.userReason ? rec10.userReason.length : rec10 && rec10.userReason));
+  const unN = await uninstall(apiD10, "search-router", "true");
+  check("D10 真卸载（不填原因）成功", unN.executed && unN.executed.json.ok, JSON.stringify(unN.executed && unN.executed.json.error));
+  const rec10b = (await apiD10.custody()).json.custody.entries;
+  const reasonB = rec10b.find((e) => e.plugin === "search-router");
+  check("D10 不填 ⇒ 收据 userReason=null（对账段显示规则=「（未填写）」由 UI 层实现）", reasonB && reasonB.userReason === null, JSON.stringify(reasonB));
+  check("D10 两渲染器：原因段逐字在产品面（段标题/说明/占位/上限）",
+    reactText.includes("删除原因（可不填）") && reactText.includes("可选：写一句话，最多 200 字") && reactText.includes("不填也可以，收据会如实记「（未填写）」")
+    && rendererHtml.includes("删除原因（可不填）") && rendererHtml.includes("可选：写一句话，最多 200 字") && rendererHtml.includes("不填也可以，收据会如实记「（未填写）」"), "");
+  check("D10 两渲染器：请求体带 reason（环节在产品面，非仅 schema）", reactText.includes("planPayload.reason") && rendererHtml.includes("planPayload.reason"), "");
+  check("D10 两渲染器：三句必含仍逐字在产品面（回归位）", reactText.includes("⚠ 本次是彻底删除，面板不会留下任何副本") && rendererHtml.includes("⚠ 本次是彻底删除，面板不会留下任何副本"), "");
 }
 
 // ════════════════════════════════════════════════════════════

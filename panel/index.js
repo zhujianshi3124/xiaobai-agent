@@ -13,6 +13,7 @@ import {
   executePlan,
   putPlan,
   getPlan,
+  dropPlan,
   PlanError,
 } from "./manager/apply-engine.mjs";
 import {
@@ -991,6 +992,13 @@ export function apply(ctx, config = {}) {
           dropPlan(plan.token);
           const r = await runDoctorApply({ cliPath: doctorCli, scopeRoot: plan.scopeRoot, configRoot: plan.configRoot, issueId: plan.issueId });
           if (r.spawnError) throw new PlanError("doctor-spawn-failed", "doctor 子进程启动失败：" + r.spawnError);
+          // CLI 的 --only 在自身 fresh dry-run 阶段拒绝（问题已消失/不可执行）⇒ 如实映射回业务码
+          if (!r.result && /issue-not-found/.test(r.stderrTail || "")) {
+            throw new PlanError("issue-not-found", "当前体检报告中没有该问题（可能刚被处理过），请重新体检");
+          }
+          if (!r.result && /issue-not-executable/.test(r.stderrTail || "")) {
+            throw new PlanError("issue-not-executable", "该问题为人工处理类（无自动修复计划）：" + plan.issueId);
+          }
           if (!r.result) throw new PlanError("doctor-spawn-failed", "doctor 未返回执行结果：" + String(r.error || "未知"));
           if (r.result.ok === false) {
             sendJson(response, planErrorStatus("doctor-step-failed"), { ok: false, code: "doctor-step-failed", error: "执行中有步骤失败，已按序中止（失败前的写入保留，可从体检回滚还原）", results: r.result.results || [], rescan: r.rescan ? r.rescan.summary : null });
