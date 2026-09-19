@@ -6,6 +6,41 @@
 
 ## [Unreleased]
 
+### Fixed（P4 期间发现的 P1 契约 semver 缺陷）
+
+- `contract/src/semver.ts`：带比较符的部分版本（如 `>=20`）此前被误当作 x 范围
+  展开成 `>=20.0.0 <21.0.0`（误加上界）。修正语义：**带 `>`/`>=`/`<`/`<=` 的部分
+  版本补零为无上界比较器**（`>=20` → `>=20.0.0`）；裸部分版本（`20`、`1.2`）与
+  `=` 保持 x 范围语义。新增回归测试。
+
+### Added（P4 面板 v2 管理 API + 实时通道，2026-09-19）
+
+- `panel/manager/registry-host.mjs`：面板插件 apply() 时装配 registry + doctor
+  服务（servicePrefix/registry/doctor 配置段全部来自插件 config，D5）；接线
+  doctor.precheck → registry 安装预检、health-changed → registry.setHealth。
+- `panel/manager/v2-api.mjs`：v2 管理 API（`/api/toolkit-panel/v2/*`）——
+  snapshot / health(含环形历史) / install 两段式（precheck → confirm）/
+  uninstall / enabled / reload / config，全部走 registry API；**confirm 必须逐字
+  等于插件 id**；失败一律 `{ok:false, code, error}`（confirm-missing /
+  plugin-unknown / value-invalid…）；无任何旁路状态改写通道。
+  **SSE 路由** `/events`：转发 registry/doctor 带前缀事件（短 event 名）+ hello
+  帧 + 15s 心跳。
+- `panel/manager/realtime-connector.mjs`：实时连接器（零依赖，浏览器/Node 双
+  端可用）——SSE 在场事件直达；断连自动降级轮询；恢复自动切回（Q3 裁决双
+  路径，均有测试）。
+- `panel/client/v2.html` + `/v2/ui` 路由：通用渲染独立页——插件列表（状态徽标/
+  legacy 标注/健康摘要）、健康详情（items + fix 建议 + 历史序列）、configSchema
+  最小表单 + 原始 JSON 兜底、安装向导（预检报告 → 阻断/警告/changes 修复清单
+  → 确认安装）；doctor 缺席降级横幅；审计事件实时展示。
+- `registry`：新增 `setConfig`（配置写回 + active 重载生效）与审计事件发射
+  （`${prefix}/audit:<event>`，REQ-10）。
+- `test/panel-v2.test.mjs`（7 例）：SSE 真流（原生 fetch 流解析线协议）、connector
+  断连降级/恢复切回双路径、confirm 校验、失败反馈 error.code/message、snapshot
+  结构、config 写回。
+- `scripts/p4-no-subplugin-import-check.mjs`：面板 v2 数据面零子插件引用检查
+  （验收证据工具，可入 CI）。
+- 门禁：test 链自动发现新测试；`test:panel` 脚本。
+
 ### Added（P3 Doctor 服务，2026-09-19）
 
 - `doctor/`：Doctor 服务（TS strict，接口 = 契约 `ToolkitDoctor`）。

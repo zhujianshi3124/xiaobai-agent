@@ -30,5 +30,8 @@ doctor/dist/
 # 测试运行期产物（S4 夹具标记，由测试自建自删）
 test/fixtures/registry/contract-plugin/marker.flag
 
+# P4 registry 运行状态目录（安装记录/隔离原因，运行期产物）
+.registry/
+
 # 临时快照
 _nm-before.txt

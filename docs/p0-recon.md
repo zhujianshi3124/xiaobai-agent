@@ -118,6 +118,7 @@
 | R10 | **Windows 特有**：junction 链接问题有前科（.doctor-link-backup 现场）、路径大小写、fs.watch 行为 | fsPaths 探测、包解析预检不可靠 | 预检用 realpath 归一（doctor 已有同款处理）；S 场景在 Windows 实机跑 |
 | R11 | **安全红线**：新 registry 路由必须沿用 loopback+配对+CSRF guard（写 fail-closed）；禁止在日志/报告输出 envVar 值 | 安全回退 | guard 抽公共模块复用；precheck 的 envVar 检查只输出"存在/缺失"布尔 |
 | R12 | **面板行 file:// 绝对路径装载**（cordis.patch.yml:82）违反无根假设 | 嵌入失败 | 迁移为包子路径 `@local/dsh-toolkit/panel`（panel 已有 manifest 与 exports，仅改 patch 行 name） |
+| R13 | **registry 装入判定依赖 cordis 内部实现**（P2/R2 结论）：fiber.state 枚举值（2=ACTIVE/3=FAILED/4=DISPOSED）、FAILED 时 `fiber.await()` 以启动错误 reject、模块命名空间插件 apply 返回 Promise 被视为后台任务（立即 ACTIVE）——均为 cordis 4.0.2 的实现行为而非稳定契约 | cordis 升级可能使装入判定失效（误判 active/failed） | 装入判定收敛在 registry/src/registry.ts 单点（FIBER_* 常量 + 轮询循环）；cordis 升级时必跑 S1/S4 场景回归；该依赖已写入 registry.ts 头注 |
 
 ---
 

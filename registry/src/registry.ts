@@ -102,6 +102,11 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
     }
   }
 
+  /** 注入安装预检实现（P3 doctor.precheck；缺省用内置契约级预检）。 */
+  setPrecheck(fn: NonNullable<RegistryOptions['precheck']>): void {
+    this.opts.precheck = fn
+  }
+
   /** 停机：取消全部重试、卸载全部子插件 fiber（REQ-6 卸载级联清理）。 */
   async stop(): Promise<void> {
     this.stopped = true
@@ -214,6 +219,27 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
 
   private audit(event: AuditEvent, pluginId: string, durationMs: number, errorCode?: string): void {
     this.log.info(`audit ${event}`, { pluginId, event, durationMs, ...(errorCode ? { errorCode } : {}) })
+    // 审计事件（REQ-10）：契约事件名之外的前缀化扩展事件，面板订阅展示（P4）。
+    this.host.emit(`${this.opts.servicePrefix}/audit:${event}`, { event, pluginId, durationMs, ...(errorCode ? { errorCode } : {}) })
+  }
+
+  /**
+   * 写回插件配置（REQ-5 面板配置表单的落点；契约接口之外的实现扩展）。
+   * active 的插件以重载方式应用新配置（cordis fiber 配置更新面在 R2 结论下
+   * 不跨 fiber 复用，重载语义最直白）。
+   */
+  async setConfig(id: string, config: unknown): Promise<void> {
+    await this.withLock(id, async () => {
+      const entry = this.entries.get(id)
+      if (!entry) throw new Error(`插件不存在：${id}`)
+      entry.config = config
+      this.persist(entry)
+      if (entry.fiber && entry.status === 'active') {
+        this.unloadEntry(entry)
+        await this.loadEntry(entry)
+      }
+      this.audit('config-changed', id, 0)
+    })
   }
 
   // ── install（REQ-2 流程）────────────────────────────────────────────────
