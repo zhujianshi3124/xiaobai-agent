@@ -866,20 +866,22 @@ body-too-large                                   → 413
 
 ---
 
-## 12. 会话交接卡（10 行 · 关账硬前置，2026-09-19 新会话第 7 轮续 · **批 2 关账包落盘·待判定侧验收确认收官版**）
+## 12. 会话交接卡（10 行 · **P2.4 收官终版**，2026-09-19 新会话第 7 轮续 · 判定侧验收通过 L-071）
 
-> ✅ **批 1 已关账**（L-059）→ **销毁式 v2 全绿＋独立复核**（L-060/L-061）→ **真卸载正式可用**（L-062，三条件闭环）→ **批 2 判定侧验收闭环＋用户批准开工**（L-063..L-067）→ **批 2 施工完成报判**（L-068）→ **碰撞裁 (b) 执行＋判定侧验收通过**（L-069）→ **用户 reload 目视通过＋批 2 关账包落盘**（L-070）。
+> ✅ **批 1 已关账**（L-059）→ **销毁式 v2 全绿＋独立复核**（L-060/L-061）→ **真卸载正式可用**（L-062，三条件闭环）→ **批 2 判定侧验收闭环＋用户批准开工**（L-063..L-067）→ **批 2 施工完成报判**（L-068）→ **碰撞裁 (b) 执行＋判定侧验收通过**（L-069）→ **用户目视通过＋批 2 关账包落盘**（L-070）→ **判定侧验收通过 ⇒ P2.4 正式收官 ✓**（L-071）。
 
-1. **当前状态**：**批 2 关账一包已落盘（L-070），待判定侧验收确认 ⇒ P2.4 收官**。批 2 交付全在案（操作台四段＋双回滚 doctor 域两步/面板域 restoreSnapshot 唯一通道＋§3.6(a) 删除原因输入＋D1 doctor CLI 三改＋U16 r2）；**两线碰撞已按用户裁 (b) 处置完成**（doctor 仓 `f423d4a`：test/ 出扫描面，D-UI-06 同族＋lib/ 直下例外 fail-closed＋三向锁断言）。关账正本＝**`evidence/P24-BATCH2-CLOSURE.md`**（三源依据：**用户目视通过**——「应该都有」＋两截图，5 误报消失＝碰撞修复真实生效；判定侧验收 L-068/L-069；关账时点全绿）。真实 patch `ce0b0b81…` 零写入。
-2. **基准事实**：cordis.patch.yml = ce0b0b81…（3097 B / CRLF，全程零写入）；真实 ~/.dsh doctor 三件套保持不存在；备份目录零五插件源码（17 个 JS＝面板开发期人工留档）；**关账时点全绿**：regression-all 14/14（63/0 · 718/0 · 79/79 · **p1-smoke 264/264** · node --test 141）＋真实仓 doctor **0/0/0**；口径与 L-068 定版零变化。
-3. **下一步**：**判定侧验收关账包 ⇒ P2.4 收官**（收官总结＝项目全景＋下一步选项，判定侧随后出）→ 泛化线后续按用户排期（(a)「夹具放扫描面外」风格建议已转告；**U15 推迟候补**随包呈裁）。
-4. **已定案**：软卸载语义＋宿主键方案 A＋冲突三态；真卸载＝销毁式＝正式可用；**确认强度分级**（0/1/2）＋**待上架禁用态**＋**失真教训两条**（叠加 8.2/8.3）为设计惯例；**写通道分域**（面板域=apply-engine 唯一；doctor 域=CLI 唯一，面板不直读 ~/.dsh）；**扫描面排除约定代码化**（test/ 出 doctor 扫描面＝两线共用仓的扫描面纪律，`isSkippedScanDir` 成文；判据 D-UI-06 同族「夹具≠在案本体」）。
-5. **硬验收口径**：p24-verify **63**＋p24-ui-matrix **718**（批 1 全量＋D 段 52：D1–D10）＋**p1-smoke 264**（真实仓 doctor 0/0/0 闸，含 test/ 夹具排除口径）；doctor 缺席/缺依赖仅 info/warning；面板 5 卡恒渲染；恢复/挂载/回滚后 sha 字节级复原（ce0b0b81 基线）。
-6. **待用户/判定侧**：**判定侧验收关账包（唯一剩余动作）**→ 收官总结／**U15** 推迟候补（随包呈裁，触发条件＝下次守卫假阳性复现）／**U17 ⚠ 常态**：请长期妥善保管仓外备份／泛化线排期与归属（用户定）。
+1. **当前状态**：**P2.4 已收官 ✓**（判定侧验收批 2 关账包通过，L-071）。批 1（软卸载/恢复＋引擎＋UI＋doctor）＋批 2（doctor 操作台＋双回滚＋§3.6(a) 删除原因＋D1 doctor CLI 三改＋**两线碰撞 (b) 处置**）两批全关账；销毁式 v2 已上架（L-062）。**零未决项**。真实 patch `ce0b0b81…`（3097 B / CRLF）零写入收官。
+2. **基准事实（存档）**：cordis.patch.yml = ce0b0b81…（3097 B / CRLF，全程零写入）；真实 ~/.dsh doctor 三件套保持不存在；备份目录零五插件源码（17 个 JS＝面板开发期人工留档）；**收官时点全绿**：regression-all 14/14（p24-verify 63/0 · p24-ui-matrix 718/0 · cards-ui 79/79 · p1-smoke 264/264 · node --test 141）＋真实仓 doctor 0/0/0；doctor 仓自测 run-tests 14/14＋d1 21/21＋stage4a 8/8＋stage4b 7/7＋stage3 验收 a–g PASS。
+3. **入口说明（新会话/泛化线/新需求从这里进）**：先读 **HANDOFF-MASTER.md**（总索引＋九大节＋叠加）→ 本卡（§12）→ `ledger.md`（L-001..L-071）→ 按需 `evidence/`。**零交接成本**；流程体系（WIP 提交／回执制／交接卡／判定侧验收／证据可重放）沿用建议已在判定侧收官总结中交用户；泛化线/新需求排期与归属由用户定。
+4. **已定案（长期有效）**：软卸载语义＋宿主键方案 A＋冲突三态；真卸载＝销毁式＝正式可用（收据先行 fail-closed）；**确认强度分级**（0/1/2）＋**待上架禁用态**＋**失真教训两条**（叠加 8.2/8.3）为设计惯例；**写通道分域**（面板域=apply-engine 唯一；doctor 域=CLI 唯一，面板不直读 ~/.dsh）；**扫描面排除约定代码化**（test/ 出 doctor 扫描面，`isSkippedScanDir`——约定不靠自觉靠代码）。
+5. **硬验收口径（存档，后续改动对照）**：p24-verify **63**＋p24-ui-matrix **718**（D1–D10）＋**p1-smoke 264**（真实仓 doctor 0/0/0 闸，含 test/ 夹具排除口径）；doctor 缺席/缺依赖仅 info/warning；面板 5 卡恒渲染；恢复/挂载/回滚后 sha 字节级复原（ce0b0b81 基线）。
+6. **挂账项（全部非阻塞）**：**U15 推迟候补**（判定侧已裁接受推迟；触发＝下次守卫假阳性复现，届时再启）／**U17 ⚠ 常态提醒**：请长期妥善保管仓外备份（唯一兜底）／泛化线排期与归属（用户定）。
 7. **正本索引 ①**：HANDOFF-MASTER.md（总索引 ＋ 叠加 4.9/4.10 ＋ **叠加 8.2/8.3 教训** ＋ 附录 A/B/C）。
-8. **正本索引 ②**：handoff-restart.md（本文）、ledger.md（最新 **L-070**）、api-notes.md；**doctor 仓**（D:/dsh-test-sandbox/projects/doctor，提交 …a865bde＋**f423d4a（碰撞裁 b：扫描面排除 test/）**；test/run-tests 14/14＋d1 21/21）。
-9. **正本索引 ③**：实现 panel/manager/{apply-engine,backup,custody,uninstall,snapshot,doctor-runner,plugin-registry}.mjs；panel/index.js **22 路由**；两渲染器 client/{index.js,panel.html}；doctor-signals.json；脚本 scripts/{p24-verify,p24-ui-matrix,p1-smoke,regression-all}.mjs；设计正本 panel/docs/{p24-design-batch2-console.md（r3）· p24-design-v2-destroy.md · user-true-uninstall-guide.md（U16 r2）}；**关账正本 evidence/P24-BATCH2-CLOSURE.md（＋CLOSURE-REGRESSION.txt）；碰撞处置报判 evidence/P24-BATCH2-COLLISION-RESOLUTION.md；目视清单 evidence/P24-BATCH2-RELOAD-CHECKLIST.md**。
-10. **红线（现行为）**：五子插件源码目录可知情确认删除；~/.dsh 与 cloudflared 不变；**写通道分域铁律**；写前必备份；写盘/重启先授权；「先申报后读」；每批次同步本卡。真卸载＝销毁式＝不可逆（收据先行 fail-closed）；**真实 cordis.patch.yml 写入仅经用户面板操作**；新功能未过上架前置 ⇒ 入口禁用/待激活态；跨线产物零接触（泛化线 docs/p0-recon.md 等 4 提交）。
+8. **正本索引 ②**：handoff-restart.md（本文）、ledger.md（最新 **L-071**）、api-notes.md；**doctor 仓**（D:/dsh-test-sandbox/projects/doctor，提交 …a865bde＋**f423d4a（碰撞裁 b：扫描面排除 test/）**；test/run-tests 14/14＋d1 21/21）。
+9. **正本索引 ③**：实现 panel/manager/{apply-engine,backup,custody,uninstall,snapshot,doctor-runner,plugin-registry}.mjs；panel/index.js **22 路由**；两渲染器 client/{index.js,panel.html}；doctor-signals.json；脚本 scripts/{p24-verify,p24-ui-matrix,p1-smoke,regression-all}.mjs；设计正本 panel/docs/{p24-design-batch2-console.md（r3）· p24-design-v2-destroy.md · user-true-uninstall-guide.md（U16 r2）}；**关账正本 evidence/P24-BATCH2-CLOSURE.md（＋CLOSURE-REGRESSION.txt）；碰撞处置 evidence/P24-BATCH2-COLLISION-RESOLUTION.md；目视清单 evidence/P24-BATCH2-RELOAD-CHECKLIST.md**。
+10. **红线（长期现行为）**：五子插件源码目录可知情确认删除；~/.dsh 与 cloudflared 不变；**写通道分域铁律**；写前必备份；写盘/重启先授权；「先申报后读」；每批次同步本卡。真卸载＝销毁式＝不可逆（收据先行 fail-closed）；**真实 cordis.patch.yml 写入仅经用户面板操作**；新功能未过上架前置 ⇒ 入口禁用/待激活态；跨线产物零接触（泛化线 docs/p0-recon.md 等 4 提交）。
+
+> 📌 **新会话第 7 轮续更新（判定侧验收通过 ⇒ P2.4 收官终版 · L-071）**：判定逐项收下——三源依据 ✓；碰撞留痕全录，**点名认可「教训代码化」**（`isSkippedScanDir`：约定不靠自觉靠代码）；stage3 单独留档（**不销项不声明修复——诚实到底**）✓；U14 陈旧标记订正＋头部时间戳刷新如实记入（**自纠**）✓；**U15 裁：接受推迟**（理由成立：非缺陷、无批次挂靠、触发条件明确＝假阳性复现时再启），候补留档。**收官终态落盘**：阶段表 **P2.4 ✅ 终态**（去「待判定侧验收确认」标注）＋叠加 4.10 标题与「下一阶段」行＋叠加 4.1 终版进度行同步；**本卡改收官终版**（状态＝P2.4 已收官；**入口说明＝泛化线/新需求来时读总文档＋交接卡——零交接成本**）。判定致意在案：批 2 全程（两批＋两次需求变更＋两线碰撞＋三次会话接力）零事故收官，**P2 全线交付完成**。执行侧功成身退（或待用户排期）。
 
 > 📌 **新会话第 7 轮续更新（用户目视通过＋批 2 关账包落盘 · L-070）**：判定指令收讫——**用户目视通过 ✓**（「应该都有」＋两截图：体检 0 问题＝**5 误报消失、碰撞修复真实生效**／操作台空态／体检回滚空态／快照列表＋恢复入口／收据空态句逐字一致；9 条以用户体感为准）；批 2 关账放行。落盘：**关账正本 `P24-BATCH2-CLOSURE.md`**（§3 碰撞留痕全录：两线并行事实＋(b) 处置＋(c) 否决理由＋(a) 转告记录＋教训；§5 U 项终态清账——**U15 推迟候补**随包呈裁／U14 订正闭环／U16 ✅／U17 常态保留）＋`P24-BATCH2-CLOSURE-REGRESSION.txt`（关账时点 **14/14 全绿＋doctor 0/0/0**）；HANDOFF-MASTER（头部时间戳刷新订正＋叠加 4.10＋阶段表＋附录 B 终态注记＋附录 C）＋ledger L-070＋本卡收官前置版。**下一动作＝判定侧验收关账包 ⇒ P2.4 收官**（收官总结判定侧随后出）。
 
