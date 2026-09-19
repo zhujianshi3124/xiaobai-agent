@@ -61,6 +61,42 @@ function errorOf(error: unknown): { code: string; message: string } {
   return { code: typeof err?.name === 'string' && err.name !== 'Error' ? err.name : 'internal', message: String(err?.message ?? error) }
 }
 
+/**
+ * 来源类错误的针对性修复建议（T0 裁决：不许出现"按消息修复后重试"式循环表述；
+ * message 本身已写明找到了什么/缺什么，这里给可执行的下一步）。
+ */
+function sourceFixAdvice(code: string): { summary: string; steps: string[] } {
+  switch (code) {
+    case 'source/path-not-found':
+      return {
+        summary: '改装正确的本地绝对路径',
+        steps: ['在文件管理器打开插件目录，从地址栏复制完整绝对路径后重试', '相对路径会按服务进程工作目录解析，请改用绝对路径'],
+      }
+    case 'source/entry-not-found':
+      return {
+        summary: '补入口字段或改装插件子包目录（见报错里的候选与示例）',
+        steps: ['若装的是 monorepo 根：改为安装其中的插件子包目录', '若目录本身是插件：在 package.json 补 "main" 或 "exports" 字段并指向已构建入口'],
+      }
+    case 'source/module-load-failed':
+      return {
+        summary: '先在插件目录补依赖/构建，再回来安装',
+        steps: ['按报错补装缺失依赖（npm/pnpm install）或执行构建（如 npm run build）', '确认入口文件能在插件目录下被 node 直接加载'],
+      }
+    case 'source/plugin-shape-invalid':
+      return {
+        summary: '让入口导出可识别的插件形态（或修正 manifest 字段）',
+        steps: ['入口需导出 apply/register 或 default 插件对象（cordis 命名导出 name/inject/apply 即可）', '若带 dsh.plugin.json：按阻断项的字段路径修正后重装'],
+      }
+    case 'source/source-not-supported':
+      return {
+        summary: '改用本地路径来源安装',
+        steps: ['npm 来源尚未开放（Q1 裁决：仅本地路径，npm 为纯增量预留）'],
+      }
+    default:
+      return { summary: '按报错信息处理对应问题后重试安装', steps: ['对照报错 message 定位问题（路径/入口/依赖/导出形态）', '修复后重试；持续失败请附完整报错原文'] }
+  }
+}
+
 export class ToolkitRegistryCore implements ToolkitRegistry {
   readonly serviceName: string
   private readonly host: HostContext
@@ -329,7 +365,7 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
             code: e.code,
             level: 'error' as const,
             message: e.message,
-            fix: { summary: '按消息修复后重试安装' },
+            fix: sourceFixAdvice(e.code),
           },
         ]
     return { pass: false, blocking, warnings: [], changes: [], legacyMode: false }
