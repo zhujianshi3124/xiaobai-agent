@@ -70,7 +70,8 @@ function makeCopy(name, { patchText, withPlugins = true } = {}) {
 
 const managerUrl = (m) => "file:///" + join(root, "panel", "manager", m).replace(/\\/g, "/");
 const { createSoftUninstallPlan, createTrueUninstallPlan, createSoftRestorePlan, createMountPlan, executeSoftUninstall, executeTrueUninstall, executeSoftRestore, executeMount, executeMountPreset, createPresetSoftUninstallPlan, createPresetRestorePlan, executePresetSoftUninstall, executePresetRestore } = await import(managerUrl("uninstall.mjs"));
-const { locateRowBlock, planRemoveRow, planWebConfigRemove, planWebConfigRestore, putPlan } = await import(managerUrl("apply-engine.mjs"));
+const { locateRowBlock, planRemoveRow, planWebConfigRemove, planWebConfigRestore, putPlan, executePlan, createSnapshotRestorePlan, PlanError } = await import(managerUrl("apply-engine.mjs"));
+const { createBackup, listRestoreSnapshots, readSnapshotEntry } = await import(managerUrl("backup.mjs"));
 const { writeDestroyReceipt, pruneCustody, readCustodyManifest, listCustody } = await import(managerUrl("custody.mjs"));
 const { buildSnapshot } = await import(managerUrl("snapshot.mjs"));
 
@@ -336,6 +337,61 @@ async function snapshotOf(dir) {
   rmSync(join(dir3, "lib", "rate-throttle"), { recursive: true, force: true });
   const r3 = runDoctor(dir3);
   check("⑦ row-without-body：行在体不在 → warning 非 error", r3.issues.some((i) => i.id === "mount.row-without-body" && i.severity === "warning") && r3.summary.error === 0);
+}
+
+// ---------- ⑧ snapshot-restore.test（D3 restoreSnapshot：写前快照经唯一通道整文件回写）----------
+{
+  const dir = makeCopy("snap-restore");
+  const patchFile = join(dir, "cordis.patch.yml");
+  const backupRoot = backupRootFor(dir);
+  const original = readFileSync(patchFile, "utf8");
+
+  // 模拟历史写前快照：摘除 rate-throttle 行块后的 patch（= 一笔软卸载落盘前的镜像）
+  const older = planRemoveRow(original, "rate-throttle").nextText;
+  const snapDir = createBackup({ backupRoot, files: [patchFile], reason: "panel-uninstall-soft", note: "history" });
+  writeFileSync(join(snapDir, readFileSync(join(snapDir, "manifest.json"), "utf8") ? JSON.parse(readFileSync(join(snapDir, "manifest.json"), "utf8")).files[0].savedAs : ""), older, "utf8");
+
+  // 当前文件已被改走（模拟后续一笔写操作）
+  const drifted = original.replace("syncSelectionOnFailover", "syncSelectionOnFailover # touched");
+  writeFileSync(patchFile, drifted, "utf8");
+
+  const stamp = snapDir.split(/[\\/]/).pop();
+  check("⑧ listRestoreSnapshots 列出该快照（含 sha/bytes/reason）", listRestoreSnapshots(backupRoot, patchFile).some((s) => s.stamp === stamp && s.reason === "panel-uninstall-soft" && s.bytes > 0));
+  check("⑧ readSnapshotEntry 拒绝穿越 stamp", readSnapshotEntry(backupRoot, "../escape", patchFile) === null && readSnapshotEntry(backupRoot, "2026-99-99T00-00-00-000Z", patchFile) === null);
+
+  let threw = null;
+  try { createSnapshotRestorePlan({ file: patchFile, backupRoot, stamp: "../../etc" }); } catch (e) { threw = e instanceof PlanError ? e.code : String(e); }
+  check("⑧ 穿越 stamp ⇒ snapshot-not-found（白名单）", threw === "snapshot-not-found", String(threw));
+
+  // plan → execute：整文件回写走唯一通道
+  const plan = createSnapshotRestorePlan({ file: patchFile, backupRoot, stamp });
+  check("⑧ plan diff 记录删/增（两份全文）", Array.isArray(plan.diff) && plan.diff.length === 2 && plan.skipAnchorCheck === true && plan.nextSha === sha(older));
+  const res = executePlan(putPlan(plan).token);
+  const restoredText = readFileSync(patchFile, "utf8");
+  check("⑧ execute 后文件回到快照内容（字节级）", restoredText === older && res.shaAfter === sha(older));
+  check("⑧ 恢复自身留了新备份（可再回滚）", listRestoreSnapshots(backupRoot, patchFile).length === 2);
+
+  // 快照与当前一致 ⇒ snapshot-identical
+  let threw2 = null;
+  try { createSnapshotRestorePlan({ file: patchFile, backupRoot, stamp }); } catch (e) { threw2 = e instanceof PlanError ? e.code : String(e); }
+  check("⑧ 快照=当前 ⇒ snapshot-identical 拒绝", threw2 === "snapshot-identical", String(threw2));
+
+  // 不存在的 stamp ⇒ snapshot-not-found
+  let threw3 = null;
+  try { createSnapshotRestorePlan({ file: patchFile, backupRoot, stamp: "2026-09-19T00-00-00-000Z" }); } catch (e) { threw3 = e instanceof PlanError ? e.code : String(e); }
+  check("⑧ 缺失 stamp ⇒ snapshot-not-found", threw3 === "snapshot-not-found", String(threw3));
+
+  // sha-conflict：plan 之后文件又被改 ⇒ 拒绝写入
+  const older2 = original; // 第二份快照 = 基线原文（与 drifted 不同即可）
+  const snapDir2 = createBackup({ backupRoot, files: [patchFile], reason: "panel-toggle", note: null });
+  writeFileSync(join(snapDir2, JSON.parse(readFileSync(join(snapDir2, "manifest.json"), "utf8")).files[0].savedAs), older2, "utf8");
+  writeFileSync(patchFile, drifted, "utf8");
+  const plan2 = createSnapshotRestorePlan({ file: patchFile, backupRoot, stamp: snapDir2.split(/[\\/]/).pop() });
+  writeFileSync(patchFile, drifted + "\r\n# extra touch\r\n", "utf8");
+  let threw4 = null;
+  try { executePlan(putPlan(plan2).token); } catch (e) { threw4 = e instanceof PlanError ? e.code : String(e); }
+  check("⑧ plan 后文件被改 ⇒ sha-conflict 拒绝", threw4 === "sha-conflict", String(threw4));
+  check("⑧ sha-conflict 后文件未被写", readFileSync(patchFile, "utf8") === drifted + "\r\n# extra touch\r\n");
 }
 
 // ---------- 收尾：真实仓零写入自证 ----------

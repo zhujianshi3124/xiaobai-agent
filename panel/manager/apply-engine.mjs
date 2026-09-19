@@ -19,7 +19,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { createBackup, listBackups } from "./backup.mjs";
+import { createBackup, listBackups, readSnapshotEntry } from "./backup.mjs";
 
 export const DEFAULT_PLAN_TTL_MS = 5 * 60 * 1000; // 5 分钟
 export const BACKUP_KEEP_COUNT = 20; // 保留策略：最近 20 份
@@ -630,10 +630,60 @@ export function createPlan({ file, rowId, key, value, backupRoot, ttlMs = DEFAUL
   return plan;
 }
 
-/** 内存 plan 存储（**短生命周期**；进程重启即清空，符合"现读不缓存"原则）。 */
-const PLAN_STORE = new Map();
+/**
+ * 配置快照恢复计划（D3，设计稿 p24-design-batch2-console.md §4.2，判定裁 (a)）。
+ *
+ * 把 `.panel-write-backups/` 里某份**写前快照**的 patch 镜像整体写回目标文件。
+ * 仍走本引擎唯一落盘通道：executePlan 的 SHA 闸（expectedSha=当前文件 sha）在
+ * 预览后被改动即中止；写前自动再备份（本次恢复自身可再回滚）；skipAnchorCheck
+ * ——整文件恢复无锚可验，正确性由 SHA 闸保证。
+ *
+ * 安全细节：
+ *   - stamp 必须通过 readSnapshotEntry 的白名单（防路径穿越）；
+ *   - 快照必须确实包含目标文件的镜像（entry.abs 严格匹配）；
+ *   - 快照内容与当前一致 ⇒ snapshot-identical 拒绝（避免无意义写盘）。
+ */
+export function createSnapshotRestorePlan({ file, backupRoot, stamp, ttlMs = DEFAULT_PLAN_TTL_MS, reason = null, note = null }) {
+  if (!existsSync(file)) {
+    throw new PlanError("target-missing", "目标文件不存在：" + file);
+  }
+  const snapshot = readSnapshotEntry(backupRoot, stamp, file);
+  if (!snapshot) {
+    throw new PlanError("snapshot-not-found", "快照不存在、已裁剪或不包含该文件的镜像：" + String(stamp));
+  }
+  const snapshotText = readFileSync(snapshot.savedPath, "utf8");
+  const currentText = readFileSync(file, "utf8");
+  const currentSha = sha256Of(currentText);
+  const snapshotSha = sha256Of(snapshotText);
+  if (currentSha === snapshotSha) {
+    throw new PlanError("snapshot-identical", "快照与当前配置内容一致，无需恢复");
+  }
+  const now = Date.now();
+  const plan = {
+    token: createHash("sha256")
+      .update(file + "|snapshot-restore|" + String(stamp) + "|" + currentSha + "|" + now)
+      .digest("hex")
+      .slice(0, 32),
+    kind: "snapshot-restore",
+    file,
+    stamp: String(stamp),
+    reason: reason != null ? reason : "panel-snapshot-restore",
+    note: note != null ? note : "restore snapshot " + String(stamp),
+    backupRoot: backupRoot || null,
+    expectedSha: currentSha,
+    nextSha: snapshotSha,
+    changed: true,
+    skipAnchorCheck: true,
+    diff: renderDiff({ before: currentText, after: snapshotText, changed: true }),
+    createdAt: new Date(now).toISOString(),
+    expiresAt: new Date(now + ttlMs).toISOString(),
+    nextText: snapshotText,
+  };
+  return plan;
+}
 
-export function putPlan(plan) {
+/** 内存 plan 存储（**短生命周期**；进程重启即清空，符合"现读不缓存"原则）。 */
+const PLAN_STORE = new Map();export function putPlan(plan) {
   PLAN_STORE.set(plan.token, plan);
   return plan;
 }
