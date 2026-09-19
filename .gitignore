@@ -19,3 +19,9 @@ node_modules/*
 
 # D-01 备份真实写测试的沙箱（脚本自建自清），不入库
 .d01-sandbox/
+
+# P1 契约模块构建产物（tsc dist，test 门禁自动构建），不入库
+contract/dist/
+
+# 临时快照
+_nm-before.txt

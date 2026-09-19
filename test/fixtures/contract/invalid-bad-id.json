@@ -1,0 +1,6 @@
+{
+  "id": "rate-throttle",
+  "displayName": "id 缺命名空间",
+  "version": "1.0.0",
+  "contract": "^1.0"
+}
