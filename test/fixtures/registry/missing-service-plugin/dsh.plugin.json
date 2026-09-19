@@ -1,0 +1,9 @@
+{
+  "id": "fixture/missing-service",
+  "displayName": "依赖不存在服务的夹具",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "requires": {
+    "services": ["fixture/no-such-service"]
+  }
+}

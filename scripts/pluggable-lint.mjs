@@ -34,11 +34,15 @@ function selfPluginOfTestFile(abs) {
   return plugins.includes(first) ? first : null;
 }
 
+// P0 裁决 N1：contract/registry/doctor 是全桶共享基础模块（非兄弟插件），
+// 任何 lib 插件与 test 用例都允许静态 import。（P3 doctor 落地后加入列表。）
+const SHARED_MODULES = ['contract', 'registry'];
+
 function isSibling(spec, fromFile, selfPlugin) {
   if (spec === '@local/dsh-toolkit') return false;
-  // 契约模块（P1，docs/p0-recon.md §6 N1 裁决）是全桶共享基础模块，不是兄弟插件：
-  // 任何 lib 插件与 test 用例都允许静态 import @local/dsh-toolkit/contract。
-  if (spec === '@local/dsh-toolkit/contract' || spec.startsWith('@local/dsh-toolkit/contract/')) return false;
+  const sharedRe = /^@local\/dsh-toolkit\/([^/]+)(?:\/|$)/;
+  const shared = sharedRe.exec(spec);
+  if (shared && SHARED_MODULES.includes(shared[1])) return false;
   const aliasRe = /^@local\/dsh-toolkit\/([^/]+)(?:\/|$)/;
   const alias = aliasRe.exec(spec);
   if (alias) return alias[1] !== selfPlugin;

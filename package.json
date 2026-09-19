@@ -4,14 +4,17 @@
   "private": true,
   "scripts": {
     "build:contract": "tsc -p contract/tsconfig.json",
-    "typecheck": "tsc -p contract/tsconfig.json --noEmit",
+    "build:registry": "tsc -p registry/tsconfig.json",
+    "typecheck": "tsc -p contract/tsconfig.json --noEmit && tsc -p registry/tsconfig.json --noEmit",
     "test:contract": "node --test test/contract.test.mjs",
-    "test": "npm run build:contract && node scripts/pluggable-lint.mjs && npm run typecheck && node --test"
+    "test:registry": "node --test test/registry.test.mjs",
+    "test": "npm run build:contract && npm run build:registry && node scripts/pluggable-lint.mjs && npm run typecheck && node --test"
   },
   "type": "module",
   "description": "本地 DSH 套件：rate-throttle / compact-router / agent-memory / search-router / web-search-local 五合一入口；一个版本号管全部。",
   "exports": {
     "./contract": "./contract/dist/index.js",
+    "./registry": "./registry/dist/index.js",
     "./rate-throttle": "./lib/rate-throttle/index.js",
     "./compact-router": "./lib/compact-router/index.js",
     "./agent-memory": "./lib/agent-memory/lib/index.js",
@@ -23,6 +26,7 @@
   "files": [
     "lib/",
     "contract/",
+    "registry/",
     "scripts/",
     "test/",
     "cordis.patch.yml",
