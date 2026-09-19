@@ -6,6 +6,31 @@
 
 ## [Unreleased]
 
+### Added（P3 Doctor 服务，2026-09-19）
+
+- `doctor/`：Doctor 服务（TS strict，接口 = 契约 `ToolkitDoctor`）。
+  - 规则引擎：规则超时（默认 5s，超时计 `rule-error`）+ `registerRule` 第三方
+    规则扩展点（REQ-4 规则来源三合一中的注册侧；内置侧 = 合成规则实现层）。
+  - manifest.requires 自动合成规则：运行时版本范围（node/dshRuntime）、依赖
+    服务、依赖子插件、envVars（只报存在性绝不出现值）、binaries、ports
+    （shared 占用仅提示）、fsPaths 读写、externalApis 可达性。
+  - `precheck`（REQ-3 全量）：来源解析 + manifest 精确字段路径 + id 冲突 +
+    合成规则全量 + legacy 标注（legacyMode/changes/fix 指引）；`createRegistry`
+    以 `precheck` 选项接入后，S1 的"缺 env → 阻断 → 补齐 → 安装成功"全链路成立。
+  - `inspect`（REQ-4）：周期巡检（watchInterval，失败退避上限 8×）+
+    manifest.healthCheck（超时/异常计 `healthcheck-failed`，计入降级计数）。
+  - 降级状态机：连续 failureThreshold 次失败 → 发布 degraded/unhealthy 并发
+    `doctor:issue-found`（每 code 一次，恢复后重置）；任一次全绿 → 立即回
+    healthy 发 `registry:health-changed`。每插件环形缓存 historySize 份报告，
+    `history(id)` 供面板画历史。
+  - 探测面 `Probes` 全部可注入（S3 故障注入即替换/操纵真实服务）。
+- `test/doctor.test.mjs`：合成规则、S1 完整分支、S3 故障注入（真实 cordis
+  服务下线→阈值内降级→恢复）、周期巡检、环形历史、规则超时、healthCheck
+  计入，共 9 例。
+- 门禁：`node --test` 全部加 `--test-force-exit`（doctor 观测面可能持有句柄，
+  保证 CI 可退出）；test 链加 `build:doctor`，typecheck 覆盖 doctor tsconfig。
+- `scripts/pluggable-lint.mjs`：SHARED_MODULES 加入 `doctor`。
+
 ### Added（P2 Registry，2026-09-19）
 
 - `registry/`：注册中心服务（TS strict，接口 = 契约 `ToolkitRegistry`）。

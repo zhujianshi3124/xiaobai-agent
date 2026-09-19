@@ -1,0 +1,11 @@
+{
+  "id": "fixture/env-plugin",
+  "displayName": "依赖必需环境变量的夹具",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "requires": {
+    "envVars": [
+      { "key": "FIXTURE_REQUIRED_VAR", "required": true, "describe": "S1 阻断演示用" }
+    ]
+  }
+}
