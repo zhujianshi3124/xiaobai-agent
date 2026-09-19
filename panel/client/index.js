@@ -1835,8 +1835,11 @@ window.__ModuleLoader__.load({
 			var configDetail = null;
 			if (open === "config") {
 				var schemaJSON = p.configSchemaJSON;
+				// T0 修复（真插件闭环实测）：表单必须以 p.config+draft 合并值为基准渲染——
+				// 原实现每次编辑都基于渲染时的 p.config 重建整个对象，多字段编辑只留最后一次。
+				var merged = Object.assign({}, p.config, draft);
 				var form = schemaJSON && schemaJSON.type === "object"
-					? v2RenderField(schemaJSON, p.config, function (v) { setDraft(v); }, "")
+					? v2RenderField(schemaJSON, merged, function (v) { setDraft(v); }, "")
 					: react.createElement("div", { style: { fontSize: "12px", color: "#888" } }, "插件未声明 configSchema，无表单可渲染（可在安装向导反馈中要求作者补充）");
 				configDetail = react.createElement("div", { style: { borderTop: "1px dashed #8886", marginTop: "6px", paddingTop: "6px" } },
 					form,
