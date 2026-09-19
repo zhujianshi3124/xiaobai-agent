@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>toolkit 插件管理（v2 · registry/doctor 数据源）</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 14px/1.6 system-ui, "Microsoft YaHei", sans-serif; margin: 0; padding: 16px 20px 60px; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .meta { color: #888; font-size: 12px; margin-bottom: 12px; }
+  .bar { display: flex; gap: 10px; align-items: center; margin: 10px 0 16px; flex-wrap: wrap; }
+  .badge { padding: 2px 10px; border-radius: 999px; font-size: 12px; border: 1px solid #9995; }
+  .badge.sse { background: #1a7f3722; border-color: #1a7f37; color: #1a7f37; }
+  .badge.poll { background: #b5890022; border-color: #b58900; color: #8a6d00; }
+  .badge.off { background: #88822222; }
+  .status { font-weight: 600; }
+  .st-active { color: #1a7f37; } .st-loading { color: #586069; } .st-installed { color: #586069; }
+  .st-error, .st-quarantined { color: #cf222e; } .st-disabled { color: #8a6d00; }
+  .card { border: 1px solid #8884; border-radius: 10px; padding: 12px 14px; margin: 10px 0; }
+  .card h3 { margin: 0 0 4px; font-size: 15px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .tag { font-size: 11px; border: 1px solid #8886; border-radius: 4px; padding: 0 6px; color: #777; }
+  .tag.legacy { color: #8a6d00; border-color: #b5890088; }
+  button { padding: 4px 12px; border-radius: 6px; border: 1px solid #8888; background: transparent; cursor: pointer; font-size: 13px; }
+  button.danger { color: #cf222e; border-color: #cf222e88; }
+  button.primary { background: #1a7f37; border-color: #1a7f37; color: #fff; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  input[type=text], textarea { padding: 5px 8px; border-radius: 6px; border: 1px solid #8888; font: inherit; }
+  textarea { width: 100%; min-height: 90px; font-family: ui-monospace, monospace; font-size: 12px; }
+  .panel { margin-top: 8px; border-top: 1px dashed #8886; padding-top: 8px; display: none; }
+  .panel.open { display: block; }
+  .item { margin: 6px 0; padding: 6px 10px; border-left: 3px solid #8885; background: #88811110; }
+  .item.error { border-color: #cf222e; } .item.warn { border-color: #b58900; } .item.ok { border-color: #1a7f37; }
+  .fix { font-size: 12px; color: #777; margin-top: 2px; }
+  .banner { border: 1px solid #b5890088; background: #b5890018; color: #8a6d00; padding: 8px 12px; border-radius: 8px; margin: 10px 0; display: none; }
+  .banner.error { border-color: #cf222e88; background: #cf222e14; color: #cf222e; }
+  .banner.ok { border-color: #1a7f3788; background: #1a7f3714; color: #1a7f37; }
+  .banner.show { display: block; }
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #333; color: #fff;
+           padding: 8px 16px; border-radius: 8px; font-size: 13px; max-width: 80vw; display: none; z-index: 9; }
+  .toast.show { display: block; }
+  .toast b { color: #ffb4a9; }
+  code { background: #88822222; border-radius: 4px; padding: 0 4px; }
+  .wizard { border: 1px dashed #8886; border-radius: 10px; padding: 12px 14px; margin: 14px 0; }
+  .history { font-size: 12px; color: #777; }
+  fieldset { border: none; padding: 0; margin: 8px 0; }
+  label.cfg { display: block; margin: 4px 0; }
+</style>
+</head>
+<body>
+<h1>toolkit 插件管理（v2）</h1>
+<div class="meta">数据源：<code>${servicePrefix}/registry</code> + <code>${servicePrefix}/doctor</code> 服务与事件流；本页不含任何具体子插件逻辑。</div>
+
+<div class="bar">
+  <span id="mode" class="badge off">通道连接中…</span>
+  <button id="refresh">重新读取</button>
+  <span class="history" id="updatedAt"></span>
+</div>
+
+<div id="doctorDown" class="banner">⚠ doctor 不可用：安装预检与健康巡检处于<b>受限模式</b>（不阻断启停/卸载）。</div>
+<div id="banner" class="banner"></div>
+
+<div class="wizard">
+  <h3 style="margin:0 0 8px">安装新插件（本地路径来源）</h3>
+  <div class="row">
+    <input type="text" id="srcPath" placeholder="插件目录或入口文件路径，如 D:\path\to\plugin" style="flex:1;min-width:280px">
+    <button id="btnPrecheck">① 预检</button>
+    <button id="btnInstall" class="primary" disabled>② 确认安装</button>
+  </div>
+  <div id="precheckOut" class="panel open"></div>
+</div>
+
+<div id="cards"></div>
+<div id="toast" class="toast"></div>
+
+<script type="module">
+import { createRealtimeConnector } from '/api/toolkit-panel/v2/connector.js';
+
+const $ = (id) => document.getElementById(id);
+const SNAPSHOT_URL = '/api/toolkit-panel/v2/snapshot';
+const SSE_URL = '/api/toolkit-panel/v2/events';
+const EVENT_NAMES = ['plugin-added','plugin-removed','status-changed','health-changed','issue-found',
+  'audit:installed','audit:removed','audit:enabled','audit:disabled','audit:reloaded','audit:quarantined','audit:config-changed'];
+
+let lastSnapshot = null;
+
+function toast(ok, message) {
+  // 失败必须展示 error.code/message（用户要求 3）
+  const el = $('toast');
+  el.innerHTML = ok ? escapeHtml(message) : `<b>${escapeHtml(message.code || 'error')}</b> ${escapeHtml(message.error || message.message || '')}`;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), ok ? 2600 : 6000);
+}
+
+function banner(kind, text) {
+  const el = $('banner');
+  el.className = 'banner show' + (kind === 'ok' ? ' ok' : kind === 'error' ? ' error' : '');
+  el.innerHTML = text;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+async function api(path, body) {
+  const response = await fetch(path, {
+    method: body === undefined ? 'GET' : 'POST',
+    headers: body === undefined ? {} : { 'content-type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    cache: 'no-store',
+  });
+  const data = await response.json().catch(() => ({ ok: false, code: 'bad-response', error: `HTTP ${response.status}` }));
+  if (!response.ok && data.ok !== false) throw { code: 'http-' + response.status, error: `HTTP ${response.status}` };
+  return data;
+}
+
+// ── 实时通道：SSE + 断连降级轮询 + 恢复切回（Q3 裁决）─────────────────────
+const connector = createRealtimeConnector({
+  sseUrl: SSE_URL,
+  snapshotUrl: SNAPSHOT_URL,
+  eventNames: EVENT_NAMES,
+  pollIntervalMs: 3000,
+  onEvent: (name, payload) => {
+    if (name === 'status-changed' || name === 'plugin-added' || name === 'plugin-removed') {
+      loadSnapshot();
+    } else if (name === 'health-changed' && payload?.id) {
+      refreshHealthIntoCard(payload.id, payload.report);
+    } else if (name === 'issue-found') {
+      toast(false, payload?.item ?? payload);
+      loadSnapshot();
+    } else if (name.startsWith('audit:')) {
+      // REQ-10 审计接线（P4）：操作审计实时展示（持久化策略见债务清单 #4）
+      toast(true, `审计 ${name.slice(6)} — ${payload?.pluginId ?? ''}`);
+    }
+  },
+  onSnapshot: (snapshot) => {
+    // 轮询路径：只有新快照才重绘（版本对比省略——以 updatedAt 变化为准）
+    render(snapshot);
+  },
+  onModeChange: (mode) => {
+    const el = $('mode');
+    if (mode === 'sse') { el.textContent = '实时（SSE）'; el.className = 'badge sse'; }
+    else if (mode === 'poll') { el.textContent = '轮询（SSE 断连降级）'; el.className = 'badge poll'; }
+    else { el.textContent = '通道连接中…'; el.className = 'badge off'; }
+  },
+});
+connector.start();
+
+// ── 渲染 ──────────────────────────────────────────────────────────────────
+function render(snapshot) {
+  lastSnapshot = snapshot;
+  $('doctorDown').classList.toggle('show', snapshot.doctorAvailable === false);
+  const cards = $('cards');
+  cards.innerHTML = '';
+  if (!snapshot.plugins.length) {
+    cards.innerHTML = '<div class="card">暂无已注册插件——用上方安装向导装入第一个。</div>';
+    return;
+  }
+  for (const p of snapshot.plugins) cards.appendChild(card(p));
+  $('updatedAt').textContent = '更新于 ' + new Date().toLocaleTimeString();
+}
+
+function card(p) {
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.dataset.id = p.id;
+  const healthLine = p.health
+    ? `健康：<span class="status st-${p.health.status}">${p.health.status}</span>` +
+      (p.healthSummary.errors ? `（错误 ${p.healthSummary.errors}）` : '') +
+      (p.healthSummary.warnings ? `（警告 ${p.healthSummary.warnings}）` : '')
+    : '健康：未知（doctor 未巡检）';
+  el.innerHTML = `
+    <h3>${escapeHtml(p.displayName)} <span class="tag">v${escapeHtml(p.version)}</span>
+        <span class="tag">契约 ${escapeHtml(p.contract)}</span>
+        ${p.legacy ? '<span class="tag legacy">legacy 模式</span>' : ''}
+        ${p.hasHealthCheck ? '<span class="tag">自定义健康检查</span>' : ''}</h3>
+    <div class="meta"><code>${escapeHtml(p.id)}</code></div>
+    <div class="row">
+      <span class="status st-${p.status}">${p.status}</span>
+      <span>${healthLine}</span>
+    </div>
+    ${p.lastError ? `<div class="item error">最近错误 <b>${escapeHtml(p.lastError.code)}</b>：${escapeHtml(p.lastError.message)}</div>` : ''}
+    <div class="row" style="margin-top:8px">
+      ${p.status === 'disabled' || p.status === 'error' || p.status === 'quarantined'
+        ? `<button data-act="enable">启用</button>` : `<button data-act="disable">停用</button>`}
+      <button data-act="reload">重载</button>
+      <button data-act="uninstall" class="danger">卸载</button>
+      <button data-act="health">健康详情</button>
+      <button data-act="config">配置</button>
+    </div>
+    <div class="panel" data-panel="health"></div>
+    <div class="panel" data-panel="config"></div>
+    <div class="panel" data-panel="confirm"></div>
+  `;
+  el.addEventListener('click', async (event) => {
+    const act = event.target?.dataset?.act;
+    if (!act) return;
+    try {
+      if (act === 'enable' || act === 'disable') return await toggleWithConfirm(p, act === 'enable');
+      if (act === 'reload') return await reloadWithConfirm(p);
+      if (act === 'uninstall') return await uninstallWithConfirm(p, el);
+      if (act === 'health') return await toggleHealthPanel(el, p);
+      if (act === 'config') return toggleConfigPanel(el, p);
+    } catch (error) {
+      toast(false, error);
+    }
+  });
+  return el;
+}
+
+// 确认弹层（用户要求 3：确认 + 结果反馈 + 失败展示 error.code/message）
+function confirmBox(hostEl, html) {
+  const box = hostEl.querySelector('[data-panel="confirm"]');
+  box.innerHTML = html;
+  box.classList.add('open');
+  return box;
+}
+
+async function toggleWithConfirm(p, enable) {
+  const box = confirmBox(p.el ?? document.querySelector(`[data-id="${CSS.escape(p.id)}"]`),
+    `<b>确认${enable ? '启用' : '停用'}</b> <code>${escapeHtml(p.id)}</code>？
+     <label class="cfg"><input type="checkbox" id="ck"> 我确认操作该插件</label>
+     <button class="primary" id="go" disabled>执行</button>`);
+  const ck = box.querySelector('#ck'), go = box.querySelector('#go');
+  ck.onchange = () => { go.disabled = !ck.checked; };
+  go.onclick = async () => {
+    const result = await api('/api/toolkit-panel/v2/enabled', { id: p.id, enabled: enable, confirm: p.id });
+    if (result.ok) { toast(true, `已${enable ? '启用' : '停用'} ${p.id}（${result.entry.status}）`); box.classList.remove('open'); loadSnapshot(); }
+    else toast(false, result);
+  };
+}
+
+async function reloadWithConfirm(p) {
+  const box = confirmBox(document.querySelector(`[data-id="${CSS.escape(p.id)}"]`),
+    `<b>确认重载</b> <code>${escapeHtml(p.id)}</code>？
+     <label class="cfg"><input type="checkbox" id="ck"> 我确认重载该插件</label>
+     <button class="primary" id="go" disabled>执行</button>`);
+  const ck = box.querySelector('#ck'), go = box.querySelector('#go');
+  ck.onchange = () => { go.disabled = !ck.checked; };
+  go.onclick = async () => {
+    const result = await api('/api/toolkit-panel/v2/reload', { id: p.id, confirm: p.id });
+    if (result.ok) { toast(true, `重载完成：${result.entry.status}${result.entry.lastError ? '（' + result.entry.lastError.code + '）' : ''}`); box.classList.remove('open'); loadSnapshot(); }
+    else toast(false, result);
+  };
+}
+
+async function uninstallWithConfirm(p, cardEl) {
+  const box = confirmBox(cardEl, `
+    <b>卸载 <code>${escapeHtml(p.id)}</code></b>（不可逆操作将移除安装记录并卸出运行时）
+    <label class="cfg">输入插件 id 以确认：<input type="text" id="typed" autocomplete="off" placeholder="${escapeHtml(p.id)}"></label>
+    <button class="danger" id="go" disabled>确认卸载</button>`);
+  const typed = box.querySelector('#typed'), go = box.querySelector('#go');
+  typed.oninput = () => { go.disabled = typed.value !== p.id; };
+  go.onclick = async () => {
+    const result = await api('/api/toolkit-panel/v2/uninstall', { id: p.id, confirm: typed.value });
+    if (result.ok) { toast(true, `已卸载 ${p.id}`); loadSnapshot(); }
+    else toast(false, result);
+  };
+}
+
+async function toggleHealthPanel(cardEl, p) {
+  const panel = cardEl.querySelector('[data-panel="health"]');
+  if (panel.classList.contains('open')) { panel.classList.remove('open'); return; }
+  panel.classList.add('open');
+  const data = await api('/api/toolkit-panel/v2/health?id=' + encodeURIComponent(p.id));
+  const items = (data.report?.items ?? []);
+  panel.innerHTML = `
+    <div>当前状态：<span class="status">${data.report?.status ?? '未知'}</span>
+      ${p.hasHealthCheck ? '（含插件自定义 healthCheck）' : ''}</div>
+    ${items.length === 0 ? '<div class="item ok">无发现（healthy）</div>' : ''}
+    ${items.map((i) => `
+      <div class="item ${i.level}">
+        <b>${escapeHtml(i.code)}</b>（${i.level}）${escapeHtml(i.message)}
+        ${i.fix ? `<div class="fix">修复建议：${escapeHtml(i.fix.summary)}${i.fix.steps ? '<br>' + i.fix.steps.map((s) => '· ' + escapeHtml(s)).join('<br>') : ''}</div>` : ''}
+      </div>`).join('')}
+    <div class="history">历史快照：${(data.history ?? []).length} 份（最近 → 最旧：${(data.history ?? []).map((h) => h.status).join(' → ') || '—'}）</div>
+  `;
+}
+
+function toggleConfigPanel(cardEl, p) {
+  const panel = cardEl.querySelector('[data-panel="config"]');
+  if (panel.classList.contains('open')) { panel.classList.remove('open'); return; }
+  panel.classList.add('open');
+  const schema = p.configSchemaJSON;
+  let formHtml = '';
+  if (schema && typeof schema === 'object' && !Array.isArray(schema)) {
+    // 最小渲染（P4）：JSON-able schema 的顶层标量字段；完整 schemastery 表单见债务清单 #8
+    formHtml = Object.entries(schema)
+      .filter(([, v]) => ['boolean', 'number', 'string'].includes(typeof v))
+      .map(([k, v]) => `<label class="cfg">${escapeHtml(k)}：
+        <input type="${typeof v === 'boolean' ? 'checkbox' : 'text'}" data-key="${escapeHtml(k)}" data-type="${typeof v}"
+          ${typeof v === 'boolean' ? (v ? 'checked' : '') : `value="${escapeHtml(String(v))}"`}></label>`)
+      .join('');
+  }
+  panel.innerHTML = `
+    <b>配置</b>${schema ? '（由 configSchema 生成，保存写回 registry）' : '（插件未声明 configSchema，使用原始 JSON 编辑）'}
+    <fieldset>${formHtml || `<textarea id="cfgJson">${escapeHtml(JSON.stringify(p.config ?? {}, null, 2))}</textarea>`}</fieldset>
+    <button class="primary" id="saveCfg">保存配置</button>
+    <span class="history">保存即写回 registry；active 插件自动重载生效。</span>
+  `;
+  panel.querySelector('#saveCfg').onclick = async () => {
+    let config = p.config ?? {};
+    if (formHtml) {
+      config = { ...(p.config ?? {}) };
+      panel.querySelectorAll('input[data-key]').forEach((input) => {
+        config[input.dataset.key] = input.dataset.type === 'boolean' ? input.checked
+          : input.dataset.type === 'number' ? Number(input.value) : input.value;
+      });
+    } else {
+      try {
+        config = JSON.parse(panel.querySelector('#cfgJson').value);
+      } catch {
+        return toast(false, { code: 'value-invalid', error: '配置不是合法 JSON' });
+      }
+    }
+    const result = await api('/api/toolkit-panel/v2/config', { id: p.id, config, confirm: p.id });
+    if (result.ok) { toast(true, `配置已写回 ${p.id}（${result.entry.status}）`); loadSnapshot(); }
+    else toast(false, result);
+  };
+}
+
+function refreshHealthIntoCard(id, report) {
+  if (!lastSnapshot) return;
+  const entry = lastSnapshot.plugins.find((p) => p.id === id);
+  if (entry && report) entry.health = report;
+}
+
+// ── 安装向导（REQ-5：选来源 → 预检报告 → 修复清单 → 确认安装）─────────────
+let lastPrecheck = null;
+$('btnPrecheck').onclick = async () => {
+  const path = $('srcPath').value.trim();
+  if (!path) return toast(false, { code: 'value-invalid', error: '请先填入插件路径' });
+  const out = $('precheckOut');
+  out.classList.add('open');
+  out.innerHTML = '<i>预检中…</i>';
+  const result = await api('/api/toolkit-panel/v2/install/precheck', { source: { kind: 'local', path } });
+  if (!result.ok) return toast(false, result);
+  lastPrecheck = { source: { kind: 'local', path }, precheck: result.precheck };
+  const pc = result.precheck;
+  out.innerHTML = `
+    <div class="item ${pc.pass ? 'ok' : 'error'}">预检结论：<b>${pc.pass ? '通过，可以安装' : '存在阻断项，修复后再装'}</b>${pc.legacyMode ? '（legacy 模式：无契约 manifest，已按受限能力包装）' : ''}</div>
+    ${pc.blocking.map((i) => `<div class="item error"><b>${escapeHtml(i.code)}</b> ${escapeHtml(i.message)}
+        ${i.fix ? `<div class="fix">修复：${escapeHtml(i.fix.summary)}${i.fix.steps ? '<br>' + i.fix.steps.map((s) => '· ' + escapeHtml(s)).join('<br>') : ''}</div>` : ''}</div>`).join('')}
+    ${pc.warnings.map((i) => `<div class="item warn"><b>${escapeHtml(i.code)}</b> ${escapeHtml(i.message)}
+        ${i.fix ? `<div class="fix">提示：${escapeHtml(i.fix.summary)}</div>` : ''}</div>`).join('')}
+    ${pc.changes.map((c) => `<div class="item warn">需改动【${escapeHtml(c.target)}】${escapeHtml(c.summary)}<div class="fix">${escapeHtml(c.detail)}</div></div>`).join('')}
+  `;
+  $('btnInstall').disabled = !pc.pass;
+};
+
+$('btnInstall').onclick = async () => {
+  if (!lastPrecheck) return;
+  const result = await api('/api/toolkit-panel/v2/install/confirm', { source: lastPrecheck.source });
+  if (result.ok) {
+    banner('ok', `安装成功：<b>${escapeHtml(result.entry.id)}</b>（${result.entry.status}）——列表已实时更新，无需刷新`);
+    $('btnInstall').disabled = true;
+    loadSnapshot();
+  } else {
+    banner('error', `安装被阻断：${result.precheck.blocking.map((b) => escapeHtml(b.code)).join('、') || '未知原因'}（详见预检报告）`);
+    $('precheckOut').innerHTML = renderPrecheckAgain(result.precheck);
+  }
+};
+
+function renderPrecheckAgain(pc) {
+  return `
+    <div class="item error">安装未通过（报告已刷新）</div>
+    ${pc.blocking.map((i) => `<div class="item error"><b>${escapeHtml(i.code)}</b> ${escapeHtml(i.message)}</div>`).join('')}
+  `;
+}
+
+async function loadSnapshot() {
+  const response = await fetch(SNAPSHOT_URL, { cache: 'no-store' });
+  const snapshot = await response.json();
+  if (snapshot.ok) render(snapshot);
+}
+$('refresh').onclick = loadSnapshot;
+loadSnapshot();
+</script>
+</body>
+</html>

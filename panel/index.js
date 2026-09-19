@@ -34,6 +34,8 @@ import {
 import { listCustody, getSoftRecord } from "./manager/custody.mjs";
 import { listRestoreSnapshots } from "./manager/backup.mjs";
 import { PLUGINS, assertUninstallable } from "./manager/plugin-registry.mjs";
+import { createToolkitServices } from "./manager/registry-host.mjs";
+import { createV2Api, toPanelRoutes } from "./manager/v2-api.mjs";
 import {
   CONFIG_WHITELIST,
   CONFIG_EDITABLE_ROW,
@@ -250,6 +252,33 @@ export function apply(ctx, config = {}) {
   const ISSUE_ID_RE = /^[A-Za-z0-9._-]+$/;
   const STAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z$/;
   const uiHtml = readFileSync(join(panelRoot(), "client", "panel.html"), "utf8");
+  const v2Html = readFileSync(join(panelRoot(), "client", "v2.html"), "utf8");
+  const connectorJs = readFileSync(join(panelRoot(), "manager", "realtime-connector.mjs"), "utf8");
+
+  // ── P4 泛化线：registry + doctor 服务装配（数据源唯一化）────────────────
+  // 面板的 v2 管理面（安装/启停/重载/卸载/配置/健康）全部走这两个服务，
+  // 禁止旁路直改状态。servicePrefix/registry/doctor 段均来自插件 config（patch 行），
+  // 无固定端口/绝对路径（D5）；与既有 P2.4 路由（patch 域操作）并存、互不影响。
+  const services = createToolkitServices(ctx, config, {
+    info: (...a) => console.log("[toolkit-manager]", ...a),
+    warn: (...a) => console.warn("[toolkit-manager]", ...a),
+    error: (...a) => console.error("[toolkit-manager]", ...a),
+  });
+  const v2 = createV2Api({
+    registry: services.registry,
+    doctor: services.doctor,
+    servicePrefix: services.servicePrefix,
+    subscribe: (name, cb) => {
+      const disposer = ctx.on(name, cb);
+      return () => {
+        try {
+          disposer();
+        } catch {
+          // 订阅已失效
+        }
+      };
+    },
+  });
 
   // 只读路径：loopback socket AND (Host loopback OR 配对校验)。
   // 配对允许 fallback 到 devicesFile hasOwn（服务缺失时的 fail-closed 兜底）。
@@ -1130,6 +1159,34 @@ export function apply(ctx, config = {}) {
         }
       }, { change: true }),
     },
+    // ── P4 泛化线：v2 管理 API（registry/doctor 数据源 + SSE 实时）────────
+    ...toPanelRoutes(v2.routes),
+    {
+      kind: "exact",
+      path: "/api/toolkit-panel/v2/ui",
+      handler: guard(async (request, response) => {
+        if (request.method !== "GET") {
+          response.writeHead(405, { allow: "GET" });
+          response.end();
+          return;
+        }
+        response.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
+        response.end(v2Html);
+      }),
+    },
+    {
+      kind: "exact",
+      path: "/api/toolkit-panel/v2/connector.js",
+      handler: guard(async (request, response) => {
+        if (request.method !== "GET") {
+          response.writeHead(405, { allow: "GET" });
+          response.end();
+          return;
+        }
+        response.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-store" });
+        response.end(connectorJs);
+      }),
+    },
   ];
 
   ctx.effect(() => {
@@ -1142,6 +1199,8 @@ export function apply(ctx, config = {}) {
           // noop
         }
       }
+      // P4：级联停掉 registry/doctor（子插件 fiber、巡检定时器）
+      void services.stop();
     };
   });
 }
