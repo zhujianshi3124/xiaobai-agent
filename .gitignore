@@ -23,5 +23,8 @@ node_modules/*
 # P1 契约模块构建产物（tsc dist，test 门禁自动构建），不入库
 contract/dist/
 
+# P2 registry 构建产物（同上）
+registry/dist/
+
 # 临时快照
 _nm-before.txt

@@ -1,0 +1,9 @@
+{
+  "id": "fixture/contract-plugin",
+  "displayName": "契约插件夹具",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "requires": {
+    "node": ">=20"
+  }
+}

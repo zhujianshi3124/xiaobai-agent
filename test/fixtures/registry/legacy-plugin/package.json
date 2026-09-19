@@ -1,0 +1,7 @@
+{
+  "name": "legacy-plugin",
+  "version": "0.2.0",
+  "description": "无 manifest 的普通 DSH 插件夹具（legacy 适配对象）",
+  "type": "module",
+  "main": "index.js"
+}

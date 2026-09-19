@@ -1,0 +1,6 @@
+{
+  "id": "fixture/invalid-manifest",
+  "displayName": "契约范围不兼容的夹具",
+  "version": "1.0.0",
+  "contract": "^2.0"
+}

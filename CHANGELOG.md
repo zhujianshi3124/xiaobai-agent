@@ -6,6 +6,33 @@
 
 ## [Unreleased]
 
+### Added（P2 Registry，2026-09-19）
+
+- `registry/`：注册中心服务（TS strict，接口 = 契约 `ToolkitRegistry`）。
+  - 生命周期：`install / uninstall / setEnabled / reload / list / get`，全部真实生效
+    （cordis 派生 ctx 装入/卸出 fiber；装入完成以 **fiber 状态迁移** 判定——ACTIVE /
+    FAILED / DISPOSED / 超时兜 PENDING——不改写插件对象、不依赖 apply 返回值的
+    await 语义，R2 结论见 `docs/p0-recon.md` §6）。
+  - 安装来源：`PluginSource = local`（Q1 裁决）；npm 分支显式报
+    `source-not-supported`（纯增量预留）。
+  - 预检（P2 契约级子集，P3 doctor.precheck 注入替换）：manifest 契约校验、
+    id 冲突、`requires.services` 可用性、legacy 标注；blocking 不注册并返回
+    `PrecheckReport`（每项含 fix）。
+  - legacy 适配器：无 manifest 插件自动包装（id 取包名归一 `legacy/<name>`），
+    可启停/卸载，预检标注 legacyMode 与补 manifest 指引。
+  - 错误隔离（REQ-6）：装入失败 → error + 指数退避自动重试（默认上限 3）→
+    quarantined；手动 enable/reload 清零重试；toolkit 级 `stop()` 级联卸载。
+  - 持久化（REQ-7）：`state.json`（原子写）记录 source/enabled/config/
+    quarantined/lastError；autoload 重启恢复，源丢失项进 error 并保留 lastError。
+  - 操作互斥：同 id 串行、install 全局互斥。
+  - 事件：`registry:plugin-added/removed/status-changed` 全部经
+    `${servicePrefix}/…` 前缀发射（D5）。
+- `test/registry.test.mjs` + `test/fixtures/registry/`：S1（契约级）/S2/S4 场景与
+  持久化、互斥、stop 级联清理共 12 例。
+- `scripts/pluggable-lint.mjs`：共享基础模块白名单改为 `SHARED_MODULES =
+  ['contract', 'registry']`（P3 将加入 doctor）。
+- 门禁：`npm test` 链加入 `build:registry`，typecheck 覆盖 registry tsconfig。
+
 ### Added（P1 契约模块，2026-09-19）
 
 - `contract/`：**DSH Sub-Plugin Contract v1** 单一契约模块（`PLUGIN_CONTRACT_VERSION = '1.0.0'`），
