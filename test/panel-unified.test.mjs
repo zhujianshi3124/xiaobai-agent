@@ -342,6 +342,9 @@ test('归一结构：toolkit-panel 主标签页同时承载 registry 管理区�
   const panel = mountUnifiedPanel({ router })
   try {
     await panel.done()
+    // P6 退役断言：对外仅此一个标签页（v2 过渡 tab 已删除）
+    assert.equal(panel.registrations.length, 1, '仅注册一个标签页')
+    assert.equal(panel.registrations[0].meta.id, 'toolkit-panel')
     const t1 = text(panel.tree)
     // ── 管理区（V2Section）
     assert.ok(t1.includes('插件管理（registry · 自适应）'), '管理区标题')
