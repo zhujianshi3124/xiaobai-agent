@@ -917,6 +917,28 @@ export function apply(ctx, config = {}) {
             old: clip(step.old),
             new: clip(step.new),
           }));
+          // install-package 前置（设计稿 §2.2/§3.2 无源变体）：零网络环境必须有 file: 本地源，
+          // 且版本可读——否则 plan 即拒（人话如实告知），不给注定失败的执行入口。
+          let extra = null;
+          const installStep = planSteps.find((s) => s && s.op === "install-package");
+          if (installStep) {
+            const declared = String(installStep.new || "");
+            if (!declared.startsWith("file:")) {
+              throw new PlanError("issue-not-executable", "该依赖没有本地安装源（file:），面板不会联网下载。可以先把包放到对应位置，或手动处理后再点「一键体检」重新查看。");
+            }
+            let version = null;
+            let sourceAbs = null;
+            try {
+              const roots = fresh.report.environment.roots || {};
+              const rootDir = resolve(roots[installStep.root] || toolkitRoot);
+              sourceAbs = resolve(rootDir, declared.slice("file:".length));
+              const meta = JSON.parse(readFileSync(join(sourceAbs, "package.json"), "utf8"));
+              version = typeof meta.version === "string" ? meta.version : null;
+            } catch {
+              version = null;
+            }
+            extra = { pkg: String(installStep.old || ""), source: sourceAbs, version, range: declared };
+          }
           const now = Date.now();
           const planObj = {
             token: createHash("sha256").update("doctor-apply|" + issueId + "|" + now + "|" + Math.random()).digest("hex").slice(0, 32),
@@ -939,6 +961,7 @@ export function apply(ctx, config = {}) {
               file: issue.file || null,
               line: issue.line || null,
               steps,
+              extra,
               summary: fresh.report.summary || null,
               createdAt: planObj.createdAt,
               expiresAt: planObj.expiresAt,

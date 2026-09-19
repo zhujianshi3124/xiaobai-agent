@@ -1240,6 +1240,267 @@ window.__ModuleLoader__.load({
 			return styles.issueInfo;
 		}
 
+		// ---- 批 2：体检操作台（设计稿 p24-design-batch2-console.md §2/§3/§4，判定验收 2026-09-19）----
+		// 文案逐字对齐设计稿 §3.1–§3.5（预审通过版）。分域：doctor 域一切经 CLI（两步补确认层）。
+		var CONSOLE_REPAIR = {
+			kind: "fix",
+			title: function (p) { return "修正失效的引用名「" + p.old + "」"; },
+			what: function (p) { return "面板将把文件《" + p.file + "》里的旧名字「" + p.old + "」改成新名字「" + p.new + "」（共精确匹配 1 处，改的就是这一处）。"; },
+			why: "旧名字已经不再被系统认识，留着它这个引用不会生效；改成新名字后引用即可正常解析。",
+			impact: "只改这一个文件里的一处文字；不改你的连接配置（cordis.patch.yml）；不联网；不安装任何东西。",
+			rollback: "改动前会自动备份到体检备份区；之后随时可以在本页「体检回滚」里一键还原。",
+			failure: "如果文件在这期间被手动改过、导致位置对不上，操作会原地中止，什么都不写、什么都不会坏。",
+			confirm: "一次只处理这一条问题。点「确认修正」，或点「取消」。",
+			button: "确认修正",
+		};
+		var CONSOLE_INSTALL = {
+			kind: "fix",
+			title: function (p) { return "补装缺失的依赖包「" + p.pkg + "」"; },
+			what: function (p) { return "面板将从本地目录《" + p.source + "》把包「" + p.pkg + "」复制安装到对应目录的 node_modules。"; },
+			version: function (p) { return p.version ? "本地源版本 " + p.version + "，必须满足声明的范围「" + p.range + "」（不满足会原地中止）。" : "安装版本以本地源 package.json 为准，且必须满足声明的范围「" + p.range + "」（不满足会原地中止）。"; },
+			impact: "只在本机复制文件，不访问网络；不修改、不删除任何现有文件。",
+			rollback: "安装会记入体检台账；之后可以在本页「体检回滚」里一键移除这个包。",
+			failure: "如果安装位置已存在同名包、或版本对不上声明的范围，操作会原地中止，什么都不写。",
+			confirm: "一次只处理这一条问题。点「确认安装」，或点「取消」。",
+			button: "确认安装",
+		};
+		var CONSOLE_ROLLBACK = {
+			kind: "rollback",
+			title: function (p) { return "回滚体检操作（" + p.stamp + "）"; },
+			what: function (p) { return "面板将把当时改动过的 " + p.files + " 个文件恢复回改动前的备份状态" + (p.packages > 0 ? "；如当时安装过包，也会一并移除（" + p.packages + " 个）" : "") + "。"; },
+			impact: "只恢复这份记录里动过的文件，其他一概不动；不联网；不改你的连接配置文件 cordis.patch.yml 的其他内容。",
+			rollback: "恢复前会先把当前状态再备份一份——回滚本身也可以再回滚。",
+			failure: "如果某个备份文件缺失，回滚会停下并如实报告，不会静默跳过。",
+			confirm: "一次只回滚这一份记录。点「确认回滚」，或点「取消」。",
+			button: "确认回滚",
+			empty: "还没有可以回滚的体检操作——体检操作台还没有改过任何东西。",
+		};
+		var CONSOLE_SNAPSHOT = {
+			kind: "snapshot",
+			title: function (p) { return "恢复配置快照（" + p.stamp + "）"; },
+			what: function () { return "面板将把配置文件 cordis.patch.yml 恢复到该快照备份时的样子（见下方变化预览）。"; },
+			impact: "会改动你的连接配置文件 cordis.patch.yml——这是本页唯一被改动的文件；不联网。恢复完成后需要重启才生效。",
+			rollback: "恢复前会先把当前配置再备份一份——这次恢复本身也会留下快照，可再恢复回来。",
+			failure: "如果当前配置在你看这份预览之后又被改过，操作会原地中止，什么都不写。",
+			confirm: "一次只恢复这一份快照。点「确认恢复」，或点「取消」。",
+			button: "确认恢复",
+			empty: "还没有可恢复的配置快照——面板每次改动配置前都会自动留一份，做过改动后这里就有了。",
+		};
+		var CONSOLE_RECEIPTS = {
+			note: "收据只是删除的账单：里面只有被删文件的清单、校验值和你填写的原因，没有文件内容，不能用来恢复。",
+			empty: "还没有删除收据——你还没有用面板做过真卸载。",
+			noReason: "（未填写）",
+		};
+
+		function ConsoleSection(props) {
+			var doctor = props.doctor;
+			var stSt = react.useState({ loading: false, error: "", states: null, snapshots: [] });
+			var st = stSt[0];
+			var setSt = stSt[1];
+			var rcSt = react.useState({ loaded: false, entries: [] });
+			var receipts = rcSt[0];
+			var setReceipts = rcSt[1];
+			var dlgSt = react.useState(null);
+			var dlg = dlgSt[0];
+			var setDlg = dlgSt[1];
+			var busySt = react.useState(false);
+			var busy = busySt[0];
+			var setBusy = busySt[1];
+			var msgSt = react.useState("");
+			var msg = msgSt[0];
+			var setMsg = msgSt[1];
+
+			var loadStates = react.useCallback(async function () {
+				setSt(function (s) { return Object.assign({}, s, { loading: true }); });
+				try {
+					var res = await fetch("/api/toolkit-panel/doctor/states", { cache: "no-store" });
+					var body = await res.json();
+					if (body.ok) {
+						setSt({ loading: false, error: "", states: body.states || [], snapshots: body.snapshots || [] });
+					} else {
+						setSt({ loading: false, error: body.error || "体检回滚记录不可用", states: null, snapshots: body.snapshots || [] });
+					}
+				} catch (e) {
+					setSt({ loading: false, error: String(e && e.message || e), states: null, snapshots: [] });
+				}
+				try {
+					var res2 = await fetch("/api/toolkit-panel/custody", { cache: "no-store" });
+					var body2 = await res2.json();
+					setReceipts({ loaded: true, entries: (body2.ok && body2.custody && Array.isArray(body2.custody.entries)) ? body2.custody.entries : [] });
+				} catch {
+					setReceipts({ loaded: true, entries: [] });
+				}
+			}, []);
+
+			react.useEffect(function () {
+				loadStates();
+			}, [loadStates]);
+
+			var beginFix = react.useCallback(async function (issue) {
+				setMsg("");
+				setBusy(true);
+				try {
+					var res = await fetch("/api/toolkit-panel/doctor/apply/plan", {
+						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
+						body: JSON.stringify({ issueId: issue.id })
+					});
+					var body = await res.json();
+					if (!body.ok) { setMsg(body.error || ("HTTP " + res.status)); return; }
+					var isInstall = body.plan.steps && body.plan.steps.some(function (s) { return s.op === "install-package"; });
+					setDlg({ copy: isInstall ? CONSOLE_INSTALL : CONSOLE_REPAIR, issueId: issue.id, plan: body.plan, phase: "confirm" });
+				} catch (e) {
+					setMsg(String(e && e.message || e));
+				} finally {
+					setBusy(false);
+				}
+			}, []);
+
+			var beginRollback = react.useCallback(async function (entry) {
+				setMsg("");
+				setBusy(true);
+				try {
+					var res = await fetch("/api/toolkit-panel/doctor/rollback/plan", {
+						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
+						body: JSON.stringify({ stamp: entry.stamp })
+					});
+					var body = await res.json();
+					if (!body.ok) { setMsg(body.error || ("HTTP " + res.status)); return; }
+					setDlg({ copy: CONSOLE_ROLLBACK, entry: entry, plan: body.plan, phase: "confirm" });
+				} catch (e) {
+					setMsg(String(e && e.message || e));
+				} finally {
+					setBusy(false);
+				}
+			}, []);
+
+			var beginSnapshot = react.useCallback(async function (snap) {
+				setMsg("");
+				setBusy(true);
+				try {
+					var res = await fetch("/api/toolkit-panel/snapshot-restore/plan", {
+						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
+						body: JSON.stringify({ stamp: snap.stamp })
+					});
+					var body = await res.json();
+					if (!body.ok) { setMsg(body.error || ("HTTP " + res.status)); return; }
+					setDlg({ copy: CONSOLE_SNAPSHOT, snap: snap, plan: body.plan, phase: "confirm" });
+				} catch (e) {
+					setMsg(String(e && e.message || e));
+				} finally {
+					setBusy(false);
+				}
+			}, []);
+
+			var confirmDlg = react.useCallback(async function () {
+				if (!dlg) return;
+				setBusy(true);
+				setMsg("");
+				try {
+					var execUrl = dlg.kind === "fix" ? "/api/toolkit-panel/doctor/apply/execute"
+						: dlg.kind === "rollback" ? "/api/toolkit-panel/doctor/rollback/execute"
+						: "/api/toolkit-panel/snapshot-restore/execute";
+					var res = await fetch(execUrl, {
+						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
+						body: JSON.stringify({ token: dlg.plan.token })
+					});
+					var body = await res.json();
+					if (!body.ok) { setMsg(body.error || ("HTTP " + res.status)); return; }
+					setDlg(function (d) { return Object.assign({}, d, { phase: "done", result: body }); });
+					await loadStates();
+				} catch (e) {
+					setMsg(String(e && e.message || e));
+				} finally {
+					setBusy(false);
+				}
+			}, [dlg, loadStates]);
+
+			var fixables = doctor && Array.isArray(doctor.issues)
+				? doctor.issues.filter(function (it) { return it.fix && it.fix.class !== "manual" && Array.isArray(it.fix.plan) && it.fix.plan.length > 0; })
+				: [];
+
+			var dlgKids = null;
+			if (dlg) {
+				var c = dlg.copy;
+				var lines = [
+					react.createElement("div", { key: "t", style: styles.dlgTitle }, c.title(dlg.plan || dlg.entry || dlg.snap)),
+					react.createElement("div", { key: "w", style: styles.dlgLine }, c.what(dlg.plan && dlg.plan.extra ? Object.assign({ file: dlg.plan.file, old: dlg.plan.steps[0].old, new: dlg.plan.steps[0].new }, dlg.plan.extra) : (dlg.plan || dlg.entry || dlg.snap))),
+				];
+				if (c.why) lines.push(react.createElement("div", { key: "why", style: styles.dlgLine }, c.why));
+				if (c.version && dlg.plan && dlg.plan.extra) lines.push(react.createElement("div", { key: "ver", style: styles.dlgLine }, c.version(dlg.plan.extra)));
+				lines.push(react.createElement("div", { key: "imp", style: styles.dlgLine }, c.impact));
+				lines.push(react.createElement("div", { key: "rb", style: styles.dlgLine }, c.rollback));
+				lines.push(react.createElement("div", { key: "fl", style: styles.dlgLine }, c.failure));
+				if (dlg.kind === "fix" && dlg.plan && Array.isArray(dlg.plan.steps)) {
+					lines.push(react.createElement("div", { key: "sk", style: styles.dlgKey }, "将执行"));
+					for (var si = 0; si < dlg.plan.steps.length; si++) {
+						var s = dlg.plan.steps[si];
+						lines.push(react.createElement("div", { key: "s" + si, style: styles.techRow },
+							s.op + (s.file ? " · " + s.file : "") + (s.op === "replace" ? " ：「" + s.old + "」→「" + s.new + "」" : "")));
+					}
+				}
+				if (dlg.kind === "snapshot" && dlg.plan && Array.isArray(dlg.plan.diff)) {
+					lines.push(react.createElement("div", { key: "dfk", style: styles.dlgKey }, "变化预览"));
+					for (var di = 0; di < dlg.plan.diff.length; di++) {
+						lines.push(react.createElement("div", { key: "d" + di, style: styles.pre }, dlg.plan.diff[di]));
+					}
+				}
+				lines.push(react.createElement("div", { key: "ck", style: styles.dlgKey }, "确认操作"));
+				lines.push(react.createElement("div", { key: "cv", style: styles.dlgLine }, c.confirm));
+				if (dlg.phase === "done") {
+					lines.push(react.createElement("div", { key: "ok", style: styles.dlgLineBold },
+						dlg.kind === "rollback" ? "回滚完成。" : dlg.kind === "snapshot" ? "快照恢复完成，重启后生效。" : "已执行完成（详情见下方执行记录）。"));
+				}
+				lines.push(react.createElement("div", { key: "row", style: styles.uninRow },
+					dlg.phase === "done"
+						? react.createElement("button", { style: styles.btnOpen, disabled: busy, onClick: function () { setDlg(null); } }, "关闭")
+						: react.createElement("button", { style: styles.btnRest, disabled: busy, onClick: confirmDlg }, c.button),
+					dlg.phase === "done" ? null : react.createElement("button", { style: styles.btnOpen, disabled: busy, onClick: function () { setDlg(null); } }, "取消"),
+					msg ? react.createElement("span", { style: styles.dlgErr }, msg) : null
+				));
+				dlgKids = react.createElement("div", { style: styles.dlgBox }, lines);
+			}
+
+			var applyEntries = st.states ? st.states.filter(function (s) { return s.action === "apply"; }) : [];
+			return react.createElement("div", { style: styles.issues },
+				react.createElement("h2", { style: styles.h2 }, "操作台（可执行项 · 确认一次改一处）"),
+				fixables.length === 0
+					? react.createElement("div", { style: styles.allGood }, "当前没有可以自动处理的问题。")
+					: fixables.map(function (it) {
+						return react.createElement("div", { key: "fx" + it.id + ":" + it.line, style: Object.assign({}, styles.issue, severityStyle(it.severity)) },
+							react.createElement("b", null, severityText(it.severity)), "：" + (it.message || ""),
+							react.createElement("div", { style: styles.techRow }, it.id + " · " + it.file + ":" + it.line),
+							react.createElement("button", { style: styles.btnRest, disabled: busy, onClick: function () { beginFix(it); } }, "执行"));
+					}),
+				react.createElement("h2", { style: styles.h2 }, "体检回滚（doctor 域 · 每次改动可还原）"),
+				st.loading ? react.createElement("div", { style: styles.muted }, "读取中…") : null,
+				!st.loading && st.error ? react.createElement("div", { style: styles.issueWarn }, "体检回滚暂不可用：" + st.error) : null,
+				!st.loading && !st.error && applyEntries.length === 0 ? react.createElement("div", { style: styles.allGood }, CONSOLE_ROLLBACK.empty) : null,
+				applyEntries.map(function (entry) {
+					return react.createElement("div", { key: entry.stamp, style: styles.issue },
+						react.createElement("b", null, entry.stamp), " · 改动 " + entry.files + " 个文件" + (entry.packages > 0 ? " · 安装 " + entry.packages + " 个包" : ""),
+						react.createElement("div", { style: styles.uninRow },
+							react.createElement("button", { style: styles.btnRest, disabled: busy, onClick: function () { beginRollback(entry); } }, "回滚")));
+				}),
+				react.createElement("h2", { style: styles.h2 }, "配置快照（面板写操作前的自动备份 · 最近 5 份）"),
+				st.snapshots.length === 0 ? react.createElement("div", { style: styles.allGood }, CONSOLE_SNAPSHOT.empty) : null,
+				st.snapshots.map(function (snap) {
+					return react.createElement("div", { key: "sn" + snap.stamp, style: styles.issue },
+						react.createElement("b", null, snap.stamp), " · " + (snap.reason || "panel") + " · sha " + String(snap.sha256 || "").slice(0, 8) + " · " + snap.bytes + " 字节",
+						react.createElement("div", { style: styles.uninRow },
+							react.createElement("button", { style: styles.btnRest, disabled: busy, onClick: function () { beginSnapshot(snap); } }, "恢复")));
+				}),
+				react.createElement("h2", { style: styles.h2 }, "删除收据（只读对账 · 不能恢复）"),
+				react.createElement("div", { style: styles.dlgLine }, CONSOLE_RECEIPTS.note),
+				receipts.loaded && receipts.entries.length === 0 ? react.createElement("div", { style: styles.allGood }, CONSOLE_RECEIPTS.empty) : null,
+				receipts.entries.map(function (r) {
+					return react.createElement("div", { key: r.custodyId, style: styles.issue },
+						react.createElement("b", null, r.plugin || r.custodyId), " · " + r.createdAt + " · 删除 " + r.fileCount + " 个文件 · 共 " + r.totalBytes + " 字节",
+						react.createElement("div", { style: styles.techRow }, "原因：" + (r.userReason || CONSOLE_RECEIPTS.noReason)));
+				}),
+				dlgKids
+			);
+		}
+
 		function ToolkitPanel() {
 			var state = react.useState(null);
 			var snapshot = state[0];
@@ -1354,8 +1615,9 @@ window.__ModuleLoader__.load({
 				react.createElement("div", { style: styles.cards }, cards),
 				react.createElement("h2", { style: styles.h2 }, "配置文件原文（cordis.patch.yml · 插件开关所在）"),
 				react.createElement("pre", { style: styles.pre }, patchText),
-				react.createElement("h2", { style: styles.h2 }, "体检结果（doctor dry-run · 只查不改）"),
-				react.createElement("div", { style: styles.issues }, doctorIssues)
+				react.createElement("h2", { style: styles.h2 }, "体检与操作台（doctor dry-run · 只查不改＋逐条确认后才执行）"),
+				react.createElement("div", { style: styles.issues }, doctorIssues),
+				react.createElement(ConsoleSection, { doctor: doctor })
 			);
 		}
 
