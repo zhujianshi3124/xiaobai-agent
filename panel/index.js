@@ -252,7 +252,9 @@ export function apply(ctx, config = {}) {
   const ISSUE_ID_RE = /^[A-Za-z0-9._-]+$/;
   const STAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z$/;
   const uiHtml = readFileSync(join(panelRoot(), "client", "panel.html"), "utf8");
-  const v2Html = readFileSync(join(panelRoot(), "client", "v2.html"), "utf8");
+  // P6 退役：v2.html 独立页（/v2/ui）已删除——registry 通用管理区并入唯一 toolkit-panel
+  // 标签页（P6 归一）。/v2/connector.js 保留：归一面板客户端经动态 import 复用
+  // realtime-connector.mjs（引擎 HTTP 面不退役）。
   const connectorJs = readFileSync(join(panelRoot(), "manager", "realtime-connector.mjs"), "utf8");
 
   // ── P4 泛化线：registry + doctor 服务装配（数据源唯一化）────────────────
@@ -1166,19 +1168,6 @@ export function apply(ctx, config = {}) {
       path: route.path,
       handler: guard(route.handler, { change: route.change === true }),
     })),
-    {
-      kind: "exact",
-      path: "/api/toolkit-panel/v2/ui",
-      handler: guard(async (request, response) => {
-        if (request.method !== "GET") {
-          response.writeHead(405, { allow: "GET" });
-          response.end();
-          return;
-        }
-        response.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
-        response.end(v2Html);
-      }),
-    },
     {
       kind: "exact",
       path: "/api/toolkit-panel/v2/connector.js",

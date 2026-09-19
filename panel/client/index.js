@@ -2017,22 +2017,9 @@ window.__ModuleLoader__.load({
 		var inject = ["slots"];
 		function apply(ctx) {
 			try {
-				// P5 泛化线：registry 驱动的过渡 tab（P6 归一后退役，见阶段报告）；P6 起同一
-				// 管理区已并入下方 toolkit-panel 主标签页，过渡期两者并存、数据同源。
-				ctx.slots.inject("settings.plugins.tab", function () {
-					try {
-						return ctx.slots.register({
-							name: "settings.plugins.tab",
-							id: "toolkit-panel-v2",
-							order: 89,
-							label: function () { return "插件管理（registry · 自适应）"; },
-							inject: function () { return {}; }
-						}, V2Section);
-					} catch (e) {
-						return function () {};
-					}
-				});
-				// 既有 tab：patch 层开关/体检操作台（P2.4 资产，管理 cordis.patch.yml 行块）
+				// P6 退役：toolkit-panel-v2 过渡标签页已删除——registry 通用管理区（V2Section）
+				// 已并入下方唯一 toolkit-panel 主标签页（P6 归一笔）。对外只保留这一个面板。
+				// 既有 tab：patch 层开关/体检操作台（P2.4 资产）+ 顶部 registry 管理区
 				ctx.slots.inject("settings.plugins.tab", function () {
 					try {
 						return ctx.slots.register({

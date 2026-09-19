@@ -43,7 +43,9 @@ const fakeCtx = {
 };
 const panelMod = await import(pathToFileURL(join(panelDir, "index.js")).href);
 panelMod.apply(fakeCtx, { toolkitRoot: root, doctorCli, devicesFile: fixtureFile });
-check("routes count == 33 (P2.4 22 条 + P4 v2 管理 API 9 条 + ui/connector 2 条)", routes.length === 33, String(routes.length));
+// P6 退役：/v2/ui 独立页删除（UI 过渡面退役，管理区并入唯一 toolkit-panel 标签页），
+// /v2/connector.js 保留（归一面板客户端动态 import realtime-connector 的引擎 HTTP 面）。
+check("routes count == 32 (P6 退役后: P2.4 22 条 + P4 v2 管理 API 9 条 + connector 1 条)", routes.length === 32, String(routes.length));
 check("P2.1 plan route registered", routes.some((r) => r.path === "/api/toolkit-panel/plan"));
 check("P2.1 execute route registered", routes.some((r) => r.path === "/api/toolkit-panel/execute"));
 check("P2.1 plan/status route registered", routes.some((r) => r.path === "/api/toolkit-panel/plan/status"));
@@ -89,7 +91,6 @@ const expectedWhenAllowed = {
   "/api/toolkit-panel/v2/reload": ["GET", 405],
   "/api/toolkit-panel/v2/config": ["GET", 405],
   "/api/toolkit-panel/v2/events": ["GET", 200],
-  "/api/toolkit-panel/v2/ui": ["GET", 200],
   "/api/toolkit-panel/v2/connector.js": ["GET", 200],
 };
 
