@@ -925,7 +925,7 @@ export function apply(ctx, config = {}) {
           if (installStep) {
             const declared = String(installStep.new || "");
             if (!declared.startsWith("file:")) {
-              throw new PlanError("issue-not-executable", "该依赖没有本地安装源（file:），面板不会联网下载。可以先把包放到对应位置，或手动处理后再点「一键体检」重新查看。");
+              throw new PlanError("issue-not-executable", "该依赖没有本地安装源（file:），面板不会联网下载。可以先把包放到对应位置，或手动处理后再重新体检查看。");
             }
             let version = null;
             let sourceAbs = null;
