@@ -43,11 +43,16 @@ const fakeCtx = {
 };
 const panelMod = await import(pathToFileURL(join(panelDir, "index.js")).href);
 panelMod.apply(fakeCtx, { toolkitRoot: root, doctorCli, devicesFile: fixtureFile });
-check("routes count == 15 (P2.4 +7 卸载/恢复/挂载路由)", routes.length === 15, String(routes.length));
+check("routes count == 22 (P2.4 +7 卸载/恢复/挂载 +批2 7 条操作台/双回滚路由)", routes.length === 22, String(routes.length));
 check("P2.1 plan route registered", routes.some((r) => r.path === "/api/toolkit-panel/plan"));
 check("P2.1 execute route registered", routes.some((r) => r.path === "/api/toolkit-panel/execute"));
 check("P2.1 plan/status route registered", routes.some((r) => r.path === "/api/toolkit-panel/plan/status"));
 check("P2.2 toggle plan route registered", routes.some((r) => r.path === "/api/toolkit-panel/toggle/plan"));
+// 批 2（L-064..L-067）：操作台/双回滚路由
+check("批2 doctor/states route registered", routes.some((r) => r.path === "/api/toolkit-panel/doctor/states"));
+check("批2 doctor/apply/plan+execute registered", routes.some((r) => r.path === "/api/toolkit-panel/doctor/apply/plan") && routes.some((r) => r.path === "/api/toolkit-panel/doctor/apply/execute"));
+check("批2 doctor/rollback/plan+execute registered", routes.some((r) => r.path === "/api/toolkit-panel/doctor/rollback/plan") && routes.some((r) => r.path === "/api/toolkit-panel/doctor/rollback/execute"));
+check("批2 snapshot-restore/plan+execute registered", routes.some((r) => r.path === "/api/toolkit-panel/snapshot-restore/plan") && routes.some((r) => r.path === "/api/toolkit-panel/snapshot-restore/execute"));
 
 const expectedWhenAllowed = {
   "/api/toolkit-panel/ui": ["GET", 200],
@@ -66,6 +71,14 @@ const expectedWhenAllowed = {
   // 销毁式 v2（L-060）：挂载路由（重装后）
   "/api/toolkit-panel/mount/plan": ["GET", 405],
   "/api/toolkit-panel/mount/execute": ["GET", 405],
+  // 批 2（L-064..L-067）：操作台/双回滚路由
+  "/api/toolkit-panel/doctor/states": ["GET", 200],
+  "/api/toolkit-panel/doctor/apply/plan": ["GET", 405],
+  "/api/toolkit-panel/doctor/apply/execute": ["GET", 405],
+  "/api/toolkit-panel/doctor/rollback/plan": ["GET", 405],
+  "/api/toolkit-panel/doctor/rollback/execute": ["GET", 405],
+  "/api/toolkit-panel/snapshot-restore/plan": ["GET", 405],
+  "/api/toolkit-panel/snapshot-restore/execute": ["GET", 405],
 };
 
 // 写路径（options.change === true）路由集合：tunneled 无服务一律 403。
@@ -82,6 +95,13 @@ const WRITE_ROUTES = new Set([
   // 销毁式 v2（L-060）：挂载是写路由
   "/api/toolkit-panel/mount/plan",
   "/api/toolkit-panel/mount/execute",
+  // 批 2（L-064..L-067）：操作台/双回滚写路由（plan 类同样标 change:true）
+  "/api/toolkit-panel/doctor/apply/plan",
+  "/api/toolkit-panel/doctor/apply/execute",
+  "/api/toolkit-panel/doctor/rollback/plan",
+  "/api/toolkit-panel/doctor/rollback/execute",
+  "/api/toolkit-panel/snapshot-restore/plan",
+  "/api/toolkit-panel/snapshot-restore/execute",
 ]);
 
 // 每个场景独立 apply 一次，通过 ctx.get 注入不同形态的 remoteWebUiPairing。

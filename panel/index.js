@@ -1,13 +1,15 @@
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { buildSnapshot } from "./manager/snapshot.mjs";
-import { runDoctorDryRun } from "./manager/doctor-runner.mjs";
+import { runDoctorDryRun, runDoctorStates, runDoctorApply, runDoctorRollback } from "./manager/doctor-runner.mjs";
 import {
   createPlan,
   createTogglePlan,
   createConfigPlan,
+  createSnapshotRestorePlan,
   executePlan,
   putPlan,
   getPlan,
@@ -29,6 +31,7 @@ import {
   executeMountPreset,
 } from "./manager/uninstall.mjs";
 import { listCustody, getSoftRecord } from "./manager/custody.mjs";
+import { listRestoreSnapshots } from "./manager/backup.mjs";
 import { PLUGINS, assertUninstallable } from "./manager/plugin-registry.mjs";
 import {
   CONFIG_WHITELIST,
@@ -204,6 +207,20 @@ const PLAN_ERROR_STATUS = {
   "preset-script-missing": 500,
   "body-missing": 400,
   "body-delete-failed": 500,
+  // 批 2（L-064..L-067，设计稿 p24-design-batch2-console.md §6.1）
+  "issue-not-found": 404,
+  "issue-not-executable": 400,
+  "issue-id-invalid": 400,
+  "stamp-invalid": 400,
+  "stamp-not-found": 404,
+  "stamp-not-rollbackable": 400,
+  "doctor-states-unavailable": 503,
+  "doctor-spawn-failed": 500,
+  "doctor-step-failed": 500,
+  "doctor-rollback-failed": 500,
+  "plan-kind-mismatch": 400,
+  "snapshot-not-found": 404,
+  "snapshot-identical": 409,
 };
 
 function planErrorStatus(code) {
@@ -224,6 +241,13 @@ export function apply(ctx, config = {}) {
   const devicesFile = resolve(config.devicesFile || process.env.TOOLKIT_PANEL_DEVICES_FILE || defaultDevicesFile());
   // 写前备份根目录（P2.1）。默认放插件仓下的 .panel-backups/ 之外，避免与人工备份混淆。
   const backupRoot = resolve(config.backupRoot || process.env.TOOLKIT_PANEL_BACKUP_ROOT || join(toolkitRoot, ".panel-write-backups"));
+  // doctor 域 config 根（D2）：面板**不直读 ~/.dsh**，一切经 CLI；此处仅在显式配置时
+  // 传 --config-root（测试指 tmpdir 副本），缺省不传 = doctor 自己的默认根。
+  const doctorConfigRoot = config.doctorConfigRoot || process.env.TOOLKIT_PANEL_DOCTOR_CONFIG_ROOT || null;
+  const patchFile = join(toolkitRoot, "cordis.patch.yml");
+  // doctor issueId / 快照 stamp 白名单（防注入与路径穿越；设计稿 §6.2/backup.mjs）
+  const ISSUE_ID_RE = /^[A-Za-z0-9._-]+$/;
+  const STAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z$/;
   const uiHtml = readFileSync(join(panelRoot(), "client", "panel.html"), "utf8");
 
   // 只读路径：loopback socket AND (Host loopback OR 配对校验)。
@@ -835,6 +859,245 @@ export function apply(ctx, config = {}) {
           },
         });
       }),
+    },
+
+    // ════════ 批 2：doctor 操作台 ＋ 双回滚（设计稿 p24-design-batch2-console.md §6.1）════════
+    // 分域铁律（§1）：doctor 域一切经 CLI 子进程（--states/--apply/--rollback）；
+    // 面板域不直读 ~/.dsh。CLI rollback 自身无确认层 ⇒ 面板两步补齐（如实申报，§4.1）。
+
+    // doctor 回滚链摘要（D2 --states，只读）＋ 面板写前快照列表（D3 数据源）。
+    // doctor 不可达 ⇒ ok:false + degraded（UI 渲染禁用态，不假装可用）。
+    {
+      kind: "exact",
+      path: "/api/toolkit-panel/doctor/states",
+      handler: guard(async (request, response) => {
+        if (request.method !== "GET") {
+          response.writeHead(405, { allow: "GET" });
+          response.end();
+          return;
+        }
+        const states = await runDoctorStates({ cliPath: doctorCli, configRoot: doctorConfigRoot });
+        const snapshots = listRestoreSnapshots(backupRoot, patchFile).slice(0, 5);
+        if (!states.ok) {
+          sendJson(response, 200, { ok: false, degraded: true, error: String(states.error || "doctor states 不可用"), states: null, snapshots });
+          return;
+        }
+        sendJson(response, 200, { ok: true, states: states.states.slice(0, 50), snapshots });
+      }),
+    },
+    // doctor 单条修复 plan（Q-C 级 1）：**fresh dry-run** 后定位该 issue，manual ⇒ 拒绝。
+    {
+      kind: "exact",
+      path: "/api/toolkit-panel/doctor/apply/plan",
+      handler: guard(async (request, response) => {
+        if (request.method !== "POST") {
+          response.writeHead(405, { allow: "POST" });
+          response.end();
+          return;
+        }
+        try {
+          const body = await readJsonBody(request);
+          const issueId = String(body.issueId || "");
+          if (!ISSUE_ID_RE.test(issueId)) throw new PlanError("issue-id-invalid", "issueId 含非法字符（仅允许字母/数字/._-）");
+          const fresh = await runDoctorDryRun({ cliPath: doctorCli, scopeRoot: toolkitRoot, configRoot: doctorConfigRoot });
+          if (!fresh.ok) throw new PlanError("doctor-spawn-failed", "体检服务不可用：" + String(fresh.error || "未知"));
+          const issue = (fresh.report.issues || []).find((i) => i && i.id === issueId);
+          if (!issue) throw new PlanError("issue-not-found", "当前体检报告中没有该问题：" + issueId + "（请重新体检）");
+          const planSteps = issue.fix && Array.isArray(issue.fix.plan) ? issue.fix.plan : [];
+          if (planSteps.length === 0) throw new PlanError("issue-not-executable", "该问题为人工处理类（无自动修复计划）：" + issueId);
+          const clip = (v) => {
+            const s = v === null || v === undefined ? "" : String(v);
+            return s.length > 120 ? s.slice(0, 117) + "…" : s;
+          };
+          const steps = planSteps.map((step) => ({
+            op: step.op,
+            root: step.root,
+            file: step.file || null,
+            occurrence: step.occurrence ?? 1,
+            old: clip(step.old),
+            new: clip(step.new),
+          }));
+          const now = Date.now();
+          const planObj = {
+            token: createHash("sha256").update("doctor-apply|" + issueId + "|" + now + "|" + Math.random()).digest("hex").slice(0, 32),
+            kind: "doctor-apply",
+            issueId,
+            scopeRoot: toolkitRoot,
+            configRoot: doctorConfigRoot,
+            createdAt: new Date(now).toISOString(),
+            expiresAt: new Date(now + 5 * 60 * 1000).toISOString(),
+          };
+          putPlan(planObj);
+          sendJson(response, 200, {
+            ok: true,
+            plan: {
+              token: planObj.token,
+              kind: "doctor-apply",
+              issueId,
+              severity: issue.severity,
+              message: issue.message,
+              file: issue.file || null,
+              line: issue.line || null,
+              steps,
+              summary: fresh.report.summary || null,
+              createdAt: planObj.createdAt,
+              expiresAt: planObj.expiresAt,
+            },
+          });
+        } catch (error) {
+          const code = error instanceof PlanError || (error && error.code) ? error.code : "internal";
+          sendJson(response, planErrorStatus(code), { ok: false, code, error: String(error && error.message || error) });
+        }
+      }, { change: true }),
+    },
+    // doctor 单条修复 execute：spawn --apply --only <id> --yes（受托执行；三条件③）。
+    {
+      kind: "exact",
+      path: "/api/toolkit-panel/doctor/apply/execute",
+      handler: guard(async (request, response) => {
+        if (request.method !== "POST") {
+          response.writeHead(405, { allow: "POST" });
+          response.end();
+          return;
+        }
+        try {
+          const body = await readJsonBody(request);
+          const plan = getPlan(String(body.token || ""));
+          if (!plan) throw new PlanError("plan-not-found", "方案不存在或已失效，请重新生成");
+          if (plan.kind !== "doctor-apply") throw new PlanError("plan-kind-mismatch", "token 不是体检修复方案（kind=" + plan.kind + "）");
+          dropPlan(plan.token);
+          const r = await runDoctorApply({ cliPath: doctorCli, scopeRoot: plan.scopeRoot, configRoot: plan.configRoot, issueId: plan.issueId });
+          if (r.spawnError) throw new PlanError("doctor-spawn-failed", "doctor 子进程启动失败：" + r.spawnError);
+          if (!r.result) throw new PlanError("doctor-spawn-failed", "doctor 未返回执行结果：" + String(r.error || "未知"));
+          if (r.result.ok === false) {
+            sendJson(response, planErrorStatus("doctor-step-failed"), { ok: false, code: "doctor-step-failed", error: "执行中有步骤失败，已按序中止（失败前的写入保留，可从体检回滚还原）", results: r.result.results || [], rescan: r.rescan ? r.rescan.summary : null });
+            return;
+          }
+          sendJson(response, 200, { ok: true, applied: true, noop: r.noop, stamp: r.result.stamp || null, backupRoot: r.result.backupRoot || null, results: r.result.results || [], rescan: r.rescan ? r.rescan.summary : null });
+        } catch (error) {
+          const code = error instanceof PlanError || (error && error.code) ? error.code : "internal";
+          sendJson(response, planErrorStatus(code), { ok: false, code, error: String(error && error.message || error) });
+        }
+      }, { change: true }),
+    },
+    // doctor 回滚 plan：指定 stamp 的恢复清单预览（只读 states 取数）。
+    {
+      kind: "exact",
+      path: "/api/toolkit-panel/doctor/rollback/plan",
+      handler: guard(async (request, response) => {
+        if (request.method !== "POST") {
+          response.writeHead(405, { allow: "POST" });
+          response.end();
+          return;
+        }
+        try {
+          const body = await readJsonBody(request);
+          const stamp = String(body.stamp || "");
+          if (!STAMP_RE.test(stamp)) throw new PlanError("stamp-invalid", "stamp 格式非法");
+          const states = await runDoctorStates({ cliPath: doctorCli, configRoot: doctorConfigRoot });
+          if (!states.ok) throw new PlanError("doctor-states-unavailable", "体检回滚记录不可用：" + String(states.error || "未知"));
+          const entry = states.states.find((s) => s.stamp === stamp);
+          if (!entry) throw new PlanError("stamp-not-found", "回滚记录不存在：" + stamp);
+          if (entry.action !== "apply") throw new PlanError("stamp-not-rollbackable", "该记录不是一次修复操作（action=" + entry.action + "），无可回滚内容");
+          const now = Date.now();
+          const planObj = {
+            token: createHash("sha256").update("doctor-rollback|" + stamp + "|" + now + "|" + Math.random()).digest("hex").slice(0, 32),
+            kind: "doctor-rollback",
+            stamp,
+            scopeRoot: toolkitRoot,
+            configRoot: doctorConfigRoot,
+            createdAt: new Date(now).toISOString(),
+            expiresAt: new Date(now + 5 * 60 * 1000).toISOString(),
+          };
+          putPlan(planObj);
+          sendJson(response, 200, {
+            ok: true,
+            plan: { token: planObj.token, kind: "doctor-rollback", stamp, action: entry.action, entryCreatedAt: entry.createdAt, files: entry.files, packages: entry.packages, backupRoot: entry.backupRoot, createdAt: planObj.createdAt, expiresAt: planObj.expiresAt },
+          });
+        } catch (error) {
+          const code = error instanceof PlanError || (error && error.code) ? error.code : "internal";
+          sendJson(response, planErrorStatus(code), { ok: false, code, error: String(error && error.message || error) });
+        }
+      }, { change: true }),
+    },
+    // doctor 回滚 execute：spawn --rollback --to <stamp>（CLI fail-closed：备份缺失即停）。
+    {
+      kind: "exact",
+      path: "/api/toolkit-panel/doctor/rollback/execute",
+      handler: guard(async (request, response) => {
+        if (request.method !== "POST") {
+          response.writeHead(405, { allow: "POST" });
+          response.end();
+          return;
+        }
+        try {
+          const body = await readJsonBody(request);
+          const plan = getPlan(String(body.token || ""));
+          if (!plan) throw new PlanError("plan-not-found", "方案不存在或已失效，请重新生成");
+          if (plan.kind !== "doctor-rollback") throw new PlanError("plan-kind-mismatch", "token 不是体检回滚方案（kind=" + plan.kind + "）");
+          dropPlan(plan.token);
+          const r = await runDoctorRollback({ cliPath: doctorCli, scopeRoot: plan.scopeRoot, configRoot: plan.configRoot, stamp: plan.stamp });
+          if (r.spawnError) throw new PlanError("doctor-spawn-failed", "doctor 子进程启动失败：" + r.spawnError);
+          if (!r.result || r.result.ok !== true) {
+            sendJson(response, planErrorStatus("doctor-rollback-failed"), { ok: false, code: "doctor-rollback-failed", error: "回滚未完成：" + String((r.result && r.result.error) || r.error || "备份缺失或目标不可恢复"), results: (r.result && r.result.results) || [] });
+            return;
+          }
+          const fresh = await runDoctorDryRun({ cliPath: doctorCli, scopeRoot: toolkitRoot, configRoot: doctorConfigRoot });
+          sendJson(response, 200, { ok: true, restoredFrom: r.result.restoredFrom || plan.stamp, beforeRollbackBackupRoot: r.result.beforeRollbackBackupRoot || null, results: r.result.results || [], rescan: fresh.ok ? fresh.report.summary : null });
+        } catch (error) {
+          const code = error instanceof PlanError || (error && error.code) ? error.code : "internal";
+          sendJson(response, planErrorStatus(code), { ok: false, code, error: String(error && error.message || error) });
+        }
+      }, { change: true }),
+    },
+    // 配置快照恢复 plan（D3 裁 (a)）：写前快照经 executePlan 唯一通道整文件回写。
+    {
+      kind: "exact",
+      path: "/api/toolkit-panel/snapshot-restore/plan",
+      handler: guard(async (request, response) => {
+        if (request.method !== "POST") {
+          response.writeHead(405, { allow: "POST" });
+          response.end();
+          return;
+        }
+        try {
+          const body = await readJsonBody(request);
+          const stamp = String(body.stamp || "");
+          if (!STAMP_RE.test(stamp)) throw new PlanError("stamp-invalid", "stamp 格式非法");
+          const plan = createSnapshotRestorePlan({ file: patchFile, backupRoot, stamp, reason: "panel-snapshot-restore", note: "restore snapshot " + stamp });
+          putPlan(plan);
+          sendJson(response, 200, {
+            ok: true,
+            plan: { token: plan.token, kind: "snapshot-restore", stamp: plan.stamp, diff: plan.diff, expectedSha: plan.expectedSha, nextSha: plan.nextSha, createdAt: plan.createdAt, expiresAt: plan.expiresAt },
+          });
+        } catch (error) {
+          const code = error instanceof PlanError || (error && error.code) ? error.code : "internal";
+          sendJson(response, planErrorStatus(code), { ok: false, code, error: String(error && error.message || error) });
+        }
+      }, { change: true }),
+    },
+    // 配置快照恢复 execute：executePlan 唯一通道（SHA 闸 + 写前备份 + 保留策略）。
+    {
+      kind: "exact",
+      path: "/api/toolkit-panel/snapshot-restore/execute",
+      handler: guard(async (request, response) => {
+        if (request.method !== "POST") {
+          response.writeHead(405, { allow: "POST" });
+          response.end();
+          return;
+        }
+        try {
+          const body = await readJsonBody(request);
+          const plan = getPlan(String(body.token || ""));
+          if (!plan) throw new PlanError("plan-not-found", "方案不存在或已失效，请重新生成");
+          if (plan.kind !== "snapshot-restore") throw new PlanError("plan-kind-mismatch", "token 不是配置快照恢复方案（kind=" + plan.kind + "）");
+          const result = executePlan(plan.token);
+          sendJson(response, 200, { ok: true, effectNote: "快照恢复完成，重启后生效", ...result });
+        } catch (error) {
+          const code = error instanceof PlanError || (error && error.code) ? error.code : "internal";
+          sendJson(response, planErrorStatus(code), { ok: false, code, error: String(error && error.message || error) });
+        }
+      }, { change: true }),
     },
   ];
 
