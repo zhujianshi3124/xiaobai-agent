@@ -78,6 +78,17 @@ test('tilde 与 x 范围：~1.2.3 / 1.x / 1.2 / *', () => {
   assert.ok(!versionSatisfies('1.0.0-rc.1', '*'));
 });
 
+test('带比较符的部分版本：补零无上界（engines.node: ">=20" 语义，P4 回归）', () => {
+  assert.ok(versionSatisfies('24.19.0', '>=20'), 'node 24 满足 >=20');
+  assert.ok(versionSatisfies('20.0.0', '>=20'));
+  assert.ok(!versionSatisfies('19.9.9', '>=20'));
+  assert.ok(versionSatisfies('1.9.0', '>1'));
+  assert.ok(!versionSatisfies('1.0.0', '>1'));
+  assert.ok(!versionSatisfies('2.0.0', '>=20'), '不得误加上界');
+  assert.ok(versionSatisfies('0.1.9', '<0.2'));
+  assert.ok(!versionSatisfies('0.2.0', '<0.2'));
+});
+
 test('DSH 生态范围语义：>=0.1.2-rc.1 <0.2.0 命中 0.1.5-rc.1（显式偏差，见 semver.ts 头注）', () => {
   const range = '>=0.1.2-rc.1 <0.2.0';
   assert.ok(versionSatisfies('0.1.5-rc.1', range));

@@ -195,15 +195,21 @@ function parseComparator(token: string): ParsedComparator | null {
     return { op: '>=', version: buildSemver(0, 0, 0, []), upper: null, upperPrerelease: false }
   }
   const major = ma
-  if (mi === 'x') {
-    return {
-      op: '>=',
-      version: buildSemver(major, 0, 0, []),
-      upper: upperBound(major + 1, 0, 0, false),
-      upperPrerelease: false,
+  if (mi === 'x' || pa === 'x') {
+    // 部分版本：裸（或 =）按 x 范围展开；带 >/>=/</<= 比较符的补零为无上界比较器
+    //（>=20 → >=20.0.0，而非误加 <21 上界——DSH 生态 `engines.node: ">=20"` 语义）。
+    const lower = buildSemver(major, mi === 'x' ? 0 : mi, 0, [])
+    if (op !== '=') {
+      return { op, version: lower, upper: null, upperPrerelease: false }
     }
-  }
-  if (pa === 'x') {
+    if (mi === 'x') {
+      return {
+        op: '>=',
+        version: buildSemver(major, 0, 0, []),
+        upper: upperBound(major + 1, 0, 0, false),
+        upperPrerelease: false,
+      }
+    }
     return {
       op: '>=',
       version: buildSemver(major, mi, 0, []),
