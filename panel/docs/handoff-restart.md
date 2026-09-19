@@ -866,20 +866,22 @@ body-too-large                                   → 413
 
 ---
 
-## 12. 会话交接卡（10 行 · 关账硬前置，2026-09-19 新会话第 6 轮续 · **批 2 施工完成报判版**）
+## 12. 会话交接卡（10 行 · 关账硬前置，2026-09-19 新会话第 7 轮 · **批 2 碰撞处置完成·待用户 reload 目视版**）
 
-> ✅ **批 1 已关账**（L-059）→ **销毁式 v2 全绿＋独立复核**（L-060/L-061）→ **真卸载正式可用**（L-062，三条件闭环）→ **批 2 判定侧验收闭环＋用户批准开工**（L-063..L-067）→ **批 2 施工完成报判**（L-068）。
+> ✅ **批 1 已关账**（L-059）→ **销毁式 v2 全绿＋独立复核**（L-060/L-061）→ **真卸载正式可用**（L-062，三条件闭环）→ **批 2 判定侧验收闭环＋用户批准开工**（L-063..L-067）→ **批 2 施工完成报判**（L-068）→ **碰撞裁 (b) 执行＋判定侧验收通过**（L-069）。
 
-1. **当前状态**：**批 2 施工完成（L-068）**——操作台（可执行 2 类＋确认页五段＋空态句）＋双回滚（doctor 域 CLI 两步／面板域 restoreSnapshot 唯一通道）＋§3.6(a) 删除原因输入＋U16 r2。**测试**：p24-verify **63/0** · p24-ui-matrix **718/0**（D 段 52）· p22-cards-ui 79/79 · 回归其余全绿 · node --test 141 · doctor 仓 D1 21/21。**唯一红项＝两线碰撞**：泛化线施工期间向同分支落 4 提交（P0–P3），其 test/fixtures/registry 故意无效夹具污染真实仓 doctor 扫描面（5 error 全系该夹具）⇒ p1-smoke 真实仓 doctor 0/0/0 闸 FAIL（263/264）——**本批零代码缺陷，方案 (a)/(b)/(c) 呈裁，未擅动**。真实 patch `ce0b0b81…` 零写入。
-2. **基准事实**：cordis.patch.yml = ce0b0b81…（3097 B / CRLF，全程零写入）；真实 ~/.dsh doctor 三件套保持不存在；备份目录零五插件源码（17 个 JS＝面板开发期人工留档）；矩阵/verify 口径 666→718、53→63（口径扩张如实）；node --test 93→141（泛化线新增 48，口径注释）。
-3. **下一步**：**判定侧验收批 2 施工 ＋ 两线碰撞方案裁决（(a) 泛化线移夹具／(b) doctor 扫描跳过 test/【本侧倾向，与 D-UI-06 同族】／(c) 闸口径修改）** → 用户 reload 目视（清单届时判定侧出）→ 批 2 关账 → P2.4 收官 → 泛化线后续按用户排期。
-4. **已定案**：软卸载语义＋宿主键方案 A＋冲突三态；真卸载＝销毁式＝正式可用；**确认强度分级**（0/1/2）＋**待上架禁用态**＋**失真教训两条**（叠加 8.2/8.3）为设计惯例；**写通道分域**（面板域=apply-engine 唯一；doctor 域=CLI 唯一，面板不直读 ~/.dsh）。
-5. **硬验收口径**：p24-verify **63**＋p24-ui-matrix **718**（批 1 全量＋D 段 52：D1–D10）；doctor 缺席/缺依赖仅 info/warning；面板 5 卡恒渲染；恢复/挂载/回滚后 sha 字节级复原（ce0b0b81 基线）。
-6. **待用户/判定侧**：批 2 验收＋碰撞方案裁决／用户 reload 目视／**U15** 矩阵守卫增量 diff（候选）／**U17 ⚠ 常态**：请长期妥善保管仓外备份／泛化线排期与归属（用户定）。
+1. **当前状态**：**批 2 碰撞处置完成，全绿待用户 reload 目视（L-069）**——批 2 全部交付（操作台四段＋双回滚＋§3.6(a) 删除原因输入＋U16 r2）不变；**唯一红项（两线碰撞）已按用户裁 (b) 处置**：doctor 扫描面整体跳过 `test/`（doctor 仓 `f423d4a`，D-UI-06 同族「夹具≠在案本体」＋lib/ 直下本体位例外 fail-closed＋三向锁断言）。**测试**：p24-verify **63/0** · p24-ui-matrix **718/0** · p22-cards-ui **79/79** · **p1-smoke 恢复 264/264** · regression-all **14/14 全绿** · node --test 141 · doctor 仓 run-tests 14/14＋d1 21/21＋stage4a 8/8＋stage4b 7/7＋stage3 a–g PASS · **真实仓 doctor 0/0/0**。**判定侧验收通过**；真实 patch `ce0b0b81…` 零写入。
+2. **基准事实**：cordis.patch.yml = ce0b0b81…（3097 B / CRLF，全程零写入）；真实 ~/.dsh doctor 三件套保持不存在；备份目录零五插件源码（17 个 JS＝面板开发期人工留档）；矩阵/verify 口径 718/63＝L-068 定版（本轮零口径变化）；node --test 141（含泛化线新增 48，口径注释）；p1-smoke 263→264（碰撞闸复原，非口径变化）。
+3. **下一步**：**用户按 `evidence/P24-BATCH2-RELOAD-CHECKLIST.md` reload 目视**（人话十步；全过回「目视通过」）⇒ **批 2 关账一包**（含两线并行碰撞留痕＋(b) 处置＋U 项清账）→ **P2.4 收官** → 泛化线后续按用户排期（(a)「夹具放扫描面外」风格建议已转告，泛化线产物零接触）。
+4. **已定案**：软卸载语义＋宿主键方案 A＋冲突三态；真卸载＝销毁式＝正式可用；**确认强度分级**（0/1/2）＋**待上架禁用态**＋**失真教训两条**（叠加 8.2/8.3）为设计惯例；**写通道分域**（面板域=apply-engine 唯一；doctor 域=CLI 唯一，面板不直读 ~/.dsh）；**扫描面排除约定代码化**（test/ 出 doctor 扫描面＝两线共用仓的扫描面纪律，`isSkippedScanDir` 成文）。
+5. **硬验收口径**：p24-verify **63**＋p24-ui-matrix **718**（批 1 全量＋D 段 52：D1–D10）＋**p1-smoke 264**（真实仓 doctor 0/0/0 闸，含 test/ 夹具排除口径）；doctor 缺席/缺依赖仅 info/warning；面板 5 卡恒渲染；恢复/挂载/回滚后 sha 字节级复原（ce0b0b81 基线）。
+6. **待用户/判定侧**：**用户 reload 目视（唯一剩余关账前置）**→ 目视后判定侧出关账一包／**U15** 矩阵守卫增量 diff（批 2 候选未做，随关账清账呈处置）／**U17 ⚠ 常态**：请长期妥善保管仓外备份／泛化线排期与归属（用户定）。
 7. **正本索引 ①**：HANDOFF-MASTER.md（总索引 ＋ 叠加 4.9 ＋ **叠加 8.2/8.3 教训** ＋ 附录 A/B/C）。
-8. **正本索引 ②**：handoff-restart.md（本文）、ledger.md（最新 **L-068**）、api-notes.md；**doctor 仓**（D:/dsh-test-sandbox/projects/doctor，提交 …edf0445＋**a865bde（批 2 D1）**；test/run-tests-d1.mjs 21/21）。
-9. **正本索引 ③**：实现 panel/manager/{apply-engine,backup,custody,uninstall,snapshot,doctor-runner,plugin-registry}.mjs；panel/index.js **22 路由**；两渲染器 client/{index.js,panel.html}；doctor-signals.json；脚本 scripts/{p24-verify,p24-ui-matrix,p1-smoke,regression-all}.mjs；设计正本 panel/docs/{p24-design-batch2-console.md（r3）· p24-design-v2-destroy.md · user-true-uninstall-guide.md（U16 r2）}；**批 2 施工报告 evidence/P24-BATCH2-CONSTRUCT-REPORT.md**。
-10. **红线（现行为）**：五子插件源码目录可知情确认删除；~/.dsh 与 cloudflared 不变；**写通道分域铁律**；写前必备份；写盘/重启先授权；「先申报后读」；每批次同步本卡。真卸载＝销毁式＝不可逆（收据先行 fail-closed）；**真实 cordis.patch.yml 写入仅经用户面板操作**；新功能未过上架前置 ⇒ 入口禁用/待激活态；跨线产物零接触（泛化线 docs/p0-recon.md 等）。
+8. **正本索引 ②**：handoff-restart.md（本文）、ledger.md（最新 **L-069**）、api-notes.md；**doctor 仓**（D:/dsh-test-sandbox/projects/doctor，提交 …a865bde＋**f423d4a（碰撞裁 b：扫描面排除 test/）**；test/run-tests 14/14＋d1 21/21）。
+9. **正本索引 ③**：实现 panel/manager/{apply-engine,backup,custody,uninstall,snapshot,doctor-runner,plugin-registry}.mjs；panel/index.js **22 路由**；两渲染器 client/{index.js,panel.html}；doctor-signals.json；脚本 scripts/{p24-verify,p24-ui-matrix,p1-smoke,regression-all}.mjs；设计正本 panel/docs/{p24-design-batch2-console.md（r3）· p24-design-v2-destroy.md · user-true-uninstall-guide.md（U16 r2）}；**碰撞处置报判 evidence/P24-BATCH2-COLLISION-RESOLUTION.md ＋ 用户目视清单 evidence/P24-BATCH2-RELOAD-CHECKLIST.md**。
+10. **红线（现行为）**：五子插件源码目录可知情确认删除；~/.dsh 与 cloudflared 不变；**写通道分域铁律**；写前必备份；写盘/重启先授权；「先申报后读」；每批次同步本卡。真卸载＝销毁式＝不可逆（收据先行 fail-closed）；**真实 cordis.patch.yml 写入仅经用户面板操作**；新功能未过上架前置 ⇒ 入口禁用/待激活态；跨线产物零接触（泛化线 docs/p0-recon.md 等 4 提交）。
+
+> 📌 **新会话第 7 轮更新（碰撞裁 (b) 执行＋判定侧验收 · L-069）**：用户裁 **(b)**（doctor 扫描跳过 test/，D-UI-06 同族「夹具≠在案本体」，治本；(a) 转告泛化线；(c) 否决留痕——改断言口径＝掩盖，真实体检 UI 也会脏）→ doctor 仓 **`f423d4a`**（走层级排除＋lib/ 直下本体位例外 fail-closed＋**三向锁断言**：test/ 夹具零检出／对照组仍检出／例外位仍检出）→ **真实仓 dry-run 0/0/0 复原 ⇒ p1-smoke 恢复 264/264、全套回归 14/14 全绿、定版口径零变化（63/0·718/0·79/79·141）**。doctor 仓自测 run-tests 14/14＋d1 21/21＋stage4a 8/8＋stage4b 7/7＋**stage3 验收 a–g PASS**；stage3「影子复检」既有环境性事项**单独留档**（施工时 FAIL／本轮 PASS 双面如实并记，不并入本批）。**判定侧验收通过**（验收表 8 项）；零写入自证齐；evidence/README 主表补登 L-068 两件（当时主表漏登，如实补记）。**下一动作＝用户 reload 目视**（清单已出：`P24-BATCH2-RELOAD-CHECKLIST.md`）→ 目视通过后批 2 关账一包 → P2.4 收官。
 
 > 📌 **新会话第 6 轮续更新（批 2 施工完成报判 · L-068）**：用户批准开工（原文在案）→ 七单元施工（每单元 WIP：doctor 仓 a865bde ＋ toolkit 508206d/b3b1575/bafcc56/75d719a/f35336b/0335863）。**D1 三条件兑现**；7 路由 15→22；D3 restoreSnapshot 收编唯一通道；§3.6(a)＋U16 r2 随批交付；矩阵 718/0。**唯一红项＝两线碰撞**（泛化线夹具污染真实仓 doctor 闸，5 error 全系其夹具）——方案 (a)/(b)/(c) 呈裁，本侧倾向 (b)（doctor 扫描跳过 test/，D-UI-06 同族），未擅动。除该闸外全绿成立，**待判定侧验收＋用户目视后批 2 关账**。
 
