@@ -275,3 +275,82 @@ test('healthCheck：异常计入（healthcheck-failed）；恢复后 healthy', a
   assert.equal(ok.reports[0].status, 'healthy')
   await stopAll()
 })
+
+// ── P5 债务 #1/#2/#3：binary minVersion 真探测 / configSchema 真校验 / 注册冲突 ──
+
+test('P5-#1：binary minVersion 真探测——版本低于下限=error、达标=无发现、取不到版本=warn', async (t) => {
+  const base = { ...fakeProbes(), hasBinary: () => true }
+  const manifestOf = (version) => ({
+    id: 'fixture/bin', displayName: 'B', version: '1.0.0', contract: '^1.0',
+    requires: { binaries: [{ name: 'tool.exe', minVersion: version }] },
+  })
+
+  // 低于下限 → error
+  const low = makeStack(t, { probes: { ...base, binaryVersion: async () => '1.2.3' } })
+  low.doctor.attachRegistry({ list: () => [], get: () => undefined })
+  const lowManifest = manifestOf('1.3.0')
+  low.doctor.attachRegistry({
+    list: () => [{ manifest: lowManifest, status: 'active', config: {}, legacy: false }],
+    get: () => ({ manifest: lowManifest, status: 'active', config: {}, legacy: false }),
+  })
+  const lowReport = await low.doctor.inspect('fixture/bin')
+  const lowItem = lowReport.reports[0].items.find((i) => i.code === 'env.binary-version-mismatch')
+  assert.ok(lowItem && lowItem.level === 'error', '低于下限 = error')
+  assert.match(lowItem.message, /1\.2\.3/)
+  await low.stopAll()
+
+  // 达标 → 无发现
+  const ok = makeStack(t, { probes: { ...base, binaryVersion: async () => '1.3.0' } })
+  ok.doctor.attachRegistry({ list: () => [], get: () => undefined })
+  const okManifest = manifestOf('1.3.0')
+  ok.doctor.attachRegistry({
+    list: () => [{ manifest: okManifest, status: 'active', config: {}, legacy: false }],
+    get: () => ({ manifest: okManifest, status: 'active', config: {}, legacy: false }),
+  })
+  const okReport = await ok.doctor.inspect('fixture/bin')
+  assert.ok(!okReport.reports[0].items.some((i) => i.code === 'env.binary-version-mismatch'), '达标无发现')
+  await ok.stopAll()
+
+  // 取不到版本 → warn（不阻断）
+  const unknown = makeStack(t, { probes: { ...base, binaryVersion: async () => null } })
+  unknown.doctor.attachRegistry({ list: () => [], get: () => undefined })
+  const unknownManifest = manifestOf('1.0.0')
+  unknown.doctor.attachRegistry({
+    list: () => [{ manifest: unknownManifest, status: 'active', config: {}, legacy: false }],
+    get: () => ({ manifest: unknownManifest, status: 'active', config: {}, legacy: false }),
+  })
+  const unknownReport = await unknown.doctor.inspect('fixture/bin')
+  assert.ok(unknownReport.reports[0].items.some((i) => i.code === 'env.binary-version-unknown' && i.level === 'warn'))
+  await unknown.stopAll()
+})
+
+test('P5-#2：configSchema 真校验——必填缺失 → 安装阻断并列出缺失项', async (t) => {
+  const { registry, doctor, stopAll } = makeStack(t, {
+    registryOpts: { precheck: (source) => doctor.precheck(source) },
+  })
+  const blocked = await registry.install({ kind: 'local', path: fixtureDir('schema-plugin') })
+  assert.equal(blocked.ok, false)
+  if (!blocked.ok) {
+    const issue = blocked.precheck.blocking.find((b) => b.code === 'config-schema-invalid')
+    assert.ok(issue, '存在 config-schema-invalid 阻断项')
+    assert.match(issue.message, /region|必填|校验/, '指出缺失/校验细节')
+  }
+  assert.equal(registry.get('dsh/schema-plugin'), undefined, '阻断不注册')
+  await stopAll()
+})
+
+test('P5-#3：注册冲突——同 commands 注册面的第二个插件被 reg.name-collision 阻断', async (t) => {
+  const { registry, doctor, stopAll } = makeStack(t, {
+    registryOpts: { precheck: (source) => doctor.precheck(source) },
+  })
+  const a = await registry.install({ kind: 'local', path: fixtureDir('conflict-a') })
+  assert.equal(a.ok, true, '第一个安装成功')
+  const b = await registry.install({ kind: 'local', path: fixtureDir('conflict-b') })
+  assert.equal(b.ok, false)
+  if (!b.ok) {
+    const issue = b.precheck.blocking.find((x) => x.code === 'reg.name-collision')
+    assert.ok(issue, '第二个被 reg.name-collision 阻断')
+    assert.match(issue.message, /fixture\.shared-cmd/)
+  }
+  await stopAll()
+})

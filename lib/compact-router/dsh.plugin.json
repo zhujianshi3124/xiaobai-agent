@@ -1,6 +1,15 @@
 {
   "manifestVersion": 1,
   "name": "@local/dsh-toolkit/compact-router",
+  "id": "dsh/compact-router",
+  "displayName": "压缩路由",
+  "version": "0.1.0",
+  "contract": "^1.0",
+  "configSchema": {
+    "type": "object",
+    "meta": {},
+    "dict": {}
+  },
   "requirements": {
     "runtime": {
       "node": ">=22",

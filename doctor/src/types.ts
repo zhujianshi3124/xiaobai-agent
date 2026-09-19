@@ -46,6 +46,8 @@ export interface Probes {
   hasEnv(key: string): boolean
   /** 二进制是否可用（PATH 探测）。 */
   hasBinary(name: string): boolean
+  /** 二进制版本探测（best-effort：`--version` 输出中的首个 semver；取不到返回 null）。 */
+  binaryVersion(name: string): Promise<string | null>
   /** TCP 端口占用探测：true = 可绑定（未被占用）。 */
   portFree(port: number): Promise<boolean>
   /** 文件路径访问能力探测。 */

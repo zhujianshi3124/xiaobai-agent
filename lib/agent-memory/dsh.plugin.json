@@ -1,6 +1,18 @@
 {
   "manifestVersion": 1,
   "name": "@local/dsh-toolkit/agent-memory",
+  "id": "dsh/agent-memory",
+  "displayName": "智能体内存台账",
+  "version": "0.1.0",
+  "contract": "^1.0",
+  "configSchema": {
+    "type": "object",
+    "meta": {},
+    "dict": {
+      "dataRoot": { "type": "string", "meta": {} },
+      "defaultWorkspace": { "type": "any", "meta": {} }
+    }
+  },
   "requirements": {
     "runtime": {
       "node": ">=22",

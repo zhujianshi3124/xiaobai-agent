@@ -279,35 +279,77 @@ async function toggleHealthPanel(cardEl, p) {
   `;
 }
 
+// schemastery 纯定义（dsh.plugin.json configSchema 落盘形态）→ 表单控件（债务 #8）
+function renderSchemaField(def, value, onValue, keyPrefix) {
+  if (!def || typeof def !== 'object') return null;
+  const meta = def.meta || {};
+  const label = keyPrefix;
+  let control = null;
+  const pathAttr = keyPrefix ? ` data-path="${escapeHtml(keyPrefix)}"` : '';
+  if (def.type === 'object') {
+    const dict = def.dict || {};
+    const children = Object.keys(dict).map((k) => renderSchemaField(dict[k], value && typeof value === 'object' ? value[k] : undefined, (v) => {
+      const next = { ...(value || {}) };
+      next[k] = v;
+      onValue(next);
+    }, (keyPrefix ? keyPrefix + '.' : '') + k)).filter(Boolean);
+    return `<fieldset style="border:1px dashed #8886;margin:4px 0;padding:4px 8px"><legend style="font-size:12px;color:#777">${escapeHtml(label || 'config')}</legend>${children.length ? children.join('') : '<span style="color:#999;font-size:12px">（无配置项）</span>'}</fieldset>`;
+  }
+  if (def.type === 'union' && Array.isArray(def.list)) {
+    const options = def.list.map((item) => {
+      const v = String(item && item.value);
+      return `<option value="${escapeHtml(v)}" ${String(value) === v ? 'selected' : ''}>${escapeHtml(v)}</option>`;
+    }).join('');
+    control = `<select${pathAttr} style="padding:3px 6px">${options}</select>`;
+  } else if (def.type === 'array') {
+    const text = Array.isArray(value) ? value.join(', ') : '';
+    control = `<input type="text"${pathAttr} value="${escapeHtml(text)}" placeholder="逗号分隔" style="width:70%">`;
+  } else if (def.type === 'boolean') {
+    control = `<input type="checkbox"${pathAttr} ${value === true ? 'checked' : ''}>`;
+  } else if (def.type === 'number') {
+    control = `<input type="number"${pathAttr} value="${value === undefined || value === null ? '' : escapeHtml(String(value))}" style="width:40%">`;
+  } else {
+    control = `<input type="text"${pathAttr} value="${value === undefined || value === null ? '' : escapeHtml(String(value))}" style="width:70%">`;
+  }
+  const req = meta.required ? '<span style="color:#cf222e;font-size:11px">必填</span>' : '';
+  return `<div><label class="cfg">${escapeHtml(label)}：${control} ${req}</label></div>`;
+}
+function collectFormValue(root, def, original) {
+  if (!def || def.type !== 'object') return original;
+  const result = { ...(original && typeof original === 'object' ? original : {}) };
+  for (const [k, childDef] of Object.entries(def.dict || {})) {
+    const input = root.querySelector(`[data-path="${CSS.escape(k)}"]`);
+    if (!input) continue;
+    const type = childDef.type || 'string';
+    if (type === 'boolean') result[k] = input.checked;
+    else if (type === 'number') result[k] = input.value === '' ? undefined : Number(input.value);
+    else if (type === 'array') result[k] = input.value.split(',').map((s) => s.trim()).filter(Boolean);
+    else result[k] = input.value;
+  }
+  return result;
+}
+
 function toggleConfigPanel(cardEl, p) {
   const panel = cardEl.querySelector('[data-panel="config"]');
   if (panel.classList.contains('open')) { panel.classList.remove('open'); return; }
   panel.classList.add('open');
   const schema = p.configSchemaJSON;
+  let usingSchema = false;
   let formHtml = '';
-  if (schema && typeof schema === 'object' && !Array.isArray(schema)) {
-    // 最小渲染（P4）：JSON-able schema 的顶层标量字段；完整 schemastery 表单见债务清单 #8
-    formHtml = Object.entries(schema)
-      .filter(([, v]) => ['boolean', 'number', 'string'].includes(typeof v))
-      .map(([k, v]) => `<label class="cfg">${escapeHtml(k)}：
-        <input type="${typeof v === 'boolean' ? 'checkbox' : 'text'}" data-key="${escapeHtml(k)}" data-type="${typeof v}"
-          ${typeof v === 'boolean' ? (v ? 'checked' : '') : `value="${escapeHtml(String(v))}"`}></label>`)
-      .join('');
+  if (schema && schema.type === 'object') {
+    usingSchema = true;
+    formHtml = renderSchemaField(schema, p.config, () => {}, '');
   }
   panel.innerHTML = `
-    <b>配置</b>${schema ? '（由 configSchema 生成，保存写回 registry）' : '（插件未声明 configSchema，使用原始 JSON 编辑）'}
+    <b>配置</b>${usingSchema ? '（由 configSchema 生成，保存写回 registry）' : '（插件未声明 configSchema，使用原始 JSON 编辑）'}
     <fieldset>${formHtml || `<textarea id="cfgJson">${escapeHtml(JSON.stringify(p.config ?? {}, null, 2))}</textarea>`}</fieldset>
     <button class="primary" id="saveCfg">保存配置</button>
-    <span class="history">保存即写回 registry；active 插件自动重载生效。</span>
+    <span class="history">保存即写回 registry（服务端按 configSchema 校验）；active 插件自动重载生效。</span>
   `;
   panel.querySelector('#saveCfg').onclick = async () => {
     let config = p.config ?? {};
-    if (formHtml) {
-      config = { ...(p.config ?? {}) };
-      panel.querySelectorAll('input[data-key]').forEach((input) => {
-        config[input.dataset.key] = input.dataset.type === 'boolean' ? input.checked
-          : input.dataset.type === 'number' ? Number(input.value) : input.value;
-      });
+    if (usingSchema) {
+      config = collectFormValue(panel, schema, p.config);
     } else {
       try {
         config = JSON.parse(panel.querySelector('#cfgJson').value);

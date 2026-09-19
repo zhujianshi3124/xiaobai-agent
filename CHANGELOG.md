@@ -6,6 +6,35 @@
 
 ## [Unreleased]
 
+### Changed（P5 存量迁移，2026-09-19）
+
+- **5 个存量插件 manifest 契约化**（REQ-9）：`lib/*/dsh.plugin.json` 就地扩展契约
+  字段 `id`（`dsh/<name>`）/ `displayName` / `version` / `contract: "^1.0"` /
+  `configSchema`（schemastery 纯定义 JSON，类型约束零默认——运行时行为零变化，
+  unknown 键直通有 S6 测试钉住）；存量字段（manifestVersion/name/requirements/
+  registers/exports）原样保留为 info 级容忍（deprecated 别名清单见 docs/debt.md 附录）。
+- **doctor CLI（沙箱仓 @local/dsh-toolkit-doctor）兼容性扩展**：manifest 根字段
+  白名单接受契约字段并做类型校验；`node --test` 14/14、真实仓 dry-run 保持 0/0/0。
+- **doctor 进程内规则补强**（债务 #1/#2/#3）：
+  - `Probes.binaryVersion()` 真探测（`--version` → 首个 semver，3s 超时），
+    `requires/binaries` 规则比对 minVersion（低于=error / 取不到=warn）；
+  - precheck 对默认配置做 configSchema 真校验（contract.`validateConfigAgainstSchema`
+    三形态：schemastery 调用 / zod safeParse / 纯定义动态重建），必填缺失阻断安装；
+  - 注册冲突规则：commands/providers/services 与已注册条目撞名 → `reg.name-collision`
+    阻断（registry 暴露 `registersOf`）。
+- **面板 registry 驱动化**（债务 #8/#9）：
+  - React client 新增 `toolkit-panel-v2` tab（order 89）：registry 驱动插件卡片、
+    安装向导、健康详情（items+fix+历史）、configSchema 表单、SSE 连接器（内联
+    CJS 同构实现，断连降级轮询/恢复切回）；
+  - 旧 `toolkit-panel` tab（patch 域管理，P2.4 资产）保留为 order 90；
+  - v2.html 配置表单升级为纯定义递归渲染。
+- **panel/index.js**：v2 路由全部套既有 guard（loopback/配对/CSRF，写路由 change:true
+  ——p1-smoke 闸验证）；两处子插件名注释文案改写为中性表述（零子插件引用证据入报告）。
+- **scripts/p1-smoke.mjs**：路由 22→33，新增 v2 路由 gate/方法预期与 WRITE_ROUTES；
+  **scripts/q2-layer-scan.mjs**：不变量更新为"顶层契约字段例外，patch/override/
+  bundle/rows 与嵌套 id 仍禁止"。
+- 门禁：`npm test` 链加入 no-subplugin-import-check（面板零子插件引用守卫）。
+
 ### Fixed（P4 期间发现的 P1 契约 semver 缺陷）
 
 - `contract/src/semver.ts`：带比较符的部分版本（如 `>=20`）此前被误当作 x 范围

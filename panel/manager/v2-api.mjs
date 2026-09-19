@@ -155,6 +155,11 @@ export function createV2Api(deps) {
       'cache-control': 'no-store',
       connection: 'keep-alive',
     })
+    // 最小 mock 响应（无 write/on，如 smoke 的 res 桩）：gate 已验证，流本身不可用——直接返回
+    if (typeof response.write !== 'function' || typeof response.on !== 'function') {
+      response.end()
+      return
+    }
     response.write(`retry: 2000\n\n`)
     response.write(`event: hello\ndata: ${JSON.stringify({ servicePrefix, at: Date.now() })}\n\n`)
 
@@ -168,15 +173,19 @@ export function createV2Api(deps) {
         }
       })
     })
-    const heartbeat = setInterval(() => {
-      try {
-        response.write(`: ping ${Date.now()}\n\n`)
-      } catch {
-        // ignore
-      }
-    }, 15000)
+    // 心跳仅在真实响应对象（有 .on）上启动——最小 mock（smoke/测试）不留悬挂定时器
+    let heartbeat = null
+    if (typeof response.on === 'function') {
+      heartbeat = setInterval(() => {
+        try {
+          response.write(`: ping ${Date.now()}\n\n`)
+        } catch {
+          // ignore
+        }
+      }, 15000)
+    }
     const cleanup = () => {
-      clearInterval(heartbeat)
+      if (heartbeat !== null) clearInterval(heartbeat)
       for (const d of disposers) {
         try {
           d()
@@ -185,8 +194,10 @@ export function createV2Api(deps) {
         }
       }
     }
-    response.on('close', cleanup)
-    response.on('error', cleanup)
+    if (typeof response.on === 'function') {
+      response.on('close', cleanup)
+      response.on('error', cleanup)
+    }
   }
 
   // ── 路由 ────────────────────────────────────────────────────────────────
@@ -216,9 +227,9 @@ export function createV2Api(deps) {
   })
 
   const health = json(async (request, response) => {
-    const id = String(new URL(request.url, 'http://x').searchParams.get('id') ?? '')
+    const id = String(new URL(request.url || "/", "http://x").searchParams.get("id") ?? "")
     const entry = registry.get(id)
-    if (!entry) throw Object.assign(new Error(`插件不存在：${id}`), { code: 'plugin-unknown' })
+    if (!entry) throw Object.assign(new Error(`插件不存在：${id}`), { code: "plugin-unknown" })
     sendJson(response, 200, { ok: true, id, report: entry.health ?? null, history: doctor.history(id) })
   })
 

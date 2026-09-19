@@ -18,6 +18,7 @@
 import {
   contractEventName,
   contractServiceName,
+  validateConfigAgainstSchema,
   validateManifest,
   versionSatisfies,
 } from '@local/dsh-toolkit/contract'
@@ -48,6 +49,8 @@ interface PluginHealthState {
 export interface RegistryAccessor {
   list(): Array<{ manifest: import('@local/dsh-toolkit/contract').DshSubPluginManifest; status: string; config: unknown; legacy: boolean }>
   get(id: string): { manifest: import('@local/dsh-toolkit/contract').DshSubPluginManifest; status: string; config: unknown; legacy: boolean } | undefined
+  /** 注册面查询（注册冲突检查用；可缺省——缺省时跳过 services 维度比对）。 */
+  registersOf?(id: string): { services?: string[]; commands?: string[]; providers?: string[] } | undefined
 }
 
 export class DoctorService implements ToolkitDoctor {
@@ -233,14 +236,68 @@ export class DoctorService implements ToolkitDoctor {
       }
     }
 
-    // 4. configSchema 对默认配置校验（REQ-3 §11）——Schema 体系在 P5 迁移中接入；
-    //    此处先做结构级检查：configSchema 在场但 config 缺必填由 Schema 校验器报。
-    if (manifest.configSchema === undefined && !resolved.legacy) {
+    // 4. configSchema 对默认配置真校验（REQ-3 §11，债务 #2）：
+    //    schema 优先级 = manifest.configSchema → 模块 Config/configSchema 导出。
+    const schemaCandidate = manifest.configSchema
+      ?? ((resolved.plugin ?? {}) as Record<string, unknown>)['Config']
+      ?? ((resolved.plugin ?? {}) as Record<string, unknown>)['configSchema']
+    if (schemaCandidate !== undefined) {
+      const check = await this.withTimeout(
+        validateConfigAgainstSchema(schemaCandidate, {}),
+        this.opts.ruleTimeoutMs,
+        'configSchema 校验',
+      )
+      if (!check.ok) {
+        for (const i of check.issues) {
+          blocking.push({
+            code: 'config-schema-invalid',
+            level: 'error',
+            message: `configSchema 默认配置校验失败 [${i.path}]：${i.message}（必填缺失或类型不符）`,
+            fix: {
+              summary: '补齐配置必填项或修正类型',
+              steps: ['按 schema 在安装后于面板"配置"中填写，或调整 configSchema 的 required 声明'],
+            },
+          })
+        }
+      }
+    } else if (!resolved.legacy) {
       changes.push({
         target: 'manifest',
         summary: '未声明 configSchema（面板将不渲染配置表单）',
         detail: '如插件有可调参数，补 configSchema（schemastery）后新装插件即可自动获得配置 UI',
       })
+    }
+
+    // 5. 注册冲突（债务 #3 进程内部分）：与已注册条目的 commands/providers/services 撞名。
+    if (this.registry) {
+      const own = resolved.registers
+      const ownServices = manifest.requires?.services ?? []
+      for (const entry of this.registry.list()) {
+        if (entry.manifest.id === manifest.id) continue
+        const other = this.registry.registersOf?.(entry.manifest.id)
+        const otherServices = (other?.services ?? entry.manifest.requires?.services ?? [])
+        const conflicts: string[] = []
+        for (const c of own?.commands ?? []) {
+          if (other?.commands?.includes(c)) conflicts.push(`命令 ${c}`)
+        }
+        for (const p of own?.providers ?? []) {
+          if (other?.providers?.includes(p)) conflicts.push(`provider ${p}`)
+        }
+        for (const s of ownServices) {
+          if (otherServices.includes(s)) conflicts.push(`服务 ${s}`)
+        }
+        if (conflicts.length > 0) {
+          blocking.push({
+            code: 'reg.name-collision',
+            level: 'error',
+            message: `与已注册插件 "${entry.manifest.id}" 注册面冲突：${conflicts.join('、')}`,
+            fix: {
+              summary: '改注册名或先卸载冲突插件',
+              steps: ['修改本插件 manifest 的 registers 声明，或在面板卸载占用同名注册面的插件'],
+            },
+          })
+        }
+      }
     }
 
     if (resolved.legacy) {

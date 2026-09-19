@@ -120,7 +120,7 @@ export function synthesizeRules(
     },
   })
 
-  // 二进制（存在性 + 版本下限）
+  // 二进制（存在性 + 版本下限真探测：--version 输出首个 semver 与 minVersion 比对）
   rules.push({
     id: 'requires/binaries',
     description: 'requires.binaries 存在性与版本下限',
@@ -134,6 +134,25 @@ export function synthesizeRules(
             message: `所需二进制 "${b.name}" 不在 PATH 中${b.describe ? '：' + b.describe : ''}`,
             fix: fix(`安装 ${b.name}`, [`安装后确认 "${b.name}" 可在命令行直接调用`]),
           })
+          continue
+        }
+        if (b.minVersion) {
+          const version = await probes.binaryVersion(b.name)
+          if (version === null) {
+            items.push({
+              code: 'env.binary-version-unknown',
+              level: 'warn',
+              message: `二进制 "${b.name}" 在场但无法获取版本，跳过下限比对（要求 >= ${b.minVersion}）`,
+              fix: fix(`确认 "${b.name} --version" 可执行`, ['部分工具不支持 --version 时可放宽 minVersion 声明']),
+            })
+          } else if (!versionSatisfies(version, '>=' + b.minVersion)) {
+            items.push({
+              code: 'env.binary-version-mismatch',
+              level: 'error',
+              message: `二进制 "${b.name}" 版本 ${version} 低于下限 ${b.minVersion}`,
+              fix: fix(`升级 ${b.name} 至 >= ${b.minVersion}`, ['升级后重跑预检']),
+            })
+          }
         }
       }
       return items

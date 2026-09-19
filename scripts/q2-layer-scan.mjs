@@ -150,22 +150,26 @@ for (const d of libDirs) {
 }
 console.log("");
 check("② 成卡目录数 = 5", manifests.length === 5, "实测 " + manifests.length + "：" + manifests.map((m) => m.dir).join(", "));
-const SUSPECT_KEYS = /(^|\.)(id|patch|patches|override|overrides|shadow|bundle|rows?)$/i;
+// P5 契约化不变量更新（2026-09-19，REQ-9）：顶层新增契约字段 id/displayName/version/
+// contract/configSchema 是子插件契约身份，不是 layer② 的 patch 指令——继续禁止
+// patch/override/bundle/rows 类字段（任何层级）与嵌套 id；顶层契约 id 例外。
+const SUSPECT_KEYS = /(^|\.)(patch|patches|override|overrides|shadow|bundle|rows?)$/i;
 const suspects = [];
 for (const m of manifests) {
   const walk = (obj, path) => {
     if (obj === null || typeof obj !== "object") return;
     for (const [k, v] of Object.entries(obj)) {
-      if (SUSPECT_KEYS.test(k)) suspects.push(m.dir + " : " + path + k + " = " + JSON.stringify(v));
-      walk(v, path + k + ".");
+      const p = path + k;
+      if (SUSPECT_KEYS.test(k) || (k === "id" && path !== "")) suspects.push(m.dir + " : " + p + " = " + JSON.stringify(v));
+      walk(v, p + ".");
     }
   };
   walk(m.json, "");
 }
-check("② 五清单里无 id / patch / override / bundle 类字段（不能增删或遮蔽挂载行）", suspects.length === 0,
-  suspects.length ? JSON.stringify(suspects) : "0 命中（只有 manifestVersion/name/requirements）");
-check("② 五清单的 id 维度：dsh.plugin.json 无 id 字段 ⇒ 层②不产生任何 patch 行",
-  manifests.every((m) => m.json.id === undefined), "五份均无 id");
+check("② 五清单里无 patch / override / bundle 类字段（不能增删或遮蔽挂载行）；嵌套 id 仍禁止", suspects.length === 0,
+  suspects.length ? JSON.stringify(suspects) : "0 命中（顶层契约字段 id/displayName/version/contract/configSchema 例外）");
+check("② 五清单的 id 维度：顶层契约 id 均为命名空间式 <scope>/<name>，且不携带 patch 指令 ⇒ 层②不产生任何 patch 行",
+  manifests.every((m) => /^[a-z0-9][a-z0-9-]{0,63}\/[a-z0-9][a-z0-9-]{0,63}$/.test(String(m.json.id || ""))), "五份均为 dsh/<name> 形式");
 
 // ============================================================
 // §3 第③层：panel/dsh.plugin.json

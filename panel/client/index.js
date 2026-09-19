@@ -1621,9 +1621,318 @@ window.__ModuleLoader__.load({
 			);
 		}
 
+		// ════ P5 泛化线：registry 驱动的插件管理 tab（REQ-5 / 债务 #9）════════
+		// 数据源仅为 /api/toolkit-panel/v2/*（registry/doctor 服务与事件流），
+		// 零具体子插件模块引用——新装插件免刷新自适应（no-subplugin-import-check 守卫）。
+		var V2_API = "/api/toolkit-panel/v2";
+		var V2_EVENT_NAMES = ["plugin-added", "plugin-removed", "status-changed", "health-changed", "issue-found",
+			"audit:installed", "audit:removed", "audit:enabled", "audit:disabled", "audit:reloaded", "audit:quarantined", "audit:config-changed"];
+
+		function v2Api(path, body) {
+			return fetch(V2_API + path, {
+				method: body === undefined ? "GET" : "POST",
+				headers: body === undefined ? {} : { "content-type": "application/json" },
+				body: body === undefined ? undefined : JSON.stringify(body),
+				cache: "no-store"
+			}).then(function (res) { return res.json(); });
+		}
+
+		// SSE + 断连降级轮询 + 恢复切回（与 panel/manager/realtime-connector.mjs 同构；
+		// ModuleLoader 客户端为 CJS 无法 import ESM，故内联同语义实现，行为以 panel-v2 测试为准）。
+		function createV2Connector(handlers) {
+			var pollTimer = null;
+			var polling = false;
+			function startPolling() {
+				if (polling) return;
+				polling = true;
+				var tick = function () {
+					fetch(V2_API + "/snapshot", { cache: "no-store" })
+						.then(function (r) { return r.json(); })
+						.then(function (data) { if (data && data.ok) handlers.onSnapshot(data); })
+						.catch(function () {});
+				};
+				tick();
+				pollTimer = setInterval(tick, 3000);
+			}
+			function stopPolling() { if (pollTimer !== null) { clearInterval(pollTimer); pollTimer = null; } polling = false; }
+			var es = new EventSource(V2_API + "/events");
+			es.onopen = function () { stopPolling(); handlers.onMode("sse"); };
+			es.onerror = function () { startPolling(); handlers.onMode("poll"); };
+			es.onmessage = function (m) { try { handlers.onEvent("message", JSON.parse(m.data)); } catch (e) {} };
+			V2_EVENT_NAMES.forEach(function (name) {
+				es.addEventListener(name, function (m) {
+					try { handlers.onEvent(name, JSON.parse(m.data)); } catch (e) {}
+				});
+			});
+			return { close: function () { stopPolling(); es.close(); } };
+		}
+
+		// schemastery 纯定义（dsh.plugin.json configSchema 落盘形态）→ 表单控件（债务 #8）
+		function v2RenderField(def, value, onValue, keyPrefix) {
+			if (!def || typeof def !== "object") return null;
+			var meta = def.meta || {};
+			var label = keyPrefix;
+			var inputStyle = { padding: "3px 6px", borderRadius: "4px", border: "1px solid #8888", font: "inherit" };
+			if (def.type === "object") {
+				var dict = def.dict || {};
+				var children = Object.keys(dict).map(function (k) {
+					var childValue = value && typeof value === "object" ? value[k] : undefined;
+					return v2RenderField(dict[k], childValue, function (v) {
+						var next = Object.assign({}, value || {});
+						next[k] = v;
+						onValue(next);
+					}, (keyPrefix ? keyPrefix + "." : "") + k);
+				}).filter(Boolean);
+				return react.createElement("fieldset", { key: keyPrefix || "root", style: { border: "1px dashed #8886", margin: "4px 0", padding: "4px 8px" } },
+					react.createElement("legend", { style: { fontSize: "12px", color: "#777" } }, label || "config"),
+					children.length ? children : react.createElement("div", { style: { color: "#999", fontSize: "12px" } }, "（无配置项）"));
+			}
+			var els = [];
+			if (def.type === "union" && Array.isArray(def.list)) {
+				var options = def.list.map(function (item) {
+					return react.createElement("option", { key: String(item && item.value), value: String(item && item.value) }, String(item && item.value));
+				});
+				els.push(react.createElement("label", { key: keyPrefix, style: { display: "block", margin: "3px 0", fontSize: "13px" } },
+					label + "：",
+					react.createElement("select", { style: inputStyle, value: String(value === undefined ? "" : value), onChange: function (e) { onValue(e.target.value); } }, options)));
+			} else if (def.type === "array") {
+				var text = Array.isArray(value) ? value.join(", ") : "";
+				els.push(react.createElement("label", { key: keyPrefix, style: { display: "block", margin: "3px 0", fontSize: "13px" } },
+					label + "（逗号分隔）：",
+					react.createElement("input", { type: "text", style: inputStyle, value: text, onChange: function (e) {
+						onValue(e.target.value.split(",").map(function (s) { return s.trim(); }).filter(Boolean));
+					} })));
+			} else if (def.type === "boolean") {
+				els.push(react.createElement("label", { key: keyPrefix, style: { display: "block", margin: "3px 0", fontSize: "13px" } },
+					label + "：",
+					react.createElement("input", { type: "checkbox", checked: value === true, onChange: function (e) { onValue(e.target.checked); } })));
+			} else if (def.type === "number") {
+				els.push(react.createElement("label", { key: keyPrefix, style: { display: "block", margin: "3px 0", fontSize: "13px" } },
+					label + "：",
+					react.createElement("input", { type: "number", style: inputStyle, value: value === undefined || value === null ? "" : value,
+						onChange: function (e) { onValue(e.target.value === "" ? undefined : Number(e.target.value)); } })));
+			} else {
+				els.push(react.createElement("label", { key: keyPrefix, style: { display: "block", margin: "3px 0", fontSize: "13px" } },
+					label + "：",
+					react.createElement("input", { type: "text", style: inputStyle, value: value === undefined || value === null ? "" : value,
+						onChange: function (e) { onValue(e.target.value); } })));
+			}
+			if (meta && meta.required) {
+				els.push(react.createElement("span", { key: keyPrefix + ":req", style: { color: "#cf222e", fontSize: "11px" } }, "必填"));
+			}
+			return react.createElement("div", { key: "wrap:" + keyPrefix }, els);
+		}
+
+		function RegistryPluginCard(props) {
+			var p = props.plugin;
+			var reactSt = react.useState(null);
+			var confirm = reactSt[0];
+			var setConfirm = reactSt[1];
+			var openSt = react.useState("");
+			var open = openSt[0];
+			var setOpen = openSt[1];
+			var draftSt = react.useState({});
+			var draft = draftSt[0];
+			var setDraft = draftSt[1];
+
+			var healthLine = p.health
+				? "健康：" + p.health.status + (p.healthSummary && p.healthSummary.errors ? "（错误 " + p.healthSummary.errors + "）" : "") + (p.healthSummary && p.healthSummary.warnings ? "（警告 " + p.healthSummary.warnings + "）" : "")
+				: "健康：未知";
+			var act = function (fn) {
+				return function () {
+					setConfirm(null);
+					fn().then(function (result) {
+						if (result && result.ok !== false) props.onChanged();
+						else if (result) props.onError(result);
+					}).catch(function (error) { props.onError(error); });
+				};
+			};
+			var toggleHealth = function () {
+				if (open === "health") { setOpen(""); return; }
+				setOpen("health");
+				v2Api("/health?id=" + encodeURIComponent(p.id)).then(function (data) {
+					var items = (data.report && data.report.items) || [];
+					setConfirm(null);
+					setOpen("health:" + JSON.stringify({
+						status: (data.report && data.report.status) || "未知",
+						items: items,
+						history: (data.history || []).map(function (h) { return h.status; })
+					}));
+				}).catch(function () { setOpen("health:加载失败"); });
+			};
+			var healthDetail = null;
+			if (open && open.indexOf("health:") === 0) {
+				try {
+					var parsed = JSON.parse(open.slice(7));
+					healthDetail = react.createElement("div", { style: { borderTop: "1px dashed #8886", marginTop: "6px", paddingTop: "6px" } },
+						react.createElement("div", { style: { fontSize: "13px" } }, "当前状态：", react.createElement("b", null, parsed.status),
+							p.hasHealthCheck ? "（含插件自定义健康检查）" : null),
+						parsed.items.length === 0 ? react.createElement("div", { style: { fontSize: "12px", color: "#1a7f37" } }, "无发现") :
+							parsed.items.map(function (i, idx) {
+								return react.createElement("div", { key: idx, style: { borderLeft: "3px solid " + (i.level === "error" ? "#cf222e" : i.level === "warn" ? "#b58900" : "#1a7f37"), margin: "4px 0", padding: "2px 8px", background: "#88811110", fontSize: "13px" } },
+									react.createElement("b", null, i.code), "（", i.level, "）", i.message,
+									i.fix ? react.createElement("div", { style: { fontSize: "12px", color: "#777" } }, "修复：" + i.fix.summary + (i.fix.steps ? "（" + i.fix.steps.join("；") + "）" : "")) : null);
+							}),
+						react.createElement("div", { style: { fontSize: "12px", color: "#888", marginTop: "4px" } }, "历史：" + (parsed.history.join(" → ") || "—")));
+				} catch (e) { healthDetail = null; }
+			}
+			var configDetail = null;
+			if (open === "config") {
+				var schemaJSON = p.configSchemaJSON;
+				var form = schemaJSON && schemaJSON.type === "object"
+					? v2RenderField(schemaJSON, p.config, function (v) { setDraft(v); }, "")
+					: react.createElement("div", { style: { fontSize: "12px", color: "#888" } }, "插件未声明 configSchema，无表单可渲染（可在安装向导反馈中要求作者补充）");
+				configDetail = react.createElement("div", { style: { borderTop: "1px dashed #8886", marginTop: "6px", paddingTop: "6px" } },
+					form,
+					react.createElement("button", {
+						style: { marginTop: "6px" },
+						onClick: act(function () { return v2Api("/config", { id: p.id, config: schemaJSON && schemaJSON.type === "object" ? (Object.keys(draft).length ? draft : p.config) : p.config }); })
+					}, "保存配置（写回 registry）"));
+			}
+			var confirmBox = null;
+			if (confirm) {
+				confirmBox = react.createElement("div", { style: { borderTop: "1px dashed #8886", marginTop: "6px", paddingTop: "6px", fontSize: "13px" } },
+					react.createElement("div", null, confirm.text),
+					react.createElement("label", null,
+						react.createElement("input", { type: "checkbox", checked: confirm.checked, onChange: function (e) { confirm.setChecked(e.target.checked); } }),
+						" 我确认操作该插件"),
+					react.createElement("button", { disabled: !confirm.checked, onClick: confirm.go }, "执行"));
+			}
+			var openConfig = function () { setOpen(open === "config" ? "" : "config"); };
+			var askConfirm = function (text, run) {
+				setConfirm({
+					text: text,
+					checked: false,
+					setChecked: function (v) {
+						setConfirm(function (c) { return Object.assign({}, c, { checked: v }); });
+					},
+					go: act(function () { return run(); })
+				});
+			};
+			return react.createElement("div", { style: { border: "1px solid #8884", borderRadius: "8px", padding: "8px 10px", margin: "8px 0" } },
+				react.createElement("div", { style: { fontWeight: 600 } },
+					p.displayName, " ",
+					react.createElement("span", { style: { fontSize: "11px", border: "1px solid #8886", borderRadius: "4px", padding: "0 4px", color: "#777" } }, "v" + p.version),
+					react.createElement("span", { style: { fontSize: "11px", border: "1px solid #8886", borderRadius: "4px", padding: "0 4px", color: "#777" } }, "契约 " + p.contract),
+					p.legacy ? react.createElement("span", { style: { fontSize: "11px", border: "1px solid #b5890088", borderRadius: "4px", padding: "0 4px", color: "#8a6d00" } }, "legacy 模式") : null),
+				react.createElement("div", { style: { fontSize: "12px", color: "#777" } }, p.id),
+				react.createElement("div", { style: { fontSize: "13px" } },
+					react.createElement("b", { style: { color: p.status === "active" ? "#1a7f37" : (p.status === "error" || p.status === "quarantined") ? "#cf222e" : "#586069" } }, p.status),
+					"　", healthLine),
+				p.lastError ? react.createElement("div", { style: { fontSize: "12px", color: "#cf222e" } }, "最近错误 ", react.createElement("b", null, p.lastError.code), "：", p.lastError.message) : null,
+				react.createElement("div", { style: { margin: "6px 0" } },
+					(p.status === "disabled" || p.status === "error" || p.status === "quarantined")
+						? react.createElement("button", { onClick: askConfirm("确认启用 " + p.id + "？", function () { return v2Api("/enabled", { id: p.id, enabled: true }); }) }, "启用")
+						: react.createElement("button", { onClick: askConfirm("确认停用 " + p.id + "？", function () { return v2Api("/enabled", { id: p.id, enabled: false }); }) }, "停用"),
+					react.createElement("button", { onClick: askConfirm("确认重载 " + p.id + "？", function () { return v2Api("/reload", { id: p.id }); }) }, "重载"),
+					react.createElement("button", { onClick: askConfirm("确认卸载 " + p.id + "？（将移除安装记录并卸出运行时）", function () { return v2Api("/uninstall", { id: p.id }); }) }, "卸载"),
+					react.createElement("button", { onClick: toggleHealth }, "健康详情"),
+					react.createElement("button", { onClick: openConfig }, "配置")),
+				confirmBox, healthDetail, configDetail);
+		}
+
+		function RegistryTab() {
+			var snapSt = react.useState(null);
+			var snapshot = snapSt[0];
+			var setSnapshot = snapSt[1];
+			var modeSt = react.useState("connecting");
+			var setMode = modeSt[1];
+			var pathSt = react.useState("");
+			var setPath = pathSt[1];
+			var wizardSt = react.useState(null);
+			var setWizard = wizardSt[1];
+			var msgSt = react.useState(null);
+			var setMsg = msgSt[1];
+
+			var reload = react.useCallback(function () {
+				v2Api("/snapshot").then(function (data) { if (data.ok) setSnapshot(data); }).catch(function () {});
+			}, []);
+			react.useEffect(function () {
+				reload();
+				var connector = createV2Connector({
+					onSnapshot: function (data) { setSnapshot(data); },
+					onMode: function (m) { setMode(m); },
+					onEvent: function (name, payload) {
+						if (name === "status-changed" || name === "plugin-added" || name === "plugin-removed") reload();
+						else if (name === "issue-found" && payload && payload.item) setMsg({ ok: false, code: payload.item.code, error: payload.item.message });
+						else if (name.indexOf("audit:") === 0) setMsg({ ok: true, code: name.slice(6), error: payload && payload.pluginId });
+					}
+				});
+				return function () { connector.close(); };
+			}, [reload]);
+
+			if (!snapshot) {
+				return react.createElement("div", null, "读取 registry 状态中…");
+			}
+			var wizard = null;
+			if (wizardSt && wizardSt.precheck) {
+				var pc = wizardSt.precheck;
+				wizard = react.createElement("div", { style: { border: "1px dashed #8886", borderRadius: "8px", padding: "8px 10px", margin: "8px 0" } },
+					react.createElement("div", { style: { fontSize: "13px", color: pc.pass ? "#1a7f37" : "#cf222e" } }, "预检结论：", react.createElement("b", null, pc.pass ? "通过，可以安装" : "存在阻断项"), pc.legacyMode ? "（legacy 模式）" : ""),
+					pc.blocking.map(function (i, idx) {
+						return react.createElement("div", { key: "b" + idx, style: { fontSize: "12px", color: "#cf222e" } }, "【阻断】", react.createElement("b", null, i.code), " ", i.message, i.fix ? "　修复：" + i.fix.summary : null);
+					}),
+					pc.warnings.map(function (i, idx) {
+						return react.createElement("div", { key: "w" + idx, style: { fontSize: "12px", color: "#8a6d00" } }, "【提示】", react.createElement("b", null, i.code), " ", i.message);
+					}),
+					pc.changes.map(function (c, idx) {
+						return react.createElement("div", { key: "c" + idx, style: { fontSize: "12px", color: "#777" } }, "需改动【", c.target, "】", c.summary, "：", c.detail);
+					}),
+					react.createElement("button", {
+						disabled: !pc.pass,
+						onClick: function () {
+							v2Api("/install/confirm", { source: { kind: "local", path: wizardSt.path } }).then(function (result) {
+								if (result.ok) { setMsg({ ok: true, code: "installed", error: result.entry.id }); setWizard(null); reload(); }
+								else { setWizard({ path: wizardSt.path, precheck: result.precheck }); setMsg({ ok: false, code: "install-blocked", error: "预检未通过，报告已刷新" }); }
+							}).catch(function (error) { setMsg({ ok: false, code: error.code || "error", error: error.error || String(error) }); });
+						}
+					}, "确认安装"));
+			}
+			var banner = msgSt && msgSt.code ? react.createElement("div", {
+				style: { border: "1px solid " + (msgSt.ok ? "#1a7f3788" : "#cf222e88"), background: msgSt.ok ? "#1a7f3714" : "#cf222e14", color: msgSt.ok ? "#1a7f37" : "#cf222e", padding: "4px 10px", borderRadius: "6px", margin: "6px 0", fontSize: "13px" }
+			}, msgSt.ok ? "已" + msgSt.code + "：" + msgSt.error : react.createElement("b", null, msgSt.code), msgSt.ok ? null : " " + msgSt.error) : null;
+			return react.createElement("div", null,
+				react.createElement("div", { style: { fontSize: "12px", color: "#888", margin: "4px 0" } },
+					"数据源：registry/doctor 服务与事件流（",
+					react.createElement("b", { style: { color: mode === "sse" ? "#1a7f37" : "#8a6d00" } }, mode === "sse" ? "实时 SSE" : mode === "poll" ? "轮询降级" : "连接中"),
+					"）；新装插件自动出现，无需刷新"),
+				snapshot.doctorAvailable === false ? react.createElement("div", { style: { border: "1px solid #b5890088", background: "#b5890018", color: "#8a6d00", padding: "4px 10px", borderRadius: "6px", margin: "6px 0", fontSize: "13px" } }, "⚠ doctor 不可用：预检与健康巡检受限") : null,
+				banner,
+				react.createElement("div", { style: { border: "1px dashed #8886", borderRadius: "8px", padding: "8px 10px", margin: "8px 0" } },
+					react.createElement("b", null, "安装新插件（本地路径）"),
+					react.createElement("div", { style: { margin: "6px 0" } },
+						react.createElement("input", { type: "text", value: pathSt[0], onChange: function (e) { setPath(e.target.value); }, placeholder: "插件目录或入口文件路径", style: { width: "60%", padding: "3px 6px", borderRadius: "4px", border: "1px solid #8888" } }),
+						react.createElement("button", { onClick: function () {
+							v2Api("/install/precheck", { source: { kind: "local", path: pathSt[0] } }).then(function (result) {
+								if (result.ok) setWizard({ path: pathSt[0], precheck: result.precheck });
+								else setMsg({ ok: false, code: "precheck-failed", error: result.error || "预检失败" });
+							}).catch(function (error) { setMsg({ ok: false, code: error.code || "error", error: error.error || String(error) }); });
+						} }, "① 预检")),
+					wizard),
+				snapshot.plugins.length === 0 ? react.createElement("div", { style: { color: "#888", fontSize: "13px" } }, "暂无已注册插件——用上方向导装入第一个。") :
+					snapshot.plugins.map(function (p) {
+						return react.createElement(RegistryPluginCard, { key: p.id, plugin: p, onChanged: reload, onError: function (result) { setMsg({ ok: false, code: result.code || result.error?.code || "error", error: result.error || result.message || String(result) }); } });
+					}));
+		}
+
 		var inject = ["slots"];
 		function apply(ctx) {
 			try {
+				// P5 泛化线：registry 驱动的插件管理 tab（新装插件自适应，REQ-5 / 债务 #9）
+				ctx.slots.inject("settings.plugins.tab", function () {
+					try {
+						return ctx.slots.register({
+							name: "settings.plugins.tab",
+							id: "toolkit-panel-v2",
+							order: 89,
+							label: function () { return "插件管理（registry · 自适应）"; },
+							inject: function () { return {}; }
+						}, RegistryTab);
+					} catch (e) {
+						return function () {};
+					}
+				});
+				// 既有 tab：patch 层开关/体检操作台（P2.4 资产，管理 cordis.patch.yml 行块）
 				ctx.slots.inject("settings.plugins.tab", function () {
 					try {
 						return ctx.slots.register({

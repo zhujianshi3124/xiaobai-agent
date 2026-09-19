@@ -1,6 +1,43 @@
 {
   "manifestVersion": 1,
   "name": "@local/dsh-toolkit/rate-throttle",
+  "id": "dsh/rate-throttle",
+  "displayName": "速率限制与换源路由",
+  "version": "0.1.0",
+  "contract": "^1.0",
+  "configSchema": {
+    "type": "object",
+    "meta": {},
+    "dict": {
+      "enabled": { "type": "boolean", "meta": {} },
+      "throttleProviders": { "type": "array", "meta": {}, "inner": { "type": "string", "meta": {} } },
+      "minIntervalMs": { "type": "number", "meta": {} },
+      "maxRequestsPerMinute": { "type": "number", "meta": {} },
+      "adaptive": { "type": "boolean", "meta": {} },
+      "maxIntervalMs": { "type": "number", "meta": {} },
+      "backoffFactor": { "type": "number", "meta": {} },
+      "logProviders": { "type": "array", "meta": {}, "inner": { "type": "string", "meta": {} } },
+      "logPath": { "type": "string", "meta": {} },
+      "routing": {
+        "type": "object",
+        "meta": {},
+        "dict": {
+          "enabled": { "type": "boolean", "meta": {} },
+          "autoGroups": { "type": "boolean", "meta": {} },
+          "autoGroupTtlMs": { "type": "number", "meta": {} },
+          "cooldownMs": { "type": "number", "meta": {} },
+          "tpmTurnSkip": { "type": "boolean", "meta": {} },
+          "tpmCooldownMs": { "type": "number", "meta": {} },
+          "downgradeContextMargin": { "type": "number", "meta": {} },
+          "maxDowngradeCompactsPerTurn": { "type": "number", "meta": {} },
+          "metricsWindowMs": { "type": "number", "meta": {} },
+          "metricsLogIntervalMs": { "type": "number", "meta": {} },
+          "clearCooldownOnUserSwitch": { "type": "boolean", "meta": {} },
+          "syncSelectionOnFailover": { "type": "boolean", "meta": {} }
+        }
+      }
+    }
+  },
   "requirements": {
     "runtime": {
       "node": ">=22",
