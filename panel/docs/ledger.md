@@ -1479,3 +1479,11 @@ HEAD = `f6d99eb`。
   - **⑤ 纪律自证**：D1 三条件兑现（--yes 文档化 ✓／doctor 仓过验两仓互引 ✓／面板 1 级确认层先于 spawn 接通 ✓）；真实 patch `ce0b0b81…` 全程零写入；真实 ~/.dsh doctor 三件套保持不存在（D9）；备份目录只读扫描零五插件源码（17 个 JS=面板开发期人工留档）；U16 r2＋§3.6(a) 随批交付；文案逐字在产品面（叠加 8.3 规则落实）。
   - **证据**：`evidence/P24-BATCH2-CONSTRUCT-REPORT.md`＋`P24-BATCH2-CONSTRUCT-REGRESSION.txt`。
   - **下一动作**：判定侧验收批 2 施工＋**两线碰撞方案裁决** → 用户 reload 目视（清单届时出）→ 批 2 关账 → P2.4 收官。
+- **L-069（新会话第 7 轮 · 批 2 收尾：用户裁 (b) ⇒ 碰撞处置执行＋报判＋判定侧验收通过；doctor@f423d4a＋toolkit 本提交互引）**：判定者开工指令收讫（收讫＋状态重建 3 行回报在案：批 2 验收 L-068 在案、泛化线 4 提交按 commit 区分零接触、两仓 git/status 核对）。用户裁决：**(b) 执行**（doctor 扫描跳过 test/，D-UI-06 同族「夹具≠在案本体」，治本）；**(a)** 转泛化线作风格建议（经用户转告，其产物零接触）；**(c) 否决**（改断言口径＝掩盖——真实体检 UI 也会脏；留痕本条）。
+  - **① doctor 仓 `f423d4a`（2 文件 +44/−2）**：`isSkippedScanDir` 统一 `walkRec`＋`walkSourceFiles` 双走层排除——**test/ 目录整体出扫描面**（走层级治本，非只挡 manifest；防一切测试夹具误报）；**唯一例外＝`lib/` 直下名为 test 的目录**（在案本体位 `lib/<name>/`，跳过即 fail-open，故放行）。新增断言测试（run-tests 13→14）：test/ 下无效 manifest（required-missing/json-syntax/嵌套深度）**任何 severity 零检出**＋对照组 `lib/broken-lib` 仍检出＋例外位 `lib/test` 仍检出（**三向锁**：零漏报＋防排除过宽＋防 fail-open）。首跑即抓出断言助手未镜像 lib/ 例外的缺口并修正（教训：断言侧规则必须镜像产品侧规则，不凭直觉重写）。
+  - **② 全套证据（`evidence/P24-BATCH2-COLLISION-RESOLUTION.md`＋`-REGRESSION.txt`）**：doctor 仓自测 **run-tests 14/14 · d1 21/21 · stage4a 8/8 · stage4b 7/7 · stage3 验收 a–g ALL PASS**；真实仓 dry-run 探针（doctor-runner 同款调用路径）**0/0/0**；toolkit **regression-all 14/14 全绿——p1-smoke 恢复 264/264**（L-068 时点 263/264，碰撞唯一红项消除），**定版口径零变化**（63/0 · 718/0 · 79/79 · 141 逐项相等）。
+  - **③ 零写入自证**：真实 patch `ce0b0b81…`（3097 B）未动；toolkit 工作树净（泛化线 4 提交＋`docs/p0-recon.md` 零接触，夹具未移动未读内容）；真实 `~/.dsh` doctor 三件套保持不存在；doctor-backups 零新增。
+  - **④ stage3「影子复检」单独留档（既有环境性事项，勿并入本批）**：施工时点 FAIL（L-068 ①，stash 对照复现在案）；本轮 `f423d4a` 后复跑 **PASS**（a–g 含 e 段影子验证）。**两轮观测如实并记：施工时 FAIL／本轮 PASS**；归既有环境性事项独立跟踪——既不作批 2 红项、也不声明「已修复」。
+  - **⑤ 判定侧验收：通过**（验收表 8 项全过：判据正确性／三向锁断言／既有行为零回归／红项消除／定版口径不变／零写入／泛化线零接触／两仓互引）。**批 2 关账前置仅余「用户 reload 目视」**——清单已由判定侧出：`evidence/P24-BATCH2-RELOAD-CHECKLIST.md`（人话十步，引号文案逐字取自两渲染器源码；§8 真卸载弹窗原因输入框**只看不删**）。
+  - **⑥ 文档同步**：`evidence/README.md` 主表补登 L-068 两件（当时仅登记修订行，主表漏登——如实补记）＋本轮 3 件；交接卡 §12 重写为「碰撞处置完成版」；HANDOFF-MASTER 叠加 4.1＋附录 C。
+  - **下一动作**：**用户 reload 目视**（按 `P24-BATCH2-RELOAD-CHECKLIST.md`）→ 回「目视通过」⇒ **批 2 关账一包**（含本碰撞留痕 §5＋U 项清账）→ **P2.4 收官**；泛化线后续排期由用户定。

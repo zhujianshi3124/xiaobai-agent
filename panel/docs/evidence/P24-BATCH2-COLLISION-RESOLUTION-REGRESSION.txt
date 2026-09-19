@@ -1,0 +1,152 @@
+P2.4 批 2 · 两线碰撞处置 (b) · 证据原文（doctor 仓全套自测＋toolkit 全套回归）
+生成：2026-09-19 12:4x GMT+8（判定侧执行 doctor@f423d4a 后）
+== A. doctor 仓全套自测（run-tests 14 / d1 21 / stage4a 8 / stage4b 7 / stage3 验收 a-g / 真实仓 dry-run 探针）==
+
+"== doctor repo suites (post f423d4a) ==" 
+## run-tests 
+PASS 预设旧名回归：root/file/old/occurrence 唯一定位
+PASS 整词匹配：@local/dsh-web 不命中 @local/dsh-web-all
+PASS root 归属优先级：profile 文件归 profile，且不重复报告
+PASS schema 检出 JSON 语法错、UTF-8 BOM、必填字段缺失
+PASS 夹具≠在案本体（D-UI-06 同族·两线碰撞裁决 b）：test/ 目录不在扫描面——故意无效夹具零检出，lib/ 对照组与 lib/test 例外仍检出
+PASS 幂等：固定 --now 连跑两次逐字节一致
+PASS apply：旧名引用修复 → 复检 0 error → 字节级备份存在
+PASS apply：干净环境 0 fixable、无新备份、状态不变
+PASS protected 负向：*.bak-* 与 preset-backups 目标整轮拒绝、零写入
+PASS 锚点漂移：dry-run 后改动目标 → step 失败、零写入
+PASS rollback：默认最近一次，目标文件与修复前逐字节一致
+PASS 文件 op：insert/delete/create-file 按 plan 执行
+PASS install-package：file: 本地源安装成功并写入 patch-state 版本
+PASS 并发锁：apply 持有文件锁时第二个实例直接失败
+
+14/14 fixture tests passed
+## run-tests-d1 
+ok - --states 空态 exit=0
+ok - --states 空链
+ok - --states configRoot=--config-root
+ok - --only apply 退出码 0（rescan 无 error）
+ok - --only apply 目标文件已改
+ok - manual 问题仍在案且无 plan
+ok - --states 记 1 条 apply
+ok - --states files=1
+ok - 写前备份在案
+ok - manual ⇒ exit=2 + issue-not-executable
+ok - 零写入（无备份目录）
+ok - 未找到 ⇒ exit=2 + issue-not-found
+ok - 非法 id ⇒ exit=2 + 白名单提示
+ok - rollback exit=0
+ok - rollback 字节级复原
+ok - --states 记 2 条（apply+rollback）
+ok - --help 含 --states
+ok - --help 含 --only
+ok - --help 含知情确认语义
+ok - 非交互无 --yes ⇒ exit=2
+ok - 真实 ~/.dsh 无 doctor 产物
+RESULT: 21/21 PASS
+## stage4a 
+PASS env.node-version-mismatch：两个子插件 node 范围不满足当前运行时
+PASS env.dsh-version-mismatch：两个子插件 dsh 范围不满足宿主版本
+PASS env.binary-missing：两个子插件声明的二进制缺失
+PASS pkg.missing-dependency：$from 指向真实 package.json，但 npm 包未安装
+PASS pkg.version-violation：真实 node_modules 解析成功，但安装版本不满足声明范围
+PASS schema.$from-dangling：$from 指向不存在的 package.json 节点
+PASS reg.name-collision：services 与 providers 各自跨子插件重名
+PASS reg.inject-face-unknown：inject 面不在宿主提供面清单，warning + manual
+8/8 stage4a fixture tests passed
+## stage4b 
+PASS pkg.resolution-outside-scope：scope 内 node_modules 真实目录包不报
+PASS pkg.resolution-outside-scope：junction 指向外部目录报出且链路完整
+PASS pkg.resolution-outside-scope：真实外部目录（非 symlink）同样报出
+PASS install-package 影子：file: 本地包成功安装且版本写入 patch-state
+PASS install-package 影子：本地包版本与声明范围冲突
+PASS install-package 影子：*.bak-* 根路径整轮 protected 拒绝
+PASS install-package 影子：目标 node_modules 为 symlink/junction 拒绝
+
+7/7 stage4b fixture tests passed
+## stage3-acceptance 
+=== a) fixture 注入旧名引用 → dry-run → apply → 复检 0 error ===
+dry-run exit=1 (期望 1)
+apply exit=0 (期望 0)
+PASS a
+
+=== b) 干净环境再 apply → 0 fixable、无新备份、状态不变 ===
+PASS b
+
+=== c) protected 负向：*.bak-* 与 preset-backups/ 目标整轮拒绝 ===
+PASS c (CLI exit=2)
+
+=== d) 锚点漂移：dry-run 之后改动目标文件 → apply step 失败、零写入 ===
+PASS d (step 失败且目标文件未再写入)
+
+=== e) 真实影子验证：复制真实 configRoot 扫描相关子集到临时目录 ===
+real configRoot scan-surface hash before=c585738c646855d4e6745c9e64434899dd75693526f809313002060ebfce0bd9 (5 files)
+real configRoot scan-surface hash after =c585738c646855d4e6745c9e64434899dd75693526f809313002060ebfce0bd9 (5 files)
+PASS e
+
+=== f) rollback → 目标文件与修复前逐字节一致 ===
+PASS f (rollback CLI exit=0, 字节级恢复)
+
+=== g) 退出码符合表 ===
+dry-run=1 apply=0 clean=0
+0=绿或成功归零；1=dry-run 发现问题；2=apply 后残留或 step 失败（protected 已在 c 中验证）；130=用户取消（代码路径 confirmIssue 返回 false）
+ALL STAGE-3 ACCEPTANCE PASS
+(node:23780) [TAG_RESOLVE_FAILED] YAMLWarning: Unresolved tag: tag:yaml.org,2002:js at line 144, column 13:
+
+  disabled: !!js process.platform === 'win32'
+            ^^^^
+
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:23780) [TAG_RESOLVE_FAILED] YAMLWarning: Unresolved tag: tag:yaml.org,2002:js at line 179, column 13:
+
+  disabled: !!js process.platform !== 'win32'
+            ^^^^
+
+(node:23780) [TAG_RESOLVE_FAILED] YAMLWarning: Unresolved tag: tag:yaml.org,2002:js at line 144, column 13:
+
+  disabled: !!js process.platform === 'win32'
+            ^^^^
+
+(node:23780) [TAG_RESOLVE_FAILED] YAMLWarning: Unresolved tag: tag:yaml.org,2002:js at line 179, column 13:
+
+  disabled: !!js process.platform !== 'win32'
+            ^^^^
+
+## real-repo dry-run probe 
+{
+  "ok": true,
+  "exitCode": 0,
+  "summary": {
+    "error": 0,
+    "warning": 0,
+    "info": 0,
+    "safe": 0,
+    "rewrite": 0,
+    "destructive": 0,
+    "manual": 0,
+    "fixable": 0
+  }
+}
+
+
+== B. toolkit 全套回归 regression-all.mjs（14 项＋node --test）==
+
+══════════════════════════════════════════════════════════
+回归全跑  2026-09-19T04:43:30.507Z
+══════════════════════════════════════════════════════════
+  ✓ p1-smoke              passed=264 failed=0
+  ✓ p2-smoke              passed=16 failed=0
+  ✓ p21-verify            53/53 PASS
+  ✓ p22-verify            104/104 PASS
+  ✓ p22-cards-ui          79/79 PASS
+  ✓ p22b-retention-scope  17/17 PASS
+  ✓ p24-verify            passed=63 failed=0
+  ✓ p24-ui-matrix         passed=718 failed=0
+  ✓ q2-layer-scan         14/14 PASS
+  ✓ q2-shipped-scan       RESULT: 21/21 PASS
+  ✓ master-merge-fidelity RESULT: 38/38 PASS
+  ✓ backup-write-test     23/23 PASS
+  ✓ pluggable-lint        通过：lib/ 与 test/ 无跨插件静态 import / eager re-export。
+  ✓ node --test           pass=141 fail=0
+══════════════════════════════════════════════════════════
+全部通过
+══════════════════════════════════════════════════════════
