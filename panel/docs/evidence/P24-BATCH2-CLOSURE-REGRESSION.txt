@@ -1,0 +1,41 @@
+== P2.4 批 2 关账时点证据原文（2026-09-19 13:0x GMT+8，L-070 关账包）==
+
+## A. toolkit regression-all.mjs（14 项＋node --test）
+
+══════════════════════════════════════════════════════════
+回归全跑  2026-09-19T05:03:43.813Z
+══════════════════════════════════════════════════════════
+  ✓ p1-smoke              passed=264 failed=0
+  ✓ p2-smoke              passed=16 failed=0
+  ✓ p21-verify            53/53 PASS
+  ✓ p22-verify            104/104 PASS
+  ✓ p22-cards-ui          79/79 PASS
+  ✓ p22b-retention-scope  17/17 PASS
+  ✓ p24-verify            passed=63 failed=0
+  ✓ p24-ui-matrix         passed=718 failed=0
+  ✓ q2-layer-scan         14/14 PASS
+  ✓ q2-shipped-scan       RESULT: 21/21 PASS
+  ✓ master-merge-fidelity RESULT: 38/38 PASS
+  ✓ backup-write-test     23/23 PASS
+  ✓ pluggable-lint        通过：lib/ 与 test/ 无跨插件静态 import / eager re-export。
+  ✓ node --test           pass=141 fail=0
+══════════════════════════════════════════════════════════
+全部通过
+══════════════════════════════════════════════════════════
+
+## B. 真实仓 doctor dry-run 探针（doctor-runner 同款调用路径）
+
+{
+  "ok": true,
+  "exitCode": 0,
+  "summary": {
+    "error": 0,
+    "warning": 0,
+    "info": 0,
+    "safe": 0,
+    "rewrite": 0,
+    "destructive": 0,
+    "manual": 0,
+    "fixable": 0
+  }
+}
