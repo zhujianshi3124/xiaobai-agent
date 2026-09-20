@@ -33,11 +33,17 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
   devicesFile/backupRoot/doctorConfigRoot 同款），缺省值仍是本机开发布局现值。
 - **`no-subplugin-import-check` 扫描面加入根入口**：`index.js` 与面板同纪律，
   不得点名任何子插件（自适应管理的前提），现扫 6 文件 0 命中。
-- 新增 `test/p7-embed.test.mjs` 13 例：基址派生与三处孪生一致 / 缺省 URL 不变 /
+- 新增 `test/p7-embed.test.mjs` 14 例：基址派生与三处孪生一致 / 缺省 URL 不变 /
   双实例（`toolkit` + `tk2`）同挂一根 webServer 路由零冲突 / 双实例真 HTTP 两面板同时可达且
   A 装的插件不进 B / B 的 SSE 收不到 A 的事件（前缀链路端到端）/ mock 桶装入→卸出
   （路由全部注销 + 订阅全部解除 + 活动句柄不增一个，doctor 巡检定时器在场下测）/
-  guard 用被注入的 webServer 且写路由 fail-closed / 根 manifest 过契约校验且与盘上同源。
+  guard 用被注入的 webServer 且写路由 fail-closed / 根 manifest 过契约校验且与盘上同源 /
+  包导出面按 Node 约定可解析 `.` 与 `./panel`（R12 前提）且 loader 解析到同一根入口。
+- **Q2 裁决追加项已兑现：真实 dsh-web-all 宿主冒烟**（用户 2026-09-20 当场授权重启）——
+  零宿主改造、`~/.dsh` 全程未读写，唯一被改文件是本仓 `cordis.patch.yml`（还原后 sha 逐字节一致）。
+  三轮重启（挂载/卸载/还原）跑完清单三项：web-search-local 运行时回归清偿（P5 遗留）、
+  面板在宿主进程内可达且 SSE 拿到 hello 帧、卸载后抽样路由 200→401 且仅剩宿主自有监听。
+  证据 `panel/docs/evidence/P7-REAL-HOST-SMOKE.md`（含"本侧明确没做的事"边界清单）。
 
 ### Changed（P5 存量迁移，2026-09-19）
 
