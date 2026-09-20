@@ -1,6 +1,9 @@
-# 遗留债务清单（终态 · 2026-09-20 项目关闭）
+# 遗留债务清单（终态 · 2026-09-20 项目关闭；2026-09-21 cordis 符合度复核追加）
 
 > 建立：2026-09-19（P4）。**最终化：2026-09-20（P8 终版验收通过，项目关闭）。**
+> **2026-09-21 复核追加**：对照 cordis 4.0.2 做符合度复核，用户裁定"全修"，
+> 按 Pack A–E 施工。A 区新增 #12–#16（已清偿），D 区新增 D-6/D-7/D-8（复核发现、
+> **待用户裁定未动实现**），C-1 补一条必答设计题。关闭状态本身不变。
 > 清零规则按用户终版裁定改为四类归档（不再要求"全部清零"）：
 > **A 已清偿** / **B 显式遗留**（裁定不做或维持现状，附触发条件）/ **C 后续任务**（已立项，附规格草案）/
 > **D 待办**（零散改进，不阻塞关闭）。每条标注**裁定方**。
@@ -24,6 +27,11 @@
 | 9 | 面板 React tab registry 化 | P4 | P5→P6 | 过渡 tab 与 `/v2/ui` 已退役（`9bd52ba`），registry 管理区并入唯一 toolkit-panel |
 | 10 | 面板归一与过渡面退役（用户 2026-09-19 权威修正） | P6 | P6 | 归一笔 `c4a1762` + 退役笔 `9bd52ba`；浏览器级命门验收通过；单 tab 断言 `registrations==1` 锁死。**"面板作为本桶唯一管理入口"= 用户明确要求，长期有效** |
 | 11b | 审计事件名手工拼装（原 #11 的 (b) 半项） | P7 | 并入 C-1 | 用户 2026-09-20 裁定：**不单独修，并入契约 v1.1**（`audit:*` 入 `CONTRACT_EVENT_NAMES` 枚举，顺带收编三处转发表） |
+| 12 | **cordis 符合度复核 Pack A**：install 幻影条目 / fiber UNLOADING 误报 / 编号无显式守卫 | 2026-09-21 复核 | 同批 | A1 事务顺序改「写内存→落盘→发通知」+ `notify()` 兜底捕获 + 回滚补 `persist(null,id)`（旧实现两条失败路径都会留分裂态）；A2 轮询补 UNLOADING 分支，错误码入契约 `FIBER_LOAD_ERROR_CODES`（四码）；A3 新增 `test/cordis-fiber-state.test.mjs`，真 cordis 实测五个终态数值与 `registry` 导出的 `FIBER_*` 对账 |
+| 13 | **Pack B2**：`normalizePlugin` 选中 `default` 时丢掉模块级 `inject`/`name` | 2026-09-21 复核 | 同批 | 保守合并（补 default 所缺、不覆盖已有；函数/类的 `name` 视为 JS 推断名可被模块级声明取代）。真实代价不是显示名，而是 **cordis 读不到 `plugin.inject` ⇒ 依赖门控静默失效**。宿主装载器未安装，如实标注为"保守近似" |
+| 14 | **Pack C**：`${prefix}/doctor` 在面板装配路径下从未进容器 | 2026-09-21 复核 | 同批 | `registry-host.mjs` 补 `host.provideService(doctor.serviceName, doctor)`，注册现场仍在面板（REQ-8 唯一装配点），回收靠 cordis fiber 归属。`test/toolkit-services.test.mjs` 4 例，含"双实例挂同一根 ctx 不撞名"。doctor 仓源码未动 |
+| 15 | **Pack D**：活动 SSE 流不受面板卸载管辖 | 2026-09-21 复核 | 同批 | `v2-api.mjs` 加 `liveStreams` 登记表 + `closeAllStreams()`（每条 teardown 单次幂等），挂进 `panel/index.js` 既有 `ctx.effect` 卸载链。旧行为：面板拆完仍留一个每 15s 往死面板写 ping、且永不结束的流。`test/panel-sse-dispose.test.mjs` 5 例，已验证非空洞 |
+| 16 | **Pack E**：inject 正向语义零覆盖 + peer 范围放行未校准 cordis | 2026-09-21 复核 | 同批 | `test/cordis-inject-lifecycle.test.mjs` 5 例（正向装配/撤依赖/再激活/两套真相分歧/全局互斥限制）；`peerDependencies` 收 `>=4.0.0-rc <5` → `^4.0.2`，新守卫断言 4.0.0/4.0.1/*-rc 均不放行。已核与 D-1 预发版偏差无冲突 |
 
 ---
 
@@ -79,6 +87,16 @@
    `CHANGELOG.md` + `docs/contract.md` 写迁移说明（旧 manifest 在 `^1.0` 下继续可用；`provides` 缺席
    时冲突检查降级为 info 而非 error），并明确"破坏性变更才升主版本"的红线未被触碰。
 
+**v1.1 必须一并处理的现状补充（2026-09-21 cordis 符合度复核，Pack E1 实测入账）**：
+`requires.services` 与 cordis 的 `inject` **目前互不桥接**——契约只把它当预检输入，
+装载门控完全取决于插件模块自己有没有 `export const inject`。实测后果（见
+`test/cordis-inject-lifecycle.test.mjs`）：① 只在 manifest 声明依赖的插件，cordis 不设门、
+依赖缺席也直接 ACTIVE；② 真按 `inject` 设门的插件，其"依赖离开 ⇒ fiber 撤下 ACTIVE、
+apply 不重跑"这一段 registry 完全不知道，条目仍报 `active`，只能靠 doctor 下一轮巡检
+报 `service-missing` 兜住；③ `install` 全局互斥 ⇒ "装 provider 去解锁正在等依赖的
+consumer"这条路走不通，只能等重试退避。**"要不要把 `requires.services` 合成为 inject"**
+是 v1.1 的必答设计题（合成会改变装载时序，须连带决定 ① 与 ② 的真相归谁写）。
+
 **验收口径**：全量门禁（`node scripts/ci-local.mjs --with-scan`）+ 真实仓 doctor dry-run `0/0/0`
 + 一条新用例证明"`provides` 声明的撞名服务会被 `reg.name-collision` 阻断"。
 
@@ -92,4 +110,7 @@
 | D-2 | **`scripts/p23-shadow-scan.mjs` 覆写历史证据文件**：每次运行都会改写 `panel/docs/evidence/P23-SHADOW-SCAN.txt` 的生成时刻与 `~/.dsh/settings.yaml` 指纹（P2.3 的 09-18 快照本轮被覆写后已 `git checkout` 还原）。建议改为写带时间戳的新文件，遵守证据目录"只增不改"硬约定 | 工程侧发现并记录；用户裁定记待办不阻塞 |
 | D-3 | **`scripts/regression-all.mjs` 清单补漏**：不含 `p23-verify` 与 `p23-shadow-scan`（本轮改面板文案时 p23 的源码断言就静默漏过一次，靠人工补跑发现）。`ci-local.mjs --with-scan` 已临时覆盖 p23-verify；建议把两项并入 `regression-all` 本体 | 同上 |
 | D-4 | **冒烟最后一项待用户人工补验**：宿主会话内一次**真实联网搜索**（验证 web-search-local 在真实 agent 调用链里工作）。本侧已验：宿主重启后 mounted 状态、真实公网探针 `runSearch()` 12 源/1.2s、`fetchUrl()` 200/45795B；未验的那一口需要用户会话凭据（宿主 `/api/web/search` 未认证返回 401，本侧不取用） | 用户侧动作；如实登记于 CHANGELOG P8 终版条目 |
-| D-5 | **R13 长期盯防**：装入判定依赖 cordis 4.0.2 的 fiber 内部行为（`FIBER_ACTIVE=2/FAILED=3/DISPOSED=4` 等）。**任何 cordis 升级必须重跑 S1/S4 场景**；依赖已写入 `registry/src/registry.ts` 头注与 `docs/contract.md` §7 D-5 | 工程侧长期纪律 |
+| D-5 | **R13 长期盯防**：装入判定依赖 cordis 4.0.2 的 fiber 内部行为（`FIBER_ACTIVE=2/FAILED=3/DISPOSED=4` 等）。**任何 cordis 升级必须重跑 S1/S4 场景**；依赖已写入 `registry/src/registry.ts` 头注与 `docs/contract.md` §7 D-5 | 工程侧长期纪律。**2026-09-21 复核：R13 本体维持已裁决不动，但当时新登记的三条衍生风险已全部收敛**——① 编号无显式守卫 → A3 数值对账用例；② 轮询漏 UNLOADING → A2 补分支并区分错误码；③ peer 范围过宽放行未校准版本 → E2 收到 `^4.0.2` 并加范围守卫。**仍按 D-5 纪律执行**（守卫只保证漂移会红，不代替人跑 S1/S4） |
+| D-6 | **`hasService` 直读代理有原型链误判**：`registry/src/host.ts` 的 `hasService` 读 `ctx[name]`，而 cordis 代理的 get 陷阱先走 `Reflect.has(target, prop)`（沿原型链）——实测 `hasService('toString'/'constructor'/'valueOf'/'hasOwnProperty'/'__proto__')` 全为 **true**。影响面：`precheck.ts` 的 `service-missing` 阻断与 doctor `requires/services` 规则会把这类名字误判为"服务在场"，从而放过一个真缺依赖的插件。改 `ctx.get(name, false)` 可闭合（只查 isolate/store，不碰原型链），但属行为变更 | 2026-09-21 复核发现。**按当轮 A4 指令"发现真实边界风险即停下待裁"，未动实现**，仅把头注改为如实陈述现状。裁定方：待用户 |
+| D-7 | **`exports` 字段位置三方冲突（内置插件目录路径装载）**：`loader.ts` 只读**顶层** `manifest['exports']`，但 5 个内置插件的 `dsh.plugin.json` 全把它写在 `requirements.exports` 下。四个因为有 `index.js` 兜底所以"看着正常"，`lib/agent-memory` 没有 index.js ⇒ **按目录路径装不进来**（`entry-not-found`），只能装 `lib/agent-memory/plugin.js`。指定修法"提到顶层"与两处既定事实硬冲突：(a) doctor 独立仓 `MANIFEST_TOP_KEYS` 不含 `exports`，一提就产 error ⇒ **打破 0/0/0 红线**，必须改 doctor 仓；(b) 本仓契约把顶层 `exports` 归为 `KNOWN_LEGACY_FIELDS`，而 C-1 第 3 项计划把这些**收紧为 error**，提到顶层是逆着已裁决方向走。第三个选项"loader 双读"被本轮指令明令禁止 | 2026-09-21 复核发现，**Pack B1 因此停手未做**。备选：① 改 doctor 白名单 + 提顶层（两仓同批，且要与 C-1 第 3 项对齐口径）；② 给 `lib/agent-memory` 补 `index.js` 作插件入口；③ 契约 v1.1 里正式定义入口声明字段并一次迁清。裁定方：待用户 |
+| D-8 | **装入成功后 `lastError` 不清**：`loadEntry` 只在失败路径写 `entry.lastError`，重试转 ACTIVE 后不回空 ⇒ 面板卡片会同时显示"运行中"和一条历史错误（E1 实测：`status=active` 且 `lastError.code=fiber-load-timeout` 并存）。语义上"最近一次错误"可以辩护为有意保留，但对使用者是误导 | 2026-09-21 复核发现，未修（不在本轮授权清单内）。建议：转 active 时把 `lastError` 降级为 `lastRecoveredError` 或带 `at` 时间戳明示陈旧。裁定方：待用户 |
