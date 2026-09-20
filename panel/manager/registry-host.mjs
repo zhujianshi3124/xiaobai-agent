@@ -57,6 +57,17 @@ export function createToolkitServices(ctx, config = {}, logger = console) {
   })
   doctor.attachHost(host)
   doctor.attachRegistry(registry)
+  // Pack C：把 doctor 也注册成 cordis 服务 `${servicePrefix}/doctor`。
+  // 为什么在面板装配现场注册、而不是改走 doctor 的 createDoctor()：面板是 REQ-8 裁定
+  // 保留的**唯一装配现场**（docs/embed-toolkit.md §1），另起一个 createDoctor 现场会
+  // 造出第二个装配点。这里只是把已有实例的引用交给容器，不复制任何装配逻辑。
+  // 为什么用 ctx.reflect.provide（经 host.provideService）：注册权归**当前 fiber**，
+  // 也就是面板自己的派生 ctx——面板被卸出时 cordis 自动摘除该服务
+  // （reflect.ts 的 provide 把注册包进 fiber.effect，卸载即回收），
+  // toolkit 不需要写任何补偿式 cleanup。
+  // 与 registry 的注册方式同源（registry.start() → 同一个 host）。mock ctx 缺服务面时
+  // host.provideService 已被上面降级为 noop，这里无需再判一次。
+  host.provideService(doctor.serviceName, doctor)
 
   // 接线（REQ-3/REQ-4）：安装预检走 doctor；健康报告回落到 registry 条目，
   // 供面板快照直接呈现（面板不另开旁路状态，用户要求 3）。

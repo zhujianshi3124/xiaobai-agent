@@ -51,6 +51,12 @@ toolkit.apply(ctx, { servicePrefix: 'mybucket' })       // config 全部可选�
 缺省实例 32 条路由与 p1-smoke 逐条一致）；`panel/docs/evidence/P7-MOCK-BUCKET-LOOP.md` 第 8 步
 （真浏览器打开 `/api/tk2-panel/ui`，页内 `PANEL_API` 已随前缀改写，交叉访问两侧互 404）。
 
+同进程双实例的表行由 `test/toolkit-services.test.mjs` 锁死：两个实例挂在**同一个**根
+ctx 上，`toolkit/*` 与 `tk2/*` 两组服务名各自可查、互不撞名（cordis 对同名重复注册直接
+抛错，撞名当场就装不上）。服务面的注册现场唯一，在面板装配器
+`panel/manager/registry-host.mjs`（`registry` 经 `registry.start()`、`doctor` 紧随其后），
+两者都由 cordis 的 fiber 归属自动随面板卸出而注销。
+
 **双实例必须各自给 `registry.statePath`（或 `dataDir`）**：缺省状态文件按 `toolkitRoot` 推导，
 同一 `toolkitRoot` 的两份实例会共用同一份安装记录——这是配置责任，不是路由冲突。
 
