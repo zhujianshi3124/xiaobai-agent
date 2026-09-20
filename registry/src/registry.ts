@@ -2,9 +2,15 @@
  * Registry 核心状态机（P2，REQ-2/6/7；规格 §4 Registry 服务接口实现）。
  *
  * - install：解析来源 → 契约级预检（blocking 不注册，返回 PrecheckReport）→
- *   落盘安装记录 → 派生 ctx 装入 → active。装入失败**不回滚注册**（进
+ *   **写 entries → persist 落盘 → emit 通知**（事务顺序固定，磁盘与内存不出现分裂窗口）
+ *   → 派生 ctx 装入 → active。装入失败**不回滚注册**（进
  *   error/重试轨道——S4 隔离语义：插件可见、可手动 reload）；解析/预检阶段
  *   失败才回滚（REQ-2 的"install 失败回滚记录"指注册前失败）。
+ *   注册之后的意外失败走补偿：删条目 + **重 persist 摘除磁盘记录**，
+ *   保证失败路径不留「内存无、磁盘有」或「内存有、磁盘无」的任一半边。
+ * - 事件发射一律走 `notify()` 包装：cordis 的 `emit` 是裸调用
+ *   （`events.ts` 里 `.map(cb => cb(...))`，无逐监听器隔离），一个抛错的面板/SSE
+ *   监听器不能把异常抛回 install/unload 主流程。捕获后记 warn，不静默丢弃。
  * - 操作互斥：同一插件 id 的操作串行；install 全局互斥（REQ-2）。
  * - 错误隔离：每个子插件独立派生 ctx（host.plugin()）；装入失败/超时 → error，
  *   指数退避自动重试，达 retryLimit → quarantined；手动 enable/reload 清零重试（REQ-6）。
@@ -22,6 +28,7 @@ import {
 } from '@local/dsh-toolkit/contract'
 import type {
   AuditEvent,
+  FiberLoadErrorCode,
   HealthReport,
   InstallResult,
   PluginEntry,
@@ -35,16 +42,46 @@ import { contractPrecheck } from './precheck.js'
 import { emptyState, loadState, saveState } from './state.js'
 import type { FiberLike, HostContext, PluginRegisters, RegistryEntry, RegistryLogger, RegistryOptions, ResolvedPlugin } from './types.js'
 
-const FIBER_ACTIVE = 2
-const FIBER_FAILED = 3
-const FIBER_DISPOSED = 4
+/**
+ * cordis `FiberState` 的**数值**镜像（4.0.2：PENDING=0 / LOADING=1 / ACTIVE=2 /
+ * FAILED=3 / DISPOSED=4 / UNLOADING=5）。
+ *
+ * 为什么是硬编码而不是 import 枚举：cordis 把 `FiberState` 声明为
+ * `export const enum`（`fiber.ts`），构建产物里被完全擦除——
+ * `node_modules/@deepseek-ai/cordis/lib/index.js` 中 `FiberState` 出现 0 次，
+ * `.d.ts` 只剩 `export declare const enum`。运行时根本拿不到这个符号，
+ * 硬编码是当时唯一可选项（R13，docs/p0-recon.md §3 + docs/debt.md D-5）。
+ *
+ * 守卫：`test/cordis-fiber-state.test.mjs` 用真 cordis 实测各终态数值并与本组常量
+ * 逐一对账。**任何 cordis 升级必跑该用例 + S1/S4**；本组常量的导出面就是为了
+ * 让守卫能引用它们，而不是各测各的。
+ */
+export const FIBER_PENDING = 0
+export const FIBER_LOADING = 1
+export const FIBER_ACTIVE = 2
+export const FIBER_FAILED = 3
+export const FIBER_DISPOSED = 4
+export const FIBER_UNLOADING = 5
 const POLL_MS = 5
+
+/**
+ * 装入等待期间的 fiber 终态判定错误。`name` 即 `lastError.code`
+ * （`errorOf()` 用非 'Error' 的 name 当码），码值取自契约公共枚举
+ * `FIBER_LOAD_ERROR_CODES`，面板/doctor 据此分流"被卸载"与"装得太慢"。
+ */
+export class FiberLoadError extends Error {
+  constructor(code: FiberLoadErrorCode, message: string) {
+    super(message)
+    this.name = code
+  }
+}
 
 /**
  * 装入完成判定（R2 结论，docs/p0-recon.md §6）：**不改写插件对象**（保持宿主
  * 原语义，D4），以 fiber 状态迁移为准——ACTIVE = 成功；FAILED = 失败（错误经
- * fiber.await() 的 rejection 取回）；DISPOSED = 装入期间被卸载；超时兜底
- * PENDING 永挂（主要覆盖 inject 服务缺席）。
+ * fiber.await() 的 rejection 取回）；DISPOSED = 装入期间被卸载；
+ * UNLOADING = 卸载进行中，继续轮询到终态，超时则报"被卸载未收敛"（区别于
+ * PENDING 兜底的"装入超时"）；超时兜底 PENDING 永挂（主要覆盖 inject 服务缺席）。
  */
 
 function defaultLogger(): RegistryLogger {
@@ -164,25 +201,56 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
 
   // ── 事件（全部带前缀）──────────────────────────────────────────────────
 
+  /**
+   * 通知发射唯一出口（A1）。cordis 的 `ctx.emit` 对监听器是裸调用，既不逐条
+   * try/catch 也不 await，任一监听器同步抛错都会中断后续监听器并把异常抛回发射方；
+   * registry 的发射点全部位于 install / unload / 状态迁移的主流程上，绝不能被
+   * 观察者拖垮。这里做兜底捕获并记 warn（带事件名与插件 id，便于定位坏监听器）。
+   *
+   * 注意：这层只保护"发射方"。cordis 不会把监听器列表交出来，做不到逐监听器隔离，
+   * 因此 **toolkit 自有监听器一律自带异常防御**（见 registry/src/host.ts 头注）。
+   */
+  private notify(event: string, payload: unknown, pluginId: string): void {
+    try {
+      this.host.emit(event, payload)
+    } catch (error) {
+      this.log.warn('事件发射被监听器异常中断（不影响本次操作结果）', {
+        pluginId,
+        event: 'emit-failed',
+        durationMs: 0,
+        errorCode: 'emit-failed',
+        message: `${event}: ${String((error as Error)?.message ?? error)}`,
+      })
+    }
+  }
+
   private emitAdded(entry: RegistryEntry): void {
-    this.host.emit(contractEventName(this.opts.servicePrefix, 'registry:plugin-added'), this.toEntry(entry))
+    this.notify(
+      contractEventName(this.opts.servicePrefix, 'registry:plugin-added'),
+      this.toEntry(entry),
+      entry.manifest.id,
+    )
   }
 
   private emitRemoved(id: string): void {
-    this.host.emit(contractEventName(this.opts.servicePrefix, 'registry:plugin-removed'), { id })
+    this.notify(contractEventName(this.opts.servicePrefix, 'registry:plugin-removed'), { id }, id)
   }
 
   private setStatus(entry: RegistryEntry, to: PluginStatus, reason?: string, error?: { code: string; message: string }): void {
     const from = entry.status
     if (from === to) return
     entry.status = to
-    this.host.emit(contractEventName(this.opts.servicePrefix, 'registry:status-changed'), {
-      id: entry.manifest.id,
-      from,
-      to,
-      ...(reason !== undefined ? { reason } : {}),
-      ...(error !== undefined ? { error } : {}),
-    })
+    this.notify(
+      contractEventName(this.opts.servicePrefix, 'registry:status-changed'),
+      {
+        id: entry.manifest.id,
+        from,
+        to,
+        ...(reason !== undefined ? { reason } : {}),
+        ...(error !== undefined ? { error } : {}),
+      },
+      entry.manifest.id,
+    )
   }
 
   // ── 查询（ToolkitRegistry 接口）────────────────────────────────────────
@@ -263,7 +331,7 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
   private audit(event: AuditEvent, pluginId: string, durationMs: number, errorCode?: string): void {
     this.log.info(`audit ${event}`, { pluginId, event, durationMs, ...(errorCode ? { errorCode } : {}) })
     // 审计事件（REQ-10）：契约事件名之外的前缀化扩展事件，面板订阅展示（P4）。
-    this.host.emit(`${this.opts.servicePrefix}/audit:${event}`, { event, pluginId, durationMs, ...(errorCode ? { errorCode } : {}) })
+    this.notify(`${this.opts.servicePrefix}/audit:${event}`, { event, pluginId, durationMs, ...(errorCode ? { errorCode } : {}) }, pluginId)
   }
 
   /**
@@ -317,7 +385,9 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
       }
 
       const id = resolved.manifest.id
-      // 3. 注册 → 落盘 → 派生 ctx 装入（pluginObject 保持解析原样，不改写）。
+      // 3. 注册（事务顺序：写内存 → 落盘 → 发通知；pluginObject 保持解析原样，不改写）。
+      //    persist 先于 emit：emit 期间任何监听器抛错都不会留下"内存有记录、磁盘没记录"
+      //    的幻影条目（该条目会永久占住 id，让同 id 重装被 id-conflict 永久拒绝）。
       const entry: RegistryEntry = {
         manifest: resolved.manifest,
         status: 'installed',
@@ -328,6 +398,7 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
         registers: resolved.registers,
       }
       this.entries.set(id, entry)
+      this.persist(entry)
       this.emitAdded(entry)
       try {
         if (this.state.plugins[id]?.enabled === false) {
@@ -339,12 +410,24 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
         this.audit('installed', id, Date.now() - t0, entry.status === 'active' ? undefined : entry.lastError?.code)
         return { ok: true, entry: this.toEntry(entry) }
       } catch (error) {
-        // 注册后的意外错误（emit/persist 等）：回滚注册（REQ-2）。
+        // 注册后的意外错误：回滚注册（REQ-2），并补偿磁盘——内存与磁盘必须同进退。
         this.cancelRetry(entry)
         if (entry.fiber) {
           try { entry.fiber.dispose() } catch { /* D3 */ }
         }
         this.entries.delete(id)
+        try {
+          this.persist(null, id)
+        } catch (persistError) {
+          // 补偿失败不覆盖原始错误，但必须显式申报分裂面（磁盘可能仍留该 id）。
+          this.log.error('回滚时摘除磁盘记录失败（磁盘可能仍留有该插件记录）', {
+            pluginId: id,
+            event: 'rollback-persist-failed',
+            durationMs: 0,
+            errorCode: 'rollback-persist-failed',
+            message: String((persistError as Error)?.message ?? persistError),
+          })
+        }
         this.emitRemoved(id)
         return { ok: false, precheck: this.loadFailureReport(error) }
       }
@@ -388,8 +471,12 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
     const fiber = this.host.plugin(entry.pluginObject, entry.config)
     entry.fiber = fiber
     try {
-      // 轮询 fiber 状态直到稳定（ACTIVE/FAILED/DISPOSED）或超时（PENDING 永挂）。
+      // 轮询 fiber 状态直到终态（ACTIVE/FAILED/DISPOSED）或超时。
+      // UNLOADING 不是终态：它可能收敛到 DISPOSED（被卸载）或回到 LOADING/PENDING
+      // （依赖变化触发重载），所以继续轮询，但记下这个事实——超时时的归因要据此
+      // 区分"被卸载未收敛"和"依赖缺席装不动"（A2）。
       let settled: { ok: true } | { ok: false; error: Error } | undefined
+      let sawUnloading = false
       while (!settled) {
         const state = fiber.state
         if (state === FIBER_ACTIVE) {
@@ -400,13 +487,29 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
             () => undefined,
             (e) => e,
           )
-          settled = { ok: false, error: captured instanceof Error ? captured : new Error('fiber 加载失败（state=FAILED）') }
+          settled = {
+            ok: false,
+            error: captured instanceof Error
+              ? captured
+              : new FiberLoadError('fiber-failed', 'fiber 加载失败（state=FAILED，未取到原始错误）'),
+          }
         } else if (state === FIBER_DISPOSED) {
-          settled = { ok: false, error: new Error('fiber 在装入期间被卸载（state=DISPOSED；apply 返回的 Promise 拒绝也会走到这里）') }
-        } else if (Date.now() - t0 > this.opts.loadTimeoutMs) {
-          settled = { ok: false, error: new Error(`装入超时（${this.opts.loadTimeoutMs}ms；依赖服务缺席会永久 PENDING）`) }
+          settled = {
+            ok: false,
+            error: new FiberLoadError('fiber-disposed', 'fiber 在装入期间被卸载（state=DISPOSED；apply 返回的 Promise 拒绝也会走到这里）'),
+          }
         } else {
-          await new Promise<void>((resolve) => this.timers.setTimeout(resolve, POLL_MS))
+          if (state === FIBER_UNLOADING) sawUnloading = true
+          if (Date.now() - t0 > this.opts.loadTimeoutMs) {
+            settled = {
+              ok: false,
+              error: sawUnloading
+                ? new FiberLoadError('fiber-unloading-timeout', `fiber 在装入期间被卸载且未收敛（state=UNLOADING 持续超过 ${this.opts.loadTimeoutMs}ms；非装配慢，是卸载卡在了清理链上）`)
+                : new FiberLoadError('fiber-load-timeout', `装入超时（${this.opts.loadTimeoutMs}ms；依赖服务缺席会永久 PENDING）`),
+            }
+          } else {
+            await new Promise<void>((resolve) => this.timers.setTimeout(resolve, POLL_MS))
+          }
         }
       }
       if (!settled.ok) throw settled.error

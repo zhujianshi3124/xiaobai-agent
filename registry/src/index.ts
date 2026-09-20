@@ -9,7 +9,7 @@
  * 服务名：`${servicePrefix}/registry`（已注册进宿主，供面板经 ctx 读取）。
  */
 
-export { ToolkitRegistryCore, sourceFixAdvice } from './registry.js'
+export { ToolkitRegistryCore, sourceFixAdvice, FiberLoadError, FIBER_PENDING, FIBER_LOADING, FIBER_ACTIVE, FIBER_FAILED, FIBER_DISPOSED, FIBER_UNLOADING } from './registry.js'
 export { cordisHost } from './host.js'
 export { resolveLocalSource, SourceError } from './loader.js'
 export { contractPrecheck } from './precheck.js'
