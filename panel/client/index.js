@@ -7,6 +7,12 @@ window.__ModuleLoader__.load({
 		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 		var react = require("react");
 
+		// 本面板一切请求的唯一基址（P7 嵌入 / REQ-8）。取值恒等于 contract 的
+		// contractHttpBase(DEFAULT_SERVICE_PREFIX)，一致性由 test/p7-embed.test.mjs 锁死。
+		// 为何这里只能是常量、不像兜底页那样由服务端注入：React 标签页由宿主客户端加载器
+		// 按固定模块 id 装载，bundle 不经我们手（详见 docs/embed-toolkit.md 嵌入边界）。
+		var PANEL_API = "/api/toolkit-panel";
+
 		// ---- 功能描述：说"这个插件是干嘛的"，不出现工程名词 ----
 		var DESCRIPTIONS = {
 			"agent-memory": "记住你说过的话和项目里的重要信息，下次对话还能用上。",
@@ -413,7 +419,7 @@ window.__ModuleLoader__.load({
 				setError("");
 				setPending(null);
 				try {
-					var res = await fetch("/api/toolkit-panel/toggle/plan", {
+					var res = await fetch(PANEL_API + "/toggle/plan", {
 						method: "POST",
 						cache: "no-store",
 						headers: { "content-type": "application/json" },
@@ -438,7 +444,7 @@ window.__ModuleLoader__.load({
 				setBusy(true);
 				setError("");
 				try {
-					var res = await fetch("/api/toolkit-panel/execute", {
+					var res = await fetch(PANEL_API + "/execute", {
 						method: "POST",
 						cache: "no-store",
 						headers: { "content-type": "application/json" },
@@ -608,7 +614,7 @@ window.__ModuleLoader__.load({
 				try {
 					var raw = draftOf(f);
 					var value = f.type === "bool" ? (raw === true || raw === "true") : raw;
-					var res = await fetch("/api/toolkit-panel/config/plan", {
+					var res = await fetch(PANEL_API + "/config/plan", {
 						method: "POST",
 						cache: "no-store",
 						headers: { "content-type": "application/json" },
@@ -632,7 +638,7 @@ window.__ModuleLoader__.load({
 				setBusy(true);
 				setError("");
 				try {
-					var res = await fetch("/api/toolkit-panel/execute", {
+					var res = await fetch(PANEL_API + "/execute", {
 						method: "POST",
 						cache: "no-store",
 						headers: { "content-type": "application/json" },
@@ -1072,13 +1078,13 @@ window.__ModuleLoader__.load({
 					// §3.6(a)：真卸载附带可选删除原因（plan 时入账，删除前落收据；空 ⇒ 收据记 null）
 					var planPayload = { plugin: plugin.dir, mode: mode, confirm: list };
 					if (mode === "true") planPayload.reason = String(reason || "").trim().slice(0, 200);
-					var res = await fetch("/api/toolkit-panel/uninstall/plan", {
+					var res = await fetch(PANEL_API + "/uninstall/plan", {
 						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
 						body: JSON.stringify(planPayload)
 					});
 					var body = await res.json();
 					if (!body.ok) { setError(body.error || ("HTTP " + res.status)); return; }
-					var res2 = await fetch("/api/toolkit-panel/uninstall/execute", {
+					var res2 = await fetch(PANEL_API + "/uninstall/execute", {
 						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
 						body: JSON.stringify({ token: body.plan.token })
 					});
@@ -1105,8 +1111,8 @@ window.__ModuleLoader__.load({
 				try {
 					// 挂载（重装后）与软恢复共用同一确认弹窗；按 dlg.mode 分派到各自端点。
 					var isMount = dlg && dlg.mode === "mount";
-					var planPath = isMount ? "/api/toolkit-panel/mount/plan" : "/api/toolkit-panel/restore/plan";
-					var execPath = isMount ? "/api/toolkit-panel/mount/execute" : "/api/toolkit-panel/restore/execute";
+					var planPath = isMount ? PANEL_API + "/mount/plan" : PANEL_API + "/restore/plan";
+					var execPath = isMount ? PANEL_API + "/mount/execute" : PANEL_API + "/restore/execute";
 					var payload = { plugin: plugin.dir };
 					if (choice) payload.hostKeyChoice = choice;
 					var res = await fetch(planPath, {
@@ -1142,7 +1148,7 @@ window.__ModuleLoader__.load({
 				try {
 					var payload = { plugin: plugin.dir };
 					if (choice) payload.hostKeyChoice = choice;
-					var res = await fetch("/api/toolkit-panel/mount/plan", {
+					var res = await fetch(PANEL_API + "/mount/plan", {
 						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
 						body: JSON.stringify(payload)
 					});
@@ -1152,7 +1158,7 @@ window.__ModuleLoader__.load({
 						return;
 					}
 					if (!body.ok) { setError(body.error || ("HTTP " + res.status)); return; }
-					var res2 = await fetch("/api/toolkit-panel/mount/execute", {
+					var res2 = await fetch(PANEL_API + "/mount/execute", {
 						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
 						body: JSON.stringify({ token: body.plan.token })
 					});
@@ -1321,7 +1327,7 @@ window.__ModuleLoader__.load({
 			var loadStates = react.useCallback(async function () {
 				setSt(function (s) { return Object.assign({}, s, { loading: true }); });
 				try {
-					var res = await fetch("/api/toolkit-panel/doctor/states", { cache: "no-store" });
+					var res = await fetch(PANEL_API + "/doctor/states", { cache: "no-store" });
 					var body = await res.json();
 					if (body.ok) {
 						setSt({ loading: false, error: "", states: body.states || [], snapshots: body.snapshots || [] });
@@ -1332,7 +1338,7 @@ window.__ModuleLoader__.load({
 					setSt({ loading: false, error: String(e && e.message || e), states: null, snapshots: [] });
 				}
 				try {
-					var res2 = await fetch("/api/toolkit-panel/custody", { cache: "no-store" });
+					var res2 = await fetch(PANEL_API + "/custody", { cache: "no-store" });
 					var body2 = await res2.json();
 					setReceipts({ loaded: true, entries: (body2.ok && body2.custody && Array.isArray(body2.custody.entries)) ? body2.custody.entries : [] });
 				} catch {
@@ -1348,7 +1354,7 @@ window.__ModuleLoader__.load({
 				setMsg("");
 				setBusy(true);
 				try {
-					var res = await fetch("/api/toolkit-panel/doctor/apply/plan", {
+					var res = await fetch(PANEL_API + "/doctor/apply/plan", {
 						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
 						body: JSON.stringify({ issueId: issue.id })
 					});
@@ -1367,7 +1373,7 @@ window.__ModuleLoader__.load({
 				setMsg("");
 				setBusy(true);
 				try {
-					var res = await fetch("/api/toolkit-panel/doctor/rollback/plan", {
+					var res = await fetch(PANEL_API + "/doctor/rollback/plan", {
 						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
 						body: JSON.stringify({ stamp: entry.stamp })
 					});
@@ -1385,7 +1391,7 @@ window.__ModuleLoader__.load({
 				setMsg("");
 				setBusy(true);
 				try {
-					var res = await fetch("/api/toolkit-panel/snapshot-restore/plan", {
+					var res = await fetch(PANEL_API + "/snapshot-restore/plan", {
 						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
 						body: JSON.stringify({ stamp: snap.stamp })
 					});
@@ -1404,9 +1410,9 @@ window.__ModuleLoader__.load({
 				setBusy(true);
 				setMsg("");
 				try {
-					var execUrl = dlg.kind === "fix" ? "/api/toolkit-panel/doctor/apply/execute"
-						: dlg.kind === "rollback" ? "/api/toolkit-panel/doctor/rollback/execute"
-						: "/api/toolkit-panel/snapshot-restore/execute";
+					var execUrl = dlg.kind === "fix" ? PANEL_API + "/doctor/apply/execute"
+						: dlg.kind === "rollback" ? PANEL_API + "/doctor/rollback/execute"
+						: PANEL_API + "/snapshot-restore/execute";
 					var res = await fetch(execUrl, {
 						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
 						body: JSON.stringify({ token: dlg.plan.token })
@@ -1535,7 +1541,7 @@ window.__ModuleLoader__.load({
 
 			var loadSnapshot = react.useCallback(async function () {
 				try {
-					var res = await fetch("/api/toolkit-panel/snapshot", { cache: "no-store" });
+					var res = await fetch(PANEL_API + "/snapshot", { cache: "no-store" });
 					if (res.status === 403) {
 						setMeta("拒绝访问：本页面只允许在这台电脑上打开。");
 						return;
@@ -1560,7 +1566,7 @@ window.__ModuleLoader__.load({
 				setDoctor(null);
 				setDoctorError("");
 				try {
-					var res = await fetch("/api/toolkit-panel/doctor/dry-run", { method: "POST", cache: "no-store" });
+					var res = await fetch(PANEL_API + "/doctor/dry-run", { method: "POST", cache: "no-store" });
 					var body = await res.json();
 					if (!body.ok) {
 						setDoctorError(body.error || ("HTTP " + res.status));
@@ -1636,9 +1642,17 @@ window.__ModuleLoader__.load({
 
 		// ════ P5 泛化线 → P6 归一：registry 驱动的通用管理区（REQ-5 / 债务 #9 / P6 面板归一）════════
 		// P6 起本区块并入唯一 toolkit-panel 标签页（ToolkitPanel 顶部），不再是独立标签页；
-		// 数据源仅为 /api/toolkit-panel/v2/*（registry/doctor 服务与带前缀事件流），
+		// 数据源仅为 PANEL_API/v2/*（registry/doctor 服务与带前缀事件流），
 		// 零具体子插件模块引用——新装插件免刷新自适应（no-subplugin-import-check 守卫）。
-		var V2_API = "/api/toolkit-panel/v2";
+		var V2_API = PANEL_API + "/v2";
+
+		// 安装来源的绝对路径判别（第五步 UX / Q1 裁决「仅本地路径」）：Windows 盘符、
+		// UNC、以及 POSIX 根路径算绝对；其余（含 "my-plugin"、"C:my-plugin" 这类盘内相对）
+		// 一律提交前拦下——服务端按进程工作目录解析它们，用户看到的报错会指向 System32
+		// 一类的意外位置，不如在这里一次说清。
+		function isAbsoluteLocalPath(p) {
+			return /^[a-zA-Z]:[\\/]/.test(p) || /^[\\/]{2}/.test(p) || /^\//.test(p);
+		}
 		var V2_EVENT_NAMES = ["plugin-added", "plugin-removed", "status-changed", "health-changed", "issue-found",
 			"audit:installed", "audit:removed", "audit:enabled", "audit:disabled", "audit:reloaded", "audit:quarantined", "audit:config-changed"];
 
@@ -1897,7 +1911,7 @@ window.__ModuleLoader__.load({
 		}
 
 		// ── P6 归一：registry 管理区（原 v2 标签页 RegistryTab）并入唯一 toolkit-panel 标签页 ──
-		// 数据源仅 /api/toolkit-panel/v2/*（registry/doctor 服务与带前缀事件流），零具体
+		// 数据源仅 PANEL_API/v2/*（registry/doctor 服务与带前缀事件流），零具体
 		// 子插件模块引用（no-subplugin-import-check 守卫）。新装插件免刷新自动出现。
 		// 容错：本区任何数据失败/渲染异常只降级本区，不影响下方 patch 域工具区。
 		function V2Section() {
@@ -1995,12 +2009,21 @@ window.__ModuleLoader__.load({
 				snapshot.doctorAvailable === false ? react.createElement("div", { style: { border: "1px solid #b5890088", background: "#b5890018", color: "#8a6d00", padding: "4px 10px", borderRadius: "6px", margin: "6px 0", fontSize: "13px" } }, "⚠ doctor 不可用：预检与健康巡检受限") : null,
 				banner,
 				react.createElement("div", { style: { border: "1px dashed #8886", borderRadius: "8px", padding: "8px 10px", margin: "8px 0" } },
-					react.createElement("b", null, "安装新插件（本地路径）"),
+					react.createElement("b", null, "安装新插件（仅本地插件目录）"),
+					react.createElement("div", { style: { fontSize: "12px", color: "#8a6d00", margin: "4px 0" } },
+						"只接受本地插件目录的", react.createElement("b", null, "绝对路径"),
+						"（npm 包安装暂未开放）。相对路径会按", react.createElement("b", null, "服务进程的工作目录"),
+						"解析而不是本项目目录，因此提交前先写全。"),
 					react.createElement("div", { style: { margin: "6px 0" } },
-						react.createElement("input", { type: "text", value: pathSt[0], onChange: function (e) { setPath(e.target.value); }, placeholder: "插件目录或入口文件路径", style: { width: "60%", padding: "3px 6px", borderRadius: "4px", border: "1px solid #8888" } }),
+						react.createElement("input", { type: "text", value: pathSt[0], onChange: function (e) { setPath(e.target.value); }, placeholder: "本地插件目录的绝对路径，如 D:\\plugins\\my-plugin", style: { width: "60%", padding: "3px 6px", borderRadius: "4px", border: "1px solid #8888" } }),
 						react.createElement("button", { onClick: function () {
-							v2Api("/install/precheck", { source: { kind: "local", path: pathSt[0] } }).then(function (result) {
-								if (result.ok) setWizard({ path: pathSt[0], precheck: result.precheck });
+							var raw = String(pathSt[0] || "").trim();
+							if (!isAbsoluteLocalPath(raw)) {
+								setMsg({ ok: false, code: "need-absolute-path", error: "请输入绝对路径（如 D:\\plugins\\my-plugin）。相对路径 \"" + raw + "\" 会按服务进程的工作目录解析，多半指向你想不到的地方。" });
+								return;
+							}
+							v2Api("/install/precheck", { source: { kind: "local", path: raw } }).then(function (result) {
+								if (result.ok) setWizard({ path: raw, precheck: result.precheck });
 								else setMsg({ ok: false, code: "precheck-failed", error: result.error || "预检失败" });
 							}).catch(function (error) { setMsg({ ok: false, code: error.code || "error", error: error.error || String(error) }); });
 					} }, "① 预检")),

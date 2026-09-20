@@ -16,7 +16,9 @@
   "type": "module",
   "description": "本地 DSH 套件：rate-throttle / compact-router / agent-memory / search-router / web-search-local 五合一入口；一个版本号管全部。",
   "exports": {
+    ".": "./index.js",
     "./contract": "./contract/dist/index.js",
+    "./panel": "./panel/index.js",
     "./registry": "./registry/dist/index.js",
     "./doctor": "./doctor/dist/index.js",
     "./rate-throttle": "./lib/rate-throttle/index.js",
@@ -28,7 +30,10 @@
     "./package.json": "./package.json"
   },
   "files": [
+    "index.js",
+    "dsh.plugin.json",
     "lib/",
+    "panel/",
     "contract/",
     "registry/",
     "doctor/",

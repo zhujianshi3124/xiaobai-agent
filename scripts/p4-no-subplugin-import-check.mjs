@@ -28,6 +28,7 @@ const MODULE_PATTERNS = [
 
 // files: [相对路径, 模式集]；'all' = 子插件名 + lib/ 模块引用；'module' = 仅 lib/ 模块引用
 const defaultFiles = [
+  ['index.js', 'all'], // P7 根入口：toolkit 自描述装配壳，同样禁止点名任何子插件
   ['panel/manager/registry-host.mjs', 'all'],
   ['panel/manager/v2-api.mjs', 'all'],
   ['panel/manager/realtime-connector.mjs', 'all'],

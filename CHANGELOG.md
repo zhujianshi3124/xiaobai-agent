@@ -1,10 +1,43 @@
 # Changelog
 
 本文件记录 @local/dsh-toolkit 的对外可见变更。格式遵循 Keep a Changelog；
-版本号 semver。工具箱泛化改造的阶段产出按 P0–P7 记录（规格见判定台账，
-现状与裁决见 `docs/p0-recon.md`）。
+版本号 semver。工具箱泛化改造的阶段产出按 P0–P8 记录（规格见判定台账，阶段号
+P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`）。
 
 ## [Unreleased]
+
+### Added（P7 嵌入，2026-09-20，REQ-8 / G4 双向兼容）
+
+- **包级根入口 `index.js` + `exports["."]`**：`@local/dsh-toolkit` 现在是一个可被任何
+  dsh 宿主当**普通插件**装载的模块（`name=dsh-toolkit` / `inject=["webServer"]` /
+  `apply`）。根入口只做两件事：导出自身 manifest、把工作交给面板装配点
+  （`panel/index.js` 一直是 registry/doctor 的现场，根入口不复制逻辑）。
+  同时补 `exports["./panel"]`（R12：面板行可由 `file://` 绝对路径迁到包子路径）。
+- **根 `dsh.plugin.json` 契约化自描述**：`id=dsh/toolkit`、`displayName`、`version`、
+  `contract: "^1.0"`、`requires`（node `>=22` / dshRuntime / **services: ["webServer"]**
+  ——面板对宿主 webServer 的依赖如实声明，宿主 doctor 预检因此形成自描述闭环）、
+  `configSchema`（纯定义 JSON、零默认，覆盖 `apply()` 真正读取的 servicePrefix/toolkitRoot/
+  doctorCli/devicesFile/backupRoot/doctorConfigRoot/registry.*/doctor.*）、
+  `panels`（**归一后的单一面板**：slot `settings.plugins.tab`、id `toolkit-panel`、order 90）。
+  旧字段（manifestVersion/name/aliases/requirements/requiredAliases）按 REQ-9 作为 info 级容忍保留。
+- **新裁定：规格 configSchema 的 `plugins` 段不实现也不声明**。boot 权威是 patch 行、运行时
+  权威是 registry state 文件（`<toolkitRoot>/.registry/state.json`）；再开一个 config 里的
+  插件种子段就是第三个事实源（R2 明令避免）。`p7-embed` 测试反向锁死"configSchema 必须
+  覆盖 apply() 真正读取的键"，将来加键不写 schema 会被测试抓住。
+- **面板 HTTP 路由前缀化**（D5 无根假设）：`contract` 新增 `contractHttpBase(prefix)` /
+  `normalizeServicePrefix(prefix)` / `DEFAULT_SERVICE_PREFIX`；`/api/toolkit-panel/*` 全部
+  23 条 P2.4 路由、9 条 v2 管理路由、`/v2/connector.js`、兜底页 `panel.html` 的页内基址
+  改为从 `config.servicePrefix` 派生。缺省前缀 `toolkit` 下逐字节等于历史值——
+  **对外 URL 零变化**（p1-smoke 32 条路由断言原样通过，未改一条）。
+- **doctor CLI 路径可注入**：新增 `TOOLKIT_PANEL_DOCTOR_CLI` 环境变量兜底（与既有
+  devicesFile/backupRoot/doctorConfigRoot 同款），缺省值仍是本机开发布局现值。
+- **`no-subplugin-import-check` 扫描面加入根入口**：`index.js` 与面板同纪律，
+  不得点名任何子插件（自适应管理的前提），现扫 6 文件 0 命中。
+- 新增 `test/p7-embed.test.mjs` 13 例：基址派生与三处孪生一致 / 缺省 URL 不变 /
+  双实例（`toolkit` + `tk2`）同挂一根 webServer 路由零冲突 / 双实例真 HTTP 两面板同时可达且
+  A 装的插件不进 B / B 的 SSE 收不到 A 的事件（前缀链路端到端）/ mock 桶装入→卸出
+  （路由全部注销 + 订阅全部解除 + 活动句柄不增一个，doctor 巡检定时器在场下测）/
+  guard 用被注入的 webServer 且写路由 fail-closed / 根 manifest 过契约校验且与盘上同源。
 
 ### Changed（P5 存量迁移，2026-09-19）
 

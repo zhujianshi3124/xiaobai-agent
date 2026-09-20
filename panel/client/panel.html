@@ -116,6 +116,9 @@
 <div id="doctorOut" class="issues"></div>
 <div id="consoleOut"></div>
 <script>
+// 本页一切请求的唯一基址（P7 嵌入 / REQ-8）：装配时由服务端按 config.servicePrefix 改写
+// 该标记（contract.contractHttpBase）；缺省前缀 toolkit 下恰为 /api/toolkit-panel，URL 零变化。
+var PANEL_API = "__TOOLKIT_PANEL_API_BASE__";
 var state = null;
 function el(id) { return document.getElementById(id); }
 function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
@@ -324,7 +327,7 @@ function wireToggle(cardEl, p) {
     msg.textContent = "正在生成改动方案…";
     confirmHost.innerHTML = "";
     try {
-      var res = await fetch("/api/toolkit-panel/toggle/plan", {
+      var res = await fetch(PANEL_API + "/toggle/plan", {
         method: "POST",
         cache: "no-store",
         headers: { "content-type": "application/json" },
@@ -377,7 +380,7 @@ function renderConfirm(host, askBtn, p) {
   go.onclick = async function () {
     go.disabled = true;
     try {
-      var res = await fetch("/api/toolkit-panel/execute", {
+      var res = await fetch(PANEL_API + "/execute", {
         method: "POST",
         cache: "no-store",
         headers: { "content-type": "application/json" },
@@ -495,7 +498,7 @@ function wireConfig(cardEl, p) {
     msg.textContent = "正在生成改动方案…";
     confirmHost.innerHTML = "";
     try {
-      var res = await fetch("/api/toolkit-panel/config/plan", {
+      var res = await fetch(PANEL_API + "/config/plan", {
         method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
         body: JSON.stringify({ rowId: panel.rowId, path: path, value: raw })
       });
@@ -525,7 +528,7 @@ function renderCfgConfirm(host, saveBtn, p) {
     var go = host.querySelector(".cfgGo");
     go.disabled = true;
     try {
-      var res = await fetch("/api/toolkit-panel/execute", {
+      var res = await fetch(PANEL_API + "/execute", {
         method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
         body: JSON.stringify({ token: plan.token })
       });
@@ -878,14 +881,14 @@ function wireP24Dialog(host, p) {
     var reasonInput = host.querySelector("input[data-reason]");
     var planPayload = { plugin: p.dir, mode: mode, confirm: typed };
     if (mode === "true" && reasonInput) planPayload.reason = String(reasonInput.value || "").trim().slice(0, 200);
-    var planned = await p24Post("/api/toolkit-panel/uninstall/plan", planPayload);
+    var planned = await p24Post(PANEL_API + "/uninstall/plan", planPayload);
     if (!planned.body.ok) {
       go.disabled = false;
       msg.innerHTML = '<span class="error">没能开始：' + esc(planned.body.error || planned.status) + "</span>";
       return;
     }
     msg.innerHTML = '<span class="muted">方案已生成，正在执行…</span>';
-    var exec = await p24Post("/api/toolkit-panel/uninstall/execute", { token: planned.body.plan.token });
+    var exec = await p24Post(PANEL_API + "/uninstall/execute", { token: planned.body.plan.token });
     go.disabled = false;
     if (!exec.body.ok) {
       msg.innerHTML = '<span class="error">没能完成：' + esc(exec.body.error || exec.status) + "</span>";
@@ -911,8 +914,8 @@ function wireRestoreDialog(host, p, msg, conflict) {
   var no = host.querySelector(".restNo");
   if (no) no.onclick = function () { host.innerHTML = ""; };
   var isMount = p._restoreKind === "mount";
-  var planUrl = isMount ? "/api/toolkit-panel/mount/plan" : "/api/toolkit-panel/restore/plan";
-  var execUrl = isMount ? "/api/toolkit-panel/mount/execute" : "/api/toolkit-panel/restore/execute";
+  var planUrl = isMount ? PANEL_API + "/mount/plan" : PANEL_API + "/restore/plan";
+  var execUrl = isMount ? PANEL_API + "/mount/execute" : PANEL_API + "/restore/execute";
   var verb = isMount ? "挂载" : "恢复";
   var runRestore = async function (choice) {
     var payload = { plugin: p.dir };
@@ -948,7 +951,7 @@ function wireRestoreDialog(host, p, msg, conflict) {
 }
 
 async function loadSnapshot() {
-  var res = await fetch("/api/toolkit-panel/snapshot", { cache: "no-store" });
+  var res = await fetch(PANEL_API + "/snapshot", { cache: "no-store" });
   if (res.status === 403) { el("meta").textContent = "拒绝访问：本页面只允许在这台电脑上打开。"; return; }
   var body = await res.json();
   if (body.ok) renderSnapshot(body.snapshot);
@@ -964,7 +967,7 @@ async function runDoctor() {
   var out = el("doctorOut");
   out.innerHTML = "";
   try {
-    var res = await fetch("/api/toolkit-panel/doctor/dry-run", { method: "POST", cache: "no-store" });
+    var res = await fetch(PANEL_API + "/doctor/dry-run", { method: "POST", cache: "no-store" });
     var body = await res.json();
     if (!body.ok) {
       el("doctorStatus").textContent = "体检没能完成";
@@ -1040,7 +1043,7 @@ var consolePlan = null;
 async function loadStates() {
   var out = el("consoleOut");
   try {
-    var res = await fetch("/api/toolkit-panel/doctor/states", { cache: "no-store" });
+    var res = await fetch(PANEL_API + "/doctor/states", { cache: "no-store" });
     var body = await res.json();
     var html = "<h2>操作台（可执行项 · 确认一次改一处）</h2>";
     var r = window.__doctorReport || null;
@@ -1069,7 +1072,7 @@ async function loadStates() {
           + '<div class="uninRow"><button class="uninRest" data-sn-stamp="' + esc(snaps[k].stamp) + '">恢复</button></div></div>';
       }
     }
-    var rc = await fetch("/api/toolkit-panel/custody", { cache: "no-store" });
+    var rc = await fetch(PANEL_API + "/custody", { cache: "no-store" });
     var rcb = await rc.json();
     var entries = rcb.ok && rcb.custody && Array.isArray(rcb.custody.entries) ? rcb.custody.entries : [];
     html += "<h2>删除收据（只读对账 · 不能恢复）</h2><div class=\"dlgLine\">" + esc(CONSOLE_RECEIPTS.note) + "</div>";
@@ -1106,7 +1109,7 @@ function wireConsole(root) {
       var id = this.getAttribute("data-fix-id");
       this.disabled = true;
       try {
-        var res = await fetch("/api/toolkit-panel/doctor/apply/plan", { method: "POST", cache: "no-store", headers: { "content-type": "application/json" }, body: JSON.stringify({ issueId: id }) });
+        var res = await fetch(PANEL_API + "/doctor/apply/plan", { method: "POST", cache: "no-store", headers: { "content-type": "application/json" }, body: JSON.stringify({ issueId: id }) });
         var body = await res.json();
         if (!body.ok) { alertOpen("没能开始：" + (body.error || res.status)); return; }
         var isInstall = body.plan.steps && body.plan.steps.some(function (s) { return s.op === "install-package"; });
@@ -1122,7 +1125,7 @@ function wireConsole(root) {
         go.onclick = async function () {
           go.disabled = true;
           el("consoleMsg").innerHTML = "执行中…";
-          var ex = await fetch("/api/toolkit-panel/doctor/apply/execute", { method: "POST", cache: "no-store", headers: { "content-type": "application/json" }, body: JSON.stringify({ token: consolePlan.token }) });
+          var ex = await fetch(PANEL_API + "/doctor/apply/execute", { method: "POST", cache: "no-store", headers: { "content-type": "application/json" }, body: JSON.stringify({ token: consolePlan.token }) });
           var exb = await ex.json();
           if (!exb.ok) { el("consoleMsg").innerHTML = '<span class="error">' + esc(exb.error || ex.status) + "</span>"; go.disabled = false; return; }
           el("consoleDlg").innerHTML = '<div class="dlgBox"><div class="dlgTitle">已执行完成</div><div class="dlgLine">详情见体检结果（已自动重新体检）。</div><div class="uninRow"><button class="uninNo" onclick="this.closest(\'#consoleDlg\').innerHTML=\'\'">关闭</button></div></div>';
@@ -1138,7 +1141,7 @@ function wireConsole(root) {
       var files = Number(this.getAttribute("data-rb-files") || "0");
       var pkgs = Number(this.getAttribute("data-rb-pkgs") || "0");
       this.disabled = true;
-      var res = await fetch("/api/toolkit-panel/doctor/rollback/plan", { method: "POST", cache: "no-store", headers: { "content-type": "application/json" }, body: JSON.stringify({ stamp: stamp }) });
+      var res = await fetch(PANEL_API + "/doctor/rollback/plan", { method: "POST", cache: "no-store", headers: { "content-type": "application/json" }, body: JSON.stringify({ stamp: stamp }) });
       var body = await res.json();
       if (!body.ok) { alertOpen("没能开始：" + (body.error || res.status)); return; }
       consolePlan = { kind: "rollback", token: body.plan.token };
@@ -1146,7 +1149,7 @@ function wireConsole(root) {
       go.onclick = async function () {
         go.disabled = true;
         el("consoleMsg").innerHTML = "回滚中…";
-        var ex = await fetch("/api/toolkit-panel/doctor/rollback/execute", { method: "POST", cache: "no-store", headers: { "content-type": "application/json" }, body: JSON.stringify({ token: consolePlan.token }) });
+        var ex = await fetch(PANEL_API + "/doctor/rollback/execute", { method: "POST", cache: "no-store", headers: { "content-type": "application/json" }, body: JSON.stringify({ token: consolePlan.token }) });
         var exb = await ex.json();
         if (!exb.ok) { el("consoleMsg").innerHTML = '<span class="error">' + esc(exb.error || ex.status) + "</span>"; go.disabled = false; return; }
         el("consoleDlg").innerHTML = '<div class="dlgBox"><div class="dlgTitle">回滚完成。</div><div class="uninRow"><button class="uninNo" onclick="this.closest(\'#consoleDlg\').innerHTML=\'\'">关闭</button></div></div>';
@@ -1159,7 +1162,7 @@ function wireConsole(root) {
     snBtns[b].onclick = async function () {
       var stamp = this.getAttribute("data-sn-stamp");
       this.disabled = true;
-      var res = await fetch("/api/toolkit-panel/snapshot-restore/plan", { method: "POST", cache: "no-store", headers: { "content-type": "application/json" }, body: JSON.stringify({ stamp: stamp }) });
+      var res = await fetch(PANEL_API + "/snapshot-restore/plan", { method: "POST", cache: "no-store", headers: { "content-type": "application/json" }, body: JSON.stringify({ stamp: stamp }) });
       var body = await res.json();
       if (!body.ok) { alertOpen("没能开始：" + (body.error || res.status)); return; }
       consolePlan = { kind: "snapshot", token: body.plan.token };
@@ -1170,7 +1173,7 @@ function wireConsole(root) {
       go.onclick = async function () {
         go.disabled = true;
         el("consoleMsg").innerHTML = "恢复中…";
-        var ex = await fetch("/api/toolkit-panel/snapshot-restore/execute", { method: "POST", cache: "no-store", headers: { "content-type": "application/json" }, body: JSON.stringify({ token: consolePlan.token }) });
+        var ex = await fetch(PANEL_API + "/snapshot-restore/execute", { method: "POST", cache: "no-store", headers: { "content-type": "application/json" }, body: JSON.stringify({ token: consolePlan.token }) });
         var exb = await ex.json();
         if (!exb.ok) { el("consoleMsg").innerHTML = '<span class="error">' + esc(exb.error || ex.status) + "</span>"; go.disabled = false; return; }
         el("consoleDlg").innerHTML = '<div class="dlgBox"><div class="dlgTitle">快照恢复完成，重启后生效。</div><div class="uninRow"><button class="uninNo" onclick="this.closest(\'#consoleDlg\').innerHTML=\'\'">关闭</button></div></div>';

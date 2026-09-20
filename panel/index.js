@@ -34,6 +34,7 @@ import {
 import { listCustody, getSoftRecord } from "./manager/custody.mjs";
 import { listRestoreSnapshots } from "./manager/backup.mjs";
 import { PLUGINS, assertUninstallable } from "./manager/plugin-registry.mjs";
+import { contractHttpBase, normalizeServicePrefix } from "../contract/dist/index.js";
 import { createToolkitServices } from "./manager/registry-host.mjs";
 import { createV2Api, toPanelRoutes } from "./manager/v2-api.mjs";
 import {
@@ -239,8 +240,17 @@ function loadJsonSafe(abs) {
 }
 
 export function apply(ctx, config = {}) {
+  // P7 嵌入（REQ-8 / D5 无根假设）：面板 HTTP 路由基址由 servicePrefix 派生，不再是硬编码字面量。
+  // 缺省前缀 toolkit 下 contractHttpBase 恰等于历史值 "/api/toolkit-panel" —— 对外 URL 零变化；
+  // 同进程多实例各带自己的前缀即路由零冲突。基址与 registry/doctor 服务名同源（同一个
+  // normalizeServicePrefix），面板客户端的孪生常量见 panel/client/index.js PANEL_API。
+  const servicePrefix = normalizeServicePrefix(config.servicePrefix);
+  const apiBase = contractHttpBase(servicePrefix);
   const toolkitRoot = resolve(config.toolkitRoot || defaultToolkitRoot());
-  const doctorCli = resolve(config.doctorCli || "D:/dsh-test-sandbox/projects/doctor/src/cli.mjs");
+  // doctor CLI 面按裁决留在仓外（沙箱独立仓 @local/dsh-toolkit-doctor），路径必须可注入：
+  // config.doctorCli → env TOOLKIT_PANEL_DOCTOR_CLI → 缺省值（本机开发布局的现值，嵌入别机时
+  // 由前两者覆盖；CLI 不在场时体检路由返回 degraded，不假装可用）。
+  const doctorCli = resolve(config.doctorCli || process.env.TOOLKIT_PANEL_DOCTOR_CLI || "D:/dsh-test-sandbox/projects/doctor/src/cli.mjs");
   const devicesFile = resolve(config.devicesFile || process.env.TOOLKIT_PANEL_DEVICES_FILE || defaultDevicesFile());
   // 写前备份根目录（P2.1）。默认放插件仓下的 .panel-backups/ 之外，避免与人工备份混淆。
   const backupRoot = resolve(config.backupRoot || process.env.TOOLKIT_PANEL_BACKUP_ROOT || join(toolkitRoot, ".panel-write-backups"));
@@ -251,7 +261,14 @@ export function apply(ctx, config = {}) {
   // doctor issueId / 快照 stamp 白名单（防注入与路径穿越；设计稿 §6.2/backup.mjs）
   const ISSUE_ID_RE = /^[A-Za-z0-9._-]+$/;
   const STAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z$/;
-  const uiHtml = readFileSync(join(panelRoot(), "client", "panel.html"), "utf8");
+  // 兜底页 panel.html 的请求基址是标记占位（P7）：装配时按 apiBase 改写。
+  // 标记缺失即抛（fail-closed）——宁可面板装不上，也不能让它带着别人的基址上线串扰。
+  const UI_API_TOKEN = "__TOOLKIT_PANEL_API_BASE__";
+  const panelHtmlSrc = readFileSync(join(panelRoot(), "client", "panel.html"), "utf8");
+  if (!panelHtmlSrc.includes(UI_API_TOKEN)) {
+    throw new Error(`panel.html 缺少请求基址标记 ${UI_API_TOKEN}（P7 路由前缀化要求，见 client/panel.html 顶部注释）`);
+  }
+  const uiHtml = panelHtmlSrc.replace(UI_API_TOKEN, apiBase);
   // P6 退役：v2.html 独立页（/v2/ui）已删除——registry 通用管理区并入唯一 toolkit-panel
   // 标签页（P6 归一）。/v2/connector.js 保留：归一面板客户端经动态 import 复用
   // realtime-connector.mjs（引擎 HTTP 面不退役）。
@@ -329,7 +346,7 @@ export function apply(ctx, config = {}) {
   const routes = [
     {
       kind: "exact",
-      path: "/api/toolkit-panel/ui",
+      path: apiBase + "/ui",
       handler: guard(async (request, response) => {
         if (request.method !== "GET") {
           response.writeHead(405, { allow: "GET" });
@@ -342,7 +359,7 @@ export function apply(ctx, config = {}) {
     },
     {
       kind: "exact",
-      path: "/api/toolkit-panel/snapshot",
+      path: apiBase + "/snapshot",
       handler: guard(async (request, response) => {
         if (request.method !== "GET") {
           response.writeHead(405, { allow: "GET" });
@@ -354,7 +371,7 @@ export function apply(ctx, config = {}) {
     },
     {
       kind: "exact",
-      path: "/api/toolkit-panel/doctor/dry-run",
+      path: apiBase + "/doctor/dry-run",
       handler: guard(async (request, response) => {
         if (request.method !== "POST") {
           response.writeHead(405, { allow: "POST" });
@@ -369,7 +386,7 @@ export function apply(ctx, config = {}) {
     // plan 路由：只读计算，返回 diff 预览 / 期望 SHA / 有效期。**不落盘**。
     {
       kind: "exact",
-      path: "/api/toolkit-panel/plan",
+      path: apiBase + "/plan",
       handler: guard(async (request, response) => {
         if (request.method !== "POST") {
           response.writeHead(405, { allow: "POST" });
@@ -420,7 +437,7 @@ export function apply(ctx, config = {}) {
     // config.enabled 混淆。底层仍复用同一套 plan/execute 两段式与备份机制。
     {
       kind: "exact",
-      path: "/api/toolkit-panel/toggle/plan",
+      path: apiBase + "/toggle/plan",
       handler: guard(async (request, response) => {
         if (request.method !== "POST") {
           response.writeHead(405, { allow: "POST" });
@@ -480,7 +497,7 @@ export function apply(ctx, config = {}) {
     // 生效路径已钉死（设计稿 §八）：18/18 = patch 激活快照 ⇒ 重启 dsh web 生效，无遮蔽。
     {
       kind: "exact",
-      path: "/api/toolkit-panel/config/plan",
+      path: apiBase + "/config/plan",
       handler: guard(async (request, response) => {
         if (request.method !== "POST") {
           response.writeHead(405, { allow: "POST" });
@@ -554,7 +571,7 @@ export function apply(ctx, config = {}) {
     // 独立受控步骤（各自 sha 校验 + fail-closed，见 manager/uninstall.mjs 头注）。
     {
       kind: "exact",
-      path: "/api/toolkit-panel/uninstall/plan",
+      path: apiBase + "/uninstall/plan",
       handler: guard(async (request, response) => {
         if (request.method !== "POST") {
           response.writeHead(405, { allow: "POST" });
@@ -616,7 +633,7 @@ export function apply(ctx, config = {}) {
     },
     {
       kind: "exact",
-      path: "/api/toolkit-panel/uninstall/execute",
+      path: apiBase + "/uninstall/execute",
       handler: guard(async (request, response) => {
         if (request.method !== "POST") {
           response.writeHead(405, { allow: "POST" });
@@ -650,7 +667,7 @@ export function apply(ctx, config = {}) {
     // 保管区清单（只读）：真卸载恢复档 + 预设 patched 状态，供恢复入口与卡片状态。
     {
       kind: "exact",
-      path: "/api/toolkit-panel/custody",
+      path: apiBase + "/custody",
       handler: guard(async (request, response) => {
         if (request.method !== "GET") {
           response.writeHead(405, { allow: "GET" });
@@ -666,7 +683,7 @@ export function apply(ctx, config = {}) {
     // 宿主键被占用 ⇒ 返回 2.9 冲突三态（A 保留当前值 / B 恢复卸载前 / C 取消），不自动覆盖。
     {
       kind: "exact",
-      path: "/api/toolkit-panel/restore/plan",
+      path: apiBase + "/restore/plan",
       handler: guard(async (request, response) => {
         if (request.method !== "POST") {
           response.writeHead(405, { allow: "POST" });
@@ -730,7 +747,7 @@ export function apply(ctx, config = {}) {
     },
     {
       kind: "exact",
-      path: "/api/toolkit-panel/restore/execute",
+      path: apiBase + "/restore/execute",
       handler: guard(async (request, response) => {
         if (request.method !== "POST") {
           response.writeHead(405, { allow: "POST" });
@@ -762,7 +779,7 @@ export function apply(ctx, config = {}) {
     // 行块事实取自真卸载**收据**（rebuild.rowBlock）——无收据则拒绝，面板不臆造插件 config。
     {
       kind: "exact",
-      path: "/api/toolkit-panel/mount/plan",
+      path: apiBase + "/mount/plan",
       handler: guard(async (request, response) => {
         if (request.method !== "POST") {
           response.writeHead(405, { allow: "POST" });
@@ -811,7 +828,7 @@ export function apply(ctx, config = {}) {
     },
     {
       kind: "exact",
-      path: "/api/toolkit-panel/mount/execute",
+      path: apiBase + "/mount/execute",
       handler: guard(async (request, response) => {
         if (request.method !== "POST") {
           response.writeHead(405, { allow: "POST" });
@@ -841,7 +858,7 @@ export function apply(ctx, config = {}) {
     // execute 路由：把已确认的 plan 落盘。写路由 → 走严格配对 + CSRF。
     {
       kind: "exact",
-      path: "/api/toolkit-panel/execute",
+      path: apiBase + "/execute",
       handler: guard(async (request, response) => {
         if (request.method !== "POST") {
           response.writeHead(405, { allow: "POST" });
@@ -862,7 +879,7 @@ export function apply(ctx, config = {}) {
     // 方案查询（只读）：供 UI 在确认页展示上下文 / 判断是否仍有效。
     {
       kind: "exact",
-      path: "/api/toolkit-panel/plan/status",
+      path: apiBase + "/plan/status",
       handler: guard(async (request, response) => {
         if (request.method !== "GET") {
           response.writeHead(405, { allow: "GET" });
@@ -901,7 +918,7 @@ export function apply(ctx, config = {}) {
     // doctor 不可达 ⇒ ok:false + degraded（UI 渲染禁用态，不假装可用）。
     {
       kind: "exact",
-      path: "/api/toolkit-panel/doctor/states",
+      path: apiBase + "/doctor/states",
       handler: guard(async (request, response) => {
         if (request.method !== "GET") {
           response.writeHead(405, { allow: "GET" });
@@ -920,7 +937,7 @@ export function apply(ctx, config = {}) {
     // doctor 单条修复 plan（Q-C 级 1）：**fresh dry-run** 后定位该 issue，manual ⇒ 拒绝。
     {
       kind: "exact",
-      path: "/api/toolkit-panel/doctor/apply/plan",
+      path: apiBase + "/doctor/apply/plan",
       handler: guard(async (request, response) => {
         if (request.method !== "POST") {
           response.writeHead(405, { allow: "POST" });
@@ -1008,7 +1025,7 @@ export function apply(ctx, config = {}) {
     // doctor 单条修复 execute：spawn --apply --only <id> --yes（受托执行；三条件③）。
     {
       kind: "exact",
-      path: "/api/toolkit-panel/doctor/apply/execute",
+      path: apiBase + "/doctor/apply/execute",
       handler: guard(async (request, response) => {
         if (request.method !== "POST") {
           response.writeHead(405, { allow: "POST" });
@@ -1045,7 +1062,7 @@ export function apply(ctx, config = {}) {
     // doctor 回滚 plan：指定 stamp 的恢复清单预览（只读 states 取数）。
     {
       kind: "exact",
-      path: "/api/toolkit-panel/doctor/rollback/plan",
+      path: apiBase + "/doctor/rollback/plan",
       handler: guard(async (request, response) => {
         if (request.method !== "POST") {
           response.writeHead(405, { allow: "POST" });
@@ -1085,7 +1102,7 @@ export function apply(ctx, config = {}) {
     // doctor 回滚 execute：spawn --rollback --to <stamp>（CLI fail-closed：备份缺失即停）。
     {
       kind: "exact",
-      path: "/api/toolkit-panel/doctor/rollback/execute",
+      path: apiBase + "/doctor/rollback/execute",
       handler: guard(async (request, response) => {
         if (request.method !== "POST") {
           response.writeHead(405, { allow: "POST" });
@@ -1115,7 +1132,7 @@ export function apply(ctx, config = {}) {
     // 配置快照恢复 plan（D3 裁 (a)）：写前快照经 executePlan 唯一通道整文件回写。
     {
       kind: "exact",
-      path: "/api/toolkit-panel/snapshot-restore/plan",
+      path: apiBase + "/snapshot-restore/plan",
       handler: guard(async (request, response) => {
         if (request.method !== "POST") {
           response.writeHead(405, { allow: "POST" });
@@ -1141,7 +1158,7 @@ export function apply(ctx, config = {}) {
     // 配置快照恢复 execute：executePlan 唯一通道（SHA 闸 + 写前备份 + 保留策略）。
     {
       kind: "exact",
-      path: "/api/toolkit-panel/snapshot-restore/execute",
+      path: apiBase + "/snapshot-restore/execute",
       handler: guard(async (request, response) => {
         if (request.method !== "POST") {
           response.writeHead(405, { allow: "POST" });
@@ -1170,7 +1187,7 @@ export function apply(ctx, config = {}) {
     })),
     {
       kind: "exact",
-      path: "/api/toolkit-panel/v2/connector.js",
+      path: apiBase + "/v2/connector.js",
       handler: guard(async (request, response) => {
         if (request.method !== "GET") {
           response.writeHead(405, { allow: "GET" });

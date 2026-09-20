@@ -57,7 +57,10 @@ export { validateConfigAgainstSchema } from './config-schema.js'
 export type { ContractEventName, ContractServiceName } from './naming.js'
 export {
   CONTRACT_EVENT_NAMES,
+  DEFAULT_SERVICE_PREFIX,
   isValidServicePrefix,
+  normalizeServicePrefix,
   contractServiceName,
   contractEventName,
+  contractHttpBase,
 } from './naming.js'
