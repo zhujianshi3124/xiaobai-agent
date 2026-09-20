@@ -49,8 +49,9 @@ const text = (tree) => textOf(tree).join(' ')
 function buttonOf(tree, label) {
   return findAll(tree, (n) => n.type === 'button' && textOf(n).join('') === label)[0] || null
 }
-function inputOf(tree, placeholder) {
-  return findAll(tree, (n) => n.type === 'input' && n.props && n.props.placeholder === placeholder)[0] || null
+// 安装向导的路径输入框：按 placeholder 前缀认（placeholder 本身是产品文案，逐字改不得让测试跟着抖）
+function pluginPathInput(tree) {
+  return findAll(tree, (n) => n.type === 'input' && String((n.props && n.props.placeholder) || '').startsWith('本地插件目录的绝对路径'))[0] || null
 }
 
 // ── 可重渲染假 react（setState 触发重渲；useEffect 带 deps 与清理）──────────
@@ -348,7 +349,8 @@ test('归一结构：toolkit-panel 主标签页同时承载 registry 管理区�
     const t1 = text(panel.tree)
     // ── 管理区（V2Section）
     assert.ok(t1.includes('插件管理（registry · 自适应）'), '管理区标题')
-    assert.ok(t1.includes('安装新插件（本地路径）'), '安装向导入口')
+    assert.ok(t1.includes('安装新插件（仅本地插件目录）'), '安装向导入口（第五步 UX：标题写明只收本地插件目录）')
+    assert.ok(t1.includes('只接受本地插件目录的') && t1.includes('绝对路径'), '安装向导帮助文案点名绝对路径（第五步 UX）')
     assert.ok(t1.includes('数据源：registry/doctor 服务与事件流'), '数据源行')
     assert.ok(t1.includes('legacy 模式'), 'legacy 标注')
     assert.ok(t1.includes('legacy/legacy-one'), 'registry 卡片渲染')
@@ -429,7 +431,7 @@ test('安装向导 E2E：预检报告 → 确认安装 → 真实 registry 装�
   const panel = mountUnifiedPanel({ router })
   try {
     await panel.done()
-    const input = inputOf(panel.tree, '插件目录或入口文件路径')
+    const input = pluginPathInput(panel.tree)
     assert.ok(input, '本地路径输入框')
     input.props.onChange({ target: { value: contractPlugin } })
     await panel.done()
@@ -450,6 +452,41 @@ test('安装向导 E2E：预检报告 → 确认安装 → 真实 registry 装�
     assert.ok(entry, 'registry 真实装入')
     assert.equal(entry.status, 'active', '装入后 active')
     assert.ok(text(panel.tree).includes('fixture/contract-plugin'), '新插件卡片自动出现（免刷新）')
+  } finally {
+    panel.dispose()
+  }
+})
+
+test('安装向导 UX（第五步）：相对路径提交前拦下并说明，一次请求都不发；绝对路径照常送检', async () => {
+  const router = makeRouter()
+  baseRoutes(router)
+  router.routes.push({
+    match: '/api/toolkit-panel/v2/snapshot',
+    handler: () => ({ status: 200, json: async () => v2SnapshotPayload([]) }),
+  })
+  const panel = mountUnifiedPanel({ router })
+  const prechecks = () => router.calls.filter((u) => u.includes('/install/precheck')).length
+  try {
+    await panel.done()
+    const input = pluginPathInput(panel.tree)
+    assert.ok(input, '路径输入框（placeholder 已写明绝对路径与示例形态）')
+    assert.ok(String(input.props.placeholder).includes('D:\\plugins\\my-plugin'), 'placeholder 给出可直接照抄的路径形态')
+
+    // 用户真实踩坑形态：从项目目录复制来的相对路径
+    input.props.onChange({ target: { value: 'dsh-repo-spec\\packages\\dsh-plugin' } })
+    await panel.done()
+    buttonOf(panel.tree, '① 预检').props.onClick()
+    await panel.done()
+    const shown = text(panel.tree)
+    assert.ok(shown.includes('请输入绝对路径'), '提示逐字出现（不是拼到 System32 的报错）')
+    assert.ok(shown.includes('服务进程的工作目录'), '说清相对路径按谁解析')
+    assert.equal(prechecks(), 0, '相对路径不得发出预检请求')
+
+    input.props.onChange({ target: { value: contractPlugin } })
+    await panel.done()
+    buttonOf(panel.tree, '① 预检').props.onClick()
+    await panel.done()
+    assert.equal(prechecks(), 1, '绝对路径照常提交服务端')
   } finally {
     panel.dispose()
   }
@@ -663,7 +700,7 @@ test('数据面降级：registry 快照失败 → 管理区降级提示，patch 
     const t1 = text(panel.tree)
     assert.ok(t1.includes('插件管理（registry）数据暂不可用'), '管理区降级提示')
     assert.ok(t1.includes('下方 patch 域工具区不受影响'), '降级说明')
-    assert.ok(!t1.includes('安装新插件（本地路径）'), '管理区主体不渲染（无半残状态）')
+    assert.ok(!t1.includes('安装新插件（仅本地插件目录）'), '管理区主体不渲染（无半残状态）')
     assert.ok(t1.includes('内置插件工具区（patch 域 · 开关 / 参数 / 卸载恢复）'), '工具区照常')
     assert.ok(t1.includes('第一层 · 配置文件（patch-row.disabled）'), '工具区开关照常')
     assert.ok(buttonOf(panel.tree, '一键体检（只查不改）'), '体检入口照常')

@@ -1,6 +1,61 @@
 {
   "manifestVersion": 1,
   "name": "@local/dsh-toolkit",
+  "id": "dsh/toolkit",
+  "displayName": "DSH 工具箱（registry/doctor/面板总装）",
+  "version": "0.1.0",
+  "contract": "^1.0",
+  "requires": {
+    "node": ">=22",
+    "dshRuntime": ">=0.1.2-rc.1 <0.2.0",
+    "services": ["webServer"]
+  },
+  "configSchema": {
+    "type": "object",
+    "meta": {},
+    "dict": {
+      "servicePrefix": { "type": "string", "meta": {} },
+      "toolkitRoot": { "type": "string", "meta": {} },
+      "doctorCli": { "type": "string", "meta": {} },
+      "devicesFile": { "type": "string", "meta": {} },
+      "backupRoot": { "type": "string", "meta": {} },
+      "doctorConfigRoot": { "type": "string", "meta": {} },
+      "registry": {
+        "type": "object",
+        "meta": {},
+        "dict": {
+          "statePath": { "type": "string", "meta": {} },
+          "dataDir": { "type": "string", "meta": {} },
+          "autoload": { "type": "boolean", "meta": {} },
+          "retryLimit": { "type": "number", "meta": {} },
+          "retryBackoffMs": { "type": "number", "meta": {} },
+          "loadTimeoutMs": { "type": "number", "meta": {} },
+          "saveDebounceMs": { "type": "number", "meta": {} }
+        }
+      },
+      "doctor": {
+        "type": "object",
+        "meta": {},
+        "dict": {
+          "watchInterval": { "type": "number", "meta": {} },
+          "failureThreshold": { "type": "number", "meta": {} },
+          "historySize": { "type": "number", "meta": {} }
+        }
+      }
+    }
+  },
+  "panels": [
+    {
+      "id": "toolkit-panel",
+      "title": "dsh-toolkit 面板（插件开关与体检）",
+      "slot": "settings.plugins.tab",
+      "order": 90,
+      "httpBase": "/api/{servicePrefix}-panel",
+      "fallbackUi": "/api/{servicePrefix}-panel/ui",
+      "realtime": ["sse", "poll"],
+      "managedBy": "dsh/toolkit"
+    }
+  ],
   "aliases": {
     "@local/dsh-compact-router": "@local/dsh-toolkit/compact-router",
     "@local/agent-memory": "@local/dsh-toolkit/agent-memory",
@@ -16,7 +71,7 @@
     "binaries": [],
     "packages": {},
     "registers": {
-      "inject": [],
+      "inject": ["webServer"],
       "events": [],
       "services": [],
       "commands": [],

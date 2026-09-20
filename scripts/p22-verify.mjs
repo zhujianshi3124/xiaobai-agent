@@ -243,10 +243,15 @@ function freshPatch() {
     clientSrc.includes("config.enabled") && htmlSrc.includes("config.enabled"));
   check("both clients state the two layers are separate",
     clientSrc.includes("两层分开") && htmlSrc.includes("两层分开"));
+  // P7 路由前缀化后，两个渲染器的请求基址集中在 PANEL_API 一处（client 常量 / 兜底页装配期标记），
+  // 端点字面量不再带完整路径。这三条断言据此改写，语义不变：toggle 必须 plan→execute 两段式，
+  // 且基址必须真的只有一处来源（出现裸 /api/toolkit-panel/... 字面量即视为回归）。
   check("toggle goes through the plan endpoint",
-    clientSrc.includes("/api/toolkit-panel/toggle/plan") && htmlSrc.includes("/api/toolkit-panel/toggle/plan"));
+    clientSrc.includes('PANEL_API + "/toggle/plan"') && htmlSrc.includes('PANEL_API + "/toggle/plan"'));
   check("toggle goes through execute (two-phase, not a direct write)",
-    clientSrc.includes("/api/toolkit-panel/execute") && htmlSrc.includes("/api/toolkit-panel/execute"));
+    clientSrc.includes('PANEL_API + "/execute"') && htmlSrc.includes('PANEL_API + "/execute"'));
+  check("request base is single-sourced (P7 prefixing, no bare /api/toolkit-panel/ literal)",
+    !/["'`]\/api\/toolkit-panel\//.test(clientSrc) && !/["'`]\/api\/toolkit-panel\//.test(htmlSrc));
   check("confirm step shows the target file",
     clientSrc.includes("目标文件") && htmlSrc.includes("目标文件"));
   check("confirm step shows the diff",

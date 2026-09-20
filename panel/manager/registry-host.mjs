@@ -9,6 +9,7 @@ import { resolve, join } from 'node:path'
 // panel/ 是嵌套包：对父包名自引用不可用，共享模块走相对路径引用构建产物。
 import { ToolkitRegistryCore, cordisHost } from '../../registry/dist/index.js'
 import { DoctorService } from '../../doctor/dist/index.js'
+import { normalizeServicePrefix } from '../../contract/dist/index.js'
 
 /**
  * @param {object} ctx        cordis 宿主 ctx（面板插件自身的派生 ctx）
@@ -17,7 +18,8 @@ import { DoctorService } from '../../doctor/dist/index.js'
  * @returns {{ registry: object, doctor: object, servicePrefix: string, statePath: string, stop: () => Promise<void> }}
  */
 export function createToolkitServices(ctx, config = {}, logger = console) {
-  const servicePrefix = String(config.servicePrefix || 'toolkit')
+  // 前缀归一走 contract.normalizeServicePrefix（与面板 HTTP 基址同源，缺省值单点定义）。
+  const servicePrefix = normalizeServicePrefix(config.servicePrefix)
   const toolkitRoot = config.toolkitRoot ? resolve(String(config.toolkitRoot)) : resolve(process.cwd(), '..')
   const registryCfg = config.registry || {}
   const doctorCfg = config.doctor || {}
@@ -59,8 +61,19 @@ export function createToolkitServices(ctx, config = {}, logger = console) {
   // 供面板快照直接呈现（面板不另开旁路状态，用户要求 3）。
   registry.setPrecheck((source) => doctor.precheck(source))
   if (hasEvents) {
-    ctx.on(`${servicePrefix}/registry:health-changed`, (payload) => {
-      if (payload && payload.id && payload.report) registry.setHealth(payload.id, payload.report)
+    // 订阅归入 ctx.effect 生命周期：面板卸出即解除，不依赖派生 ctx 何时被宿主回收
+    // （P7 验收「卸载级联清理计数归零」要求监听器与 HTTP 路由同批清）。
+    ctx.effect(() => {
+      const disposer = ctx.on(`${servicePrefix}/registry:health-changed`, (payload) => {
+        if (payload && payload.id && payload.report) registry.setHealth(payload.id, payload.report)
+      })
+      return () => {
+        try {
+          disposer()
+        } catch {
+          // 订阅已失效
+        }
+      }
     })
   }
 

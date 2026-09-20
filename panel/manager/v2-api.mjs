@@ -10,9 +10,7 @@
 
 // 注意：panel/ 是嵌套包（@local/dsh-toolkit/panel），对父包名的自引用不可用，
 // 共享模块（contract/registry/doctor）一律相对路径引用其构建产物。
-import { AUDIT_EVENTS } from '../../contract/dist/index.js'
-
-const V2 = '/api/toolkit-panel/v2'
+import { AUDIT_EVENTS, contractHttpBase, normalizeServicePrefix } from '../../contract/dist/index.js'
 
 const ERROR_STATUS = {
   'plugin-unknown': 400,
@@ -168,6 +166,9 @@ function entryView(entry) {
  */
 export function createV2Api(deps) {
   const { registry, doctor, servicePrefix, subscribe } = deps
+  // P7 嵌入（REQ-8）：v2 管理面（含 SSE /events 与 connector.js）的路由基址从 servicePrefix
+  // 派生，与面板服务名/事件名同源；缺省前缀下恰等于历史值 /api/toolkit-panel/v2（URL 零变化）。
+  const V2 = `${contractHttpBase(normalizeServicePrefix(servicePrefix))}/v2`
 
   // ── SSE（Q3 裁决：事件流；断连由客户端 connector 降级轮询）──────────────
   // SSE event 名用短名（去 registry:/doctor: 段）：客户端 addEventListener 对齐，

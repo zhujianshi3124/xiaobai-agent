@@ -209,8 +209,10 @@ const reactSrc = readFileSync(join(root, "panel", "client", "index.js"), "utf8")
 const htmlSrc = readFileSync(join(root, "panel", "client", "panel.html"), "utf8");
 check("react 含「参数编辑」区块", reactSrc.includes("参数编辑"));
 check("html 含「参数编辑」区块", htmlSrc.includes("参数编辑"));
-check("react 含 config/plan 调用", reactSrc.includes("/api/toolkit-panel/config/plan"));
-check("html 含 config/plan 调用", htmlSrc.includes("/api/toolkit-panel/config/plan"));
+// P7 路由前缀化：两个渲染器的基址集中在 PANEL_API（client 常量 / 兜底页装配期标记），
+// 端点断言改为按 PANEL_API 派生形态匹配，语义不变（config/plan 调用必须在场）。
+check("react 含 config/plan 调用", reactSrc.includes('PANEL_API + "/config/plan"'));
+check("html 含 config/plan 调用", htmlSrc.includes('PANEL_API + "/config/plan"'));
 check("react 含 search-router mode 只读展示", reactSrc.includes("SearchRouterModeRow"));
 check("html 含 search-router mode 只读展示", htmlSrc.includes("modeHtml"));
 check("既有断言字符串保留：P2.3 配置编辑（react/html）", reactSrc.includes("P2.3 配置编辑") && htmlSrc.includes("P2.3 配置编辑"));
