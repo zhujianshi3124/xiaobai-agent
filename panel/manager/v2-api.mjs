@@ -189,6 +189,40 @@ export function createV2Api(deps) {
     'issue-found': 'doctor:issue-found',
   }
 
+  /**
+   * 活动 SSE 连接登记表（Pack D）。
+   *
+   * 为什么必须显式登记：面板 fiber 被拆时，cordis 只回收它名下的 effect（HTTP 路由、
+   * 事件订阅）。**已经打开的 response 不是 cordis 的 effect，心跳 setInterval 也不是**
+   * ——原先两者只在 `response.on('close'|'error')` 里清理，于是"客户端一直挂着连接、
+   * 面板被卸出"这一格会留下一个每 15s 往死面板写 ping 的定时器：路由注销了、订阅没了，
+   * 流却永远不结束。这正是 P7「卸载级联清理计数归零」验收没覆盖到的那条路径。
+   *
+   * 每条连接的 teardown 都是单次幂等的：'close' 与 'error' 可能都触发，closeAll 触发过
+   * 之后 'close' 还会再来一次，重复 clearInterval / 重复解除订阅都会污染
+   * 「订阅解除次数 == 建立次数」这一类计数断言。
+   */
+  const liveStreams = new Set()
+
+  /** 单条流的 teardown（幂等）：清心跳 → 解除订阅 → 摘登记表。 */
+  function teardownStream(stream) {
+    if (stream.closed) return
+    stream.closed = true
+    if (stream.heartbeat !== null) {
+      clearInterval(stream.heartbeat)
+      stream.heartbeat = null
+    }
+    for (const d of stream.disposers) {
+      try {
+        d()
+      } catch {
+        // 订阅已失效
+      }
+    }
+    stream.disposers.length = 0
+    liveStreams.delete(stream)
+  }
+
   function handleEvents(request, response) {
     response.writeHead(200, {
       'content-type': 'text/event-stream; charset=utf-8',
@@ -203,7 +237,19 @@ export function createV2Api(deps) {
     response.write(`retry: 2000\n\n`)
     response.write(`event: hello\ndata: ${JSON.stringify({ servicePrefix, at: Date.now() })}\n\n`)
 
-    const disposers = SSE_EVENT_NAMES.map((short) => {
+    const stream = { response, heartbeat: null, disposers: [], closed: false }
+    liveStreams.add(stream)
+    // 心跳用裸 setInterval：它不在 cordis 的 effect 管辖内，因此必须由 liveStreams
+    // 这张表显式持有句柄，closeAllStreams 才能替它收尾。
+    stream.heartbeat = setInterval(() => {
+      try {
+        response.write(`: ping ${Date.now()}\n\n`)
+      } catch {
+        // ignore
+      }
+    }, 15000)
+
+    stream.disposers = SSE_EVENT_NAMES.map((short) => {
       const full = SSE_SHORT_NAME[short] ?? short
       return subscribe(`${servicePrefix}/${full}`, (payload) => {
         try {
@@ -213,31 +259,26 @@ export function createV2Api(deps) {
         }
       })
     })
-    // 心跳仅在真实响应对象（有 .on）上启动——最小 mock（smoke/测试）不留悬挂定时器
-    let heartbeat = null
-    if (typeof response.on === 'function') {
-      heartbeat = setInterval(() => {
-        try {
-          response.write(`: ping ${Date.now()}\n\n`)
-        } catch {
-          // ignore
-        }
-      }, 15000)
-    }
-    const cleanup = () => {
-      if (heartbeat !== null) clearInterval(heartbeat)
-      for (const d of disposers) {
-        try {
-          d()
-        } catch {
-          // ignore
-        }
+    response.on('close', () => teardownStream(stream))
+    response.on('error', () => teardownStream(stream))
+  }
+
+  /**
+   * 结束全部活动 SSE 流并清零其心跳/订阅（Pack D）。
+   * 由面板卸载链调用（见 panel/index.js 的 ctx.effect），返回被关掉的连接数。
+   */
+  function closeAllStreams() {
+    const count = liveStreams.size
+    for (const stream of [...liveStreams]) {
+      teardownStream(stream)
+      try {
+        stream.response.end()
+      } catch {
+        // 已断开的连接：end 抛错无所谓，登记表里已经把它摘掉了
       }
     }
-    if (typeof response.on === 'function') {
-      response.on('close', cleanup)
-      response.on('error', cleanup)
-    }
+    liveStreams.clear()
+    return count
   }
 
   // ── 路由 ────────────────────────────────────────────────────────────────
@@ -356,7 +397,15 @@ export function createV2Api(deps) {
     { method: 'GET', path: `${V2}/events`, handler: handleEvents, change: false },
   ]
 
-  return { routes, V2, entryView, schemaToJSON }
+  return {
+    routes,
+    V2,
+    entryView,
+    schemaToJSON,
+    // Pack D：面板卸载链用 closeAllStreams 掐断活动流；liveStreamCount 供测试/诊断核对。
+    closeAllStreams,
+    liveStreamCount: () => liveStreams.size,
+  }
 }
 
 /** 面板路由形态适配：v2 路由 → webServer exact 路由（handler 内做方法校验）。 */
