@@ -1,0 +1,9 @@
+{
+  "id": "fixture/inject-consumer",
+  "displayName": "用 cordis 原生 inject 声明依赖的消费者（E1）",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "requires": {
+    "services": ["fixture/needed"]
+  }
+}
