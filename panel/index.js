@@ -1211,6 +1211,19 @@ export function apply(ctx, config = {}) {
           // noop
         }
       }
+      // Pack D：先掐断活动 SSE 流，再停 registry/doctor。
+      // 挂在这里而不是 registry-host 的 stop() 链上，理由有两层：
+      //   ① 本 ctx.effect 就是面板既有的级联清理唯一挂点（路由注销 + services.stop()
+      //      都在这一条链上），SSE 流属同一批"面板自己的资源"，跟着走才对称；
+      //   ② v2 实例是面板 apply() 里的局部变量，registry-host 根本拿不到它——
+      //      要挂过去就得把 v2 传进装配器，那会把"面板 HTTP 面"的知识漏进服务层。
+      // 顺序上必须在 unregister 之后（不再有新连接进来）、在 services.stop() 之前
+      // （流上的写入回调还引用着 registry 视图，别让它在拆除中途被调用）。
+      try {
+        v2.closeAllStreams();
+      } catch (error) {
+        console.warn("[toolkit-manager] SSE 流收尾异常（继续卸载）：", error && error.message || error);
+      }
       // P4：级联停掉 registry/doctor（子插件 fiber、巡检定时器）
       void services.stop();
     };
