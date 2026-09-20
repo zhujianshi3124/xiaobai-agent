@@ -64,9 +64,15 @@ export function createToolkitServices(ctx, config = {}, logger = console) {
   if (hasEvents) {
     // 订阅归入 ctx.effect 生命周期：面板卸出即解除，不依赖派生 ctx 何时被宿主回收
     // （P7 验收「卸载级联清理计数归零」要求监听器与 HTTP 路由同批清）。
+    // 监听器自带异常防御（A1 纪律，见 registry/src/host.ts 头注）：cordis 的 emit
+    // 不逐监听器隔离，这里抛出去会中断同批其它订阅者。
     ctx.effect(() => {
       const disposer = ctx.on(`${servicePrefix}/registry:health-changed`, (payload) => {
-        if (payload && payload.id && payload.report) registry.setHealth(payload.id, payload.report)
+        try {
+          if (payload && payload.id && payload.report) registry.setHealth(payload.id, payload.report)
+        } catch (error) {
+          logger.warn(`健康回写失败（忽略，不影响被通知方）：${String(error && error.message || error)}`)
+        }
       })
       return () => {
         try {

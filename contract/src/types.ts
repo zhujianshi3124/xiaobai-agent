@@ -152,6 +152,24 @@ export interface PrecheckReport {
 // ── 来源 / 注册中心 ───────────────────────────────────────────────────────
 
 /**
+ * 装入等待期间 fiber 状态机判定的错误码（公共枚举，供面板/doctor 按码分流）。
+ * 与 cordis FiberState 的对应关系见 `registry.ts` 的 FIBER_* 常量与
+ * `test/cordis-fiber-state.test.mjs`（编号守卫）。
+ */
+export const FIBER_LOAD_ERROR_CODES = [
+  /** fiber 停在 FAILED：apply/配置校验抛错（错误原文经 fiber 的 rejection 取回时保留原文）。 */
+  'fiber-failed',
+  /** fiber 到达 DISPOSED：装入期间插件被外部卸载。 */
+  'fiber-disposed',
+  /** fiber 处于 UNLOADING 且直到超时都未收敛到终态：语义仍是"被卸载"，不是"装得太慢"。 */
+  'fiber-unloading-timeout',
+  /** fiber 长期 PENDING/ACTIVE 前的等待超时（典型成因：inject 的服务始终缺席）。 */
+  'fiber-load-timeout',
+] as const
+
+export type FiberLoadErrorCode = (typeof FIBER_LOAD_ERROR_CODES)[number]
+
+/**
  * 安装来源。Q1 裁决（2026-09-19）：P2 仅实现 `local`；`npm` 为预留判别分支，
  * 后续追加必须保持纯增量——不改本契约、不改 registry 主流程。
  */

@@ -1,5 +1,6 @@
 // Registry 单测（P2，REQ-2/6/7）：S1 契约级安装流、S2 legacy 包装、S4 错误隔离、
 // 持久化与 autoload、操作互斥、带前缀事件、stop 级联清理。
+// A1（install 事务化 + 事件发射隔离）、A2（fiber 状态归因）用例在本文件末尾。
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtempSync, writeFileSync, unlinkSync, existsSync, rmSync, readFileSync } from 'node:fs'
@@ -7,7 +8,14 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 
-import { createRegistry } from '@local/dsh-toolkit/registry'
+import {
+  createRegistry,
+  ToolkitRegistryCore,
+  FIBER_PENDING,
+  FIBER_ACTIVE,
+  FIBER_DISPOSED,
+  FIBER_UNLOADING,
+} from '@local/dsh-toolkit/registry'
 import { contractEventName, contractServiceName } from '@local/dsh-toolkit/contract'
 
 const fixtureDir = (name) => join(import.meta.dirname, 'fixtures', 'registry', name)
@@ -25,15 +33,85 @@ function makeRegistry(t, opts = {}) {
   const tmp = mkdtempSync(join(tmpdir(), 'registry-test-'))
   t.after(() => rmSync(tmp, { recursive: true, force: true }))
   const ctx = new Context()
+  const statePath = join(tmp, 'state', 'registry-state.json')
   const created = createRegistry(ctx, {
     servicePrefix: 'toolkit',
-    statePath: join(tmp, 'state', 'registry-state.json'),
+    statePath,
     retryBackoffMs: 1,
     loadTimeoutMs: 250,
     ...opts,
   })
   t.after(() => created.stop())
-  return { ...created, ctx, tmp }
+  return { ...created, ctx, tmp, statePath }
+}
+
+/** A1/A2 用：读出磁盘上的插件 id 集合。 */
+function persistedIds(statePath) {
+  try {
+    return Object.keys(JSON.parse(readFileSync(statePath, 'utf8')).plugins).sort()
+  } catch {
+    return []
+  }
+}
+
+/** A1 的核心不变式：任何时刻内存 entries 与 state.json 逐条一致（不留任一半边）。 */
+function assertNoSplit(registry, statePath, label) {
+  assert.deepEqual(
+    persistedIds(statePath),
+    registry.list().map((e) => e.manifest.id).sort(),
+    `${label}：内存与磁盘分裂`,
+  )
+}
+
+/**
+ * A2 用：可编程 HostContext 替身。
+ * 为什么这里不用真 cordis：本组要钉的是 registry 自己的**分支归因逻辑**
+ * （拿到某个 fiber.state 数值后该报哪个错误码），真 cordis 反而无法把 fiber
+ * 稳定停在 UNLOADING 上。数值↔语义的对应由 test/cordis-fiber-state.test.mjs
+ * 用真 cordis 钉死，两者合起来覆盖完整。
+ */
+function fakeHost(script) {
+  return {
+    services: {},
+    emitted: [],
+    plugin() {
+      if (script.throwOnPlugin) throw new Error('host.plugin boom（模拟注册后意外错误）')
+      return {
+        state: script.state,
+        disposed: false,
+        dispose() {
+          this.disposed = true
+        },
+        async await() {},
+      }
+    },
+    emit(event, ...args) {
+      this.emitted.push([event, ...args])
+    },
+    provideService(name, value) {
+      this.services[name] = value
+    },
+    hasService() {
+      return true
+    },
+  }
+}
+
+function makeFakeHostRegistry(t, host, opts = {}) {
+  const tmp = mkdtempSync(join(tmpdir(), 'registry-fake-'))
+  t.after(() => rmSync(tmp, { recursive: true, force: true }))
+  const statePath = join(tmp, 'state', 'registry-state.json')
+  const core = new ToolkitRegistryCore(host, {
+    servicePrefix: 'toolkit',
+    statePath,
+    autoload: false,
+    retryBackoffMs: 1,
+    loadTimeoutMs: 60,
+    ...opts,
+  })
+  core.start()
+  t.after(() => core.stop())
+  return { registry: core, statePath, tmp }
 }
 
 async function waitForStatus(registry, id, status, timeoutMs = 1500) {
@@ -274,4 +352,131 @@ test('stop：级联卸载全部子插件（REQ-6），服务条目清空', async
   // stop 只卸 fiber 不删注册条目（卸载走 uninstall）；此处以条目保留 + fiber 已卸载为准。
   const fiberGone = created.registry.list().length === 1 && contractPluginState.disposed >= 1
   assert.ok(fiberGone)
+})
+
+// ── A1：install 事务化 + 事件发射隔离（幻影条目回归钉子）────────────────────
+
+test('A1：plugin-added 上有必抛错的监听器 → install 仍成功、磁盘与内存一致、同 id 可卸载后重装', async (t) => {
+  setMarker(true)
+  const warns = []
+  const { registry, ctx, statePath } = makeRegistry(t, {
+    logger: { info: () => {}, warn: (m, meta) => warns.push([m, meta]), error: () => {} },
+  })
+  // cordis 的 emit 对监听器是裸调用、无逐条隔离；旧实现把 emitAdded 放在 try 之外，
+  // 这一个抛错就让 install reject，而 entries 已写入未落盘 → 永久占住 id 的幻影条目。
+  ctx.on(contractEventName('toolkit', 'registry:plugin-added'), () => {
+    throw new Error('bad observer (A1)')
+  })
+
+  const result = await registry.install({ kind: 'local', path: contractPlugin })
+  assert.equal(result.ok, true, '监听器抛错不得让 install 失败')
+  if (!result.ok) return
+  await waitForStatus(registry, 'fixture/contract-plugin', 'active')
+  assertNoSplit(registry, statePath, 'install 成功后')
+
+  // 发射被隔离这件事必须留下痕迹，不许静默吞掉
+  assert.ok(
+    warns.some(([, meta]) => meta?.errorCode === 'emit-failed'),
+    `emit 异常应记 warn 申报（实际 warns=${JSON.stringify(warns.map((w) => w[1]?.errorCode))}）`,
+  )
+
+  await registry.uninstall('fixture/contract-plugin')
+  assertNoSplit(registry, statePath, 'uninstall 后')
+  assert.equal(persistedIds(statePath).includes('fixture/contract-plugin'), false)
+
+  // 同 id 重装必须成功——这是幻影条目缺陷的直接反证
+  const again = await registry.install({ kind: 'local', path: contractPlugin })
+  assert.equal(again.ok, true, '同 id 卸载后重装必须成功（幻影条目缺陷会使其永久 id-conflict）')
+  await waitForStatus(registry, 'fixture/contract-plugin', 'active')
+  assertNoSplit(registry, statePath, '重装后')
+})
+
+test('A1：注册之后主流程意外抛错 → 内存条目与磁盘记录同时摘除（不留「磁盘有、内存无」）', async (t) => {
+  const host = fakeHost({ throwOnPlugin: true })
+  const { registry, statePath } = makeFakeHostRegistry(t, host)
+
+  const result = await registry.install({ kind: 'local', path: fixtureDir('legacy-plugin') })
+  assert.equal(result.ok, false, '注册后失败仍按 REQ-2 回滚')
+  if (result.ok) return
+  assert.ok(
+    result.precheck.blocking.some((b) => /host\.plugin boom/.test(b.message)),
+    '原始错误须如实上报，不被补偿动作掩盖',
+  )
+  assert.equal(registry.get('legacy/legacy-plugin'), undefined, '内存条目已摘除')
+  assertNoSplit(registry, statePath, '注册后失败回滚')
+  assert.deepEqual(persistedIds(statePath), [], '磁盘记录也必须摘除（旧实现只删内存，留下孤儿记录会在下次 autoload 复活）')
+})
+
+test('A1：install 的各条失败分支都不留分裂态', async (t) => {
+  const { registry, statePath } = makeRegistry(t)
+  const cases = [
+    ['路径不存在', { kind: 'local', path: join(statePath, '..', 'nope') }],
+    ['契约不兼容', { kind: 'local', path: fixtureDir('invalid-manifest-plugin') }],
+    ['依赖服务缺席', { kind: 'local', path: fixtureDir('missing-service-plugin') }],
+    ['npm 来源未开放', { kind: 'npm', spec: 'some-pkg' }],
+  ]
+  for (const [label, source] of cases) {
+    const r = await registry.install(source)
+    assert.equal(r.ok, false, `${label}：应失败`)
+    assertNoSplit(registry, statePath, `${label} 失败后`)
+  }
+  assert.deepEqual(persistedIds(statePath), [], '四条失败分支后磁盘仍应为空')
+  // force 路径（注册成功但装入失败）同样不得分裂
+  const forced = await registry.install({ kind: 'local', path: fixtureDir('pending-inject-plugin') }, { force: true })
+  assert.equal(forced.ok, true)
+  await waitForStatus(registry, 'legacy/fixture-pending-inject', 'quarantined', 2000)
+  assertNoSplit(registry, statePath, 'force 装入失败进入隔离轨道后')
+})
+
+// ── A2：fiber 状态归因（UNLOADING 不再误报为「装入超时」）───────────────────
+
+const LEGACY_ID = 'legacy/legacy-plugin' // fake-host 用例安装的夹具归一后的 id
+
+test('A2：fiber 停在 UNLOADING 未收敛 → fiber-unloading-timeout，与「装入超时」区分', async (t) => {
+  const host = fakeHost({ state: FIBER_UNLOADING })
+  const { registry } = makeFakeHostRegistry(t, host, { retryLimit: 0, loadTimeoutMs: 80 })
+  const r = await registry.install({ kind: 'local', path: fixtureDir('legacy-plugin') })
+  assert.equal(r.ok, true, '注册成功，失败进隔离轨道')
+  const entry = await waitForStatus(registry, LEGACY_ID, 'quarantined', 2000)
+  assert.equal(entry.lastError.code, 'fiber-unloading-timeout')
+  assert.match(entry.lastError.message, /UNLOADING/)
+  assert.doesNotMatch(entry.lastError.message, /装入超时/, '被卸载未收敛不得被误报成"装得太慢"')
+})
+
+test('A2：fiber 到达 DISPOSED → fiber-disposed（被卸载语义），不是超时', async (t) => {
+  const host = fakeHost({ state: FIBER_DISPOSED })
+  const { registry } = makeFakeHostRegistry(t, host, { retryLimit: 0, loadTimeoutMs: 80 })
+  await registry.install({ kind: 'local', path: fixtureDir('legacy-plugin') })
+  const entry = await waitForStatus(registry, LEGACY_ID, 'quarantined', 2000)
+  assert.equal(entry.lastError.code, 'fiber-disposed')
+  assert.match(entry.lastError.message, /被卸载/)
+})
+
+test('A2：fiber 长期 PENDING（依赖始终缺席）→ 仍报装入超时（原有语义不回归）', async (t) => {
+  const host = fakeHost({ state: FIBER_PENDING })
+  const { registry } = makeFakeHostRegistry(t, host, { retryLimit: 0, loadTimeoutMs: 80 })
+  await registry.install({ kind: 'local', path: fixtureDir('legacy-plugin') })
+  const entry = await waitForStatus(registry, LEGACY_ID, 'quarantined', 2000)
+  assert.equal(entry.lastError.code, 'fiber-load-timeout')
+  assert.match(entry.lastError.message, /装入超时/)
+})
+
+test('A2（真 cordis）：装入等待期间外部 dispose 该 fiber → 报 fiber-disposed 而非超时', async (t) => {
+  const { registry, ctx } = makeRegistry(t, { retryLimit: 0, loadTimeoutMs: 4000 })
+  let fiber = null
+  // 用 cordis 公开的 internal/plugin 事件取真 fiber 句柄，不碰 registry 私有字段。
+  ctx.on('internal/plugin', (f) => {
+    if (f.name === 'fixture-pending-inject') fiber = f
+  })
+  const pending = registry.install({ kind: 'local', path: fixtureDir('pending-inject-plugin') }, { force: true })
+  await new Promise((r) => setTimeout(r, 30))
+  assert.ok(fiber, '必须拿到真 fiber 句柄')
+  assert.equal(fiber.state, FIBER_PENDING, '前置：inject 缺席应停在 PENDING')
+
+  fiber.dispose()
+  const result = await pending
+  assert.equal(result.ok, true, '注册本身成功')
+  const entry = await waitForStatus(registry, 'legacy/fixture-pending-inject', 'quarantined', 3000)
+  assert.equal(entry.lastError.code, 'fiber-disposed', `真 cordis 路径下的归因：${entry.lastError?.code}`)
+  assert.match(entry.lastError.message, /被卸载/)
 })

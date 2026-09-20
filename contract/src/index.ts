@@ -18,6 +18,7 @@ export type {
   HealthCheckCtx,
   DshSubPluginManifest,
   PluginStatus,
+  FiberLoadErrorCode,
   HealthItemFix,
   HealthItem,
   HealthReport,
@@ -36,7 +37,7 @@ export type {
   ToolkitDoctor,
   AuditEvent,
 } from './types.js'
-export { AUDIT_EVENTS } from './types.js'
+export { AUDIT_EVENTS, FIBER_LOAD_ERROR_CODES } from './types.js'
 
 export type { Semver } from './semver.js'
 export {
