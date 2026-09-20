@@ -242,7 +242,7 @@ test('根 manifest 的 configSchema 覆盖 apply() 真正读取的配置键（�
   for (const key of ['servicePrefix', 'toolkitRoot', 'doctorCli', 'devicesFile', 'backupRoot', 'doctorConfigRoot', 'registry', 'doctor']) {
     assert.ok(schema.dict[key], `configSchema 缺字段 ${key}`)
   }
-  for (const key of ['statePath', 'dataDir', 'autoload', 'retryLimit', 'retryBackoffMs', 'loadTimeoutMs', 'saveDebounceMs']) {
+  for (const key of ['statePath', 'dataDir', 'autoload', 'auditLog', 'auditFile', 'retryLimit', 'retryBackoffMs', 'loadTimeoutMs', 'saveDebounceMs']) {
     assert.ok(schema.dict.registry.dict[key], `registry.${key} 未在 configSchema 中`)
   }
   for (const key of ['watchInterval', 'failureThreshold', 'historySize']) {

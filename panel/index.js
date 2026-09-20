@@ -287,6 +287,7 @@ export function apply(ctx, config = {}) {
     registry: services.registry,
     doctor: services.doctor,
     servicePrefix: services.servicePrefix,
+    auditFile: services.auditFile,
     subscribe: (name, cb) => {
       const disposer = ctx.on(name, cb);
       return () => {

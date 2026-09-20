@@ -45,6 +45,27 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
   面板在宿主进程内可达且 SSE 拿到 hello 帧、卸载后抽样路由 200→401 且仅剩宿主自有监听。
   证据 `panel/docs/evidence/P7-REAL-HOST-SMOKE.md`（含"本侧明确没做的事"边界清单）。
 
+### Added（P8 收尾，2026-09-20，债务 #4/#5/#6/#7 清偿）
+
+- **四份正本文档落盘**（债务 #6/#7）：`docs/contract.md`（契约全文 + 与规格的 6 处偏差集中登记，
+  含 semver 预发版偏差 D-1、TS 范围豁免 D-2、R13 fiber 依赖 D-5）、`docs/add-sub-plugin.md`
+  （加插件=零面板代码改动，含"提供面"缺口警示）、`docs/migration.md`（三层配置权威与生效时机、
+  旧字段收紧的三个前置条件、compact-router 预设特例、doctor 两张脸分工）、
+  `docs/embed-toolkit.md`（装载面/config 全键表/前缀化三张表/guard 前提/**六条边界如实陈述**）。
+- **审计持久化**（债务 #4 的持久化半边）：新增 `panel/manager/audit-sink.mjs`——订阅本实例
+  `audit:*` 七类事件，按行追加 `<状态文件同目录>/audit.jsonl`（2 MiB 单档轮转；
+  `registry.auditLog:false` 关闭、`registry.auditFile` 改路径）。**白名单字段**
+  `at/event/pluginId/durationMs/errorCode?`，配置内容与环境变量值一律不落盘（REQ-10 禁泄口径）；
+  落点经 `/v2/snapshot` 的 `auditFile` 字段可发现。测试 `test/audit-sink.test.mjs` 4 例
+  （含"卸出后不再写""双实例各写各的文件""审计行只允许白名单键"）。
+  根 manifest 的 `configSchema.registry` 同步补 `auditLog`/`auditFile` 两键。
+- **一条命令的本机 CI 门禁**（债务 #5）：`scripts/ci-local.mjs` = `npm test` 全链 + 回归全跑 14 项 +
+  **真实仓 doctor dry-run 的数字判定**（CLI 退出码 0 只代表跑完，必须 e/w/i 全 0 才算过）；
+  `--with-scan` 追加 `p23-verify`（`regression-all` 清单原本不含它）。
+- `.github/workflows/ci.yml` 结构就位，**但从未在本环境执行**：本仓无 git 远端，且依赖
+  `@deepseek-ai/*` 私有源，公共 runner 上 `npm ci` 装不出来——需自带私有源凭据的 self-hosted
+  runner。该结论写进 workflow 头注，不假装 CI 已绿。
+
 ### Changed（P5 存量迁移，2026-09-19）
 
 - **5 个存量插件 manifest 契约化**（REQ-9）：`lib/*/dsh.plugin.json` 就地扩展契约
