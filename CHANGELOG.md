@@ -6,6 +6,39 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### cordis 符合度复核与修复（2026-09-21，Pack A–E，用户裁定"全修"）
+
+对照本仓实际 vendored 的 `@deepseek-ai/cordis@4.0.2` 逐条核可插拔模式符合度，按 5 个 Pack 施工，
+每 Pack 一次提交、每次全量门禁绿。台账见 `docs/debt.md` A #12–#16 / D-6/D-7/D-8 / C-1 补充。
+
+- **修复（registry 核心）**：`install` 事务顺序改为「写内存 → 落盘 → 发通知」并给事件发射加兜底捕获
+  —— 此前任一观察者抛错都会让 `install` reject，同时留下永久占住该 id 的内存幻影条目；回滚分支补
+  `persist` 摘除，失败路径不再留磁盘孤儿记录。轮询补 `UNLOADING` 分支，"被卸载未收敛"不再误报为
+  "装入超时"，四个终态错误码入契约公共枚举 `FIBER_LOAD_ERROR_CODES`。
+- **修复（装载器）**：`normalizePlugin` 选中 `mod.default` 时不再丢弃模块级 `inject`/`name`
+  —— 丢 `inject` 的真实代价是 cordis 依赖门控静默失效。采用"补缺、不盖已有"的保守合并，
+  宿主装载器未安装故如实标注为近似。
+- **修复（服务面）**：`${prefix}/doctor` 现在真的注册进 cordis 容器（此前面板装配路径绕过了它，
+  文档承诺的服务查找不成立）；回收靠 cordis fiber 归属，零补偿 cleanup。doctor 独立仓源码未动。
+- **修复（面板 HTTP 面）**：活动 SSE 连接纳入卸载链（`liveStreams` + `closeAllStreams`），
+  每条流 teardown 单次幂等；面板拆时流被 `end()`、心跳 `setInterval` 回收。
+- **加固（测试）**：`test/cordis-fiber-state.test.mjs` 用真 cordis 实测 FiberState 数值与 `FIBER_*`
+  常量对账（R13 从此有显式回归守卫）；`test/cordis-inject-lifecycle.test.mjs` 补 cordis `inject`
+  **正向**语义（此前只有负向一条）；Pack C/D 各自的服务面与卸载联动用例。
+  本轮新增 32 条用例，分布在 6 个文件：cordis-fiber-state 7、registry.test 追加 7（A1 三条 + A2 四条）、
+  loader-statics 4、toolkit-services 4、panel-sse-dispose 5、cordis-inject-lifecycle 5；
+  当前 `node --test` 为 **229 条 / fail 0**。
+- **收紧**：`peerDependencies."@deepseek-ai/cordis"` 由 `>=4.0.0-rc <5` 收为 `^4.0.2`，
+  不再放行未经 fiber 行为校准的 4.0.0/4.0.1/更早 rc；已核与本仓 semver 引擎的预发版偏差
+  （`docs/contract.md` §7 D-1）无冲突，并有守卫用例锁死。
+- **未做（停下待裁，未静默降级）**：① `hasService` 直读 `ctx[name]` 经实测有原型链误判
+  （`hasService('toString') === true`），改 `ctx.get(name, false)` 可闭合但属行为变更（D-6）；
+  ② Pack B1 指定的"把 `exports` 提到顶层"与 doctor 仓根字段白名单、以及 C-1 把 legacy 字段
+  收紧为 error 的既定方向双重硬冲突，第三种绕法被明令禁止，故整项停手（D-7）；
+  ③ 装入成功后 `lastError` 不清导致"运行中 + 历史错误"并存，不在授权清单内（D-8）。
+- **文档同步**：`docs/embed-toolkit.md` §3 服务注册现场、§6 进程内"卸干净"判据；
+  `docs/add-sub-plugin.md` 入口 `exports` 位置的 loader 实况与未裁定项。
+
 ### 关闭（P8 终版验收通过，2026-09-20）
 
 - **DSH-TOOLKIT-PLUG-001 泛化改造线（P0–P8）项目关闭**。终版 DoD 自查与证据：

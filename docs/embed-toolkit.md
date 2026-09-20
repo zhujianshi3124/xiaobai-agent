@@ -98,3 +98,9 @@ ctx 上，`toolkit/*` 与 `tk2/*` 两组服务名各自可查、互不撞名（c
   `GET /api/<prefix>-panel/v2/events` → 首帧 `event: hello` + `data {"servicePrefix":...}`（SSE 通道真通）。
 - 卸干净：宿主重启后（或 fiber dispose 后）上述路由不再由 toolkit 应答；宿主自身监听面不新增端口。
   实测记录：`panel/docs/evidence/P7-REAL-HOST-SMOKE.md` §二③（8 条抽样 200→401、仅剩 3080 一个监听）。
+- 卸干净（进程内，运行时装入/卸出通道）：面板 fiber 被拆时，除 32 条路由逐条注销、事件订阅逐条解除、
+  doctor 巡检定时器清零之外，**已打开的 SSE 流也会被服务端 `end()` 且心跳定时器被回收**
+  （`v2-api.mjs` 的 `liveStreams`/`closeAllStreams`，挂在 `panel/index.js` 的 `ctx.effect` 卸载链上）。
+  这两项都是 2026-09-21 复核补齐的：此前"客户端挂着流、面板被拆"会留下永不结束的流与每 15s 写一次的
+  ping 定时器。回归钉子：`test/panel-sse-dispose.test.mjs`（真 `fiber.dispose()` 路径）
+  + `test/toolkit-services.test.mjs`（`${prefix}/registry`、`${prefix}/doctor` 两个服务键随 fiber 消失）。

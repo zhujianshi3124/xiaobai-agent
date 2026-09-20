@@ -47,6 +47,14 @@ registry 的 legacy 适配器会合成 manifest（id 落 `legacy/<包名>`，无
 1. **入口**：`dsh.plugin.json` 的 `exports['.']` → `package.json` 的 `exports['.']`
    （字符串或 `{".":{default|node}}`）→ `main` → `index.js`/`index.mjs`。monorepo 根没有入口时，
    预检报错会直接列出**可改装的插件子包候选**（T0 实测：装 monorepo 壳目录会失败，装 `packages/*` 才对）。
+   ⚠️ **位置口径（loader 只读顶层，不读 `requirements.exports`）**：`registry/src/loader.ts`
+   的入口解析取的是 **`dsh.plugin.json` 顶层的 `exports['.']`**，嵌套在 `requirements.exports`
+   下的那一份**不会被读到**。本仓 5 个内置插件目前都写在 `requirements.exports` 里（存量
+   manifest v1 的形状），其中 4 个因为目录下有 `index.js` 走下一级兜底才"看着正常"，
+   `lib/agent-memory` 没有 `index.js` ⇒ 按目录路径装不进来（实测 `entry-not-found`，只能装
+   `lib/agent-memory/plugin.js`）。**新写子插件请直接把入口交给 `package.json` 的
+   `exports`/`main` 或目录下的 `index.js`**；顶层 `exports` 与 `requirements.exports` 的
+   归属尚未裁定（会牵动 doctor 独立仓的根字段白名单），见 `docs/debt.md` D-7。
 2. **configSchema 落盘用纯定义 JSON、零默认值**（P5 起的仓内口径）。面板按它递归渲染表单
    （object/array/union/boolean/number/string + 必填标注），保存走 `registry.setConfig`，
    写回前服务端**真校验**（必填缺失阻断）。

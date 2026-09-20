@@ -101,7 +101,7 @@ SSE 短名映射三处。
 | D-2 | **TypeScript 范围豁免**：仅 `contract` / `registry` / `doctor` 三模块 TS strict（各自 tsconfig），存量 5 插件与 `panel/` 保持 JS + JSDoc | N1 裁决（`docs/p0-recon.md` §6）：这是对规格 §8 的**正式豁免**；配套硬约束=门禁必须跑 `typecheck`×3（`package.json` scripts.test），不是只放文件 |
 | D-3 | **`requires` 整体可选**（规格写法是必填对象） | `types.ts:96` 注释明示；零需求插件不写空对象 |
 | D-4 | **函数型成员不落盘**：`healthCheck` 只能是模块导出；`configSchema`/`panels` 允许 JSON 落盘 | `validate.ts:179`；JSON 装不下函数 |
-| D-5 | **R13：装入判定依赖 cordis 内部实现**——`fiber.state` 枚举（2=ACTIVE/3=FAILED/4=DISPOSED）、FAILED 时 `fiber.await()` 以启动错误 reject、模块命名空间插件的 `apply` 返回 Promise 被视为后台任务（立即 ACTIVE）。这些是 cordis **4.0.2 的实现行为，不是稳定契约** | 用户裁决"fiber 状态迁移判定装入"（风险 R13）。缓解：判定收敛在 `registry/src/registry.ts` 单点（`FIBER_*` 常量 + 轮询循环）；**cordis 升级必须重跑 S1/S4 场景**；该依赖已写入 `registry.ts` 头注 |
+| D-5 | **R13：装入判定依赖 cordis 内部实现**——`fiber.state` 枚举（2=ACTIVE/3=FAILED/4=DISPOSED/**5=UNLOADING**）、FAILED 时 `fiber.await()` 以启动错误 reject、模块命名空间插件的 `apply` 返回 Promise 被视为后台任务（立即 ACTIVE）。这些是 cordis **4.0.2 的实现行为，不是稳定契约**。补充实测：`FiberState` 声明为 `export const enum`，构建产物 `lib/index.js` 中该符号出现 0 次 ⇒ **运行时根本 import 不到**，硬编码数值是当时唯一可选项 | 用户裁决"fiber 状态迁移判定装入"（风险 R13）。缓解：判定收敛在 `registry/src/registry.ts` 单点（导出的 `FIBER_*` 常量 + 轮询循环）；**cordis 升级必须重跑 S1/S4 场景**；该依赖已写入 `registry.ts` 头注。**2026-09-21 复核加固**：`test/cordis-fiber-state.test.mjs` 用真 cordis 实测五个终态数值与 `FIBER_*` 逐一对账（显式守卫，编号漂移当场红）；轮询补 UNLOADING 分支并区分错误码（`FIBER_LOAD_ERROR_CODES`）；`peerDependencies` 收紧为 `^4.0.2` 并加范围守卫。本体裁决不变 |
 | D-6 | 审计事件名手工拼装（见 §3 末） | 债务 #11b，未清偿，交用户复核 |
 
 ## 8. 兼容性规则
