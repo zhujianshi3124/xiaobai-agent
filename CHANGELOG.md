@@ -6,6 +6,31 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### 关闭（P8 终版验收通过，2026-09-20）
+
+- **DSH-TOOLKIT-PLUG-001 泛化改造线（P0–P8）项目关闭**。终版 DoD 自查与证据：
+  `panel/docs/evidence/P7-MOCK-BUCKET-LOOP.md`（mock 桶真浏览器 8 步闭环 + tk2 前缀整轮）、
+  `panel/docs/evidence/P7-REAL-HOST-SMOKE.md`（真实 dsh-web-all 宿主三轮重启冒烟）、
+  `panel/docs/evidence/T0-REAL-PLUGIN-LOOP.md`（真实插件兼容性闭环）。
+  终版门禁：`node --test` 194/0 + build×3 + pluggable-lint + no-subplugin-import-check（6 文件 0 命中）
+  + typecheck×3 + 回归全跑 14 项全绿（p1-smoke 314/0 一条断言未改）+ p23-verify 107/0 +
+  doctor 真实仓 dry-run 0/0/0 + `node scripts/ci-local.mjs --with-scan` 4/4。
+- **债务清单按用户裁定改为四类归档**（不再要求"全部清零"）：A 已清偿 / B 显式遗留 / C 后续任务 /
+  D 待办，逐条标注裁定方 —— 见 `docs/debt.md`。四项工程侧裁定入账：双实例共享确认池**不修**（B-1，
+  附触发条件）；审计事件命名**并入契约 v1.1**（B 区 11b → C-1）；**契约 v1.1 立项**且规格草案全文
+  存 `docs/debt.md` C-1（`provides` + audit 入枚举 + `KNOWN_LEGACY_FIELDS` 收紧 + 5 内置插件补
+  provides + 两仓同批 + 次版本发布含迁移说明）；**审计浏览 UI 不做**、记待办（D-1，数据已落盘、
+  `auditFile` 路径可查）。CI 维持现状：本地一条命令门禁即为事实 CI，workflow 待有远端自然生效（B-2）。
+- **如实登记一项未闭环的人工验证**：冒烟清单最后一项"宿主会话内一次真实联网搜索"**待用户本人补验**
+  （D-4）。本侧已验到：宿主重启后 web-search-local 为 mounted、真实公网探针 `runSearch()` 12 源/1.2s、
+  `fetchUrl()` 200/45795 字节；未验的是真实 agent 调用链里的那一次搜索——它需要用户的登录会话
+  （宿主 `/api/web/search` 对未认证请求返回 401，本侧不取用用户凭据）。
+- 待办另记三项：`p23-shadow-scan` 覆写历史证据文件（D-2）、`regression-all` 清单缺 p23 两项（D-3）、
+  cordis 升级必重跑 S1/S4 的 R13 长期盯防（D-5）。
+- **长期协作原则修正（用户 2026-09-20，长期有效）**：用户只验收结果——原有功能在、无 bug、
+  不影响正常使用；实现方法与过程取舍由工程侧自行判断并记录在案。仅"面板作为本桶唯一管理入口"
+  为用户明确要求，继续有效（单 tab 断言 `registrations==1` 继续锁死）。
+
 ### Added（P7 嵌入，2026-09-20，REQ-8 / G4 双向兼容）
 
 - **包级根入口 `index.js` + `exports["."]`**：`@local/dsh-toolkit` 现在是一个可被任何
