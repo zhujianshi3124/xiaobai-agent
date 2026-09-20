@@ -14,7 +14,9 @@
  *      {".":{"default":…}} 对象形态，对齐宿主 Node 解析约定，T0/G1）→
  *      package.json main → index.{js,mjs}；找不到时报可执行 fix 文案
  *      （含 monorepo 根的插件子包候选指引）
- *   3. 动态 import 入口；插件对象形态归一（default / 命名导出 / 函数）
+ *   3. 动态 import 入口；插件对象形态归一（default / 命名导出 / 函数）。
+ *      选中 default 时按 mergeNamespaceStatics 保守补齐模块命名级静态面
+ *      （name/inject/Config/…），避免"模块声明了依赖、cordis 没看到"（B2）
  *
  * legacy id 规则：包名（package.json name）否则入口文件名；不带命名空间时
  * 归一到 `legacy/<name>`，避免与契约 id 的 `<scope>/<name>` 冲突。
@@ -161,6 +163,58 @@ function resolveEntry(dir: string, manifest: Record<string, unknown> | undefined
   throw new SourceError('entry-not-found', `未找到插件入口：${entryNotFoundMessage(dir)}`)
 }
 
+/**
+ * cordis 与 toolkit 都会从插件对象上读取的静态面：
+ * `name`/`inject`/`Config`/`provide`/`intercept` 来自 cordis 的 `Plugin.Base`
+ * （registry.ts），`configSchema` 是本仓 manifest/registry/doctor 三处的消费键。
+ */
+const PLUGIN_STATIC_KEYS = ['name', 'inject', 'Config', 'configSchema', 'provide', 'intercept'] as const
+
+/**
+ * 保守合并（B2）：当 `mod.default` 被选中为插件对象时，把**模块命名空间上声明了、
+ * 而 default 自身没有声明**的静态面补到 default 上；default 自身已有的属性一律不覆盖。
+ *
+ * 为什么需要：cordis 从插件对象本身读 `plugin.inject` / `plugin.name` / `plugin.Config`
+ * （registry.ts 的 `Inject.resolve(plugin.inject)` 与 runtime.name）。原先直接返回
+ * `mod.default` 会把兄弟命名导出（`export const inject` / `export const name`）整批丢掉，
+ * 于是"模块声明了依赖、cordis 却没看到"——装载门控静默失效。
+ *
+ * `name` 是唯一需要额外规则的一个：函数/类的 `name` 是 JS 推断出的标识符
+ * （`class RouterCompactionEngine` → `'RouterCompactionEngine'`），不是插件级的显示名
+ * 声明，cordis 自己也按这个前提办（`if (name === 'apply') name = undefined`）。所以模块级
+ * `export const name` 应当优先于推断名；对象的 own `name` 则是有意声明，不覆盖。
+ *
+ * 语义边界如实标注：这是对宿主装载器解包行为的**保守近似**——宿主装载器
+ * （`@deepseek-ai/cordis-plugin-loader`）在本仓未安装（cordis 仅把它列为可选
+ * peerDependency），无法逐条对照其解包规则，因此这里只做"补齐缺失、绝不改已有"
+ * 这个无争议子集，不去猜得更远。
+ */
+function mergeNamespaceStatics(def: object, ns: Record<string, unknown>): void {
+  const isFn = typeof def === 'function'
+  for (const key of PLUGIN_STATIC_KEYS) {
+    const fromNs = ns[key]
+    if (fromNs === undefined) continue
+    const inferredFunctionName = key === 'name' && isFn
+    if (!inferredFunctionName && Object.prototype.hasOwnProperty.call(def, key)) continue
+    if (inferredFunctionName) {
+      if (typeof fromNs !== 'string' || fromNs === '') continue
+      if ((def as { name: string }).name === fromNs) continue
+      // 函数/类的 name 是 [[ writable: false, configurable: true ]]，只能 defineProperty。
+      try {
+        Object.defineProperty(def, 'name', { value: fromNs, configurable: true, writable: false, enumerable: false })
+      } catch {
+        /* 不可扩展/不可重定义：放弃改名，装载本身不受影响 */
+      }
+      continue
+    }
+    try {
+      ;(def as Record<string, unknown>)[key] = fromNs
+    } catch {
+      /* default 被冻结：保留原样，不改写别人的模块导出 */
+    }
+  }
+}
+
 /** 归一插件对象：接受 default 导出、命名导出集合、函数形态。 */
 function normalizePlugin(mod: unknown, entryPath: string): unknown {
   if (typeof mod === 'function') return mod
@@ -169,7 +223,10 @@ function normalizePlugin(mod: unknown, entryPath: string): unknown {
     const def = rec['default']
     if (def && (typeof def === 'object' || typeof def === 'function')) {
       const d = def as Record<string, unknown>
-      if (typeof d['apply'] === 'function' || typeof def === 'function') return def
+      if (typeof d['apply'] === 'function' || typeof def === 'function') {
+        mergeNamespaceStatics(def as object, rec)
+        return def
+      }
     }
     if (typeof rec['apply'] === 'function' || typeof rec['register'] === 'function' || typeof rec['configSchema'] === 'object') {
       return mod
