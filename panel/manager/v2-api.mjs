@@ -165,7 +165,7 @@ function entryView(entry) {
  *        订阅带前缀事件，返回取消函数。
  */
 export function createV2Api(deps) {
-  const { registry, doctor, servicePrefix, subscribe } = deps
+  const { registry, doctor, servicePrefix, subscribe, auditFile } = deps
   // P7 嵌入（REQ-8）：v2 管理面（含 SSE /events 与 connector.js）的路由基址从 servicePrefix
   // 派生，与面板服务名/事件名同源；缺省前缀下恰等于历史值 /api/toolkit-panel/v2（URL 零变化）。
   const V2 = `${contractHttpBase(normalizeServicePrefix(servicePrefix))}/v2`
@@ -262,6 +262,8 @@ export function createV2Api(deps) {
       ok: true,
       servicePrefix,
       doctorAvailable: doctor !== undefined && doctor !== null,
+      // 审计落盘位置（债务 #4）：让"事后可查"这件事可被发现；面板内历史浏览仍是显式遗留项
+      ...(auditFile ? { auditFile } : {}),
       plugins,
     })
   })

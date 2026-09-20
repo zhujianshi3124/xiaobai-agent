@@ -1,0 +1,36 @@
+# 结构就位，但**本环境从未执行过**（债务 #5 的如实申报）：
+#   ① 本仓没有 git 远端（`git remote -v` 空）——这个文件今天不会在任何地方跑起来；
+#   ② 依赖 @deepseek-ai/* 私有源（cordis / dsh-web / dsh-settings / dsh-compaction-basic），
+#      公共 github-hosted runner 上 `npm ci` 装不出来 ⇒ 只有能取到私有源的 self-hosted runner 才可能绿；
+#   ③ 门禁正本 = 本机 `node scripts/ci-local.mjs`（build×3 + pluggable-lint +
+#      no-subplugin-import-check + typecheck×3 + node --test + 回归全跑 + doctor dry-run 0/0/0）。
+# 若将来接入远端：把 runner 换成自带私有源凭据的 self-hosted，并按需补 S5 真浏览器用例。
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  gate:
+    # 必须是有 @deepseek-ai 私有源凭据与本机 doctor CLI 的 self-hosted runner
+    runs-on: [self-hosted, dsh]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node (engines: >=22)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies (needs private registry credentials on the runner)
+        run: npm ci
+
+      - name: Full local gate (build×3 + lint + import-guard + typecheck×3 + tests + regression + doctor 0/0/0)
+        run: node scripts/ci-local.mjs --with-scan
+        env:
+          # 仓级文件面检查的 CLI 按裁决留在独立仓；嵌入别机时用该变量注入
+          DOCTOR_CLI: ${{ vars.DOCTOR_CLI }}

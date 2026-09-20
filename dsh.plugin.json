@@ -27,6 +27,8 @@
           "statePath": { "type": "string", "meta": {} },
           "dataDir": { "type": "string", "meta": {} },
           "autoload": { "type": "boolean", "meta": {} },
+          "auditLog": { "type": "boolean", "meta": {} },
+          "auditFile": { "type": "string", "meta": {} },
           "retryLimit": { "type": "number", "meta": {} },
           "retryBackoffMs": { "type": "number", "meta": {} },
           "loadTimeoutMs": { "type": "number", "meta": {} },

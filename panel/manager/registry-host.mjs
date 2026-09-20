@@ -5,11 +5,12 @@
 // 禁止 import 任何具体子插件模块（lib/*）——自适应的前提。
 // 配置全部来自插件 config（patch 行），无固定端口/绝对路径（D5）。
 
-import { resolve, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 // panel/ 是嵌套包：对父包名自引用不可用，共享模块走相对路径引用构建产物。
 import { ToolkitRegistryCore, cordisHost } from '../../registry/dist/index.js'
 import { DoctorService } from '../../doctor/dist/index.js'
 import { normalizeServicePrefix } from '../../contract/dist/index.js'
+import { createAuditSink } from './audit-sink.mjs'
 
 /**
  * @param {object} ctx        cordis 宿主 ctx（面板插件自身的派生 ctx）
@@ -77,6 +78,14 @@ export function createToolkitServices(ctx, config = {}, logger = console) {
     })
   }
 
+  // 审计落盘（债务 #4）：状态文件同目录的 audit.jsonl，与安装记录同生命周期、同前缀命名空间。
+  // 必须在 registry.start()（含 autoload 恢复）之前挂上，否则首批 audit 事件会漏记。
+  const auditEnabled = registryCfg.auditLog !== false
+  const auditFile = resolve(registryCfg.auditFile || join(dirname(statePath), 'audit.jsonl'))
+  const auditSink = hasEvents && auditEnabled
+    ? createAuditSink({ servicePrefix, file: auditFile, on: (name, cb) => ctx.on(name, cb), logger })
+    : null
+
   registry.start()
   if (hasEvents && (doctorCfg.watchInterval ?? 30000) > 0) doctor.startWatch()
 
@@ -85,9 +94,11 @@ export function createToolkitServices(ctx, config = {}, logger = console) {
     doctor,
     servicePrefix,
     statePath,
+    auditFile: auditSink ? auditSink.file : null,
     stop: async () => {
       doctor.stopWatch()
       await registry.stop()
+      if (auditSink) auditSink.dispose()
     },
   }
 }
