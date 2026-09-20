@@ -1,0 +1,6 @@
+{
+  "name": "default-statics-win-plugin",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "index.js"
+}
