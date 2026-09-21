@@ -50,6 +50,26 @@ export interface RegistryOptions {
   timers?: Timers
 }
 
+/**
+ * 入口解析的来源标记（D-7 裁定 2026-09-21）。
+ * 值会被验收测试与诊断文案按字面比对，**改名即破坏契约**；新增顺位须同时更新
+ * `docs/add-sub-plugin.md` §1 与 `loader.ts` 头注的解析顺序。
+ */
+export type EntrySource =
+  /** 正典：`dsh.plugin.json` 的 `requirements.exports['.']`。 */
+  | 'manifest.requirements.exports'
+  /** 正典的套件根形态：`requirements.exports` 为 `{"$from":"package.json#exports"}` 时继承的表。 */
+  | 'manifest.requirements.exports($from)'
+  /** legacy 兼容位：顶层 `exports['.']`，命中必带 warn。 */
+  | 'manifest.exports(legacy)'
+  /** 宿主 Node 约定（T0/G1）。 */
+  | 'package.json#exports'
+  | 'package.json#main'
+  /** 目录惯例兜底（前面各级都没有声明时才允许走到这里）。 */
+  | 'index-convention'
+  /** 来源本身就是入口文件路径（.js/.mjs）。 */
+  | 'explicit-file'
+
 /** 插件对外注册面（用于注册冲突检查；从 manifest 新旧两种形态归一提取）。 */
 export interface PluginRegisters {
   services?: string[] | undefined
@@ -67,6 +87,14 @@ export interface ResolvedPlugin {
   source: PluginSource
   /** 实际入口说明（诊断用）。 */
   entryPath: string
+  /** 入口是按哪一级解析出来的（D-7 裁定后可观测；验收测试逐条比对这一格）。 */
+  entrySource: EntrySource
+  /**
+   * 装载器的非阻断告警（legacy 入口位置、与正典重复被忽略的声明等）。
+   * loader 自己不写日志（保持纯解析 + 可单测），由 registry 在 install/autoload 两条
+   * 路径经 `RegistryLogger.warn` 落盘——与 A1 的"捕获后记 warn，不静默丢弃"同一条通道。
+   */
+  entryWarnings: string[]
   /** 注册面（P5 注册冲突检查用；legacy 从旧 manifest.requirements.registers 提取）。 */
   registers?: PluginRegisters | undefined
 }

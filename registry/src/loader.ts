@@ -10,10 +10,18 @@
  *      - 存在但只有旧 manifestVersion:1 字段（无 contract）→ **legacy**（术语表：
  *        "未实现契约的普通 DSH 插件"），合成契约 manifest
  *      - 不存在 → legacy
- *   2. 入口解析：manifest.exports['.'] → package.json exports['.']（字符串或
- *      {".":{"default":…}} 对象形态，对齐宿主 Node 解析约定，T0/G1）→
- *      package.json main → index.{js,mjs}；找不到时报可执行 fix 文案
- *      （含 monorepo 根的插件子包候选指引）
+ *   2. 入口解析（D-7 裁定 2026-09-21；实现见 resolveEntry）：
+ *      ① `requirements.exports['.']` —— **正典位置**（doctor 仓把 `exports` 定为
+ *         `requirements` 的必填键并逐条断言目标真实存在；顶层 `exports` 不在其
+ *         `MANIFEST_TOP_KEYS` 白名单里）。套件根写法 `{"$from":"package.json#exports"}`
+ *         按继承语义把表换成 `package.json#exports`。
+ *      ② 顶层 `exports['.']` —— legacy 兼容位，命中必打 warn；与正典并存时正典赢并
+ *         warn 指出忽略了哪一份重复声明。
+ *      ③ `package.json` 的 `exports['.']` → `main`（宿主 Node 约定，T0/G1）→
+ *         `index.js`/`index.mjs` 目录惯例（仅前三级都没有声明时兜底）。
+ *      **任一显式声明（①②）指向不存在的文件即报 entry-not-found，绝不静默回退**
+ *      （manifest 与实现同步是红线；回退就是在掩盖）。找不到入口时报可执行 fix 文案
+ *      （含 monorepo 根的插件子包候选指引）。
  *   3. 动态 import 入口；插件对象形态归一（default / 命名导出 / 函数）。
  *      选中 default 时按 mergeNamespaceStatics 保守补齐模块命名级静态面
  *      （name/inject/Config/…），避免"模块声明了依赖、cordis 没看到"（B2）
@@ -27,7 +35,7 @@ import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { validateManifest } from '@local/dsh-toolkit/contract'
 import type { DshSubPluginManifest, ManifestIssue, PluginSource } from '@local/dsh-toolkit/contract'
-import type { PluginRegisters, ResolvedPlugin } from './types.js'
+import type { EntrySource, PluginRegisters, ResolvedPlugin } from './types.js'
 
 /** 归一提取注册面：新契约 requires.services + 旧 requirements.registers.{services,commands,providers}。 */
 function extractRegisters(m: Record<string, unknown> | undefined): PluginRegisters | undefined {
@@ -134,33 +142,143 @@ function entryNotFoundMessage(dir: string): string {
   return parts.join('。') + '。'
 }
 
-function resolveEntry(dir: string, manifest: Record<string, unknown> | undefined): string {
-  // 1. dsh.plugin.json 的 exports['.']（契约 manifest 的显式声明，优先级最高）
-  const exportsMap = manifest?.['exports']
-  if (exportsMap && typeof exportsMap === 'object' && !Array.isArray(exportsMap)) {
-    const dot = (exportsMap as Record<string, unknown>)['.']
-    if (typeof dot === 'string') {
-      const p = join(dir, dot)
-      if (existsSync(p)) return p
+/**
+ * 入口解析结果（D-7 裁定：来源必须可观测，legacy 位置与重复声明要能带出 warn）。
+ */
+interface EntryResolution {
+  path: string
+  source: EntrySource
+  warnings: string[]
+}
+
+/** 读一张 exports 表里的 `"."` 字符串声明；没有或非字符串则 undefined。 */
+function dotDeclaration(exportsField: unknown): string | undefined {
+  if (!exportsField || typeof exportsField !== 'object' || Array.isArray(exportsField)) return undefined
+  const dot = (exportsField as Record<string, unknown>)['.']
+  return typeof dot === 'string' && dot !== '' ? dot : undefined
+}
+
+/** 套件根的继承指针形态：`{ "$from": "package.json#exports" }`（doctor 只允许套件根这么写）。 */
+function isExportsMacro(exportsField: unknown): boolean {
+  return !!exportsField && typeof exportsField === 'object' && !Array.isArray(exportsField)
+    && (exportsField as Record<string, unknown>)['$from'] === 'package.json#exports'
+}
+
+/** 同表还声明了别的子路径时，把整张表列进报错文案（只复述 manifest，不去 import 猜形状）。 */
+function declaredExportsHint(manifest: Record<string, unknown> | undefined, baseDir: string): string | undefined {
+  const requirements = manifest?.['requirements'] as Record<string, unknown> | undefined
+  const rawTable = requirements?.['exports']
+  if (!rawTable || typeof rawTable !== 'object' || Array.isArray(rawTable) || isExportsMacro(rawTable)) return undefined
+  const table = rawTable as Record<string, unknown>
+  const keys = Object.keys(table).filter((k) => k !== '$from')
+  if (keys.length <= 1) return undefined
+  const listing = keys.map((k) => `'${k}' → ${join(baseDir, String(table[k]))}`).join('；')
+  return `同一张 requirements.exports 表还声明了 ${keys.length} 条：${listing}。本次按 "." 解析到的模块不是插件形态；`
+    + `若插件入口是其中某个子路径，请直接改装该文件路径（manifest 声明为准，装载器不代为挑选）`
+}
+
+/**
+ * 入口解析（D-7 裁定 2026-09-21，顺序与 loader.ts 头注、add-sub-plugin.md §1 同源）：
+ *   ① requirements.exports['.']（正典；$from 则按继承语义换成 package.json#exports 的表）
+ *   ② 顶层 exports['.']（legacy 兼容位，命中打 warn；与正典并存时正典赢并 warn）
+ *   ③ package.json 的 exports['.'] → main（宿主 Node 约定，T0/G1）
+ *   ④ index.js / index.mjs 目录惯例（前面各级都没有声明时才兜底）
+ *
+ * 红线：①② 这类**显式声明**指向不存在的文件 ⇒ 直接 entry-not-found 并给出该绝对路径，
+ * 绝不静默回退到后面的顺位（回退就是拿惯例掩盖 manifest 与实现不同步）。
+ */
+function resolveEntry(dir: string, manifest: Record<string, unknown> | undefined): EntryResolution {
+  const warnings: string[] = []
+  const pkg = readJson(join(dir, 'package.json'))
+  const requirements = manifest?.['requirements'] as Record<string, unknown> | undefined
+  const canonicalTable = requirements?.['exports']
+  const inheritsFromPkg = isExportsMacro(canonicalTable)
+  const effectiveCanonicalTable = inheritsFromPkg ? pkg?.['exports'] : canonicalTable
+  const canonicalDot = dotDeclaration(effectiveCanonicalTable)
+  const legacyDot = dotDeclaration(manifest?.['exports'])
+
+  if (inheritsFromPkg && canonicalDot === undefined && pkg?.['exports'] !== undefined) {
+    warnings.push(
+      'requirements.exports 用 {"$from":"package.json#exports"} 继承指针，但 package.json 的 exports 里没有 "." 映射；'
+      + '已按后续顺位解析（套件根应当让 "." 指到真实入口）',
+    )
+  }
+
+  // ① 正典
+  if (canonicalDot !== undefined) {
+    const p = join(dir, canonicalDot)
+    if (!existsSync(p)) {
+      throw new SourceError('entry-not-found', declaredMissingMessage(
+        '正典位置 requirements.exports', canonicalDot, p, dir, manifest,
+      ))
+    }
+    if (legacyDot !== undefined) {
+      warnings.push(
+        `双声明并存：入口按正典 requirements.exports['.']="${canonicalDot}" 解析，`
+        + `已忽略顶层重复声明 exports['.']="${legacyDot}"。顶层 exports 不在 doctor 的清单根字段白名单里`
+        + '（写了会被判 `清单根字段非法: exports`），请删掉它',
+      )
+    }
+    return {
+      path: p,
+      source: inheritsFromPkg ? 'manifest.requirements.exports($from)' : 'manifest.requirements.exports',
+      warnings,
     }
   }
-  // 2. package.json（对齐宿主 Node 解析约定：exports['.'] → main；字符串与
-  //    对象 {".":{"default":…}} 两种形态都收。本 loader 按文件路径 import，
-  //    比"按包说明符 import"宽容：exports 存在但 '.' 未映射时仍依次尝试
-  //    main 与 index——目标是宿主能装的我们也能装（G1 双向兼容）。
-  const pkg = readJson(join(dir, 'package.json'))
-  const fromExports = pkg ? resolvePkgExportsTarget(dir, pkg['exports']) : undefined
-  if (fromExports) return fromExports
+
+  // ② legacy 顶层声明
+  if (legacyDot !== undefined) {
+    const p = join(dir, legacyDot)
+    if (!existsSync(p)) {
+      throw new SourceError('entry-not-found', declaredMissingMessage(
+        'legacy 位置（顶层）exports', legacyDot, p, dir, manifest,
+      ))
+    }
+    warnings.push(
+      `入口取自 legacy 位置：顶层 exports['.']="${legacyDot}"。声明入口的正典位置是`
+      + ` requirements.exports['.']（顶层 exports 不在 doctor 的清单根字段白名单里），请把该声明迁入`
+      + ` requirements.exports 后删除顶层那一份`,
+    )
+    return { path: p, source: 'manifest.exports(legacy)', warnings }
+  }
+
+  // ③ 宿主 Node 约定（T0/G1：字符串与 {".":{default|node}} 两种形态都收）
+  const fromPkgExports = pkg ? resolvePkgExportsTarget(dir, pkg['exports']) : undefined
+  if (fromPkgExports) return { path: fromPkgExports, source: 'package.json#exports', warnings }
   const main = pkg?.['main']
   if (typeof main === 'string') {
     const p = join(dir, main)
-    if (existsSync(p)) return p
+    if (existsSync(p)) return { path: p, source: 'package.json#main', warnings }
   }
+
+  // ④ 目录惯例兜底（仅当上面各级都没有声明/都没有命中）
   for (const name of ['index.js', 'index.mjs']) {
     const p = join(dir, name)
-    if (existsSync(p)) return p
+    if (existsSync(p)) return { path: p, source: 'index-convention', warnings }
   }
   throw new SourceError('entry-not-found', `未找到插件入口：${entryNotFoundMessage(dir)}`)
+}
+
+/** 显式声明（正典或 legacy）指向不存在文件时的可执行文案：给绝对路径 + 同表其他声明。 */
+function declaredMissingMessage(
+  positionLabel: string,
+  dot: string,
+  absPath: string,
+  dir: string,
+  manifest: Record<string, unknown> | undefined,
+): string {
+  const parts = [
+    `manifest 声明了入口却指向不存在的文件：${positionLabel}['.']="${dot}" → ${absPath}（该文件不存在）`,
+    'manifest 与实现必须同步，装载器**不会**回退到 package.json 或 index.js 惯例去猜一个能用的入口',
+  ]
+  const requirements = manifest?.['requirements'] as Record<string, unknown> | undefined
+  const table = requirements?.['exports']
+  if (table && typeof table === 'object' && !Array.isArray(table) && !isExportsMacro(table)) {
+    const others = Object.keys(table).filter((k) => k !== '$from')
+    parts.push(`该 requirements.exports 表声明的键：${others.map((k) => `'${k}'`).join('、')}`)
+  }
+  parts.push(`修复：把 "${dot}" 指向 ${dir} 下真实存在的入口文件，或改正拼写后重装`)
+  return `${parts.join('。')}。`
 }
 
 /**
@@ -216,7 +334,7 @@ function mergeNamespaceStatics(def: object, ns: Record<string, unknown>): void {
 }
 
 /** 归一插件对象：接受 default 导出、命名导出集合、函数形态。 */
-function normalizePlugin(mod: unknown, entryPath: string): unknown {
+function normalizePlugin(mod: unknown, entryPath: string, shapeHint?: string): unknown {
   if (typeof mod === 'function') return mod
   if (mod && typeof mod === 'object') {
     const rec = mod as Record<string, unknown>
@@ -232,7 +350,7 @@ function normalizePlugin(mod: unknown, entryPath: string): unknown {
       return mod
     }
   }
-  throw new SourceError('plugin-shape-invalid', `${entryPath} 未导出可识别的插件形态（default/apply/register）`)
+  throw new SourceError('plugin-shape-invalid', `${entryPath} 未导出可识别的插件形态（default/apply/register）${shapeHint ? `。${shapeHint}` : ''}`)
 }
 
 function synthLegacyManifest(dir: string, entryPath: string, mod: unknown, source: PluginSource): DshSubPluginManifest {  const pkg = readJson(join(dir, 'package.json'))
@@ -271,7 +389,11 @@ export async function resolveLocalSource(input: PluginSource): Promise<ResolvedP
   const baseDir = isFile ? dirname(p) : p
   const manifestPath = join(baseDir, 'dsh.plugin.json')
   const manifestRaw = readJson(manifestPath)
-  const entryPath = isFile ? p : resolveEntry(baseDir, manifestRaw)
+  // 来源直接给文件路径时不经解析顺位（显式即显式）；目录才走 resolveEntry。
+  const resolvedEntry = isFile ? undefined : resolveEntry(baseDir, manifestRaw)
+  const entryPath = isFile ? p : resolvedEntry!.path
+  const entrySource: EntrySource = isFile ? 'explicit-file' : resolvedEntry!.source
+  const entryWarnings = resolvedEntry?.warnings ?? []
 
   let mod: unknown
   try {
@@ -279,7 +401,7 @@ export async function resolveLocalSource(input: PluginSource): Promise<ResolvedP
   } catch (error) {
     throw new SourceError('module-load-failed', `入口加载失败 ${entryPath}：${String((error as Error)?.message ?? error)}`)
   }
-  const plugin = normalizePlugin(mod, entryPath)
+  const plugin = normalizePlugin(mod, entryPath, declaredExportsHint(manifestRaw, baseDir))
 
   if (manifestRaw && manifestHasContract(manifestRaw)) {
     const result = validateManifest(manifestRaw)
@@ -294,7 +416,7 @@ export async function resolveLocalSource(input: PluginSource): Promise<ResolvedP
     if (runtimeSchema !== undefined && manifest.configSchema === undefined) {
       manifest.configSchema = runtimeSchema
     }
-    return { manifest, plugin, legacy: false, source: input, entryPath, registers: extractRegisters(manifestRaw) }
+    return { manifest, plugin, legacy: false, source: input, entryPath, entrySource, entryWarnings, registers: extractRegisters(manifestRaw) }
   }
 
   const legacyManifest = synthLegacyManifest(baseDir, entryPath, plugin, input)
@@ -304,5 +426,5 @@ export async function resolveLocalSource(input: PluginSource): Promise<ResolvedP
     const first = check.errors[0]!
     throw new SourceError('plugin-shape-invalid', `legacy 合成 manifest 校验失败：${first.path} ${first.message}`, check.errors)
   }
-  return { manifest: check.manifest, plugin, legacy: true, source: input, entryPath, registers: extractRegisters(manifestRaw) }
+  return { manifest: check.manifest, plugin, legacy: true, source: input, entryPath, entrySource, entryWarnings, registers: extractRegisters(manifestRaw) }
 }

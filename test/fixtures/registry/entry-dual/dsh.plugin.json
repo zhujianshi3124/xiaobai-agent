@@ -1,0 +1,15 @@
+{
+  "id": "fixture/entry-dual",
+  "displayName": "双声明夹具（正典与 legacy 并存）",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "requirements": {
+    "node": ">=20",
+    "exports": {
+      ".": "./canonical-entry.js"
+    }
+  },
+  "exports": {
+    ".": "./legacy-entry.js"
+  }
+}

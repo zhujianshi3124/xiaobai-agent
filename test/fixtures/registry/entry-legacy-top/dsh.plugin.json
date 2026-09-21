@@ -1,0 +1,9 @@
+{
+  "id": "fixture/entry-legacy-top",
+  "displayName": "legacy 顶层 exports 夹具",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "exports": {
+    ".": "./legacy-entry.js"
+  }
+}

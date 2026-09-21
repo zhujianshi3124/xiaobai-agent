@@ -1,0 +1,12 @@
+{
+  "id": "fixture/entry-canonical",
+  "displayName": "正典入口夹具",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "requirements": {
+    "node": ">=20",
+    "exports": {
+      ".": "./canonical-entry.js"
+    }
+  }
+}
