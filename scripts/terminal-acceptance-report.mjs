@@ -1,8 +1,33 @@
+// 【历史冻结 · 2026-09-21 Pack I，债务 D-17】P2.2 第 10 轮终验的**时点取证脚本**，不是回归项。
+// ⚠ **禁止重跑**：本脚本末尾（原 :154-156 的 mkdirSync + writeFileSync）会把报告写回
+//   panel/docs/evidence/TERMINAL-ACCEPTANCE-ROUND10.txt —— 那是**已入库、已在 evidence/README
+//   登记 sha(49ef62a0…) 与字节(6689) 的历史证据正本**，重跑即覆写（时刻行与 `~/.dsh` 指纹都会变）。
+//   这与 D-2（p23-shadow-scan 覆写历史证据）同族，是**第二处**；不改写它的输出路径，因为本脚本
+//   整体已被冻结、修它没有收益。需要那份证据请直接读库内文件。
+// 冻结原因（两条）：① 它要证的判据是当时的（"复原到 ce0b0b81…"），该基准已随 H5 与本轮滚存退役，
+//   把它改成能跑就是伪造那份历史结论；② 它的"基准可重建性"公式（HEAD blob + 追加 toolkit-manager
+//   4 行）自 P2.4 把那 4 行提交进 HEAD 起就不再自洽。
+// 不在 regression-all / ci-local 清单内；历史产物读 panel/docs/evidence/TERMINAL-ACCEPTANCE-ROUND10.txt。
+// 原实现见提交 41ad40c。
+// ── 以下为当时的原始内容（只读取证 + 落报告文本，不改动任何被取证文件）──
 // 终验取证报告生成器（只读取证 + 落报告文本，不改动任何被取证文件）
 import { readFileSync, readdirSync, existsSync, statSync, writeFileSync, mkdirSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
+
+// ↓ 冻结硬闸（2026-09-21 Pack I / D-17）：只拦"再跑一次"，不改下面任何取证逻辑与历史结论文本。
+// 下面的 writeFileSync 会把结果写进已入库并登记 sha 的证据正本，重跑即覆写；光靠头注拦不住手滑，
+// 所以这里直接退出。真要复核第 10 轮判据：读 panel/docs/evidence/TERMINAL-ACCEPTANCE-ROUND10.txt 正本。
+console.log(
+  [
+    'terminal-acceptance-report.mjs 已冻结（2026-09-21 Pack I / 债务 D-17），未执行。',
+    '原因：它会覆写已入库、已登记 sha 的历史证据正本 panel/docs/evidence/TERMINAL-ACCEPTANCE-ROUND10.txt；',
+    '      且它依赖的判据基准 ce0b0b81… 与「HEAD blob + 追加 toolkit-manager 4 行」的重建公式均已退役。',
+    '要复核第 10 轮判据：直接读该证据文件正本（evidence/README 主表有它的字节数与 sha256）。',
+  ].join('\n'),
+);
+process.exit(2)
 
 const ROOT = "D:\\dsh-plugins\\dsh-toolkit";
 const TARGET = join(ROOT, "cordis.patch.yml");

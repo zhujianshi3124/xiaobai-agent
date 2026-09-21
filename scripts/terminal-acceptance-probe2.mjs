@@ -9,6 +9,11 @@ const TARGET = join(ROOT, "cordis.patch.yml");
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const L = (t = "") => console.log(t);
 
+// 【历史冻结 · 2026-09-21 Pack I / D-17】同上：第 10 轮"硬判据 (c) 复原到基准"的时点探针（只读、不写盘）。
+// 基准 ce0b0b81… 与重建公式（HEAD blob + 追加 toolkit-manager 4 行）都已退役 ⇒ 今天重跑必报
+// "NO ✗ — 未回到基准"，属预期的时点错位，不是新故障，也不要为凑绿去改这里。
+L("【时点脚本 · 已冻结】本探针判的是第 10 轮（2026-09-18）的基准复原，今天重跑出现 NO ✗ 属预期（详见本文件头注）。");
+
 const headBlob = execFileSync("git", ["show", "HEAD:cordis.patch.yml"], { cwd: ROOT, maxBuffer: 1 << 24 }).toString("utf8");
 const APPEND_LF = "\n- insert:\n    - id: toolkit-manager\n      name: 'file:///D:/dsh-plugins/dsh-toolkit/panel/index.js'\n";
 const baseline = Buffer.from((headBlob.replace(/\r\n/g, "\n") + APPEND_LF).replace(/\n/g, "\r\n"), "utf8");
