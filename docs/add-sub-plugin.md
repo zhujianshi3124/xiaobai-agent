@@ -44,17 +44,30 @@ registry 的 legacy 适配器会合成 manifest（id 落 `legacy/<包名>`，无
 
 要点：
 
-1. **入口**：`dsh.plugin.json` 的 `exports['.']` → `package.json` 的 `exports['.']`
-   （字符串或 `{".":{default|node}}`）→ `main` → `index.js`/`index.mjs`。monorepo 根没有入口时，
-   预检报错会直接列出**可改装的插件子包候选**（T0 实测：装 monorepo 壳目录会失败，装 `packages/*` 才对）。
-   ⚠️ **位置口径（loader 只读顶层，不读 `requirements.exports`）**：`registry/src/loader.ts`
-   的入口解析取的是 **`dsh.plugin.json` 顶层的 `exports['.']`**，嵌套在 `requirements.exports`
-   下的那一份**不会被读到**。本仓 5 个内置插件目前都写在 `requirements.exports` 里（存量
-   manifest v1 的形状），其中 4 个因为目录下有 `index.js` 走下一级兜底才"看着正常"，
-   `lib/agent-memory` 没有 `index.js` ⇒ 按目录路径装不进来（实测 `entry-not-found`，只能装
-   `lib/agent-memory/plugin.js`）。**新写子插件请直接把入口交给 `package.json` 的
-   `exports`/`main` 或目录下的 `index.js`**；顶层 `exports` 与 `requirements.exports` 的
-   归属尚未裁定（会牵动 doctor 独立仓的根字段白名单），见 `docs/debt.md` D-7。
+1. **入口解析（三级正典顺序，2026-09-21 D-7 裁定后已实现；本节是单一事实源）**，
+   实现见 `registry/src/loader.ts` 的 `resolveEntry`：
+   - **① `requirements.exports['.']` —— 正典位置。** doctor 独立仓把 `exports` 定为
+     `requirements` 的必填键，并逐条断言其目标文件真实存在；顶层 `exports` 反而不在 doctor 的
+     清单根字段白名单（`MANIFEST_TOP_KEYS`）里，写上去当场产 error。
+     套件根可写继承指针 `{"$from":"package.json#exports"}`，此时正典表就是 `package.json#exports`。
+   - **② 顶层 `exports['.']` —— legacy 兼容位。** 命中一定打 warn（经 registry 的 A1 warn 通道
+     落日志，event=`entry-declaration`）；与正典并存时**正典赢**，warn 点名被忽略的那一份。
+   - **③ `package.json` 的 `exports['.']`（字符串或 `{".":{default|node}}`）→ `main`；
+     ④ `index.js`/`index.mjs` 目录惯例** —— 仅当前两级都没有声明时才走到这里（宿主 Node 约定，T0/G1）。
+   - **红线：显式声明（①②）指向不存在的文件 ⇒ 直接 `entry-not-found` 并给拼好的绝对路径，
+     绝不静默回退后面的顺位**（回退就是拿惯例掩盖 manifest 与实现不同步）。
+   - 解析结果的可观测面：`ResolvedPlugin.entrySource`（七种来源值，见 `registry/src/types.ts`）
+     与 `entryWarnings`。
+   - ⚠️ **`.` 是"包主导出"，不必然是插件入口。** 本仓 `lib/agent-memory` 即此形态：
+     `"." → ./lib/index.js` 是指令台账数据库（非插件形状），插件在 `"./plugin" → plugin.js`
+     （宿主 `cordis.patch.yml` 挂的也是 `@local/dsh-toolkit/agent-memory/plugin`）。
+     因此**按目录路径装它会得到 `plugin-shape-invalid`**，报错文案会点名同表可改装的文件；
+     这不是缺陷（装载器不代为挑选），要装请按文件路径装。
+   - monorepo 根没有入口时，预检报错会直接列出**可改装的插件子包候选**
+     （T0 实测：装 monorepo 壳目录会失败，装 `packages/*` 才对）。
+   - **建议写法**：入口交给 `package.json` 的 `exports`/`main` 或目录下的 `index.js`，
+     并让 `requirements.exports["."]` 与之一致——三处一致时上面任何一级都会解析到同一个文件。
+
 2. **configSchema 落盘用纯定义 JSON、零默认值**（P5 起的仓内口径）。面板按它递归渲染表单
    （object/array/union/boolean/number/string + 必填标注），保存走 `registry.setConfig`，
    写回前服务端**真校验**（必填缺失阻断）。
@@ -104,5 +117,6 @@ node /d/dsh-test-sandbox/projects/doctor/src/cli.mjs --scope D:/dsh-plugins/dsh-
 - `path-not-found` ⇒ 提示"请填绝对路径 + 示例形态 + 相对路径按服务进程工作目录解析"；
   面板前端现在会在**提交前**就拦下相对路径（`need-absolute-path`），不让你看到拼错路径的报错。
 - `entry-not-found` ⇒ 写清已读取到什么、缺哪个字段、monorepo 子包候选、补什么（带 JSON 片段示例）。
-- `module-load-failed` / `plugin-shape-invalid` ⇒ 给模块路径与原因；shape 类会说明接受哪些导出形态。
+- `module-load-failed` / `plugin-shape-invalid` ⇒ 给模块路径与原因；shape 类会说明接受哪些导出形态
+  （按目录装"`.` 声明的是数据库"那类包时，文案还会点名同表里可改装的插件子路径）。
 - `source-not-supported` ⇒ npm 来源未实现（Q1），给"仅本地路径"的如实说明。
