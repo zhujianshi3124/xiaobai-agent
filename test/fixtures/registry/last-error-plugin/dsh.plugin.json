@@ -1,0 +1,9 @@
+{
+  "id": "fixture/last-error-plugin",
+  "displayName": "lastError 生命周期夹具",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "requires": {
+    "node": ">=20"
+  }
+}

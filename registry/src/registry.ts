@@ -15,7 +15,8 @@
  * - 错误隔离：每个子插件独立派生 ctx（host.plugin()）；装入失败/超时 → error，
  *   指数退避自动重试，达 retryLimit → quarantined；手动 enable/reload 清零重试（REQ-6）。
  * - 持久化：state.json 记录 source/enabled/config/quarantined/lastError；
- *   autoload 按记录恢复，失败项进 error 并保留 lastError（REQ-7）。
+ *   autoload 按记录恢复，失败项进 error 并保留 lastError（REQ-7）；转 ACTIVE 即清空
+ *   lastError（D-8：它是"当前状态"字段，历史在审计 JSONL 里），磁盘记录同步回写。
  * - 事件：全部经 contractEventName(servicePrefix, …) 带前缀（D5/REQ-8）。
  * - 审计（REQ-10）：结构化日志 {pluginId, event, durationMs, errorCode}；
  *   审计事件面板接线在 P4（避免私造契约外事件名）。
@@ -240,6 +241,12 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
     const from = entry.status
     if (from === to) return
     entry.status = to
+    // D-8：`lastError` 是**当前状态**字段，不是历史台账——插件跑到 ACTIVE 就没有可陈
+    // 的错误，留着会让面板同屏显示"运行中"+"最近错误 fiber-load-timeout"（E1 实测形态）。
+    // 状态源只有这一处（install / autoload 恢复 / setEnabled / reload / 自动重试五条路
+    // 都要经过这里），所以清也只在这里清；面板与 /v2/snapshot 都是读取方，不各自缓存。
+    // 历史不丢：失败当时已按 REQ-10 发 `audit:*` 并落 JSONL，清掉的只是这个字段。
+    if (to === 'active' && entry.lastError !== undefined) delete entry.lastError
     this.notify(
       contractEventName(this.opts.servicePrefix, 'registry:status-changed'),
       {
@@ -640,6 +647,10 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
         }
         this.emitAdded(entry)
         await this.loadEntry(entry)
+        // D-8：恢复成功时 lastError 已在 setStatus('active') 处清掉，但磁盘记录是
+        // 从旧 state 读进来的，不同步回写就会留下"盘上有、内存无"的陈旧错误（A1 口径：
+        // 内存与磁盘同进退）。persist 经 saveDebounceMs 合并，逐插件调用只落一次盘。
+        this.persist(entry)
       })
     }
   }
