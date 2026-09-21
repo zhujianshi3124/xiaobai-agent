@@ -9,9 +9,25 @@
 一个普通 DSH 插件（导出 `name` / `inject` / `apply`，或 default 对象）就能被装：
 registry 的 legacy 适配器会合成 manifest（id 落 `legacy/<包名>`，无包名则用入口文件名），
 面板卡片带 **legacy 徽标**并如实说明受限项（无环境预检、无自定义健康检查、无配置表单）。
-`configSchema` 若以模块导出 `Config` 存在，legacy 包装也会拾取（`registry/src/loader.ts:187`）。
+`configSchema` 若以模块导出 `Config` 存在，legacy 包装也会拾取（`registry/src/loader.ts` 的
+`synthLegacyManifest`——按函数名找，别按行号找，行号会漂）。
 
 ⇒ 双向兼容的下限：**装得进来、管得起来、限制说清楚**。
+
+**⚠ 两条作者必须知道的规则（Pack H3 / 债务 D-12、D-15 实测得出）**：
+
+1. **元数据要长在"被选中的那个对象"上**。同一个插件有两条装载通道，交给 cordis 的对象不同：
+   宿主装载器（`cordis-plugin-loader@1.0.3`）是 `exports.default ?? exports` 的**纯替换**，
+   而 toolkit registry 会把模块级 `name/inject/Config` **保守合并**到 default 上（更宽，兜第三方）。
+   cordis 只读交给它的那个对象的 `plugin.name` / `plugin.inject` / `plugin.Config`。
+   ⇒ 所以**写了 `export default` 就别再只把元数据放在模块级**：default 是对象就写
+   `export default { name, inject, Config, apply }`；default 是类就写 `static name` / `static inject`；
+   default 是函数则 cordis 读到的是 JS 推断名（不是你要的插件名）。两条通道逐字一致由
+   `test/dual-channel-parity.test.mjs` 对本仓内置入口逐条钉住，可作为写法样板。
+2. **带 npm scope 的包（`@scope/name`）不能走 legacy**：legacy 合成 id 的规则是"包名含 `/` 就原样
+   沿用"，而契约要求 id 是 `<scope>/<name>` 小写字母数字连字符式——`@` 不合法，装载会以
+   `plugin-shape-invalid` 拒绝（文案已点名成因）。⇒ 这类包**必须**写 `dsh.plugin.json`，
+   且其中的 `contract` 字段必须是非空字符串（缺它同样落 legacy 而撞上第 1 条）。
 
 ## 2. 想要完整管理面：写 `dsh.plugin.json`
 

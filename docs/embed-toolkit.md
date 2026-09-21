@@ -29,7 +29,7 @@ toolkit.apply(ctx, { servicePrefix: 'mybucket' })       // config 全部可选�
 | 键 | 作用 | 缺省 |
 |---|---|---|
 | `servicePrefix` | 服务名 / 事件名 / **HTTP 路由基址**三张表的命名空间 | `toolkit` ⇒ 与历史逐字节相同 |
-| `toolkitRoot` | 面板 patch 域操作的仓根（读 `cordis.patch.yml`、写回也在此） | `panel/` 的上一级 |
+| `toolkitRoot` | 面板 patch 域操作的仓根（读 `cordis.patch.yml`、写回也在此），**同时也是安装记录/审计流水的锚定根** | `panel/` 的上一级——按**模块自身位置**推导（唯一推导点 `panel/manager/toolkit-root.mjs`），**与宿主进程 cwd 无关**（H1 / D-11；修复前 registry 侧按 `resolve(process.cwd(),"..")` 算，落点会随启动方式漂到 `C:\Windows\.registry` 这类位置）。优先级：显式 `config.toolkitRoot` > 模块位置推导 |
 | `registry.statePath` / `registry.dataDir` | 安装记录 / enabled / config / 隔离原因 / lastError 落盘位置 | `<toolkitRoot>/.registry/state.json` |
 | `registry.autoload` | 重启后按记录自动恢复（REQ-7） | `true` |
 | `registry.retryLimit` / `retryBackoffMs` / `loadTimeoutMs` / `saveDebounceMs` | 错误隔离与退避（REQ-6） | 3 / 500 / 30000 / 0 |
@@ -59,6 +59,13 @@ ctx 上，`toolkit/*` 与 `tk2/*` 两组服务名各自可查、互不撞名（c
 
 **双实例必须各自给 `registry.statePath`（或 `dataDir`）**：缺省状态文件按 `toolkitRoot` 推导，
 同一 `toolkitRoot` 的两份实例会共用同一份安装记录——这是配置责任，不是路由冲突。
+（H1 之后"缺省"是稳定的仓根，不再随启动目录漂移；但两份实例同仓根 ⇒ 仍共用记录，照旧要显式给。）
+
+**落盘是否真的在落，面板会说**（H1 / D-11）：`/v2/snapshot` 带 `durability`（`state` = 安装记录、
+`audit` = 审计流水两面），任一面写不下去时面板顶部点名路径 + 给可执行建议，插件卡片状态标注
+"未落盘（重启会丢）"，同时发 `audit:state-save-failed`。装配期落点连目录都建不出来**不再让面板
+装不上**（只降级并申报）；但请注意显式 `auditLog: false` 或宿主无事件面时审计本来就不落盘，
+那时 `durability.audit.ok` 为 `false` 是配置结果，不是故障。
 
 ## 4. 面板 guard 的前提（P7.4）
 
