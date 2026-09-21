@@ -6,6 +6,64 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### Pack F（2026-09-21，cordis 符合度复核三项待裁全部关闭）
+
+上一轮登记在 `docs/debt.md` D 区的三项待裁（D-6 / D-7 / D-8）按用户任务书实施，三项各自
+独立提交、每笔之后全量门禁绿。台账见 `docs/debt.md` A #17 / #18 / #19 与《D-7 追加》。
+
+- **修复 F1（D-6）**：`hasService` 由直读 cordis 代理属性（`ctx[name]`）改为 `ctx.get(name, false)`。
+  旧实现的误判来自代理 get 陷阱先走 `Reflect.has(target, prop)`（沿原型链），加上
+  `isSpecialProperty` 把 `_` 前缀与 `prototype`/`then` 直接放行，于是
+  `hasService('toString'/'constructor'/'valueOf'/'hasOwnProperty'/'__proto__')` 全为 true ——
+  不是显示问题而是判定问题：precheck 的 `service-missing` 阻断与 doctor 的 `requires/services`
+  规则会把这类名字当作"服务在场"，从而放过一个真缺依赖的插件。改法以 vendored 源码为准
+  （`src/reflect.ts:233-243`：isolate 与 store 均为 `Object.create(null)`，未命中直接返回
+  undefined 不抛错）。头注由"如实陈述直读"改写为"为什么不再直读"。提交 `b399623`。
+- **修复 F2（D-7）**：装载器入口解析改为**三级正典顺序** —— ① `requirements.exports['.']`
+  （正典；`{"$from":"package.json#exports"}` 按继承语义换成 package.json 的表）→ ② 顶层
+  `exports['.']`（legacy 兼容位，命中必 warn；与正典并存时正典赢并点名被忽略的那一份）→
+  ③ `package.json` 的 `exports['.']`/`main`（宿主 Node 约定，T0/G1 既有层）→ ④ `index.js`/
+  `index.mjs` 目录惯例。**显式声明指向不存在的文件一律 `entry-not-found`，绝不静默回退**
+  （回退就是拿惯例掩盖 manifest 与实现不同步；doctor 早已把"声明了就必须存在"当 error 判）。
+  裁定依据是三处交叉验证：doctor 仓把 `exports` 定为 `requirements` 必填键且顶层 `exports`
+  不在根字段白名单（⇒ 顶层才是非法位，上一轮"禁双读只读顶层"的裁定被本轮显式撤销）。
+  5 个内置插件的 manifest 一字未改；告警随 `ResolvedPlugin.entryWarnings` 带出并经 registry
+  的 A1 warn 通道落盘，来源随 `entrySource` 可观测。提交 `23de06a`。
+  - **B1 验收改判（情形 A）**：`lib/agent-memory` 的正典声明 `"."` 指向 `./lib/index.js`
+    （指令台账数据库，非插件形状），插件在同表 `"./plugin"`。全仓 8 条声明目标实测全部存在
+    （0 缺失）⇒ 不属"声明指向不存在文件"的同步缺陷，故按目录装载产出**结构化可执行报错**
+    （`plugin-shape-invalid` + 点名 `./plugin` 绝对路径）即终态设计行为；显式文件路径行为不变。
+- **修复 F3（D-8）**：插件转 ACTIVE 即清空 `lastError`（连带其 `at` 时间字段），消除面板
+  "运行中"+"最近错误"并存的误导。修在状态源唯一一处 `setStatus`，五条到 ACTIVE 的路径
+  （install / autoload 恢复 / setEnabled / reload / 自动重试）全部经过它；面板 client 与
+  `/v2/snapshot` 核查后确认**无独立缓存**（卡片整体来自服务端快照），故读取方零改动。
+  历史不丢：失败当时已按 REQ-10 发 `audit:*` 并落 JSONL。autoload 恢复成功补一次 `persist`
+  以守住"内存与磁盘同进退"。提交 `57ebc24`。
+- **加固（测试）**：本轮新增 **25 条用例** —— F1 `test/host-has-service.test.mjs` 5 条、
+  F2 `test/loader-entry-resolution.test.mjs` 14 条（含 4 套自带 DECOY 哨兵的
+  `test/fixtures/registry/entry-*` 夹具）、F3 `test/registry-last-error.test.mjs` 6 条。
+  当前 `node --test` 汇总 **263 条 / fail 0**：与"上轮 229 + 本轮 25 = 254"差 9 条，原因是 node 的
+  测试文件发现机制会把 `test/` 下的夹具模块也当文件级用例计入，本轮新建夹具带进 9 个
+  （F2 的 8 个入口文件 + F3 私有夹具 1 个）；这是仓内既有口径，非本轮引入的计数错误，如实记下。
+  F3 之所以要用私有夹具：`node --test` 的测试文件之间并发跑，而 `contract-plugin/marker.flag`
+  是跨文件共享的磁盘开关（复用会偶发翻红，已记 D-10）。
+- **三项摘实现变异自检**：F1 摘回旧直读 ⇒ 仅"原型链钉子"一条精确翻红；F2 三发 —— 摘正典分支
+  ⇒ 8 条翻红（4 内置 + `$from` 根 + 双声明 + 不回退红线 + 情形 A）、摘 legacy 分支 ⇒ 2 条、
+  把"声明不存在即报错"改成"静默回退" ⇒ 1 条（红线用例）；F3 摘掉"转 ACTIVE 清空"整条分支
+  ⇒ 4 条（enable／snapshot／autoload／reload 各钉一条），另两条按设计不翻红（重装换条目、
+  防过度修复方向相反）。三次变异后均重建并 `sha256sum -c` 校验产物逐字节还原。
+- **发现并登记（未顺手改）**：D-9 `retryAttempts` 装入成功后不清零（重试计数跨段结转，隔离
+  提示里"连续失败 N 次"在这种情况下不准）；D-10 上述夹具共享开关的偶发翻红。C-1 必答设计题
+  补第 2 条：doctor 要求 `requirements` 必含 `exports` 键，而本仓契约 v1 根本没有该字段，
+  两边口径分叉须在 v1.1 归一。
+- **过程留痕**：F2 执行期间出现过一次误触裁决（"停手只落文档"），仅在未提交文档层执行、
+  零 commit、已丢弃；裁定链第 ③ 步记于 `docs/debt.md`《D-7 追加》。
+- **环境注记**：`docs/debt.md` D 区前新增一节，把"Node 24/Windows 全量 `node --test` 批次里
+  真 http+fetch 命中 libuv 断言 ⇒ 文件级红、子用例全绿"的分流方法与"直接驱动 route handler +
+  response 桩"的正解从测试文件头注收进正文。
+- **门禁与边界**：三笔提交每笔 `node scripts/ci-local.mjs --with-scan` 4/4；`p1-smoke` 断言
+  一字未动（实跑 314/0）；doctor 独立仓零改动；`panel/` 未触及。
+
 ### cordis 符合度复核与修复（2026-09-21，Pack A–E，用户裁定"全修"）
 
 对照本仓实际 vendored 的 `@deepseek-ai/cordis@4.0.2` 逐条核可插拔模式符合度，按 5 个 Pack 施工，
