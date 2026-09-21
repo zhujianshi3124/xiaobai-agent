@@ -58,7 +58,7 @@
     - id: web-search-local
       name: '@local/dsh-toolkit/web-search-local'
       config:
-        engines: [searxng, google, duckduckgo, mojeek, bing, baidu, sogou, 360]
+        engines: [searxng, google, duckduckgo, mojeek, bing, baidu, sogou, '360']
 
 - insert:
     - id: web-search-router
