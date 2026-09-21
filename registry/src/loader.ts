@@ -302,10 +302,19 @@ const PLUGIN_STATIC_KEYS = ['name', 'inject', 'Config', 'configSchema', 'provide
  * 声明，cordis 自己也按这个前提办（`if (name === 'apply') name = undefined`）。所以模块级
  * `export const name` 应当优先于推断名；对象的 own `name` 则是有意声明，不覆盖。
  *
- * 语义边界如实标注：这是对宿主装载器解包行为的**保守近似**——宿主装载器
- * （`@deepseek-ai/cordis-plugin-loader`）在本仓未安装（cordis 仅把它列为可选
- * peerDependency），无法逐条对照其解包规则，因此这里只做"补齐缺失、绝不改已有"
- * 这个无争议子集，不去猜得更远。
+ * 语义边界（H3 / 债务 D-12 已对照完毕，原文的"无法对照"前提作废）：宿主装载器
+ * `@deepseek-ai/cordis-plugin-loader@1.0.3` 的 `unwrapExports` 是**纯替换**
+ * （`exports.default ?? exports`，两跳，见其 `lib/index.js:745-751`），命名导出的元数据
+ * 不在它手上处理。也就是说本函数比宿主装载器**更宽**——这是有意的兜底（第三方插件常把
+ * `inject` 写成模块级命名导出，纯替换会让 cordis 读不到依赖门控）。
+ * 但**本仓内置入口不再依赖这份宽度**：三个曾因此分叉的入口已把元数据自带到 default 上
+ * （compact-router 的 `static name`、agent-memory 的 `{name, apply}` default、
+ * web-search-local 的 `Config`），两通道逐字一致由 `test/dual-channel-parity.test.mjs` 钉住。
+ *
+ * 一处必须知道的副作用：合并是**就地改写**插件对象（函数/类的 `name` 只能通过
+ * `defineProperty` 换），作用在模块里那个对象本身，不是副本。所以同一模块对象一旦被本
+ * 通道解析过，之后哪怕走宿主那条纯替换路径，读到的也是改写后的名字（内置入口因 H3 两边
+ * 同名而不受影响；第三方插件的这条性质由上面的守卫用例顺序注释兜住）。
  */
 function mergeNamespaceStatics(def: object, ns: Record<string, unknown>): void {
   const isFn = typeof def === 'function'
@@ -424,7 +433,23 @@ export async function resolveLocalSource(input: PluginSource): Promise<ResolvedP
   const check = validateManifest(legacyManifest)
   if (!check.ok) {
     const first = check.errors[0]!
-    throw new SourceError('plugin-shape-invalid', `legacy 合成 manifest 校验失败：${first.path} ${first.message}`, check.errors)
+    // D-15：文案必须指对**真实成因**。修复前这里一律报"legacy 合成 manifest 校验失败：<id 格式>"，
+    // 而缺口其实在别处——目录里那份 dsh.plugin.json 没有 `contract` 字段（或为空），装载器才
+    // 落进 legacy 合成分支，随后拿包名当 id 被命名空间式规则拒绝（`@scope/name` 里的 `@` 不合法）。
+    // 典型现场：装载本仓 panel/ 目录（它有 manifest，但 manifestVersion 形态无 contract）。
+    const pkgName = (readJson(join(baseDir, 'package.json')) as Record<string, unknown> | undefined)?.['name']
+    const cause = manifestRaw
+      ? `原因不是"legacy 形态"，而是 ${manifestPath} **缺非空 \`contract\` 字段**（`
+        + `manifestHasContract 判据：字符串且非空），装载器因此按 legacy 合成 id`
+      : `原因：${baseDir} 没有 dsh.plugin.json，装载器按 legacy 合成 id`
+    throw new SourceError(
+      'plugin-shape-invalid',
+      `插件入口可用，但 manifest 无法成形：${cause}。`
+        + `合成 id 取自 ${typeof pkgName === 'string' && pkgName !== '' ? `package.json#name="${pkgName}"` : '入口文件名'}，`
+        + `未过契约校验（${first.path}：${first.message}）。`
+        + `修法：给 dsh.plugin.json 补 "contract": "^1.0"（推荐），或改 package.json#name / 显式声明 id 为 <scope>/<name> 形式`,
+      check.errors,
+    )
   }
   return { manifest: check.manifest, plugin, legacy: true, source: input, entryPath, entrySource, entryWarnings, registers: extractRegisters(manifestRaw) }
 }
