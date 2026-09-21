@@ -912,6 +912,22 @@ window.__ModuleLoader__.load({
 			if (isTrue) {
 				kids.push(react.createElement("div", { key: "topwarn", style: styles.dlgWarnTop }, "⚠ " + TRUE_COMMON.topWarning));
 			}
+			// H2（D-14）：卸载方向的交叉引用报告（provider 引用 + 声明式依赖）。
+			// 与服务端同语义：**只告知、不阻断**——确认按钮仍可用，决定权在用户。
+			var xrefs = props.crossRefs || [];
+			if (xrefs.length > 0) {
+				kids.push(react.createElement("div", { key: "xref", style: styles.crossBox },
+					react.createElement("div", { style: styles.crossHead }, "⚠ 有其它配置/插件引用这个插件（共 " + xrefs.length + " 处）"),
+					xrefs.map(function (r, i) {
+						return react.createElement("div", { key: i, style: styles.crossLine },
+							(r.line ? "第 " + r.line + " 行：" : "登记表：") + r.text
+						);
+					}),
+					react.createElement("div", { style: styles.crossFoot }, props.warnAcked
+						? "你已知晓上述引用风险；继续即按所选方式执行。"
+						: "继续将先只显示这份清单一次（不会替你改引用）；再点一次即执行。")
+				));
+			}
 			var rows = isTrue
 				? [
 					["删什么", c.del, false],
@@ -1069,7 +1085,7 @@ window.__ModuleLoader__.load({
 				setDlg({ kind: "uninstall", mode: mode });
 			};
 
-			var doUninstall = react.useCallback(async function (mode) {
+			var doUninstall = react.useCallback(async function (mode, ackWarn) {
 				setBusy(true);
 				setError("");
 				try {
@@ -1084,6 +1100,14 @@ window.__ModuleLoader__.load({
 					});
 					var body = await res.json();
 					if (!body.ok) { setError(body.error || ("HTTP " + res.status)); return; }
+					// H2（D-14）：卸载方向的交叉引用报告——**只告知、不阻断**。第一拍把它显示出来
+					// 并停手（plan 是只读的，没写盘），用户再点一次才真正 execute。
+					var xrefs = (body.plan && body.plan.crossRefs) || [];
+					if (xrefs.length > 0 && !ackWarn) {
+						setDlg({ kind: "uninstall", mode: mode, crossRefs: xrefs });
+						setBusy(false);
+						return;
+					}
 					var res2 = await fetch(PANEL_API + "/uninstall/execute", {
 						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
 						body: JSON.stringify({ token: body.plan.token })
@@ -1203,10 +1227,13 @@ window.__ModuleLoader__.load({
 				));
 			}
 			if (dlg && dlg.kind === "uninstall") {
+				var xrefsShown = (dlg.crossRefs || []).length > 0;
 				kids.push(react.createElement(UninstallDialog, {
 					key: "dlg-u",
 					plugin: plugin,
 					mode: dlg.mode,
+					crossRefs: dlg.crossRefs || [],
+					warnAcked: xrefsShown,
 					willDelete: plugin.bodyStats || null,
 					typed: typed,
 					reason: reason,
@@ -1218,7 +1245,8 @@ window.__ModuleLoader__.load({
 						setTyped(next);
 					},
 					onReason: function (v) { setReason(String(v || "").slice(0, 200)); },
-					onConfirm: function () { doUninstall(dlg.mode); },
+					// 已显示引用警告时，这一次点击即为"已知晓"（第二拍才 execute）。
+					onConfirm: function () { doUninstall(dlg.mode, xrefsShown); },
 					onCancel: function () { setDlg(null); setError(""); }
 				}));
 			}

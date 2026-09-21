@@ -20,6 +20,9 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { createBackup, listBackups, readSnapshotEntry } from "./backup.mjs";
+// 交叉引用预检的知识来源（登记表：provider id 与声明式依赖）。plugin-registry 不 import
+// 本模块，无环；它也是"面板私有的插件知识"唯一入口（P2.4 起）。
+import { crossRefNeedles, declaredDependents, pluginByRowId, PLUGINS } from "./plugin-registry.mjs";
 
 export const DEFAULT_PLAN_TTL_MS = 5 * 60 * 1000; // 5 分钟
 export const BACKUP_KEEP_COUNT = 20; // 保留策略：最近 20 份
@@ -213,6 +216,42 @@ export function findCrossReferences(text, { rowId, alsoMatch = [] }) {
 export const LITERAL_DISABLED_VALUES = ["true", "false"];
 
 /**
+ * 交叉引用报告的完整口径（H2 / 债务 D-14 关账）。
+ *
+ * 修复前只有一层：`findCrossReferences(text, {rowId})`，而面板客户端从不传 `alsoMatch`
+ * ⇒ 匹配词恒等于行 id。两个后果：
+ *   ① patch 里以 **provider id** 引用本插件的行看不见（`web` 行的
+ *      `searchProvider: auto-search` / `fetchProvider: local-fetch` 正是这种写法）；
+ *   ② **声明式依赖**在文本里没有字面引用（`web-search-router` 那行不会写 web-search-local
+ *      的名字），扫文本永远扫不到，而那恰恰是后果最重的一类（整条搜索链断掉）。
+ * 现在两类都补上：needles 由登记表给出，声明依赖由 `declaredDependents` 反向给出。
+ *
+ * 语义不变：**只报告、不阻断**（管理入口如实告知，决定权在用户）。
+ *
+ * @param {string} text patch 全文
+ * @param {{rowId?: string|null, plugin?: string|null, alsoMatch?: string[]}} opts
+ * @returns {Array<{line: number|null, text: string, source: string}>}
+ */
+export function buildCrossRefs(text, { rowId = null, plugin = null, alsoMatch = [] } = {}) {
+  if (!rowId && !plugin) return [];
+  const meta = plugin ? PLUGINS[plugin] : null;
+  const extra = [...(alsoMatch ?? []), ...crossRefNeedles(rowId)];
+  let hits = [];
+  if (rowId) {
+    hits = findCrossReferences(text, { rowId, alsoMatch: extra }).map((h) => ({ ...h, source: "patch" }));
+  } else if (meta?.pkg) {
+    // 预设托管（compact-router）在 patch 里没有自己的行 ⇒ 无"自身块"可排除，按**包名**扫引用。
+    hits = findCrossReferences(text, { rowId: meta.pkg, alsoMatch: extra }).map((h) => ({ ...h, source: "patch" }));
+  }
+  const declared = declaredDependents(plugin ?? "").map((d) => ({
+    line: null,
+    text: "插件 " + d.plugin + " 声明依赖本插件：" + d.note + "（patch 文本里没有字面引用，扫文本看不见）",
+    source: "declared-dependency",
+  }));
+  return [...declared, ...hits];
+}
+
+/**
  * 读出某行现有的 `disabled` 原始文本（不存在则返回 null）。
  *
  * 存在的意义是把「字面量」与「表达式」区分开：`disabled` 在 DSH 里除了
@@ -263,7 +302,8 @@ export function createTogglePlan({ file, rowId, enabled, backupRoot, ttlMs = DEF
 
   // 锚点唯一性由 planRowFlag → locateRowAnchor 保证（0 或 ≥2 都会抛）
   const result = planRowFlag(text, { rowId, key: "disabled", value: enabled ? "false" : "true" });
-  const crossRefs = enabled ? [] : findCrossReferences(text, { rowId, alsoMatch });
+  // 停用方向才查引用（启用不会让任何引用变悬空）；口径见 buildCrossRefs（H2 / D-14）。
+  const crossRefs = enabled ? [] : buildCrossRefs(text, { rowId, plugin: pluginByRowId(rowId), alsoMatch });
   const now = Date.now();
 
   return {
