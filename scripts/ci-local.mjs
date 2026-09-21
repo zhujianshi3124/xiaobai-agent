@@ -8,7 +8,7 @@
 //
 // 用法：node scripts/ci-local.mjs [--with-scan]
 //   默认跑：build×3 + pluggable-lint + no-subplugin-import-check + typecheck×3 + node --test
-//         + 回归全跑 14 项 + 真实仓 doctor dry-run（须 0/0/0）
+//         + 回归全跑 14 项 + 真实仓 doctor dry-run（须 0/0/0）+ patch 行配置校验（I1 / D-16）
 //   --with-scan：追加 p23-verify（不在 regression-all 清单里的两项之一）
 import { spawnSync } from 'node:child_process'
 import { resolve, dirname } from 'node:path'
@@ -22,6 +22,10 @@ const steps = [
   ['npm test（build×3 + lint + 零子插件引用守卫 + typecheck×3 + node --test）', 'npm', ['test', '--prefix', ROOT]],
   ['回归全跑（13 专项脚本 + node --test）', process.execPath, [resolve(ROOT, 'scripts/regression-all.mjs')]],
   ['doctor 真实仓 dry-run 必须 0/0/0', process.execPath, [DOCTOR_CLI, '--scope', ROOT]],
+  // I1（债务 D-16）：patch 行的 config 按**宿主通道语义**校验——真 YAML 标量解析 + unwrap + Config。
+  // 这一环在 H5 之前是缺的，于是 cordis.patch.yml:61 一个未加引号的 360 让宿主整机起不来，
+  // 而仓内 293/293 全绿。脚本自带 --selfcheck（解析器语义 20 条断言），见该文件头注。
+  ['patch 行配置校验（宿主通道语义，含真 YAML 标量解析）', process.execPath, [resolve(ROOT, 'scripts/patch-config-check.mjs')]],
 ]
 if (withScan) steps.push(['p23-verify（regression-all 未含）', process.execPath, [resolve(ROOT, 'scripts/p23-verify.mjs')]])
 
