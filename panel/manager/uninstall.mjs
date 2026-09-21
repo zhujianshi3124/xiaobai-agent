@@ -30,6 +30,7 @@ import {
   dropPlan,
   PlanError,
   DEFAULT_PLAN_TTL_MS,
+  buildCrossRefs,
 } from "./apply-engine.mjs";
 import { createBackup } from "./backup.mjs";
 import { PLUGINS, assertUninstallable } from "./plugin-registry.mjs";
@@ -415,6 +416,10 @@ export function createSoftUninstallPlan({ toolkitRoot, plugin, ttlMs, reason, no
     hostKey: meta.hostKey
       ? { key: meta.hostKey, raw: hostKeyRaw, relOffsetWithinConfig: hostKeyRelOffset, afterKeys: hostKeyAfterKeys }
       : null,
+    // H2 / D-14：卸载方向也要交叉引用报告（修复前卸载路径**无任何**此类预检，
+    // 只有 presetBridgePrecheck 的备份存在性 fail-closed）。**只警告、不阻断**，
+    // 与停用方向行为对齐（管理入口如实告知，决定权在用户）。
+    crossRefs: buildCrossRefs(text, { rowId: meta.rowId, plugin }),
     changed: true,
     createdAt: new Date(now).toISOString(),
     expiresAt: new Date(now + (ttlMs || DEFAULT_PLAN_TTL_MS)).toISOString(),
@@ -467,6 +472,8 @@ export function createTrueUninstallPlan({ toolkitRoot, plugin, ttlMs, reason, no
     block: located.block,
     insertAt: located.start,
     hostKey: meta.hostKey ? { key: meta.hostKey, raw: hostKeyRaw, relOffsetWithinConfig: hostKeyRelOffset, afterKeys: hostKeyAfterKeys } : null,
+    // H2 / D-14：真卸载（销毁式）同样给交叉引用报告；只警告、不阻断。
+    crossRefs: buildCrossRefs(text, { rowId: meta.rowId, plugin }),
     libDir: join(toolkitRoot, "lib", plugin),
     createdAt: new Date(now).toISOString(),
     expiresAt: new Date(now + (ttlMs || DEFAULT_PLAN_TTL_MS)).toISOString(),
@@ -489,6 +496,9 @@ export function createPresetSoftUninstallPlan({ toolkitRoot, plugin, ttlMs, reas
     managedBy: "preset",
     reason: reason || "panel-uninstall-soft-preset",
     note: note || plugin + " 软卸载（预设回写 --undo；本体保留）",
+    // 预设托管插件在 patch 里没有自己的行 ⇒ 按包名扫引用 + 声明式依赖（当前 compact-router
+    // 两项皆空，报告为空是**如实**，不是没查；它的挂载面在预设文件里，由 presetBridgePrecheck 管）。
+    crossRefs: buildCrossRefs(readPatch(toolkitRoot), { plugin }),
     userReason: userReason || null,
     confirmCopy: confirmCopy || null,
     backupRoot: null,
@@ -518,6 +528,7 @@ export function createPresetTrueUninstallPlan({ toolkitRoot, plugin, ttlMs, reas
     managedBy: "preset",
     reason: reason || "panel-uninstall-true-preset",
     note: note || plugin + " 真卸载（预设回写 --undo → 确认后存档 → 删本体）",
+    crossRefs: buildCrossRefs(readPatch(toolkitRoot), { plugin }),
     userReason: userReason || null,
     confirmCopy: confirmCopy || null,
     backupRoot: null,

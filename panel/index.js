@@ -615,6 +615,9 @@ export function apply(ctx, config = {}) {
               kind: plan.kind,
               plugin: plan.plugin,
               mode: plan.mode,
+              // H2（D-14）：卸载方向补交叉引用报告（provider 引用 + 声明式依赖）。
+              // 只告知、不阻断：客户端第一拍只显示清单，用户再点一次才 execute。
+              crossRefs: plan.crossRefs ?? [],
               file: plan.file || null,
               rowId: plan.rowId || null,
               note: plan.note,

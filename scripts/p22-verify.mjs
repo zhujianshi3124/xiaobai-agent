@@ -267,10 +267,12 @@ function freshPatch() {
 // 起因：上轮只证过 rate-throttle 一张，而面板开放 toggle 的是 4 张卡。
 // 「只证 1 张」等于没证 —— 本段把每一张都真跑一遍，并对齐锚点行号。
 const CARDS = [
-  { dir: "rate-throttle", rowId: "rate-throttle", line: 14, pkg: "@local/dsh-toolkit/rate-throttle" },
-  { dir: "web-search-local", rowId: "web-search-local", line: 58, pkg: "@local/dsh-toolkit/web-search-local" },
-  { dir: "search-router", rowId: "web-search-router", line: 64, pkg: "@local/dsh-toolkit/search-router" },
-  { dir: "agent-memory", rowId: "agent-memory-runtime", line: 74, pkg: "@local/dsh-toolkit/agent-memory" },
+  { dir: "rate-throttle", rowId: "rate-throttle", line: 14, pkg: "@local/dsh-toolkit/rate-throttle", xref: { patch: 0, declared: 0, any: [] } },
+  // H2（债务 D-14）：两张搜索卡被停用时要报出"以 provider id 写的引用"（patch 命中）；
+  // web-search-local 另有一条**声明式依赖**（search-router 依赖它，文本里看不见）。
+  { dir: "web-search-local", rowId: "web-search-local", line: 58, pkg: "@local/dsh-toolkit/web-search-local", xref: { patch: 1, declared: 1, any: [/fetchProvider:\s*local-fetch/] } },
+  { dir: "search-router", rowId: "web-search-router", line: 64, pkg: "@local/dsh-toolkit/search-router", xref: { patch: 1, declared: 0, any: [/searchProvider:\s*auto-search/] } },
+  { dir: "agent-memory", rowId: "agent-memory-runtime", line: 74, pkg: "@local/dsh-toolkit/agent-memory", xref: { patch: 0, declared: 0, any: [] } },
 ];
 {
   for (const card of CARDS) {
@@ -306,10 +308,20 @@ const CARDS = [
       && typeof plan.token === "string" && plan.token.length === 32
       && plan.expectedSha === beforeSha
       && Number.isFinite(Date.parse(plan.expiresAt)) && Date.parse(plan.expiresAt) > Date.now()
-      && plan.crossRefs.length === 0
+      && Array.isArray(plan.crossRefs)
       && plan.targetEnabled === false;
     check("card " + card.dir + ": confirm-page metadata complete (file/rowId/line/token/sha/expiry/diff)", metaOk,
       JSON.stringify({ file: !!plan.file, rowId: plan.rowId, anchorLine: plan.anchorLine, tokenLen: plan.token.length, expiry: plan.expiresAt }));
+
+    // (d2) H2（债务 D-14）：停用方向的交叉引用报告按**逐卡写死的期望**核对。
+    // 原先这张表恒为 0（`plan.crossRefs.length === 0` 曾是被断言的"正常态"）——那正是缺陷本身：
+    // 匹配词只有行 id，看不见 provider id 引用，也看不见声明式依赖。现在要求两张搜索卡必须报出来。
+    const patchHits = plan.crossRefs.filter((r) => r.source === "patch");
+    const declaredHits = plan.crossRefs.filter((r) => r.source === "declared-dependency");
+    check("card " + card.dir + ": H2 cross-ref report matches expectation (patch=" + card.xref.patch + " declared=" + card.xref.declared + ")",
+      patchHits.length === card.xref.patch && declaredHits.length === card.xref.declared
+      && card.xref.any.every((re) => patchHits.some((h) => re.test(h.text))),
+      JSON.stringify({ patch: patchHits.map((h) => h.text), declared: declaredHits.map((h) => h.text) }));
 
     // (e) 落盘后：只在**该行**加了 disabled，其它层不动
     eng.putPlan(plan);
