@@ -29,14 +29,14 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
   `name/inject/Config` 三元组（副本可信性由本机真 loader 1.0.3 现场复核，缺席即 skip）。
   B2 保守合并保留作第三方形态兜底，头注按实测改写（原文"无法对照宿主装载器"的前提作废），
   并记录其**就地改写插件对象**的副作用。
-- **⚠ 行为收紧预告（H3）**：宿主通道从此**会对 web-search-local 的 config 做 Standard Schema
-  校验**（`Config` 此前只在模块级，宿主走纯替换拿不到它，cordis 于是原样放行）。本机真配置
-  （`cordis.patch.yml` 的 engines 行）实测 0 issue，装载不受影响；**但若某台宿主上留有历史坏值
-  （如 `engines` 写成字符串），从此会由"静默放行"变成"明确报错拒绝装载"——这是收紧，不是回归**。
-  同理 `compact-router` / `agent-memory` 在宿主侧的 fiber 显示名从此固定为
+- **⚠ 行为收紧（H3，2026-09-21 H5 已真机兑现并修正一处错账）**：宿主通道从此**会对 web-search-local
+  的 config 做 Standard Schema 校验**（`Config` 此前只在模块级，宿主走纯替换拿不到它，cordis 于是
+  原样放行）。历史坏值从此由"静默放行"变成"明确报错"。**修正**：本条目原文写的是"本机真配置
+  （`cordis.patch.yml` 的 engines 行）实测 0 issue"——**那句是错的，见下方 H5 条目**。同理
+  `compact-router` / `agent-memory` 在宿主侧的 fiber 显示名从此固定为
   `compact-router` / `agent-memory-runtime`（原为 JS 推断名 `RouterCompactionEngine` / `register`），
   影响面限于日志器名、服务撞名报错文案与宿主 cordis 调试视图；toolkit 自身的卸载/审计/state
-  键一律按 `manifest.id`，不受影响。
+  键一律按 `manifest.id`，不受影响。真机复核读数见 `panel/docs/evidence/H-REAL-HOST-REVERIFY.md` §三。
 - **D-15**：维持"面板不可经 registry 通道自举"（防递归装配），但 `plugin-shape-invalid`
   文案改为点名真实成因（manifest 缺非空 `contract` 字段 vs 目录本就无 manifest），
   并给出两条可执行修法，用例钉住。
@@ -55,6 +55,33 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
   `D:\dsh-test-sandbox\docs\warn-stale-config-snapshots.md` 立了警示（禁作恢复基线、
   `sougou` 已于 `37819e9` 修对、整份早于面板），README 对应条目加了指针；
   **快照本身不删不改不重生成**。
+
+- **H5 真机复验（2026-09-21，用户批准重启真实宿主）**：H1 落点固定与 H3 双通道统一在
+  dsh-web-all 宿主上全部兑现——宿主进程 `cwd` 实测 `C:\Windows\system32`（旧公式的命中场景），
+  而 state/audit 两面都锚在 `D:\dsh-plugins\dsh-toolkit\.registry`；`/v2/snapshot` 新增的
+  `durability` 字段在场即为新码运行的判别物；7 处历史漂移点与对照位复扫**零新文件**。
+  容器面直读（临时探针插件，验完即卸）显示 `compact-router` / `agent-memory-runtime` 的宿主侧
+  fiber 名 = 声明名，旧名 `RouterCompactionEngine` / `register` **0 条在场**；
+  `web-search-local` 入口级 fiber 的 `Config` 与 `~standard` 在场。抽样 32/32 路由符合 p1-smoke
+  声明、SSE `hello` 首帧正常、autoload 与状态文件一致。全文取证见
+  `panel/docs/evidence/H-REAL-HOST-REVERIFY.md`。
+- **Fixed（H5 真机撞出的启动故障）**：`cordis.patch.yml:61` 的 `engines` 第 8 项 `360` 加引号
+  （`360` → `'360'`）。原值经 YAML 解析成**整数**，H3 起宿主通道开始真校验该插件配置，于是
+  启动即 `ValidationError: $.engines[7] expected string but got 360`，该异常经 cordis-plugin-loader
+  冒到 `dsh-app-boot` 顶层 ⇒ **整个宿主进程 exit 1，面板与所有插件一起起不来**（爆炸半径远大于
+  本文件 H3 段原先描述的"拒绝装载该插件"）。
+  **此改动影响宿主实际加载行为**（该文件是宿主经 patch 机制加载的 bundle 总装补丁），
+  经用户裁决执行；同文件其余 4 个 config 块（含 `rate-throttle` 的嵌套 `routing`/`staticGroups`）
+  逐值目检，无第二处同类问题。
+  行为影响面：`360` 引擎在坏值时代**功能正常**（`lib/web-search-local/index.js:1050` 有
+  `String(name)` 兜底并明文注明 YAML 会把数字送进来），本次不是"修好一个坏引擎"，
+  而是让配置类型诚实、宿主恢复启动。
+  基线滚存：P8 判据基准 `ce0b0b81…`(3097 B) → `bb7af96f…`(3099 B)，`scripts/p24-verify.mjs` 与
+  `scripts/p24-ui-matrix.mjs` 的硬闸期望值同步（守卫机制本身未放宽）。历史证据文档中的
+  `ce0b0b81…` 记载保留原文——那是各轮当时的真实读数。
+- **新增债务《D-16》**（debt.md）：静态 patch 通道的配置校验失败 = 掀掉整个宿主，而 registry 动态
+  通道有单条目隔离/重试/超时——这个不对称此前无人登记。含一条盲区：本次坏值长在 toolkit 自家
+  patch 行里、不经面板安装通道，故 doctor 的安装前预检天然够不着。
 
 ### Pack G（2026-09-21，真实 dsh-web-all 宿主冒烟 · 用户批准重启）
 
