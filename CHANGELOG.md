@@ -6,6 +6,38 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### Pack G（2026-09-21，真实 dsh-web-all 宿主冒烟 · 用户批准重启）
+
+F 三项收口后按授权重启真实宿主验证新版本生效。九项清单 **八项 PASS、一项未验**，
+证据正本 `panel/docs/evidence/G-REAL-HOST-SMOKE.md`（**未用 `p23-shadow-scan` 生成**，它会覆写
+历史证据，D-2 在案）。三轮重启均走既有权威脚本 `scripts/restart-trigger.ps1`
+（19s / 17s / 18s 回端口），改造前基线与卸出态复测都留了读数。
+
+- **①②③④⑤⑥⑦⑧ 全过**：面板路由可达；p1-smoke 声明的 32 条路由逐条符合期望（其中 7 条读路由
+  全 200，其余按设计 405/404/400——"全部 200"的字面口径已如实改写）；5 个内置子插件全部 mounted；
+  SSE 在同进程真实写入序列里推全 `plugin-added / status-changed / audit:*` 事件、心跳实测 15s 一帧、
+  关闭后轮询端点仍 200；面板卸出后 8 条抽样全部 401 且新进程只有一个监听端口；
+  `ctx['toolkit/doctor']` 由**宿主进程内探针**证得可取可干活（`inspect()` 真跑出 healthy），
+  顺带把 D-6 升级为宿主现场实测（`ctx['toString']` 有值 vs `ctx.get('toString',false)` 缺席）；
+  F3 的 lastError 抽查在宿主里走完"失败 → 恢复 → `lastError:null`"且 `audit.jsonl` 保留全程；
+  fiber 编号守卫换宿主那份 cordis 4.0.2 重跑，六值与 `FIBER_*` 全对。
+- **F2 的宿主侧结论**：负路径真机验证通过——经安装 API 提交 `lib/agent-memory` 目录路径，
+  得到情形 A 的结构化可执行报错（`plugin-shape-invalid` + 点名同表 `./plugin`），且 live registry
+  不被污染；宿主侧 agent-memory 本就按显式子路径挂载（patch 第 74 行），不受三级解析改动影响。
+- **⑨ 未验（即停即报）**：宿主会话内一次真实联网搜索仍阻塞在用户会话凭据
+  （`/api/web/*` 匿名 401、浏览器侧 `dsh web authentication required`），本轮不取用凭据、
+  不读 `~/.dsh` ⇒ **D-4 保持未关闭**，只追加"再尝试仍阻塞"的注记。
+- **两条如实边界写进证据正文，不当成已验**：卸出态"活动 SSE 流终止"是经**进程重启**达成的，
+  不等于 Pack D 修的同进程 `fiber.dispose()` 那一格（其命门证据仍在
+  `test/panel-sse-dispose.test.mjs`）；`LOADING=1` 与仓内守卫同口径，由枚举不变式覆盖、未单独实测。
+- **新发现两笔（只登记不修）**：D-11 `toolkitRoot` 缺省按宿主进程 cwd 推导，导致状态与审计落点
+  随启动方式漂移（本轮实测在 `C:\Windows\.registry` 与 `D:\dsh-plugins\.registry` 间跳过两次，
+  后者作为本轮副作用已清除）；D-12 宿主装有 `cordis-plugin-loader@1.0.3`，B2 头注"无法对照宿主
+  装载器"的前提已不再成立。
+- **还原自证**：`cordis.patch.yml` 三轮后 sha256 与本轮开始前逐字节一致
+  （`ce0b0b81…`，同 L-060 关账基准）；live registry 收尾 `plugins: []`；toolkit 与 doctor 两仓
+  工作树均为空。
+
 ### Pack F（2026-09-21，cordis 符合度复核三项待裁全部关闭）
 
 上一轮登记在 `docs/debt.md` D 区的三项待裁（D-6 / D-7 / D-8）按用户任务书实施，三项各自
