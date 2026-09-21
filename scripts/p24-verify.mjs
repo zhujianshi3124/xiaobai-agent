@@ -13,12 +13,14 @@ import { createHash } from "node:crypto";
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const patchPath = join(root, "cordis.patch.yml");
 const BASE_SHA = createHash("sha256").update(readFileSync(patchPath, "utf8")).digest("hex");
-// 基准滚存（2026-09-21 H5，用户裁决"加引号修配置"）：ce0b0b81… → bb7af96f…。
+// 基准滚存（第 1 次，2026-09-21 H5，用户裁决"加引号修配置"）：ce0b0b81… → bb7af96f…。
 // 起因：cordis.patch.yml:61 的 engines 第 8 项 `360` 未加引号被 YAML 解析成整数，
 // H3 起宿主通道开始按 Standard Schema 校验该插件配置 ⇒ 启动即 ValidationError 掀掉整个宿主。
 // 修的是数据（`360` → `'360'`），守卫机制本身一字未放宽。取证见
 // panel/docs/evidence/H-REAL-HOST-REVERIFY.md、账见 docs/debt.md A#24 / D-16。
-const BASELINE_SHA_EXPECTED = "bb7af96fb47ea8275cdf91bd0978a611c144077b7c8006804ff22ce404c88b3c";
+// 基准滚存（第 2 次，2026-09-21 Pack I，用户指令"删除 360 和搜狗"）：bb7af96f… → e8051fe9…。
+// 起因同样是数据（engines 从 8 项减到 6 项），机制未放宽；引擎池现状见 docs/debt.md A#25。
+const BASELINE_SHA_EXPECTED = "e8051fe9cb04e61889a9a2f3f171efd3ab70c516156768337c0f5e1e85a8453d";
 if (BASE_SHA !== BASELINE_SHA_EXPECTED) {
   console.error("ABORT: 真实 cordis.patch.yml 基线漂移（" + BASE_SHA.slice(0, 12) + "）——拒绝在非基准态跑验证");
   process.exit(1);
@@ -403,7 +405,7 @@ async function snapshotOf(dir) {
 // ---------- 收尾：真实仓零写入自证 ----------
 {
   const nowSha = sha(readFileSync(patchPath, "utf8"));
-  check("真实 cordis.patch.yml 全程零写入（基准 bb7af96f… 不变）", nowSha === BASE_SHA && BASE_SHA === BASELINE_SHA_EXPECTED);
+  check("真实 cordis.patch.yml 全程零写入（基准 e8051fe9… 不变）", nowSha === BASE_SHA && BASE_SHA === BASELINE_SHA_EXPECTED);
   rmSync(work, { recursive: true, force: true });
 }
 
