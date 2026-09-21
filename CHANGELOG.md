@@ -83,6 +83,51 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
   通道有单条目隔离/重试/超时——这个不对称此前无人登记。含一条盲区：本次坏值长在 toolkit 自家
   patch 行里、不经面板安装通道，故 doctor 的安装前预检天然够不着。
 
+### Pack I（2026-09-21，安全网与历史脚本处置 + 搜索引擎清理 · 纯仓内、零宿主动作）
+
+用户合并指令两件事（互不依赖）：把 H5 故障暴露的"没有任何链路看得到 patch 行类型错误"这一格补成门禁；
+并按指令删除 `360` 与搜狗两个引擎。债务侧关账 D-16 / D-17。
+
+- **Added 门禁第 5 步 `scripts/patch-config-check.mjs`（关 D-16）**：解析 `cordis.patch.yml` 后，逐行按
+  **宿主通道语义**校验 config——`import(name)` → 官方 `unwrapExports`（逐字抄自 cordis-plugin-loader 1.0.3）
+  → 读那个对象上的 `Config` → `Config['~standard'].validate(config)`；无 `Config` 的入口**如实跳过并打印
+  理由**（与 cordis `if (!runtime.Config) return config` 同语义），认不出模块又带 config 的行**判红**（要求
+  补 `HOST_ROW_MODULES` 表，不做静默放过）。当前读数：7 行 ⇒ 2 行真校验（`web`、`web-search-local`）、
+  5 行如实跳过。
+  **自带 YAML 子集解析器**而不是复用面板的 `parseRootRows`：后者把值一律当字符串，会把 `360` 读成 `'360'`
+  ——正是本脚本要抓的那类 bug，复用即假绿。该解析器严格到 fail-closed（锚点/别名/块标量/多文档/
+  `on|off|y|n` 这类 YAML 1.1↔1.2 结论相反的歧义写法/下划线数字一律抛错），并有 `selfcheckCases()`
+  20 条断言**每次门禁都复验一遍解析器本身**——解析器退化时报"本校验器不可信"而不是安静通过。
+  报错格式补齐了 cordis 原文缺的三样：**文件名 + 行号 + 修法**（H5 §二的六维评估）。
+  变异自检两发：① 还原未引号 `360` ⇒ 精确报 `cordis.patch.yml:61 的 engines.7 … 加单引号`、exit 1；
+  ② 把解析器整数分支改成返回字符串 ⇒ 走自证翻红分支、exit 1。
+- **Changed 引擎池 8 → 6（用户指令）**：`cordis.patch.yml:61` 删 `sogou` 与 `'360'`，现为
+  `[searxng, google, duckduckgo, mojeek, bing, baidu]`。删除前四项影响分析全过：剩余 ≥1；分层降级链
+  `cn` 仍有 `bing`/`baidu`（`ENGINE_LAYERS` 按 `cfg.engines` 投影，空层自动丢弃）；search-router 按
+  provider/mode 路由、不含引擎名；宿主 `~/.dsh/dsh-search-router.json` 只读核对无引擎条目。
+  **边界如实**：`lib/web-search-local` 的实现、`ENGINES` 表、`ENGINE_LAYERS.cn` 与 `defaultConfig()`
+  按指令**未动** ⇒ 没有该 patch 行覆盖的宿主上默认仍含这两个引擎；且每次调用的 `engine`/`engines` 覆盖
+  只查 `ENGINES` 不查 `cfg.engines` ⇒ 显式指名 `'360'` 仍能命中实现。生效层序为
+  默认 → patch 行 → settings 节（若今后经 settings 写 engines 会再覆盖一层）。
+  判据基准随之第 2 次滚存：`bb7af96f…`(3099 B) → **`e8051fe9…`(3085 B)**，
+  `scripts/p24-verify.mjs` / `scripts/p24-ui-matrix.mjs` 两处硬闸期望值同步（**机制未放宽**，
+  两次滚存来路写进常量上方注释）；历史证据文档里的旧 sha 记载保留原文不改。
+- **Added `test/s6-contract-migration.test.mjs` S6-C4**：该文件里的 `PATCH_CONFIGS` 是 patch 值的
+  **手抄镜像**（此前无人核对，正是"H5 那句 0 issue"式的漂移温床），新增对账断言钉住引擎列表一致性
+  ——改 patch 忘改镜像即红。变异自检 MUT-H：只把镜像改回含 `sogou`（真文件不动）⇒ 精确翻红；还原 ⇒ 4/4。
+- **Changed（退役与冻结，关 D-17）**：`scripts/restore-cordis-baseline.mjs` **显式退役**——它的重建公式
+  「HEAD blob + 追加 toolkit-manager 4 行」自那 4 行进 HEAD 起就不自洽（H5 轮实测 3202 B ≠ 3097 B，
+  且本轮改动之前就已如此，一直 fail-closed 未写盘），而"钉死某一枚 sha"的概念也已被滚存判据取代 ⇒
+  现行恢复动作是 `git checkout HEAD -- cordis.patch.yml`（`q2-layer-scan` ④ 正以此判据校验），
+  完整原实现保留在提交 `10ebcef`。三个 `scripts/terminal-acceptance-*.mjs` 判为**历史冻结**（加时点
+  头注与运行横幅，不删）。其中查实 `terminal-acceptance-report.mjs` **重跑会覆写已入库、已登记 sha 的
+  证据正本** `panel/docs/evidence/TERMINAL-ACCEPTANCE-ROUND10.txt`（与 D-2 同族第二处）⇒ 加了执行硬闸
+  （`process.exit(2)`，只拦跑、不改任何取证逻辑与历史结论文本），并把 `evidence/README` 里该行"可重放"
+  的表述按只增不改的规矩追加更正。
+- **未做**：没重启宿主（改动经 `@local` 链接在下次自然重启时生效）、没碰 `~/.dsh` 的凭据与配置写路径
+  （仅按指令对 `dsh-search-router.json` 做只读核对）、doctor 独立仓零改动、p1-smoke 断言一字未动、
+  未用 `p23-shadow-scan` 生成任何产物。
+
 ### Pack G（2026-09-21，真实 dsh-web-all 宿主冒烟 · 用户批准重启）
 
 F 三项收口后按授权重启真实宿主验证新版本生效。九项清单 **八项 PASS、一项未验**，
