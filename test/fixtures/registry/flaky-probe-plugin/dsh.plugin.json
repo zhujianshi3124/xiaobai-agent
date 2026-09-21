@@ -1,0 +1,9 @@
+{
+  "id": "fixture/flaky-probe-plugin",
+  "displayName": "可控失败夹具",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "requires": {
+    "node": ">=20"
+  }
+}

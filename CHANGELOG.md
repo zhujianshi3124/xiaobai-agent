@@ -41,6 +41,21 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
   文案改为点名真实成因（manifest 缺非空 `contract` 字段 vs 目录本就无 manifest），
   并给出两条可执行修法，用例钉住。
 
+- **H4 顺手三件**：
+  **D-9** `retryAttempts` 在转 ACTIVE 时归零（与 D-8 的 `lastError` 同走状态源 `setStatus`），
+  计数从此只有"当前这一段连续失败"一个含义；新增诊断面 `retryAttemptsOf(id)`。
+  如实收窄一条：现存的每段入口路径（`setEnabled(true)` / `reload` / active 态 `setConfig`）
+  本来就会先经 `unloadEntry` 清零，所以 D-9 原文担心的"更早被隔离"实际暴露面比预期窄，
+  真实收益是不变式与诊断/文案口径正确（变异自检结果记在测试文件文末）。
+  **D-10** 契约插件夹具的 marker 开关改为**每次调用时解析 + 支持 `process.env.FIXTURE_MARKER`**，
+  五个使用方各自持有 pid 专属路径 ⇒ 并行跑测试文件不再互相翻对方那枚磁盘开关；
+  顺带消掉一颗克隆即失红的暗雷（仓内 `marker.flag` 本就是 gitignore 的运行产物）——
+  本轮已把它从原位挪走并全量批跑 293/293 绿，证明使用方不再依赖它。
+  **D-13** 沙箱侧三份 09-14 前后的陈旧配置快照（`after-switch.yml` 等）在
+  `D:\dsh-test-sandbox\docs\warn-stale-config-snapshots.md` 立了警示（禁作恢复基线、
+  `sougou` 已于 `37819e9` 修对、整份早于面板），README 对应条目加了指针；
+  **快照本身不删不改不重生成**。
+
 ### Pack G（2026-09-21，真实 dsh-web-all 宿主冒烟 · 用户批准重启）
 
 F 三项收口后按授权重启真实宿主验证新版本生效。九项清单 **八项 PASS、一项未验**，

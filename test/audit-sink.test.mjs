@@ -2,7 +2,7 @@
 // 断言 audit.jsonl 的行形状、白名单字段（绝不落配置内容）、卸出后不再追加、多实例各写各的文件。
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, rmSync, readFileSync, existsSync } from 'node:fs'
+import { mkdtempSync, rmSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
@@ -11,6 +11,13 @@ import { createToolkitServices } from '../panel/manager/registry-host.mjs'
 
 const ROOT = resolve(import.meta.dirname, '..')
 const fixturePlugin = join(ROOT, 'test', 'fixtures', 'registry', 'contract-plugin')
+// D-10：本夹具靠一枚 marker 决定"装得起来"。过去路径定死在仓内，既会被并行跑的其它
+// 测试文件翻来覆去，也让本文件在**干净克隆**（marker 是 gitignore 的运行产物）下直接失红。
+// 现在自带一份：指到 pid 专属路径并写出来，退出即清。
+const markerPath = join(tmpdir(), `dsh-fixture-marker-${process.pid}-audit-sink`)
+process.env.FIXTURE_MARKER = markerPath
+writeFileSync(markerPath, '', 'utf8')
+process.on('exit', () => { try { rmSync(markerPath, { force: true }) } catch { /* 已清 */ } })
 
 function stack(t, prefix = 'toolkit') {
   const tmp = mkdtempSync(join(tmpdir(), `audit-${prefix}-`))

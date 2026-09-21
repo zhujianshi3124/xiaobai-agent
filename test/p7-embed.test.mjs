@@ -39,6 +39,12 @@ const fallbackSrc = readFileSync(join(ROOT, 'panel', 'client', 'panel.html'), 'u
 const UI_API_TOKEN = '__TOOLKIT_PANEL_API_BASE__'
 const FIXTURE_DEFAULT_ROUTES = 32 // p1-smoke 同一口径：P2.4 22 + v2 管理 9 + connector 1
 const fixturePlugin = join(ROOT, 'test', 'fixtures', 'registry', 'contract-plugin')
+// D-10：自带一份夹具开关（仓内 marker.flag 是 gitignore 的运行产物，干净克隆下不存在；
+// 且并行跑的其它文件会翻它）。本文件需要那个插件"装得起来"，所以写出来、退出即清。
+const fixtureMarker = join(tmpdir(), `dsh-fixture-marker-${process.pid}-p7-embed`)
+process.env.FIXTURE_MARKER = fixtureMarker
+writeFileSync(fixtureMarker, '', 'utf8')
+process.on('exit', () => { try { rmSync(fixtureMarker, { force: true }) } catch { /* 已清 */ } })
 
 function activeHandles() {
   return process.getActiveResourcesInfo().slice().sort()

@@ -24,7 +24,10 @@ import { createV2Api, toPanelRoutes } from '../panel/manager/v2-api.mjs'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const fixtureDir = (name) => join(root, 'test', 'fixtures', 'registry', name)
 const contractPlugin = fixtureDir('contract-plugin')
-const markerPath = join(contractPlugin, 'marker.flag')
+// D-10：本文件独占的夹具开关（见 registry.test.mjs 里同一条注释）。
+const markerPath = join(tmpdir(), `dsh-fixture-marker-${process.pid}-panel-unified`)
+process.env.FIXTURE_MARKER = markerPath
+process.on('exit', () => { try { unlinkSync(markerPath) } catch { /* 已清 */ } })
 function setMarker(exists) {
   if (exists) writeFileSync(markerPath, '', 'utf8')
   else if (existsSync(markerPath)) unlinkSync(markerPath)
