@@ -246,12 +246,20 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
     const from = entry.status
     if (from === to) return
     entry.status = to
-    // D-8：`lastError` 是**当前状态**字段，不是历史台账——插件跑到 ACTIVE 就没有可陈
-    // 的错误，留着会让面板同屏显示"运行中"+"最近错误 fiber-load-timeout"（E1 实测形态）。
-    // 状态源只有这一处（install / autoload 恢复 / setEnabled / reload / 自动重试五条路
-    // 都要经过这里），所以清也只在这里清；面板与 /v2/snapshot 都是读取方，不各自缓存。
-    // 历史不丢：失败当时已按 REQ-10 发 `audit:*` 并落 JSONL，清掉的只是这个字段。
-    if (to === 'active' && entry.lastError !== undefined) delete entry.lastError
+    // 状态源只有这一处（install / autoload 恢复 / setEnabled / reload / 自动重试五条路都要
+    // 经过这里），所以"转 ACTIVE 即清"的两件字段也只在这里清；面板与 /v2/snapshot 都是
+    // 读取方，不各自缓存。
+    if (to === 'active') {
+      // D-8：`lastError` 是**当前状态**字段，不是历史台账——插件跑到 ACTIVE 就没有可陈的
+      // 错误，留着会让面板同屏显示"运行中"+"最近错误 fiber-load-timeout"（E1 实测形态）。
+      // 历史不丢：失败当时已按 REQ-10 发 `audit:*` 并落 JSONL，清掉的只是这个字段。
+      if (entry.lastError !== undefined) delete entry.lastError
+      // D-9：`retryAttempts` 的语义是"**当前这段**连续失败次数"，同理归零。修复前只有
+      // unloadEntry / setEnabled(true) / reload 会清 ⇒ 上一段重试留下的计数结转进下一段
+      // 故障，最坏情形（默认 retryLimit=3）第 2 次真故障就被隔离，且隔离提示里
+      // "连续失败 N 次达到上限"的 N 比实际故障数大。
+      entry.retryAttempts = 0
+    }
     this.notify(
       contractEventName(this.opts.servicePrefix, 'registry:status-changed'),
       {
@@ -719,5 +727,15 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
    */
   stateSaveStatus(): { ok: boolean; path: string; at?: number; error?: string; advice?: string[] } {
     return this.lastSave
+  }
+
+  /**
+   * 诊断面（D-9）：某插件"**当前这段**"已连续尝试装入几次。转 ACTIVE 即归零，所以这个数
+   * 就是"离隔离还有多远"的真相；未注册返回 undefined，已注册未失败过返回 0。
+   * 只读，不进契约面（面板/doctor 要按 id 查健康请走 `get()`/doctor 报告）。
+   */
+  retryAttemptsOf(id: string): number | undefined {
+    const entry = this.entries.get(id)
+    return entry ? entry.retryAttempts ?? 0 : undefined
   }
 }

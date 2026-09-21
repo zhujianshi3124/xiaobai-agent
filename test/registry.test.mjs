@@ -22,7 +22,12 @@ const fixtureDir = (name) => join(import.meta.dirname, 'fixtures', 'registry', n
 const contractPlugin = fixtureDir('contract-plugin')
 const contractPluginState = (await import(`file:///${fixtureDir('contract-plugin/index.js').replace(/\\/g, '/')}`)).state
 const legacyPluginState = (await import(`file:///${fixtureDir('legacy-plugin/index.js').replace(/\\/g, '/')}`)).state
-const markerPath = join(contractPlugin, 'marker.flag')
+// D-10：本文件**独占**的夹具开关。原先三家测试文件共用仓内那一枚 marker.flag，
+// 而 `node --test` 并行跑文件 ⇒ 谁最后写盘谁赢，复用该夹具的新用例偶发翻红。
+// 夹具现在按调用时解析 `process.env.FIXTURE_MARKER`，这里指到 pid 专属路径。
+const markerPath = join(tmpdir(), `dsh-fixture-marker-${process.pid}-contract-plugin`)
+process.env.FIXTURE_MARKER = markerPath
+process.on('exit', () => { try { unlinkSync(markerPath) } catch { /* 已清 */ } })
 
 function setMarker(exists) {
   if (exists) writeFileSync(markerPath, '', 'utf8')

@@ -16,7 +16,11 @@ import { createRealtimeConnector } from '../panel/manager/realtime-connector.mjs
 
 const fixtureDir = (name) => join(import.meta.dirname, 'fixtures', 'registry', name)
 const contractPlugin = fixtureDir('contract-plugin')
-const markerPath = join(contractPlugin, 'marker.flag')
+// D-10：本文件独占的夹具开关（与 registry.test.mjs / panel-unified.test.mjs 同构）——
+// 三家过去共用仓内那一枚 marker.flag，并行跑文件时互相覆盖，复用夹具的新用例偶发翻红。
+const markerPath = join(tmpdir(), `dsh-fixture-marker-${process.pid}-panel-v2`)
+process.env.FIXTURE_MARKER = markerPath
+process.on('exit', () => { try { unlinkSync(markerPath) } catch { /* 已清 */ } })
 function setMarker(exists) {
   if (exists) writeFileSync(markerPath, '', 'utf8')
   else if (existsSync(markerPath)) unlinkSync(markerPath)
