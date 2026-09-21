@@ -17,6 +17,8 @@
  * - 持久化：state.json 记录 source/enabled/config/quarantined/lastError；
  *   autoload 按记录恢复，失败项进 error 并保留 lastError（REQ-7）；转 ACTIVE 即清空
  *   lastError（D-8：它是"当前状态"字段，历史在审计 JSONL 里），磁盘记录同步回写。
+ *   落盘失败不再静默（H1 / D-11）：记 error 日志（带路径）+ 发 `audit:state-save-failed`
+ *   + `stateSaveStatus()` 可查，面板据此把"运行中但未落盘"如实显示出来。
  * - 事件：全部经 contractEventName(servicePrefix, …) 带前缀（D5/REQ-8）。
  * - 审计（REQ-10）：结构化日志 {pluginId, event, durationMs, errorCode}；
  *   审计事件面板接线在 P4（避免私造契约外事件名）。
@@ -146,6 +148,8 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
   private readonly locks = new Map<string, Promise<unknown>>()
   private installLock: Promise<unknown> = Promise.resolve()
   private state = emptyState()
+  /** 最近一次状态落盘的结果（H1 / D-11 可见化；`ok:false` 即"内存生效、磁盘未落"）。 */
+  private lastSave: { ok: boolean; path: string; at?: number; error?: string; advice?: string[] }
   private saveTimer: unknown
   private stopped = false
 
@@ -161,6 +165,7 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
       ...options,
     }
     this.log = options.logger ?? defaultLogger()
+    this.lastSave = { ok: true, path: this.opts.statePath }
     this.timers = options.timers ?? {
       setTimeout: (fn, ms) => setTimeout(fn, ms),
       clearTimeout: (h) => clearTimeout(h as NodeJS.Timeout),
@@ -323,8 +328,35 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
     const write = () => {
       try {
         saveState(this.opts.statePath, this.state)
+        this.lastSave = { ok: true, path: this.opts.statePath, at: Date.now() }
       } catch (error) {
-        this.log.error('状态落盘失败', { pluginId: id ?? '*', event: 'state-save-failed', durationMs: 0, errorCode: 'state-save-failed', message: String((error as Error).message) })
+        // H1（债务 D-11 失效模式②）：落盘失败**不许只留一行日志**。修复前面板照常显示
+        // active，重启后条目全丢且无从解释——"内存生效、磁盘未落"是分裂态，必须可发现。
+        // 这里不引入重试机制（用户裁定：最小可见化即可）；恢复路径是修好落点后重装/重载。
+        const message = String((error as Error).message)
+        // pluginId 取条目自己的 id（persist(entry) 不带 id 参数），摘除失败才退到 '*'。
+        const idOrStar = entry?.manifest.id ?? id ?? '*'
+        this.lastSave = {
+          ok: false,
+          path: this.opts.statePath,
+          at: Date.now(),
+          error: message,
+          advice: [
+            `确认状态文件可写：${this.opts.statePath}（当前失败原因：${message}）`,
+            '若该路径来自宿主启动目录的推导副作用：给 toolkit-manager 行补 config.toolkitRoot（或 config.registry.statePath）后重启宿主',
+            '落点修好之前，当前列表只在内存里——重启后不会自动恢复',
+          ],
+        }
+        this.log.error('状态落盘失败（内存已生效、磁盘未落，重启后本条会丢）', {
+          pluginId: idOrStar,
+          event: 'state-save-failed',
+          durationMs: 0,
+          errorCode: 'state-save-failed',
+          message,
+          statePath: this.opts.statePath,
+        })
+        // 审计事件（REQ-10）：sink 落不进同一个坏目录时它自己会 warn，不会递归回来。
+        this.audit('state-save-failed', idOrStar, 0, 'state-save-failed')
       }
     }
     if (this.opts.saveDebounceMs > 0) {
@@ -678,5 +710,14 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
   setHealth(id: string, report: HealthReport): void {
     const entry = this.entries.get(id)
     if (entry) entry.health = report
+  }
+
+  /**
+   * 最近一次状态落盘的结果（H1 / 债务 D-11；实现扩展，不在 `ToolkitRegistry` 契约面上，
+   * 调用方按"有此方法则读"处理，缺省视为可写）。`ok:false` 携带路径与可执行建议，
+   * 供面板如实呈现"运行中但未落盘"。写成功会自行翻回 `ok:true`（不引入重试）。
+   */
+  stateSaveStatus(): { ok: boolean; path: string; at?: number; error?: string; advice?: string[] } {
+    return this.lastSave
   }
 }
