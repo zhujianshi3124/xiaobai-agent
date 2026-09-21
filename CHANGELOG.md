@@ -6,6 +6,41 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### Pack H（2026-09-21，交叉验证轮后的债务清偿 · D-9~D-15）
+
+外部独立审计报告复核并账后，用户裁定"修"。B2 取选项 3+2 混合（入口自带元数据根治 + 双通道守卫）。
+
+- **H1 toolkitRoot 根治（D-11）**：面板与 registry 的 toolkitRoot 收敛到唯一推导点
+  `panel/manager/toolkit-root.mjs`，缺省按**模块位置**锚定，与进程 cwd 彻底无关（优先级：
+  显式 `config.toolkitRoot` > 模块位置）。两种失效模式可见化：① 落点连目录都建不出来时
+  **不再炸面板装配**（原先审计 sink 的无保护 mkdir 会一路把面板 apply() 掀掉），改为点名路径
+  + 可执行建议；② 状态写不进文件时不再只留一行日志——`stateSaveStatus()` +
+  新审计事件 `audit:state-save-failed` + `/v2/snapshot.durability` + 条目 `persisted:false`，
+  面板卡片如实标注"未落盘（重启会丢）"。**未引入重试机制**。
+- **H2 交叉预检补全（D-14）**：停用/卸载方向的交叉引用报告补上 **provider id 维度**
+  （`searchProvider: auto-search` / `fetchProvider: local-fetch` 这类引用原先看不见）与
+  **声明式依赖**（search-router 依赖 web-search-local，文本里无字面引用）；卸载路径从零预检
+  变为与停用同口径。**语义不变：只告知、不阻断**（卸载弹窗第一拍只出示清单，再点一次才执行）。
+  `doctor-signals.json` 一字未动（消费者是独立仓 doctor CLI）。
+- **H3 双通道统一（D-12 + D-15）**：三个内置入口把元数据自带到 default 上——
+  compact-router `static name = "compact-router"`、agent-memory 改为
+  `export default { name, apply }`、web-search-local 的 default 补 `Config`。
+  新增守卫 `test/dual-channel-parity.test.mjs`：逐入口比对两条通道交给 cordis 的
+  `name/inject/Config` 三元组（副本可信性由本机真 loader 1.0.3 现场复核，缺席即 skip）。
+  B2 保守合并保留作第三方形态兜底，头注按实测改写（原文"无法对照宿主装载器"的前提作废），
+  并记录其**就地改写插件对象**的副作用。
+- **⚠ 行为收紧预告（H3）**：宿主通道从此**会对 web-search-local 的 config 做 Standard Schema
+  校验**（`Config` 此前只在模块级，宿主走纯替换拿不到它，cordis 于是原样放行）。本机真配置
+  （`cordis.patch.yml` 的 engines 行）实测 0 issue，装载不受影响；**但若某台宿主上留有历史坏值
+  （如 `engines` 写成字符串），从此会由"静默放行"变成"明确报错拒绝装载"——这是收紧，不是回归**。
+  同理 `compact-router` / `agent-memory` 在宿主侧的 fiber 显示名从此固定为
+  `compact-router` / `agent-memory-runtime`（原为 JS 推断名 `RouterCompactionEngine` / `register`），
+  影响面限于日志器名、服务撞名报错文案与宿主 cordis 调试视图；toolkit 自身的卸载/审计/state
+  键一律按 `manifest.id`，不受影响。
+- **D-15**：维持"面板不可经 registry 通道自举"（防递归装配），但 `plugin-shape-invalid`
+  文案改为点名真实成因（manifest 缺非空 `contract` 字段 vs 目录本就无 manifest），
+  并给出两条可执行修法，用例钉住。
+
 ### Pack G（2026-09-21，真实 dsh-web-all 宿主冒烟 · 用户批准重启）
 
 F 三项收口后按授权重启真实宿主验证新版本生效。九项清单 **八项 PASS、一项未验**，
