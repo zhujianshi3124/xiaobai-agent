@@ -22,6 +22,7 @@ export function cordisHost(ctx: Context): HostContext {
     plugin(p: unknown, config?: unknown): FiberLike
     emit(event: string, ...args: unknown[]): unknown
     reflect: { provide(name: string, value: unknown, check?: unknown): unknown }
+    get(name: string, strict?: boolean): unknown
   }
   return {
     plugin(p: unknown, config?: unknown): FiberLike {
@@ -34,27 +35,26 @@ export function cordisHost(ctx: Context): HostContext {
       loose.reflect.provide(name, value)
     },
     /**
-     * 服务可用性探测：**直读 ctx 代理属性**（`ctx[name]`），不是 `ctx.get(name)`。
-     * 两者语义不同，这里是按"缺席即 false、不抛错"的探测需求选的：
-     * 未声明/未注入的名字在代理 get 陷阱里会 throw（`cannot get property … without
-     * inject`），故包 try/catch 收敛成 false；注入了但提供方 fiber 未 ACTIVE 同样落到
-     * catch → false。这与 ctx.get(name) 的默认 strict 分支（strict=true 只认 ACTIVE
-     * fiber 的实现）在结果上一致。
+     * 服务可用性探测：`ctx.get(name, false)`（D-6 修正，2026-09-21 裁定）。
      *
-     * 已知边界（尚未裁决，勿在此顺手改）：代理 get 陷阱先走 `Reflect.has(target, prop)`，
-     * 它会沿原型链命中 `Object.prototype` 的成员——实测 hasService('toString') /
-     * ('constructor') / ('valueOf') / ('hasOwnProperty') / ('__proto__') 均返回 true。
-     * 影响面：precheck 的 service-missing 阻断与 doctor 的 requires/services 规则会把这些
-     * 名字误判为"服务在场"。改用 ctx.get(name, false) 可闭合（它只查 isolate/store，
-     * 不碰原型链），但那是行为变更，留待裁决。
+     * 语义：**缺席即 false，且不抛错**。`ReflectService.get(name, strict)` 只查
+     * isolate 映射与 store（两者都是 `Object.create(null)`），命中实现则返回其值，
+     * 未命中直接 `return`（undefined）——源码见 cordis 4.0.2 `src/reflect.ts:233-243`。
+     * `strict = false` 表示**不要求提供方 fiber 已 ACTIVE**：与探测需求一致
+     * （"这个名字有没有人提供"），也与旧直读路径在这一口径上的实际行为一致。
+     *
+     * 为什么不再直读 `ctx[name]`：代理 get 陷阱先走 `Reflect.has(target, prop)`，
+     * 它会沿原型链命中 `Object.prototype` 的成员；且 `isSpecialProperty` 把 `_` 前缀
+     * 与 `prototype` 等保留字直接放行成 `Reflect.get`，所以 `hasService('toString')` /
+     * ('constructor') / ('valueOf') / ('hasOwnProperty') / ('__proto__') 在旧实现下
+     * 全部误报 true ⇒ precheck 的 service-missing 阻断与 doctor 的 requires/services
+     * 规则会放过一个真缺依赖的插件。改 `ctx.get` 后这条误判路径被整体闭合，
+     * 影响面收敛为"确实以这些名字注册过的服务"（见 test/host-has-service.test.mjs
+     * 的三枚钉子）。
      */
     hasService(name: string): boolean {
-      try {
-        const value = (ctx as unknown as Record<string, unknown>)[name]
-        return value !== undefined && value !== null
-      } catch {
-        return false
-      }
+      const value = loose.get(name, false)
+      return value !== undefined && value !== null
     },
   }
 }
