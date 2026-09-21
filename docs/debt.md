@@ -10,6 +10,22 @@
 > **2026-09-21 Pack G（真实宿主冒烟）**：九项清单**八项 PASS**，第 ⑨ 项（宿主会话内一次真实联网搜索）
 > 仍阻塞在用户会话凭据，按 G2 协议即停即报未擅自绕行 ⇒ **D-4 保持未关闭**；宿主侧新发现两笔登记为 D-11 / D-12。
 > 证据正本：`panel/docs/evidence/G-REAL-HOST-SMOKE.md`（本轮未用 `p23-shadow-scan` 生成任何证据，见 D-2）。
+>
+> ### 本轮总账（cordis 符合度审计 → Pack A–G 全链，2026-09-21 收口）
+> **一句话**：对照 vendored cordis 4.0.2 做符合度审计 ⇒ 三批修复（Pack A–E 全修 → 复核登记 D-6/7/8 →
+> Pack F 三项收口）→ 误触事件处置 → F2 正解（裁定反转并落地三级入口解析）→ 真机验证（Pack G 九项全闭环）。
+> **提交链**：`e7f21f5`(A) → `d2dd56f`(B2) → `6cd60e7`(C) → `bba6232`(D) → `857ba8a`(E) → `e66ad26`(复核落盘) →
+> `b399623`(F1) → `57ebc24`(F3) → `23de06a`(F2) → `a6e7457`(F 收尾文档) → `9d1086e`(G 证据) → 本笔(D-4 关账+总账)。
+> **状态**：D-6 / D-7 / D-8 已关闭（A #17/#18/#19）；D-4 已关闭（A 区外唯一用户侧动作项，见上）；
+> 施工期新发现 D-9 ~ D-12 **登记在案、未修**（重试计数、夹具共享开关、statePath 随宿主 cwd 漂移、
+> 宿主装有 cordis-plugin-loader 使 B2"无法对照"的前提失效）；Pack H（toolkitRoot 固定 + 对照宿主装载器）
+> 未被点名，留本文件排队，本轮不启动。
+> **误触事件处置**：F2 执行期间一次单选裁决误触（"停手只落文档"），仅在未提交文档层执行、零 commit，
+> 已丢弃并写入《D-7 追加》裁定链第 ③ 步；D-4 补验期间两次"零命中"报告经复核证明是**取证脚本口径缺陷**
+> （非搜索未发生），纠错过程写入 `D4-WEB-SEARCH-HOST-EVIDENCE.md` §三。
+> **冷启动读法**（新会话只看仓库即可接上）：本文件头 → `AGENTS.md` 六条红线 →
+> `panel/docs/evidence/G-REAL-HOST-SMOKE.md`（含补验注记）与 `D4-WEB-SEARCH-HOST-EVIDENCE.md` →
+> 门禁一条命令 `node scripts/ci-local.mjs --with-scan`。
 > 清零规则按用户终版裁定改为四类归档（不再要求"全部清零"）：
 > **A 已清偿** / **B 显式遗留**（裁定不做或维持现状，附触发条件）/ **C 后续任务**（已立项，附规格草案）/
 > **D 待办**（零散改进，不阻塞关闭）。每条标注**裁定方**。
@@ -140,7 +156,7 @@ v1.1 必须择一：**（a）** 契约正式定义入口声明字段（含 `"."`
 | D-1 | **审计历史浏览 UI**：面板内查看 `audit.jsonl`（需新增只读路由 + 列表渲染）。数据已落盘、路径经 `/v2/snapshot.auditFile` 可查 | 用户 2026-09-20 裁定：不做，记待办 |
 | D-2 | **`scripts/p23-shadow-scan.mjs` 覆写历史证据文件**：每次运行都会改写 `panel/docs/evidence/P23-SHADOW-SCAN.txt` 的生成时刻与 `~/.dsh/settings.yaml` 指纹（P2.3 的 09-18 快照本轮被覆写后已 `git checkout` 还原）。建议改为写带时间戳的新文件，遵守证据目录"只增不改"硬约定 | 工程侧发现并记录；用户裁定记待办不阻塞 |
 | D-3 | **`scripts/regression-all.mjs` 清单补漏**：不含 `p23-verify` 与 `p23-shadow-scan`（本轮改面板文案时 p23 的源码断言就静默漏过一次，靠人工补跑发现）。`ci-local.mjs --with-scan` 已临时覆盖 p23-verify；建议把两项并入 `regression-all` 本体 | 同上 |
-| D-4 | **冒烟最后一项待用户人工补验**：宿主会话内一次**真实联网搜索**（验证 web-search-local 在真实 agent 调用链里工作）。本侧已验：宿主重启后 mounted 状态、真实公网探针 `runSearch()` 12 源/1.2s、`fetchUrl()` 200/45795B；未验的那一口需要用户会话凭据（宿主 `/api/web/search` 未认证返回 401，本侧不取用） | 用户侧动作；如实登记于 CHANGELOG P8 终版条目。**2026-09-21 Pack G 再尝试仍未关闭**：宿主 `/api/web/{search,providers}` 从 127.0.0.1 直连一律 401（面板的 loopback 放行分支不适用）；本机浏览器打开 `127.0.0.1:3080` 得 `dsh web authentication required`（且重启后访问 URL/token 已轮换）。本轮未取用、也未尝试获取用户凭据（红线）。其余八项已在真宿主取证，见 `panel/docs/evidence/G-REAL-HOST-SMOKE.md` §三 |
+| D-4 | **冒烟最后一项待用户人工补验**：宿主会话内一次**真实联网搜索**（验证 web-search-local 在真实 agent 调用链里工作）。本侧已验：宿主重启后 mounted 状态、真实公网探针 `runSearch()` 12 源/1.2s、`fetchUrl()` 200/45795B；未验的那一口需要用户会话凭据（宿主 `/api/web/search` 未认证返回 401，本侧不取用） | 用户侧动作；如实登记于 CHANGELOG P8 终版条目。**2026-09-21 Pack G 再尝试仍未关闭**：宿主 `/api/web/{search,providers}` 从 127.0.0.1 直连一律 401（面板的 loopback 放行分支不适用）；本机浏览器打开 `127.0.0.1:3080` 得 `dsh web authentication required`（且重启后访问 URL/token 已轮换）。本轮未取用、也未尝试获取用户凭据（红线）。 其余八项已在真宿主取证，见 `panel/docs/evidence/G-REAL-HOST-SMOKE.md` §三。**2026-09-21 13:48 补验通过并关闭**：用户在宿主会话内亲自完成真实联网搜索，取数得 **7 次 `web_search` 调用、7 次 `isError=false`、合计 47 条来源链接**（单条 3.4–10.5s），归因到 web-search-local 有三重证据（search-router 路由判 local、`lib/web-search-local/index.js:1280-1291` 的输出指纹在会话正本命中 5 次、G1③ 已证 5/5 mounted）。证据正本 `panel/docs/evidence/D4-WEB-SEARCH-HOST-EVIDENCE.md`（含逐条数据表、口径澄清、以及取证脚本自身两个缺陷的如实记录：只按 `tool/call` 取名会漏 `run_code` 内经 `tool/ptc-dispatch` 派发的调用；zstd 会话正本须逐帧解压）；G 侧以文末《补验注记 · 第⑨项》收口（只增不改）⇒ **G1 九项全部闭环** |
 | D-5 | **R13 长期盯防**：装入判定依赖 cordis 4.0.2 的 fiber 内部行为（`FIBER_ACTIVE=2/FAILED=3/DISPOSED=4` 等）。**任何 cordis 升级必须重跑 S1/S4 场景**；依赖已写入 `registry/src/registry.ts` 头注与 `docs/contract.md` §7 D-5 | 工程侧长期纪律。**2026-09-21 复核：R13 本体维持已裁决不动，但当时新登记的三条衍生风险已全部收敛**——① 编号无显式守卫 → A3 数值对账用例；② 轮询漏 UNLOADING → A2 补分支并区分错误码；③ peer 范围过宽放行未校准版本 → E2 收到 `^4.0.2` 并加范围守卫。**仍按 D-5 纪律执行**（守卫只保证漂移会红，不代替人跑 S1/S4） |
 | D-6 | **`hasService` 直读代理有原型链误判**：`registry/src/host.ts` 的 `hasService` 读 `ctx[name]`，而 cordis 代理的 get 陷阱先走 `Reflect.has(target, prop)`（沿原型链）——实测 `hasService('toString'/'constructor'/'valueOf'/'hasOwnProperty'/'__proto__')` 全为 **true**。影响面：`precheck.ts` 的 `service-missing` 阻断与 doctor `requires/services` 规则会把这类名字误判为"服务在场"，从而放过一个真缺依赖的插件。改 `ctx.get(name, false)` 可闭合（只查 isolate/store，不碰原型链），但属行为变更 | 2026-09-21 复核发现。**按当轮 A4 指令"发现真实边界风险即停下待裁"，未动实现**，**已关闭（2026-09-21 Pack F1，提交 `b399623`）**：用户裁定改用 `ctx.get(name, false)`，详见 A #17。 |
 | D-7 | **`exports` 字段位置三方冲突（内置插件目录路径装载）**：`loader.ts` 只读**顶层** `manifest['exports']`，但 5 个内置插件的 `dsh.plugin.json` 全把它写在 `requirements.exports` 下。四个因为有 `index.js` 兜底所以"看着正常"，`lib/agent-memory` 没有 index.js ⇒ **按目录路径装不进来**（`entry-not-found`），只能装 `lib/agent-memory/plugin.js`。指定修法"提到顶层"与两处既定事实硬冲突：(a) doctor 独立仓 `MANIFEST_TOP_KEYS` 不含 `exports`，一提就产 error ⇒ **打破 0/0/0 红线**，必须改 doctor 仓；(b) 本仓契约把顶层 `exports` 归为 `KNOWN_LEGACY_FIELDS`，而 C-1 第 3 项计划把这些**收紧为 error**，提到顶层是逆着已裁决方向走。第三个选项"loader 双读"被本轮指令明令禁止 | 2026-09-21 复核发现，**Pack B1 因此停手未做**。备选：① 改 doctor 白名单 + 提顶层（两仓同批，且要与 C-1 第 3 项对齐口径）；② 给 `lib/agent-memory` 补 `index.js` 作插件入口；③ 契约 v1.1 里正式定义入口声明字段并一次迁清。裁定方：待用户。**已关闭（2026-09-21 Pack F2，提交 `23de06a`）**：裁定走第 1 案（`requirements.exports` 为正典、三级解析已实现、内置 manifest 一字未改）；完整裁定链、三处交叉验证证据、agent-memory 互斥点与 A/B 判定见本节末《**D-7 追加**》。 |

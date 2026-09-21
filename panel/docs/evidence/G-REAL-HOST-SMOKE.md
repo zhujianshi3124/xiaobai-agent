@@ -260,3 +260,29 @@ PASS  枚举顺序不变式：[0,1,2,3,4,5] 互不相同、排序恰为 0..5
 2. **D-12**：宿主侧装有 `@deepseek-ai/cordis-plugin-loader@1.0.3`，而本仓 `loader.ts` 的 B2
    注记写的是"宿主装载器在本仓未安装，无法逐条对照其解包规则，故只做保守近似"。
    ⇒ 该近似现在**具备了可对照的条件**（读宿主那份源码即可），B2 的口径可以在下一轮收紧。
+
+---
+
+## 补验注记 · 第⑨项已闭环（2026-09-21 13:48 取证，14:05 追加）
+
+> §〇 表里 ⑨ 那行、§三 与 §五 的"未验/没做"表述**原样保留**（本目录只增不改）；
+> 终态以本节为准：**⑨ 已验 PASS，G1 九项全部闭环**。
+
+- 用户在宿主会话内亲自完成一次真实联网搜索（前两轮因话术与脚本口径未取到，见新证据文件 §三）。
+  本次取数得 **7 次 `web_search` 调用、7 次 `isError=false`、合计 47 条来源链接**，
+  单条耗时 3.4–10.5s（派发与回执两条记录时间差）⇒ 真实外网往返，不是本地桩。
+- **归因到 web-search-local 的三重证据**：① 路由——`lib/search-router/index.js:106-116` 在 `mode:auto` 下只有命中
+  `officialProviders:["llm-deepseek"]` 才走官方，本次会话 `model/selection` 记录里的 provider 是
+  `sensenova-gateway-2` / `sensenova-gateway` / `modelscope-gateway`，都不在名单内 ⇒ 落到
+  `defaultWhenUnknown:"local"` 即 `local-multi`；② 输出指纹——结果正文里的 `Sources:` 清单与
+  `Cite the relevant URLs above as markdown links...`、`(Showing the first N sources...)` 两句收尾
+  只存在于 `lib/web-search-local/index.js:1280-1291`，在会话正本中命中 5 次；③ 装配在场——本文件 §二③
+  已证 web-search-local 在 5/5 mounted 之列。
+- **取证脚本缺陷如实记录**：前两版只按 `type==="tool/call"` 取工具名，而宿主里 `web_search` 是在
+  `run_code` 程序内派发、落盘为 `tool/ptc-dispatch-start`/`tool/ptc-dispatch` ⇒ 曾误报"零命中"。
+  另：会话正本是 zstd **多帧级联**，整块一次解压只拿得到首帧（319 KB 文件只解出 200 字节），
+  须按魔数 `28 B5 2F FD` 逐帧解压才取得全 110 条记录。**那两次"零命中"是脚本口径问题，不是搜索没发生。**
+- 完整三格数据表、口径澄清（用户明确裁：不按 fetch 格关账）与可重放命令：
+  `panel/docs/evidence/D4-WEB-SEARCH-HOST-EVIDENCE.md`；脚本与原始输出留档
+  `.panel-backups/g-real-host-smoke-20260921/d4-websearch-final.mjs` 与 `d4-websearch-report.txt`。
+- D-4 已在 `docs/debt.md` 关闭（2026-09-21）。

@@ -24,9 +24,15 @@ F 三项收口后按授权重启真实宿主验证新版本生效。九项清单
 - **F2 的宿主侧结论**：负路径真机验证通过——经安装 API 提交 `lib/agent-memory` 目录路径，
   得到情形 A 的结构化可执行报错（`plugin-shape-invalid` + 点名同表 `./plugin`），且 live registry
   不被污染；宿主侧 agent-memory 本就按显式子路径挂载（patch 第 74 行），不受三级解析改动影响。
-- **⑨ 未验（即停即报）**：宿主会话内一次真实联网搜索仍阻塞在用户会话凭据
-  （`/api/web/*` 匿名 401、浏览器侧 `dsh web authentication required`），本轮不取用凭据、
-  不读 `~/.dsh` ⇒ **D-4 保持未关闭**，只追加"再尝试仍阻塞"的注记。
+- **⑨ 已验（13:48 补验收口，D-4 关闭）**：宿主会话内一次真实联网搜索由用户亲自完成，取数得
+  **7 次 `web_search` 调用、7 次 `isError=false`、合计 47 条来源链接**（单条 3.4–10.5s），
+  三重归因证明走的就是 web-search-local（search-router 在 `mode:auto` 下把这批 provider 判给
+  `local-multi` + 该插件 `index.js:1280-1291` 的输出指纹在会话正本命中 5 次 + 5/5 mounted）
+  ⇒ **G1 九项全部闭环**。证据正本 `panel/docs/evidence/D4-WEB-SEARCH-HOST-EVIDENCE.md`；
+  G 文件以文末《补验注记》收口（只增不改，"未验"原文保留为过程痕迹）。
+  前两轮报"零命中"经复核是**取证脚本自身口径缺陷**（宿主里 `web_search` 在 `run_code` 内经
+  `tool/ptc-dispatch` 派发，只按 `tool/call` 取名会漏；zstd 会话正本须逐帧解压），
+  纠错过程写入该证据 §三——不把脚本缺陷当成"搜索未发生"。
 - **两条如实边界写进证据正文，不当成已验**：卸出态"活动 SSE 流终止"是经**进程重启**达成的，
   不等于 Pack D 修的同进程 `fiber.dispose()` 那一格（其命门证据仍在
   `test/panel-sse-dispose.test.mjs`）；`LOADING=1` 与仓内守卫同口径，由枚举不变式覆盖、未单独实测。
@@ -37,6 +43,9 @@ F 三项收口后按授权重启真实宿主验证新版本生效。九项清单
 - **还原自证**：`cordis.patch.yml` 三轮后 sha256 与本轮开始前逐字节一致
   （`ce0b0b81…`，同 L-060 关账基准）；live registry 收尾 `plugins: []`；toolkit 与 doctor 两仓
   工作树均为空。
+- **清单校正留痕**：`panel/docs/evidence/README.md` 里 G 文件那一行原本记的 size/sha 是该文件
+  补交叉引用**之前**算的陈旧值，已纠正为入库值并在同一行保留旧值与原因（索引行可校正，
+  证据正文仍守"只增不改"）。
 
 ### Pack F（2026-09-21，cordis 符合度复核三项待裁全部关闭）
 
