@@ -10,6 +10,12 @@ const TARGET = join(ROOT, "cordis.patch.yml");
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const line = (t = "") => console.log(t);
 
+// 【历史冻结 · 2026-09-21 Pack I / D-17】第 10 轮终验的时点探针（只读、不写盘，跑起来无害）。
+// 但它判的是当时的基准 ce0b0b81… 与「HEAD blob + 追加 toolkit-manager 4 行」的重建公式，两者都已退役
+// ⇒ 今天重跑必然打印 "NO ✗"，那是**预期的时点错位，不是新故障**。别据此改本文件、也别当回归跑：
+// 它不在 regression-all / ci-local 清单内。历史结论正本见 evidence/TERMINAL-ACCEPTANCE-ROUND10.txt。
+line("【时点脚本 · 已冻结】以下读数按第 10 轮（2026-09-18）的判据基准解释，今天重跑出现 NO ✗ 属预期（详见本文件头注）。");
+
 line("══════════════════════════════════════════════════════════════════");
 line("终验取证探针（只读）  " + new Date().toISOString());
 line("══════════════════════════════════════════════════════════════════");
