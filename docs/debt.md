@@ -20,6 +20,15 @@
 > 施工期新发现 D-9 ~ D-12 **登记在案、未修**（重试计数、夹具共享开关、statePath 随宿主 cwd 漂移、
 > 宿主装有 cordis-plugin-loader 使 B2"无法对照"的前提失效）；Pack H（toolkitRoot 固定 + 对照宿主装载器）
 > 未被点名，留本文件排队，本轮不启动。
+> **2026-09-21 交叉验证轮（外部独立审计报告复核，代码零改动）**：对另一 agent 的 cordis 符合度审计报告
+> 逐条证实/证伪并并账。该报告总体结论"符合"成立、可作为第三方验收单，但它报的三个"新问题"里
+> toolkitRoot 分叉是真（= D-11 病根，见《D-11 追加》）、sougou 是沙箱侧滞后快照（新登记 D-13）、
+> doctorCli 绝对路径是既有申报（`docs/embed-toolkit.md` §5 第 4 条，无新增）；其"依赖可预检"一节
+> 有因果错置（新登记 D-14），其组件表把 rate-throttle / agent-memory 的清理机制写错（实为 `ctx.on`
+> fiber 级回收，全文件 `ctx.effect` 零次）。**兑现 D-12**：已逐字对照宿主 loader 1.0.3 的解包链，
+> 结论是 **B2 比官方更宽且分叉可观察**（7 个入口实测 4 个分叉，见《D-12 追加》）。另新登记 D-15
+> （无 `contract` 的 manifest 遇 scoped 包名必被 registry 通道拒）。本轮它未覆盖 manifest 入口层
+> （F2 三级解析 / `requirements.exports` 正典 / agent-memory 目录装载如实报错）——它的"符合"不含这一层。
 > **误触事件处置**：F2 执行期间一次单选裁决误触（"停手只落文档"），仅在未提交文档层执行、零 commit，
 > 已丢弃并写入《D-7 追加》裁定链第 ③ 步；D-4 补验期间两次"零命中"报告经复核证明是**取证脚本口径缺陷**
 > （非搜索未发生），纠错过程写入 `D4-WEB-SEARCH-HOST-EVIDENCE.md` §三。
@@ -163,8 +172,11 @@ v1.1 必须择一：**（a）** 契约正式定义入口声明字段（含 `"."`
 | D-8 | **装入成功后 `lastError` 不清**：`loadEntry` 只在失败路径写 `entry.lastError`，重试转 ACTIVE 后不回空 ⇒ 面板卡片会同时显示"运行中"和一条历史错误（E1 实测：`status=active` 且 `lastError.code=fiber-load-timeout` 并存）。语义上"最近一次错误"可以辩护为有意保留，但对使用者是误导 | 2026-09-21 复核发现，未修（不在本轮授权清单内）。**已关闭（2026-09-21 Pack F3，提交 `57ebc24`）**：用户裁定"转 ACTIVE 即清空"，未新增 `lastRecoveredError` 字段（历史归审计 JSONL），详见 A #18。 |
 | D-9 | **`retryAttempts` 在装入成功后不清零**：`loadEntry` 成功路径不重置计数（只有 `unloadEntry`、`setEnabled(true)`、`reload` 显式清零）⇒ 前一段重试留下的计数会结转进下一段故障，隔离提示里"连续失败 N 次达到上限"这句话在这种情况下不准（真实故障数比报出的少），且更早进 quarantined。默认 `retryLimit: 3` 下最坏情形是第 2 次真实故障就被隔离。Pack F3 施工期发现，**未顺手改**（不在授权清单内，且改法涉及"成功是否等于计数归零"的口径） | 工程侧发现并记录。裁定方：待用户 |
 | D-10 | **测试夹具 `marker.flag` 是跨文件共享开关**：`node --test` 的测试文件之间并发跑，`registry.test.mjs` 与 `panel-v2.test.mjs` 都翻 `test/fixtures/registry/contract-plugin/marker.flag` 这一个磁盘文件 ⇒ 任何新用例复用该夹具做"先失败后成功"都会偶发翻红（Pack F3 实测特征：单跑 6/6 绿、全量批跑红一条）。本轮只给 F3 建了私有夹具 `last-error-plugin/`，**没有**动既有两处共享用法。建议：夹具改成"每个用例自带 marker 路径"，或把需要翻开关的文件标为串行 | 工程侧发现并记录；不阻塞关闭 |
-| D-11 | **`toolkitRoot` 缺省按宿主进程 cwd 推导 ⇒ 状态与审计落点会随启动方式漂移**：`panel/manager/registry-host.mjs:24` 的 `resolve(process.cwd(), "..")` 使 `statePath`/`auditFile` 指到 `<cwd 的上一层>/.registry`。Pack G 实测：同一次冒烟里落点在 `C:\Windows\.registry` 与 `D:\dsh-plugins\.registry` 之间跳过两次（差异只来自拉起 dsh web 时的工作目录）。审计"事后可查"的前提是落点稳定；本轮已把 D 盘那份副作用清除，并把宿主拉回原形态。建议：statePath 锚定到 toolkit 自身安装根（或强制显式配置），别让产品行为依赖启动器 cwd | 工程侧发现并记录。裁定方：待用户 |
-| D-12 | **B2"保守近似"的前提已经变了**：`registry/src/loader.ts` 的 `mergeNamespaceStatics` 头注写着"宿主装载器 `@deepseek-ai/cordis-plugin-loader` 在本仓未安装，无法逐条对照其解包规则"。Pack G 现场核实：**宿主装了它**（`…/@deepseek-ai/dsh/node_modules/@deepseek-ai/cordis-plugin-loader@1.0.3`）。⇒ 下一轮可读该源码把 B2 从"近似"收紧为"对齐宿主"，并决定是否需要把它的解包规则钉成用例 | 工程侧发现并记录。裁定方：待用户 |
+| D-11 | **`toolkitRoot` 缺省按宿主进程 cwd 推导 ⇒ 状态与审计落点会随启动方式漂移**：`panel/manager/registry-host.mjs:24` 的 `resolve(process.cwd(), "..")` 使 `statePath`/`auditFile` 指到 `<cwd 的上一层>/.registry`。Pack G 实测：同一次冒烟里落点在 `C:\Windows\.registry` 与 `D:\dsh-plugins\.registry` 之间跳过两次（差异只来自拉起 dsh web 时的工作目录）。审计"事后可查"的前提是落点稳定；本轮已把 D 盘那份副作用清除，并把宿主拉回原形态。建议：statePath 锚定到 toolkit 自身安装根（或强制显式配置），别让产品行为依赖启动器 cwd | 工程侧发现并记录。裁定方：待用户。**2026-09-21 交叉验证轮并账**：外部审计报告的 P1 即此条病根，两处推导已逐字定位、两个漂移点按公式复原吻合，并核出**两种更硬的失效模式**（落点建不出来时面板 fail-hard 装不上；写得出现目录但写不进文件时状态静默丢失）——见本节末《D-11 追加》。修复等 Pack H 点名，本轮代码零改动 |
+| D-12 | **B2"保守近似"的前提已经变了**：`registry/src/loader.ts` 的 `mergeNamespaceStatics` 头注写着"宿主装载器 `@deepseek-ai/cordis-plugin-loader` 在本仓未安装，无法逐条对照其解包规则"。Pack G 现场核实：**宿主装了它**（`…/@deepseek-ai/dsh/node_modules/@deepseek-ai/cordis-plugin-loader@1.0.3`）。⇒ 下一轮可读该源码把 B2 从"近似"收紧为"对齐宿主"，并决定是否需要把它的解包规则钉成用例 | 工程侧发现并记录。裁定方：待用户。**已兑现（2026-09-21 交叉验证轮）**：完整解包链已逐字对照、7 个入口双通道实测完毕，结论与修法选项见本节末《D-12 追加》。**代码一字未动，修复等 Pack H 点名** |
+| D-13 | **沙箱侧配置快照整份滞后，禁止当恢复基线用**（外部审计报告 P2 并账）：`D:\dsh-test-sandbox\after-switch.yml`（2026-09-14 13:13 `dsh --profile web --dump-config` 产物，**不是本仓任何脚本/测试的输出**，仓内对 `after-switch` 零引用）里 `@local/dsh-toolkit/web-search-local` 行的 engines 写作 `sougou`。核实结果与报告不同：这份快照**忠实记录了当时的真状态**，拼写错误在 09-16 已由本仓自己改对（提交 `37819e9 fix(P2-2): correct Sogou engine key sougou -> sogou`，现行真源 `cordis.patch.yml:61` = `sogou`）。真正的问题不是拼写而是**整份早于面板**：该段止于 `agent-memory-runtime`，**没有 `toolkit-manager` 行**，也早于 Pack A–G 全部改动 ⇒ 当"恢复基线"会退回 7 天前的插行集。同一旧状态另有两份副本：`archive/pluggable-audit/toolkit-copy/cordis.patch.yml`、`_trash_candidates/duplicates/accept-after-restart.yml`（与根文件 MD5 相同 `e5e3d2ab…`）。锚定它的 `docs/reviews/dsh-toolkit-切换窗口-待审核.md:117` 本身就是重生成指令（再 dump 一次即覆盖为现值） | 外部审计报告发现、本仓核实。沙箱非 git 仓，**本轮不删不动**（删除权在用户逐轮任务书）。处置建议：三份标"历史取证快照，禁作恢复基线"，或文件头补一行"dump 于 09-14，早于 P2-2 拼写修复与面板挂载" |
+| D-14 | **停用交叉引用预检的覆盖面只有行 id，且不阻断；卸载不做此类预检**（外部审计报告"依赖可预检"一节并账）：`findCrossReferences(text, {rowId, alsoMatch})` 的 needles = 行 id + `alsoMatch`（`panel/manager/apply-engine.mjs:178-181`），HTTP 层确实收 `body.alsoMatch`（`panel/index.js:459`），**但面板客户端只发 `{rowId, enabled}`**（`panel/client/index.js:426`）⇒ UI 路径上 needles 恒等于行 id。最该防的两处引用恰好不是行 id：`cordis.patch.yml:7-8` 的 `searchProvider: auto-search` / `fetchProvider: local-fetch` 引的是 **provider id** ⇒ 恒不命中。且 crossRefs 非空**不阻断**（`apply-engine.mjs:238-239` 自陈"报告非空不自动阻止"）；卸载路径无交叉引用预检（`uninstall.mjs` 内 `findCrossReferences` 零命中，只有 `presetBridgePrecheck` 的备份存在性 fail-closed）。另注：`doctor-signals.json` 与这份检查**没有数据关系**——signals 的消费者是独立仓 doctor CLI（`projects/doctor/src/engine.mjs:1376-1504`，只产 info/warning，绝不 error），本仓 panel/registry 全量 grep 零命中 | 外部审计报告发现（其表述"停用/卸载时会做交叉引用预检"经核实为夸大）、本仓核实。裁定方：待用户。建议 Pack H：为 web-search-local / search-router 预置 `alsoMatch` = 其 provider id（数据源就是 doctor-signals.json），或由服务端从 signals 派生 needles |
+| D-15 | **manifest 无 `contract` 字段 + 包名带 npm scope ⇒ registry 通道必拒，报错文案指向错位**：`manifestHasContract` 只认非空字符串 `contract`（`registry/dist/loader.js:75-77`），缺字段即落 legacy 合成；合成 id 的规则是"含 `/` 直接沿用包名，否则加 `legacy/` 前缀"（`:336-337`），于是包名 `@local/dsh-toolkit` 原样成为 id，被契约的命名空间式小写规则拒绝（`contract/src/validate.ts:111`，`@` 不合法）⇒ 报 `plugin-shape-invalid: legacy 合成 manifest 校验失败：id 必须是命名空间式小写 id`，而真实缺口是"这份 manifest 没有 contract 字段"。实测现场：本仓 `panel/dsh.plugin.json`（`manifestVersion:1`，**无 contract/id**）经 `resolveLocalSource` 装载即撞这条；宿主 loader 通道对同一目录毫无障碍（它不读 manifest）。⇒ 面板只能经 patch 行装载（与 REQ-8 唯一装配点一致），但任何"无 contract 的 scoped 第三方包目录"经面板装进来都会收到这条误导性文案 | 交叉验证轮实测发现（探针见《D-12 追加》）。裁定方：待用户。建议：legacy 合成对 scoped 包名改产 `legacy/<name>` 或报"缺 contract 字段"，二选一都是一行改动 |
 
 ---
 
@@ -214,3 +226,54 @@ v1.1 必须择一：**（a）** 契约正式定义入口声明字段（含 `"."`
 doctor 独立仓零改动；p1-smoke 314/0 一字未动；门禁 `node scripts/ci-local.mjs --with-scan` 4/4。
 **重开条件**：契约 v1.1 正式定义入口声明字段时（C-1 必答设计题第 2 条），须一并决定 `.` 的语义是否改为"插件入口"——
 若改，agent-memory 的 manifest 才进入情形 B 的修改窗口。裁定方：待用户（v1.1 立项时）。
+
+---
+
+### D-11 追加 · 交叉验证轮：toolkitRoot 分叉的代码级归因（2026-09-21，只报不修）
+
+外部审计报告的第 1 条"新问题"经核实**成立**，且它就是 D-11 的病根。逐字定位（当前 HEAD）：
+
+| 现场 | 位置 | 推导 | 锚定物 |
+|---|---|---|---|
+| 面板自己的 toolkitRoot | `panel/index.js:54-56` + `:249` | `resolve(config.toolkitRoot || resolve(panelRoot(), ".."))`，`panelRoot()` 取 `import.meta.url` 的目录 | **源文件位置**（稳定） |
+| registry/doctor/审计的 toolkitRoot | `panel/manager/registry-host.mjs:24` | `config.toolkitRoot ? resolve(…) : resolve(process.cwd(), "..")` | **进程 cwd**（随启动方式漂移） |
+| 两者为何没接上 | `panel/index.js:281` | `createToolkitServices(ctx, config, logger)` —— 传的是**原始 config**，`:249` 已 resolve 的值没有往下传 | ⇒ 同一进程内两个根并存 |
+
+**缺省值在真实部署里就是生效路径**，不是理论边界：本仓 `cordis.patch.yml:80-82` 的 `toolkit-manager` 行只有 `id` + `name: 'file:///…/panel/index.js'`，**整行没有任何 config** ⇒ `config.toolkitRoot` 恒缺席 ⇒ `:24` 的 cwd 推导当场生效。后果：面板写 patch / 备份 / custody 落在 `D:\dsh-plugins\dsh-toolkit`（`:256` 的 `backupRoot` 亦用稳定根），而 registry 状态与审计流水落在 `<cwd 上一层>\.registry`——**同一次运行、两个根**。
+
+**两个漂移点按公式复原，全部吻合**：`resolve(cwd,"..")` 在 cwd=`C:\Windows\System32`（提权 shell 的缺省起点）时给出 `C:\Windows` ⇒ `C:\Windows\.registry`；在 cwd=`D:\dsh-plugins\dsh-toolkit`（在仓内拉起宿主）时给出 `D:\dsh-plugins` ⇒ `D:\dsh-plugins\.registry`。与 Pack G 记录的两个观测点逐一对上（`panel/docs/evidence/G-REAL-HOST-SMOKE.md:226-231`）。今天现场：`C:\Windows\.registry` 存在且**递归 0 文件**（`dir /a` 已核，目录时刻 09-21 07:43:18），`D:\dsh-plugins\.registry` 已不存在，`C:\.registry` / `C:\Users\.registry` / `C:\Users\LENOVO\.registry` / `C:\Windows\System32\.registry` / 仓内 `.registry` 均不存在 ⇒ 与"当前实例仍按 cwd 推导、且这一实例没经面板装过插件"一致。
+
+**本轮新发现的两种失效模式**（D-11 原文只写了"落点漂移"，比这更严重）：
+
+1. **落点连目录都建不出来时，面板整个装不上**（fail-hard）。审计 sink 在装配期**无条件** `mkdirSync(dirname(file), { recursive: true })`（`panel/manager/audit-sink.mjs:34`，由 `registry-host.mjs:100-104` 在 `hasEvents && auditLog!==false` 时调用），这一句**没有 try/catch** ⇒ 异常穿出 `createToolkitServices` ⇒ 穿出面板 `apply()` ⇒ cordis fiber 载入失败 ⇒ 唯一管理入口没了。落点由启动器 cwd 决定，等于把面板可用性挂在启动方式上。
+2. **落点建得出来但写不进去时，状态静默丢失**（fail-silent）。`persist()` 把 `saveState` 包在 try/catch 里，失败只 `log.error('状态落盘失败', … errorCode:'state-save-failed')`（`registry/src/registry.ts:323-329`；`state.ts:34-42` 自身不吞错）⇒ 面板照常显示 `active`，重启后条目全丢。同一条路径推导同时具备"过度失败"和"不足失败"两端。
+
+**修法（采纳报告建议，并补一条降级）**：① `panel/index.js:281` 把已 resolve 的 `toolkitRoot` 传进 `createToolkitServices`（或在 `registry-host.mjs` 内以 `import.meta.url` 锚定仓根），使两半归一个根；② audit sink 的装配期 mkdir 加降级（建不出来就 warn + 禁用 sink，绝不让面板装不上）。修复等 Pack H 点名，**本轮代码零改动**。
+
+**如实边界**：`C:\Windows\.registry` 为空，**无法事后区分**"从未写过"与"写失败被模式 2 吞掉"——宿主 console 日志不落盘（`C:\Users\LENOVO\.dsh\logs` 下只有 `llm-requests.jsonl`，grep `state-save-failed` / `audit sink 写入失败` 零命中），且 3080 全部路由匿名 401（本侧不取凭据），当前实例挂载集无法运行时取证。ACL 只读取到 `BUILTIN\Users:(I)(RX)`（无写位）而该目录确被建出 ⇒ 建目录的那次启动是提权的，与"cwd=System32"互证。
+
+---
+
+### D-12 追加 · 交叉验证轮：B2 与官方 loader 的完整对照（2026-09-21，只报不修）
+
+**装载器现场（先纠正一处措辞）**：`@deepseek-ai/cordis-plugin-loader` **1.0.3**，物理两份——`C:\Users\LENOVO\AppData\Roaming\npm\node_modules\@deepseek-ai\dsh\node_modules\@deepseek-ai\cordis-plugin-loader`（全局 CLI `@deepseek-ai/dsh@0.1.5-rc.1` 的**嵌套依赖**，声明在 `…\dsh\package.json:37`）与 `D:\dsh-plugins\dsh-web-search-local\node_modules\…`（旧独立插件自带）；`C:\Users\LENOVO\.dsh\profiles\node_modules\@deepseek-ai\cordis-plugin-loader` 是指向前者的符号链。它**不是顶层全局包**，报告"全局安装"的说法会让人找不到。cordis 本体各处均为 **4.0.2**，无版本分裂。⇒ B2 头注"`registry/src/loader.ts:305-308` 本仓未安装、无法逐条对照"的前提确实已失效。
+
+**官方解包链（读完整，不止报告引的那 5 行）**：`unwrapExports(exports)`（`lib/index.js:745-751`，等价 TS 源 `src/index.ts:191-199`）是**纯替换两跳**：`exports = exports.default ?? exports` → 若结果带 `__esModule` 再 `.default ?? exports`（注释链到 esbuild default-interop issue）。调用点两处（`:466` 热重载、`:522` 首次 `_init`），产物直接交给 `:537` 的 `ctx.registry.plugin(plugin, this.options.config, …)`。**命名导出上的元数据不在 loader 层处理**——loader 只负责"选出对象"。配置层另有一条独立通道：`EntryOptions.inject`（`lib/types/config/entry.d.ts`），由 `:709` 的 `Inject.resolve(fiber.entry.options.inject, fiber.inject)` 合进 fiber ⇒ 宿主可以用 YAML 行的 `inject:` 声明依赖，而 **toolkit 的 patch 行一条都没用**（全凭模块自带）。
+
+**cordis 4.0.2 的取值口径**（`node_modules/@deepseek-ai/cordis/lib/index.js:1622-1634`，逐字）：`runtime.name = plugin.name`（`name === "apply"` 时置空）、`runtime.Config = plugin.Config`、`fiber.inject = Inject.resolve(plugin.inject)`；配置校验 `if (!runtime.Config) return config; runtime.Config["~standard"].validate(config)`（`:956-957`）。⇒ 一切元数据必须**长在交给 cordis 的那个对象上**，B2 的动机成立。
+
+**双通道实测**（探针 `D:\dsh-test-sandbox\var\scratch\xval-audit-20260921\dual-channel-probe.mjs`：H 通道调**真** loader 的 `unwrapExports`，R 通道调**真** `resolveLocalSource`，同一入口各跑一次，再按上面口径打印 cordis 会看到什么；只 import 判形状，不写任何安装状态）：
+
+| 入口 | H（宿主 loader） | R（registry + B2） | 判定 |
+|---|---|---|---|
+| 桶根 `index.js` | `dsh-toolkit` / `['webServer']` / 无 Config | 同 | 一致 |
+| rate-throttle | `rate-throttle` / `['llm','tokenMeter']` / 无 | 同 | 一致（无 default，两通道都取命名空间） |
+| search-router | `search-router` / `['web']` / 无 | 同 | 一致（default 自带 name+inject，纯替换无损） |
+| **compact-router** | 名 **`RouterCompactionEngine`** / 四项 inject 齐 | 名 **`compact-router`** / 四项 inject 齐 | **分叉（仅名字）**：`lib/compact-router/index.js:43` 的模块级 `export const name` 被 B2 覆盖到 `:485` 的 default 类上（类静态 `:157` inject 两通道都保住） |
+| **web-search-local** | 名/inject 正常，**`Config` 丢失** | 名/inject 正常，**`Config` 在场** | **分叉（行为级）**：`:123` 的模块级 `Config`（`@deepseek-ai/schemastery`，实测 `~standard.validate` 可用）不在 `:1422` 的 default 对象上 ⇒ H 通道 cordis 直接 `return config` 跳过校验，R 通道会校验 ⇒ 同一份坏 config 一边报错一边放行 |
+| **agent-memory `plugin.js`** | 名 **`register`** | 名 **`agent-memory-runtime`** | **分叉（仅名字）**：default 是 `:105` 的函数声明，JS 推断名即 `register`；`:19` 的模块级 name 由 B2 覆盖。两通道 inject 均为空（本就没有） |
+| **面板 `panel/index.js`** | 名 `toolkit-manager` / `['webServer']` | **装载失败** `plugin-shape-invalid`（legacy 合成 id 校验） | **分叉（可达性）**：见新登记 D-15。面板本就不该走 registry 通道，但失败原因不是设计声明而是字段缺失 |
+
+**结论：B2 比官方更宽**（合并 ⊃ 纯替换），且**分叉可观察**。方向上 B2 更贴近"模块声明的意图"，代价是同一个插件经两条通道装载时 **cordis 侧显示名不同**（宿主 preset 通道 = `RouterCompactionEngine`，面板 registry 通道 = `compact-router`）。影响面逐条核过：cordis 日志器名（`:631-632` `name ??= hyphenate(fiber.name)`）、服务撞名报错文案（`:812` `has been registered at <fiber.name>`）、宿主 cordis 调试视图的 fiber 树。toolkit **自己的键控不受影响**——registry/src 与 panel/ 全量 grep `fiber.name` 零命中，条目一律按 `manifest.id` 记账（卸载/审计/state.json 都安全）。附带一条代码推导（未实测）：同一模块实例若被两条通道先后装入，cordis 按 callback 身份复用 runtime（`:1622-1631` 的 `_internal.get(callback)`），**名字由先到者定**。
+
+**给 Pack H 的三个选项（裁定方：待用户）**：① 把 B2 收紧成与官方一致（纯替换）——代价是丢掉 A#13 的 inject 门控修复，等于回退，不可取；② 保留 B2，把 `loader.ts:305-308` 的"保守近似/无法对照"改成"故意比宿主 loader 更宽 + 差异表"，并考虑钉成用例（本轮已把差异表落档，可作规格）；③ 改三个内置入口自身（default 对象自带 `name` / `Config`），使两通道逐字一致——最小、最正解，但动子插件源码，须按红线 6 全量跑。本轮**代码一字未动**。
