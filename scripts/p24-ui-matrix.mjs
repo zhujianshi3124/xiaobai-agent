@@ -22,7 +22,9 @@ import { createHash } from "node:crypto";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const patchPath = join(root, "cordis.patch.yml");
-const BASE_SHA_EXPECT = "ce0b0b81c91ca4c420bb5302b2dbe951de0347ca729122511be288aa7c2b76b9";
+// 基准滚存（2026-09-21 H5）：ce0b0b81… → bb7af96f…，与 scripts/p24-verify.mjs 同步。
+// 起因与守卫口径变更说明见该文件注释、panel/docs/evidence/H-REAL-HOST-REVERIFY.md、docs/debt.md A#24。
+const BASE_SHA_EXPECT = "bb7af96fb47ea8275cdf91bd0978a611c144077b7c8006804ff22ce404c88b3c";
 const BASE_SHA = createHash("sha256").update(readFileSync(patchPath, "utf8")).digest("hex");
 if (BASE_SHA !== BASE_SHA_EXPECT) {
   console.error("ABORT: 真实 cordis.patch.yml 基线漂移（" + BASE_SHA.slice(0, 12) + "）——拒绝在非基准态跑矩阵");
@@ -1260,7 +1262,7 @@ section("批2 操作台/双回滚（D 段）");
 // 6. 收尾：真实仓零写入自证
 // ════════════════════════════════════════════════════════════
 section("收尾");
-check("真实 cordis.patch.yml 全程零写入（基准 ce0b0b81… 不变）", sha(readFileSync(patchPath, "utf8")) === BASE_SHA, sha(readFileSync(patchPath, "utf8")).slice(0, 12));
+check("真实 cordis.patch.yml 全程零写入（基准 bb7af96f… 不变）", sha(readFileSync(patchPath, "utf8")) === BASE_SHA, sha(readFileSync(patchPath, "utf8")).slice(0, 12));
 // 守卫口径（Q1' 修正，L-059）：放行「面板运行期合法的长期落痕」，只拦本矩阵**新增**产物。
 //   soft-uninstalls.json —— 软卸载台账（面板发起）
 //   row-adjacency.json    —— 行块邻接留痕（D-UI-05 长期证据，与清账解耦、只增不减）
