@@ -26,6 +26,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { Context } from '@deepseek-ai/cordis'
 
 import { createV2Api } from '../panel/manager/v2-api.mjs'
+import { AUDIT_EVENTS } from '../contract/dist/index.js'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 // Windows 下动态 import 必须走 file:// URL（与 p7-embed 同口径）
@@ -160,7 +161,9 @@ test('Pack D 单元：closeAllStreams 结束连接、清心跳、解除订阅，
   const events = v2.routes.find((r) => r.path.endsWith('/v2/events'))
   await events.handler(sseRequest, stream)
   assert.equal(v2.liveStreamCount(), 1, '打开一条流就该进登记表')
-  assert.equal(subs.on, 12, '12 类事件（5 契约 + 7 审计）各订阅一次')
+  // 计数按定义式给（5 条契约短名 + 全部审计事件）：新增审计事件时这里不必跟着改字面量，
+  // 而客户端孪生表若漏改会由 test/toolkit-root.test.mjs 的"孪生表一致"用例翻红。
+  assert.equal(subs.on, 5 + AUDIT_EVENTS.length, `${5 + AUDIT_EVENTS.length} 类事件（5 契约 + ${AUDIT_EVENTS.length} 审计）各订阅一次`)
   assert.ok(timeouts() > before, `心跳定时器必须在场，否则没测到句柄清理：before=${before}`)
 
   assert.equal(v2.closeAllStreams(), 1, 'closeAll 报回被关掉的连接数')

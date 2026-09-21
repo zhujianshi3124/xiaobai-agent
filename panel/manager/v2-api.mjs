@@ -132,13 +132,16 @@ function schemaToJSON(schema) {
   return null
 }
 
-function entryView(entry) {
+function entryView(entry, persisted = true) {
   return {
     id: entry.manifest.id,
     displayName: entry.manifest.displayName,
     version: entry.manifest.version,
     contract: entry.manifest.contract,
     status: entry.status,
+    // H1（D-11）：状态没落到盘上时，卡片不得只写"active"就当一切正常——
+    // 面板据此把状态行标注成"运行中 · 未落盘"，并给出原因与修复建议。
+    persisted,
     legacy: entry.legacy,
     config: entry.config,
     lastError: entry.lastError ?? null,
@@ -165,7 +168,16 @@ function entryView(entry) {
  *        订阅带前缀事件，返回取消函数。
  */
 export function createV2Api(deps) {
-  const { registry, doctor, servicePrefix, subscribe, auditFile } = deps
+  const { registry, doctor, servicePrefix, subscribe, auditFile, durability } = deps
+  // 状态是否真落盘（H1 / D-11）。装配方没给 durability 时按"可写"处理（并行线 mock 宿主）。
+  const stateOk = () => {
+    if (typeof durability !== 'function') return true
+    try {
+      return durability()?.state?.ok !== false
+    } catch {
+      return false
+    }
+  }
   // P7 嵌入（REQ-8）：v2 管理面（含 SSE /events 与 connector.js）的路由基址从 servicePrefix
   // 派生，与面板服务名/事件名同源；缺省前缀下恰等于历史值 /api/toolkit-panel/v2（URL 零变化）。
   const V2 = `${contractHttpBase(normalizeServicePrefix(servicePrefix))}/v2`
@@ -298,13 +310,16 @@ export function createV2Api(deps) {
   }
 
   const snapshot = json(async (request, response) => {
-    const plugins = registry.list().map(entryView)
+    const plugins = registry.list().map((entry) => entryView(entry, stateOk()))
     sendJson(response, 200, {
       ok: true,
       servicePrefix,
       doctorAvailable: doctor !== undefined && doctor !== null,
       // 审计落盘位置（债务 #4）：让"事后可查"这件事可被发现；面板内历史浏览仍是显式遗留项
       ...(auditFile ? { auditFile } : {}),
+      // H1（D-11）：两面落盘事实（state=安装记录能否恢复 / audit=流水能否可查）随快照下发，
+      // 面板据此在管理区顶部如实申报"未落盘"，而不是等用户重启后才发现条目没了。
+      ...(typeof durability === 'function' ? { durability: durability() } : {}),
       plugins,
     })
   })
@@ -335,7 +350,7 @@ export function createV2Api(deps) {
       }
       const result = await registry.install(source, { force: body.force === true })
       if (result.ok) {
-        sendJson(response, 200, { ok: true, entry: entryView(result.entry) })
+        sendJson(response, 200, { ok: true, entry: entryView(result.entry, stateOk()) })
       } else {
         // 阻断/失败不抛：预检报告整体下发（REQ-5 安装向导第 2 步）
         sendJson(response, 200, { ok: false, precheck: result.precheck })
@@ -360,7 +375,7 @@ export function createV2Api(deps) {
         throw Object.assign(new Error('enabled 必须是布尔'), { code: 'value-invalid' })
       }
       await registry.setEnabled(id, body.enabled)
-      sendJson(response, 200, { ok: true, entry: entryView(registry.get(id)) })
+      sendJson(response, 200, { ok: true, entry: entryView(registry.get(id), stateOk()) })
     }),
   )
 
@@ -369,7 +384,7 @@ export function createV2Api(deps) {
       const id = String(body.id ?? '')
       requireConfirm(body, id)
       await registry.reload(id)
-      sendJson(response, 200, { ok: true, entry: entryView(registry.get(id)) })
+      sendJson(response, 200, { ok: true, entry: entryView(registry.get(id), stateOk()) })
     }),
   )
 
@@ -381,7 +396,7 @@ export function createV2Api(deps) {
         throw Object.assign(new Error('缺少 config'), { code: 'value-invalid' })
       }
       await registry.setConfig(id, body.config)
-      sendJson(response, 200, { ok: true, entry: entryView(registry.get(id)) })
+      sendJson(response, 200, { ok: true, entry: entryView(registry.get(id), stateOk()) })
     }),
   )
 

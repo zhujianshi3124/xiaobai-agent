@@ -1,0 +1,9 @@
+{
+  "id": "fixture/save-probe-plugin",
+  "displayName": "落盘可见性夹具",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "requires": {
+    "node": ">=20"
+  }
+}

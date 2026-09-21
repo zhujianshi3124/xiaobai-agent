@@ -43,16 +43,13 @@ import {
   validateConfigValue,
   checkCrossField,
 } from "./manager/config-whitelist.mjs";
+import { resolveToolkitRoot } from "./manager/toolkit-root.mjs";
 
 export const name = "toolkit-manager";
 export const inject = ["webServer"];
 
 function panelRoot() {
   return dirname(fileURLToPath(import.meta.url));
-}
-
-function defaultToolkitRoot() {
-  return resolve(panelRoot(), "..");
 }
 
 function isLoopbackAddress(address) {
@@ -246,7 +243,10 @@ export function apply(ctx, config = {}) {
   // normalizeServicePrefix），面板客户端的孪生常量见 panel/client/index.js PANEL_API。
   const servicePrefix = normalizeServicePrefix(config.servicePrefix);
   const apiBase = contractHttpBase(servicePrefix);
-  const toolkitRoot = resolve(config.toolkitRoot || defaultToolkitRoot());
+  // toolkitRoot 的唯一推导点在 manager/toolkit-root.mjs（H1 / D-11）：显式 config 优先，
+  // 缺省按模块位置锚定，**不再依赖进程 cwd**。下面 createToolkitServices 传的是
+  // 已 resolve 的值（不是原始 config），否则 registry/doctor 会另算一个根。
+  const toolkitRoot = resolveToolkitRoot(config);
   // doctor CLI 面按裁决留在仓外（沙箱独立仓 @local/dsh-toolkit-doctor），路径必须可注入：
   // config.doctorCli → env TOOLKIT_PANEL_DOCTOR_CLI → 缺省值（本机开发布局的现值，嵌入别机时
   // 由前两者覆盖；CLI 不在场时体检路由返回 degraded，不假装可用）。
@@ -278,7 +278,10 @@ export function apply(ctx, config = {}) {
   // 面板的 v2 管理面（安装/启停/重载/卸载/配置/健康）全部走这两个服务，
   // 禁止旁路直改状态。servicePrefix/registry/doctor 段均来自插件 config（patch 行），
   // 无固定端口/绝对路径（D5）；与既有 P2.4 路由（patch 域操作）并存、互不影响。
-  const services = createToolkitServices(ctx, config, {
+  // H1（D-11）：这里传下去的 config 带着**已 resolve 的 toolkitRoot**——修复前传的是原始
+  // config，registry-host 便自己按 process.cwd() 另算一个根，同一次运行里面板写 patch 的
+  // 根与状态/审计落点所在根可以完全不同（实测漂移过两次）。
+  const services = createToolkitServices(ctx, { ...config, toolkitRoot }, {
     info: (...a) => console.log("[toolkit-manager]", ...a),
     warn: (...a) => console.warn("[toolkit-manager]", ...a),
     error: (...a) => console.error("[toolkit-manager]", ...a),
@@ -288,6 +291,7 @@ export function apply(ctx, config = {}) {
     doctor: services.doctor,
     servicePrefix: services.servicePrefix,
     auditFile: services.auditFile,
+    durability: services.durability,
     subscribe: (name, cb) => {
       const disposer = ctx.on(name, cb);
       return () => {

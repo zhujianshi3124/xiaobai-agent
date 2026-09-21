@@ -261,6 +261,12 @@ export const AUDIT_EVENTS = [
   'reloaded',
   'quarantined',
   'config-changed',
+  /**
+   * 状态落盘失败（H1 / 债务 D-11 可见化）：内存里的条目生效了、磁盘上没有，
+   * 重启即丢。此前这条只有一行 error 日志（面板仍显示 active，无人知晓不持久），
+   * 现在升级为可发现面：随 `/v2/snapshot.durability.state` 呈现，面板如实标注未落盘。
+   */
+  'state-save-failed',
 ] as const
 
 export type AuditEvent = (typeof AUDIT_EVENTS)[number]

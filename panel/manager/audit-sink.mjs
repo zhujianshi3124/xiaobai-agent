@@ -28,10 +28,28 @@ function safeFields(payload) {
  * @param {string} opts.file           JSONL 落盘绝对路径
  * @param {(name:string, cb:Function)=>Function} opts.on  事件订阅（ctx.on 形态，返回 disposer）
  * @param {{warn?:Function}} [opts.logger]
- * @returns {{file:string, dispose:()=>void}}
+ * @returns {{ok:boolean, file:string, error?:string, advice?:string[], dispose:()=>void}}
  */
 export function createAuditSink({ servicePrefix, file, on, logger = console }) {
-  mkdirSync(dirname(file), { recursive: true })
+  // H1（债务 D-11 失效模式①）：装配期建目录**不许裸抛**。修复前这一句没有 try/catch，
+  // 于是"审计落点恰好不可写"会顺着 createToolkitServices → 面板 apply() 一路炸上去，
+  // 整个管理面板装不上（实测形态：宿主以 C:\Windows\System32 为工作目录启动时，
+  // 落点被推导成 C:\Windows\.registry）。审计没落是缺陷，面板装不上是事故。
+  try {
+    mkdirSync(dirname(file), { recursive: true })
+  } catch (error) {
+    const reason = String(error && error.message ? error.message : error)
+    return {
+      ok: false,
+      file,
+      error: reason,
+      advice: [
+        `确认审计落点可写：${file}（当前失败原因：${reason}）`,
+        '临时绕行：给 toolkit-manager 行 config.registry.auditFile 填一个绝对可写路径（或 auditLog:false 显式关闭并知晓后果）后重启宿主',
+      ],
+      dispose() {},
+    }
+  }
   const disposers = AUDIT_EVENTS.map((event) =>
     on(`${servicePrefix}/audit:${event}`, (payload) => {
       const line = JSON.stringify({ at: Date.now(), event, ...safeFields(payload) }) + '\n'
@@ -50,6 +68,7 @@ export function createAuditSink({ servicePrefix, file, on, logger = console }) {
   )
   let disposed = false
   return {
+    ok: true,
     file,
     dispose() {
       if (disposed) return

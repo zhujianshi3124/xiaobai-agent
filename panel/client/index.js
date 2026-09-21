@@ -1654,7 +1654,7 @@ window.__ModuleLoader__.load({
 			return /^[a-zA-Z]:[\\/]/.test(p) || /^[\\/]{2}/.test(p) || /^\//.test(p);
 		}
 		var V2_EVENT_NAMES = ["plugin-added", "plugin-removed", "status-changed", "health-changed", "issue-found",
-			"audit:installed", "audit:removed", "audit:enabled", "audit:disabled", "audit:reloaded", "audit:quarantined", "audit:config-changed"];
+			"audit:installed", "audit:removed", "audit:enabled", "audit:disabled", "audit:reloaded", "audit:quarantined", "audit:config-changed", "audit:state-save-failed"];
 
 		function v2Api(path, body) {
 			return fetch(V2_API + path, {
@@ -1892,7 +1892,10 @@ window.__ModuleLoader__.load({
 					p.legacy ? react.createElement("span", { style: { fontSize: "11px", border: "1px solid #b5890088", borderRadius: "4px", padding: "0 4px", color: "#8a6d00" } }, "legacy 模式") : null),
 				react.createElement("div", { style: { fontSize: "12px", color: "#777" } }, p.id),
 				react.createElement("div", { style: { fontSize: "13px" } },
-					react.createElement("b", { style: { color: p.status === "active" ? "#1a7f37" : (p.status === "error" || p.status === "quarantined") ? "#cf222e" : "#586069" } }, p.status),
+					// H1（D-11）：persisted===false 表示这条只在内存里、没落到 state.json。
+					// 此时不许再报成绿的"active"——黄字 + "未落盘（重启会丢）"，原因在上方横幅里。
+					react.createElement("b", { style: { color: p.status === "active" ? (p.persisted === false ? "#b58900" : "#1a7f37") : (p.status === "error" || p.status === "quarantined") ? "#cf222e" : "#586069" } },
+						p.status + (p.persisted === false ? " · 未落盘（重启会丢）" : "")),
 					"　", healthLine),
 				p.lastError ? react.createElement("div", { style: { fontSize: "12px", color: "#cf222e" } }, "最近错误 ", react.createElement("b", null, p.lastError.code), "：", p.lastError.message) : null,
 				react.createElement("div", { style: { margin: "6px 0" } },
@@ -1908,6 +1911,23 @@ window.__ModuleLoader__.load({
 					react.createElement("button", { onClick: toggleHealth }, "健康详情"),
 					react.createElement("button", { onClick: openConfig }, "配置")),
 				confirmBox, healthDetail, configDetail);
+		}
+
+		// H1（债务 D-11 可见化）：状态/审计没真落盘时在管理区顶部如实申报。
+		// 数据源只有 /v2/snapshot.durability（面板不自己探盘——状态源唯一，与 D-8 同口径）。
+		function durabilityBanner(snap) {
+			var d = snap && snap.durability;
+			if (!d) return null;
+			var bad = [];
+			if (d.state && d.state.ok === false) bad.push({ what: "安装记录（state.json）", file: d.state.path || d.state.file, why: d.state.error, advice: d.state.advice });
+			if (d.audit && d.audit.ok === false) bad.push({ what: "审计流水（audit.jsonl）", file: d.audit.file, why: d.audit.error, advice: d.audit.advice });
+			if (bad.length === 0) return null;
+			return react.createElement("div", { style: { border: "1px solid #cf222e88", background: "#cf222e12", color: "#820d16", padding: "6px 10px", borderRadius: "6px", margin: "6px 0", fontSize: "13px" } },
+				bad.map(function (b) {
+					return react.createElement("div", { key: b.what },
+						react.createElement("b", null, "⚠ " + b.what + " 没有落盘"), "：", String(b.why || "落点不可写"), "（落点 ", String(b.file || "?"), "）",
+						b.advice && b.advice.length ? react.createElement("ul", { style: { margin: "4px 0 0 18px", padding: 0 } }, b.advice.map(function (s, i) { return react.createElement("li", { key: i }, s); })) : null);
+				}));
 		}
 
 		// ── P6 归一：registry 管理区（原 v2 标签页 RegistryTab）并入唯一 toolkit-panel 标签页 ──
@@ -2028,6 +2048,7 @@ window.__ModuleLoader__.load({
 							}).catch(function (error) { setMsg({ ok: false, code: error.code || "error", error: error.error || String(error) }); });
 					} }, "① 预检")),
 				wizardBox),
+				durabilityBanner(snapshot),
 				snapshot.plugins.length === 0 ? react.createElement("div", { style: { color: "#888", fontSize: "13px" } }, "暂无已注册插件——用上方向导装入第一个。") :
 					snapshot.plugins.map(function (p) {
 						return react.createElement(RegistryPluginCard, { key: p.id, plugin: p, onChanged: reload, onError: function (result) { setMsg({ ok: false, code: result.code || result.error?.code || "error", error: result.error || result.message || String(result) }); } });
