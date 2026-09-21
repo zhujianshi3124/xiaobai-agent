@@ -20,6 +20,7 @@ export type {
   RegistryStateFile,
   PersistedPlugin,
   ResolvedPlugin,
+  EntrySource,
   HostContext,
   FiberLike,
   RegistryLogger,

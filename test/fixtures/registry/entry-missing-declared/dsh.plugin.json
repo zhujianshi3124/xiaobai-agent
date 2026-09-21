@@ -1,0 +1,12 @@
+{
+  "id": "fixture/entry-missing-declared",
+  "displayName": "声明指向不存在文件（同步缺陷夹具）",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "requirements": {
+    "node": ">=20",
+    "exports": {
+      ".": "./declared-but-absent.js"
+    }
+  }
+}

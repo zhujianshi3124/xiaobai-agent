@@ -382,6 +382,7 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
       } catch (error) {
         return { ok: false, precheck: this.loadFailureReport(error) }
       }
+      this.logEntryWarnings(resolved)
 
       // 2. 预检：注入实现（P3 doctor）优先，缺省用内置契约级预检。
       const precheck: PrecheckReport = this.opts.precheck
@@ -460,6 +461,23 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
           },
         ]
     return { pass: false, blocking, warnings: [], changes: [], legacyMode: false }
+  }
+
+  /**
+   * 装载器告警落日志（D-7 三级解析：legacy 入口位置、与正典重复而被忽略的声明）。
+   * loader 本身保持纯解析（可单测、可被 doctor.precheck 直接调用而不产生日志副作用），
+   * 所以告警随 ResolvedPlugin 带出来，在这里经 A1 同款 warn 通道落盘——不静默丢弃。
+   */
+  private logEntryWarnings(resolved: ResolvedPlugin): void {
+    for (const message of resolved.entryWarnings) {
+      this.log.warn(message, {
+        pluginId: resolved.manifest.id,
+        event: 'entry-declaration',
+        durationMs: 0,
+        errorCode: 'legacy-entry-declaration',
+        message,
+      })
+    }
   }
 
   // ── 装入 / 卸出（REQ-6 错误隔离核心）────────────────────────────────────
@@ -637,6 +655,7 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
           entry.manifest = resolved.manifest
           entry.legacy = resolved.legacy
           entry.pluginObject = resolved.plugin
+          this.logEntryWarnings(resolved)
         } catch (resolveError) {
           const e = errorOf(resolveError)
           entry.lastError = { ...e, at: Date.now() }
