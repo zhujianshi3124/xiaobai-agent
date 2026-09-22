@@ -54,7 +54,11 @@ export interface ManifestRequirements {
   /** DSH 运行时版本范围，如 ">=0.1.2-rc.1 <0.2.0"。 */
   dshRuntime?: string
   node?: string
-  /** 依赖的 cordis 服务名（inject 面）。 */
+  /**
+   * 依赖的 cordis 服务名（**纯依赖面**）。它不桥接 cordis 的 `inject`（门控只认模块导出的 `inject`），
+   * 也**不是提供面**——"本插件注册了什么"由 `provides` 承载（契约 v1.1；见 docs/contract.md §2.1 与
+   * docs/contract-v1.1-recon.md §5 P0-2）。
+   */
   services?: string[]
   /** 依赖的其他子插件 id（全局唯一 id，非路径）。 */
   subPlugins?: string[]
@@ -85,6 +89,18 @@ export interface HealthCheckCtx {
  * 子插件契约 manifest。字段语义见规格 §4；与规格的偏差（已裁决允许的微调）：
  * `requires` 整体可选（零需求的插件不必写空对象），其余字段名未变。
  */
+/**
+ * 提供面（契约 v1.1 新增，C-1 第 1 项）：本插件**注册进环境**的东西。
+ * 与 `requires` 严格分向——`requires.services` 是"我要用的"，`provides.services` 是"我登记的"。
+ * 事件的订阅面不在这里：它留在 legacy `requirements.registers.events`（2026-09-22 裁定采甲，
+ * 本仓无事件发出方 ⇒ `provides` 不设 events 槽；见 docs/contract.md §2.1 末）。
+ */
+export interface ManifestProvides {
+  services?: string[]
+  commands?: string[]
+  providers?: string[]
+}
+
 export interface DshSubPluginManifest {
   /** 全局唯一，命名空间式 `<scope>/<name>`，如 `dsh/rate-throttle`。 */
   id: string
@@ -94,6 +110,8 @@ export interface DshSubPluginManifest {
   /** 兼容的契约版本范围，如 "^1.0"。 */
   contract: string
   requires?: ManifestRequirements
+  /** 本插件的提供面（注册进环境的服务/命令/实现）。缺席 = 未申报提供面。 */
+  provides?: ManifestProvides
   /** 沿用项目现有 Schema 体系（schemastery）；面板据此自动生成配置表单（REQ-5）。 */
   configSchema?: unknown
   panels?: PanelDescriptor[]
