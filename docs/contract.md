@@ -26,7 +26,7 @@
 | `requires` | ⬜ | 对象；子域见 §2.1。整体可缺席（零需求的插件不必写空对象——**对规格的一处放宽**） |
 | `configSchema` | ⬜ | Schema 对象或构造函数；JSON 落盘时是 schemastery 纯定义（§5） |
 | `panels` | ⬜ | 数组，每项必须有非空 `id`（`PanelDescriptor`，其余键开放）。**当前无任何消费者**：面板只把 `entry.manifest.panels` 原样透传（`panel/manager/v2-api.mjs` 的 `panels:` 一行），宿主也不认它（§7 D-8 与 `docs/embed-toolkit.md` §5 第 1 条）；它是"呈现面声明"，不是"提供面" |
-| `healthCheck` | ⬜ | **只能是函数**，因此只能由模块导出携带；JSON 里出现即 error。【批 3 落地，当前装载器不绑定它 ⇒ 写了不跑】见 §7 D-9 |
+| `healthCheck` | ⬜ | **只能是函数**，因此只能由模块导出携带；JSON 里出现即 error。**契约 v1.1 批 3 已接通写方**：装载器把模块导出的它绑进 manifest（契约分支与 legacy 分支都绑，先读插件对象再读模块命名空间），体检读的就是这一份 ⇒ 写了会跑。见 §7 D-9 |
 | `provides` | ⬜ | **提供面（契约 v1.1 批 2 已落地）**：`{services?, commands?, providers?}` 三槽，每槽为可选的**非空字符串数组**；未知子键与拼错槽位名一律 error（与"未知顶层字段=error"同口径，`events` 尤甚——它不属提供面，见 §2.1 末）。装载侧 `extractRegisters` **逐槽优先读 `provides`**，缺席才回落到 legacy `requirements.registers.*`（回落属迁移期行为，数据正源待批 10） |
 
 **未知顶层字段 = error**（拼错字段名会静默失效，故拒绝）。迁移期容忍的旧字段清单是封闭的：
@@ -230,7 +230,7 @@ schemastery 重建后校验；④ `{uid,refs}` toJSON 形态 → 重建后校验
 | D-6 | 审计事件名手工拼装（见 §3 末） | 债务 #11b。**2026-09-20 裁定"不单独修、并入契约 v1.1 第 2 项"；2026-09-22 审定后列入 v1.1 排期（批 9）**。此前状态栏一直写"未清偿，交用户复核"，与台账不符 |
 | D-7 | **入口声明的必填性归独立 doctor，不归本契约**：本契约不定义"manifest 必须携带入口声明"，只定义解析行为（§4） | 2026-09-22 裁定（C-1 必答设计题第 2 条）：采"契约管解析行为、doctor 管必填性"；`projects/doctor/src/engine.mjs` 的 `REQUIREMENT_KEYS` 与 `buildExportTargetIssues` 是必填性正源。v1.2 若撤根字段必填须连带处理"键集校验静默空转"（`docs/debt.md` C-2 前置 1） |
 | D-8 | `panels` 是契约字段但**无装配消费者**：宿主不认（`dsh-web-all` 不读），本仓只把它原样透传给面板数据面 | `docs/embed-toolkit.md` §5 第 1 条 + `panel/manager/v2-api.mjs` 的 `panels` 透传行；桶根 manifest 那份 `toolkit-panel` 描述符因此是**自述性数据**，不驱动布局 |
-| D-9 | **`healthCheck` 读方已在、写方从未存在**：体检与快照读 `manifest.healthCheck`，但装载器不绑定模块导出的它（其静态面白名单只有 `name/inject/Config/configSchema/provide/intercept` 六键）⇒ 作者按 §2/§7 D-4 写了不会跑 | 2026-09-22 审定 ★2 定稿=**改代码**，批 3 落地。落地前的事实：本仓**没有任何模块导出 `healthCheck`**（`index.js`/`lib/*`/`panel/` 全量 grep 零命中）⇒ 绑定接通后内置插件的"突然生效面"为 0，只影响第三方契约插件 |
+| D-9 | **`healthCheck` 读方已在、写方从未存在**：体检与快照读 `manifest.healthCheck`，但装载器不绑定模块导出的它（其静态面白名单只有 `name/inject/Config/configSchema/provide/intercept` 六键）⇒ 作者按 §2/§7 D-4 写了不会跑 | 2026-09-22 审定 ★2 定稿=**改代码**，批 3 落地。落地前的事实：本仓**没有任何模块导出 `healthCheck`**（`index.js`/`lib/*`/`panel/` 全量 grep 零命中）⇒ 绑定接通后内置插件的"突然生效面"为 0，只影响第三方契约插件。**【批 3 已落地】**：写方由 `registry/src/loader.ts` 的 `bindRuntimeStatics` 接上（两条装载分支都绑），真装载链用例 `test/doctor.test.mjs` 的"批 3-①/②"钉住"模块那份能被体检读到"与"函数不落盘、不炸盘"；摘掉绑定调用即翻红。**批 3 复核维持**：全仓（排除 `test/` 与 `dist/`）仍无任何模块导出 `healthCheck`/`panels` ⇒ 内置行为零变化 |
 | D-10 | **契约缺"提供面"字段导致 `requires.services` 被借用**：`extractRegisters` 把依赖面归一进注册面、冲突检查据此比对 ⇒ 共同依赖同服务会被阻断（假阳性已实测） | 2026-09-22 裁定：C-1 第 1 项 `provides` 落地即修（批 2），并须带对偶用例"共同依赖不判撞名"。成因与为何长期潜伏（内置全用 legacy `requirements.registers`、桶根只走宿主通道）见 `docs/contract-v1.1-recon.md` §5.2 P0-2。**【批 2 已清偿行为半边】**：`provides` 三槽进类型与校验、`extractRegisters` 逐槽优先读它、`doctor/src/doctor.ts` 撞名比对的**两处**借用点（本插件侧与对方侧）同日断掉；对偶用例在 `test/doctor.test.mjs` 的"批 2-②"。**数据半边未动**——内置 7 份仍无 `provides`，桶根的倒置留批 10 纠正（实测读数见 recon §10.3 批 2 段） |
 | D-11 | **scoped 包不能走 legacy**：合成 id 只在包名不含 `/` 时加 `legacy/` 前缀；`@scope/name` 原样沿用 ⇒ 被命名空间式小写规则拒绝（`@` 不合法） | 债务 D-15 的文案修复（`e80caea`）：报错点名真实成因。§8 那句"合成的 id 落 `legacy/<name>`"须带此条件；`docs/add-sub-plugin.md` §1 已按此写 |
 | D-12 | **§5 那句"以模块导出为准"当前与实现相反**（实现是 manifest 落盘那份赢） | 2026-09-22 审定 ★3 定稿=**改代码**（批 4），故本文**保留承诺句不改为附和现状**；实现跟上前的实际行为以本行为准，勿据 §5 那一句判断当前行为 |
