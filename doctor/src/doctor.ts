@@ -238,10 +238,13 @@ export class DoctorService implements ToolkitDoctor {
     }
 
     // 4. configSchema 对默认配置真校验（REQ-3 §11，债务 #2）：
-    //    schema 优先级 = manifest.configSchema → 模块 Config/configSchema 导出。
-    const schemaCandidate = manifest.configSchema
-      ?? ((resolved.plugin ?? {}) as Record<string, unknown>)['Config']
-      ?? ((resolved.plugin ?? {}) as Record<string, unknown>)['configSchema']
+    //    schema 优先级 = **模块 Config/configSchema 导出 → manifest.configSchema**
+    //    （契约 v1.1 批 4 · ★3：两处都在时模块赢；loader 已把模块值写进 manifest，这里同序是为
+    //    绕开装载绑定的路径也保持同一口径，见 contract.md §5 与 §7 D-12）。
+    const pluginLike = (resolved.plugin ?? {}) as Record<string, unknown>
+    const schemaCandidate = pluginLike['Config']
+      ?? pluginLike['configSchema']
+      ?? manifest.configSchema
     if (schemaCandidate !== undefined) {
       const check = await this.withTimeout(
         validateConfigAgainstSchema(schemaCandidate, {}),

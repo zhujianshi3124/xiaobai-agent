@@ -75,8 +75,9 @@ function extractRegisters(m: Record<string, unknown> | undefined): PluginRegiste
  * default 对象形态下不会出现在 default 上（`mergeNamespaceStatics` 只补 `PLUGIN_STATIC_KEYS` 六键，
  * 不含这两个），只读插件对象就会重蹈"声明了却读不到"的同一个洞（B2 的教训形）。
  *
- * 只补位、不覆盖：`healthCheck` 只能是函数 ⇒ JSON 落盘的 manifest 那份恒为缺席；`panels` 两处都在时
- * **维持现状（落盘那份赢）**——双在场的优先级属 ★3 同族问题，正由批 4 定案，本批不预判。
+ * 优先级：`healthCheck` 只能是函数 ⇒ JSON 落盘那份恒缺席，绑定必然是补位；
+ * `panels` 两处都在时**模块导出赢**（契约 v1.1 批 4 与 ★3 同族同向裁定，2026-09-22 批 3 验收令第二节），
+ * 与 `configSchema` 同序、同一批实现。
  */
 function bindRuntimeStatics(manifest: DshSubPluginManifest, pluginLike: unknown, modLike: unknown): void {
   const read = function (key: string): unknown {
@@ -93,11 +94,9 @@ function bindRuntimeStatics(manifest: DshSubPluginManifest, pluginLike: unknown,
       manifest.healthCheck = runtimeHealthCheck as NonNullable<DshSubPluginManifest['healthCheck']>
     }
   }
-  if (manifest.panels === undefined) {
-    const runtimePanels = read('panels')
-    if (Array.isArray(runtimePanels)) {
-      manifest.panels = runtimePanels as NonNullable<DshSubPluginManifest['panels']>
-    }
+  const runtimePanels = read('panels')
+  if (Array.isArray(runtimePanels)) {
+    manifest.panels = runtimePanels as NonNullable<DshSubPluginManifest['panels']>
   }
 }
 
@@ -463,12 +462,16 @@ export async function resolveLocalSource(input: PluginSource): Promise<ResolvedP
       const first = result.errors[0]!
       throw new SourceError('plugin-shape-invalid', `manifest 校验失败 ${manifestPath}:${first.path} ${first.message}`, result.errors)
     }
-    // configSchema 优先用模块导出（函数型 Schema 落不了盘）。
+    // ★3（契约 v1.1 批 4）：configSchema **模块导出赢**——两处都在时用模块那份覆盖落盘那份。
+    // 此前是反的（manifest 有值即不采纳模块值），令 contract.md §5 的承诺句长期失真（D-12），
+    // 可观测后果：web-search-local 生效的是 manifest 的 1 键 schema，不是模块 14 键 Config。
+    // Config / configSchema 都在 PLUGIN_STATIC_KEYS 六键内 ⇒ default 形态下已由
+    // mergeNamespaceStatics 补到插件对象上，故这里读 rec 就够，不需要命名空间回退。
     const rec = (plugin && typeof plugin === 'object' ? plugin : {}) as Record<string, unknown>
     const runtimeSchema = rec['Config'] ?? rec['configSchema']
     const manifest = result.manifest
-    if (runtimeSchema !== undefined && manifest.configSchema === undefined) {
-      manifest.configSchema = runtimeSchema
+    if (runtimeSchema !== undefined) {
+      manifest.configSchema = runtimeSchema as typeof manifest.configSchema
     }
     bindRuntimeStatics(manifest, rec, mod)
     return { manifest, plugin, legacy: false, source: input, entryPath, entrySource, entryWarnings, registers: extractRegisters(manifestRaw) }

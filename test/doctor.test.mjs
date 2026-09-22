@@ -446,3 +446,42 @@ test('批 3-②：JSON 落盘边界——磁盘上两份形态都不含函数，
   rmSync(dir, { recursive: true, force: true })
   await stopAll()
 })
+
+// ── 批 4（★3 优先级 + panels 同族同向）──────────────────────────────────────
+
+test('批 4-①：configSchema 与 panels 双在场 ⇒ 生效的是模块那份（引用相等 + 写回行为双向证明）', async (t) => {
+  const mod = await import('./fixtures/registry/schema-precedence/index.js')
+  const { registry, stopAll } = makeStack(t)
+  const id = 'fixture/schema-precedence'
+  const installed = await registry.install({ kind: 'local', path: fixtureDir('schema-precedence') })
+  assert.equal(installed.ok, true, '双在场夹具应装入: ' + JSON.stringify(installed.ok ? {} : installed.precheck.blocking.map((x) => x.code + ':' + x.message)))
+  const entry = registry.get(id)
+  assert.equal(entry.manifest.configSchema, mod.Config, '内存面 configSchema 必须是模块 Config（引用相等，不是深合并）')
+  assert.deepEqual(entry.manifest.panels.map((p) => p.id), ['from-module'], 'panels 与 configSchema 同序：模块那份赢')
+
+  let acceptedManifestOnly = true
+  try {
+    await registry.setConfig(id, { fromManifest: 'x' })
+  } catch {
+    acceptedManifestOnly = false
+  }
+  assert.equal(acceptedManifestOnly, false,
+    '只满足"落盘那份"的配置必须被拒 ⇒ 若优先级翻回 manifest 赢，这里会误通过（变异自检的抓手）')
+  await registry.setConfig(id, { fromModule: 'ok' })
+  await stopAll()
+})
+
+test('批 4-②：doctor 预检同序——默认配置按**模块** schema 判，缺 fromModule 阻断且点名模块字段', async (t) => {
+  const { registry, doctor, stopAll } = makeStack(t, {
+    registryOpts: { precheck: (source) => doctor.precheck(source) },
+  })
+  const blocked = await registry.install({ kind: 'local', path: fixtureDir('schema-precedence') })
+  assert.equal(blocked.ok, false, '空默认配置不满足模块 Config 的 fromModule 必填 ⇒ 应阻断')
+  if (!blocked.ok) {
+    const issue = blocked.precheck.blocking.find((x) => x.code === 'config-schema-invalid')
+    assert.ok(issue, '阻断码为 config-schema-invalid（既有断言语义未放宽）')
+    assert.match(issue.message, /fromModule/, '点名的是**模块那份**的必填字段，而非落盘的 fromManifest')
+    assert.equal(/fromManifest/.test(issue.message), false, '不得同时把落盘那份的字段算进判据')
+  }
+  await stopAll()
+})

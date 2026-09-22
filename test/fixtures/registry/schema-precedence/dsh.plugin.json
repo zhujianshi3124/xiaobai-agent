@@ -1,0 +1,30 @@
+{
+  "id": "fixture/schema-precedence",
+  "displayName": "configSchema/panels 双在场优先级夹具",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "configSchema": {
+    "uid": 1,
+    "refs": {
+      "0": {
+        "type": "string",
+        "meta": {}
+      },
+      "1": {
+        "type": "object",
+        "meta": {
+          "default": {}
+        },
+        "dict": {
+          "fromManifest": 0
+        }
+      }
+    }
+  },
+  "panels": [
+    {
+      "id": "from-manifest",
+      "title": "落盘那份面板"
+    }
+  ]
+}
