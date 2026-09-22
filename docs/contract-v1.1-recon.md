@@ -366,6 +366,43 @@ schemastery list 正确读法 + 面板测试（`panel-unified` 按 label 定位�
 
 ---
 
+### 10.3 批次执行记录（滚存追加区，一笔一段）
+
+> 口径：本区**只追加不回改**上方计划表与 §9 原文（"错误照录、修订滚存"）；每批记
+> "做了什么 / 实测数字 / 变异证据 / 未做与边界"。计划与现场不符时以本区为准并在段内说明。
+
+**批 1 · doctor 根字段白名单加 `provides`**（施工面在另一仓 `projects/doctor`，本仓纯 docs）
+
+- 笔：doctor `2f12f53`（单父笔、独立可 revert），互引基线 toolkit `af803b2`（批 0）。
+  改动 = `MANIFEST_TOP_KEYS` 补一个键名 + 一行注释，加 `test/run-tests.mjs` 新增 1 例，共 2 文件 `+29/-1`。
+  **零值校验照 `requires`/`panels` 先例（`6839cc1`）**：键名合法性归本 CLI，`provides` 的值语义
+  （`{services?,commands?,providers?}`）留批 2 在 `contract/src/validate.ts` 落 ⇒ 不新增 issue 种类、
+  issue 结构与输出 `schemaVersion` 不变。
+- 实测：doctor 四套件 **15/8/7/21**（`run-tests` 14→15，计划要求的"不降"成立）；真实仓 dry-run
+  `--scope D:/dsh-plugins/dsh-toolkit` ⇒ `issues: 0 (error 0, warning 0, info 0, fixable 0)`、exit 0；
+  本仓门禁动 doctor 后复跑 **5/5**（64.2s，第 3 步即消费改后引擎）。
+- 变异自检：摘掉白名单里的 `'provides'` ⇒ 新用例翻红并报 `"清单根字段非法: provides。"`
+  （`severity=error`、`category=schema`、`fix.class=manual`，与摘前结构一致）；恢复后复跑 15/15。
+  **摘除态真实仓仍 0/0/0** ⇒ 这个键当前对存量 7 份 manifest 零影响，纯为批 2/批 10 预留通道。
+  新用例自带反向钉：同 manifest 再写一个拼错根字段 `provids` 必须**且只**报一条 ⇒ 防白名单退化为放行一切。
+- **还 §9 盲区**：`test/acceptance-stage3.mjs` a–g 七块**全 PASS**（exit 0）。e) 真实影子块跑前/跑后
+  真实 `configRoot` 扫描面 hash 同为 `c585738c646855d4e6745c9e64434899dd75693526f809313002060ebfce0bd9`
+  （5 files）⇒ 真实 `~/.dsh` 零写入；跑后本仓 `git status --porcelain` **空**、HEAD 未变 ⇒ §9 当年按
+  "写仓风险"回避的那个 e) 块，实测路径是**只读真实 scope + 写影子 tmp 目录**（该块唯一 fixable 来自
+  注入到影子 config 的旧名预设；跑前已先实测真实仓 `fixable 0` 作为前置）；d1 的"真实 `~/.dsh` 无 doctor 产物"同轮仍绿。
+  **建议**（未成文、待协调侧裁）：后续批次把 stage3 纳入 doctor 侧常规复跑面；未裁前仍按 §10 各批口径执行。
+- 未做与边界（如实）：未重启宿主、未碰真实引擎配置与 `~/.dsh`（批 1 非真机批，真机窗口仍留批 4/6/8）；
+  `cordis.patch.yml` 判据基准 `e8051fe9` **未动 ⇒ 未变、不滚存**；探针目录 `var/scratch/c1-recon-20260922/`
+  按协调侧令暂留未清。
+- 前置状态：`docs/debt.md` C-1 现状块 ⑤（"分批计划过裁前两仓代码一行不动"）的过裁条件已满足
+  （批 0-11 + 改名批 + 五修正，2026-09-22 协调侧过裁令）⇒ 本批为该裁定之后的**首笔动代码**，
+  debt.md 原文按"错误照录"未改写，状态以本区为准。
+- 连带事实（供后续批引用）：本仓门禁第 3 步经 `DOCTOR_CLI`（缺省 `D:/dsh-test-sandbox/projects/doctor/src/cli.mjs`）
+  直读 doctor 源码 ⇒ doctor 的任何改动都被本仓门禁每轮复跑覆盖，故两仓任一笔动完须复跑门禁 5/5。
+  本区引用为**函数/键名定位**，未写行号（§11 首条规矩）。
+
+---
+
 ## 11. 边界、错账与探针清单
 
 - **本文自身也是文档**：其中的 `file:line` 同样会漂。仓库既有口径 `add-sub-plugin.md` §1「按函数名找，
