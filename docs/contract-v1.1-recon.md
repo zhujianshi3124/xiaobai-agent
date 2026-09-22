@@ -282,6 +282,9 @@
 
 B 需要两处新裁定（执行侧不自裁）：
 1. **`events` 槽位无家可归**：草案的 `provides = {services?, commands?, providers?}` **没有 `events`**，但 5/5 lib manifest 都带 `requirements.registers.events`（agent-memory 7 条、rate-throttle 4 条），且面板技术详情在展示它。三选一：① `provides` 增 `events?`；② 保留一个 `subscribes`/`events` 平级字段；③ 从面板移除该展示。**建议 ① 或 ②，因为它同时消掉一处"契约无表达"的同类缺口。**
+  【**裁定 23 的批 2 前置实测已回，见 §10.4**：11 条声明**全部是监听面**、生产代码**零发出**、混合 0 样本
+  ⇒ ① 不采（`provides` 按定稿三槽，不加 `events`，否则成空壳字段）；③ 本就不采纳；余下唯一待裁的是
+  这 11 条的家在 `requires.events`（甲，零 doctor 改动）还是新根字段 `subscribes`（乙，须再一笔白名单）。】
 2. **`inject` 键名**：面板技术详情的 `inject` 取自 `requirements.registers.inject`（依赖面）。v1.1 正确语义下它对应契约的 `requires.services`。若一并改名，`p1-smoke:337` 的字符串在场断言（`["managedBy","inject","services","commands"]`）要跟着翻；若不改名，则输出面同时存在 `inject`（依赖）与 `provides`（提供）——反而更清楚。**建议不改 `inject` 名，只改数据来源。**
 
 **须更新的断言清单（请批准这三处，其余 311 条不动）**：`p1-smoke.mjs:295`（5 卡计数，仅当输出形状变才动）、`:337`（字段名字符串）、`:305`（doctor 0/0/0 —— 这条属批次序问题非改名问题，见 §9）。
@@ -440,6 +443,48 @@ schemastery list 正确读法 + 面板测试（`panel-unified` 按 label 定位�
   `versionSatisfies('1.1.0','^1.1')=true`（常量现值实测 `1.0.0`）⇒ 与 §10 批 11 行那句"对偶已备"吻合，
   且"勿提前写 `^1.1`"的红线得证；
   ⑥ 文档字样面（`docs/` 6 个文件 + `CHANGELOG.md` 命中 `1.0.0`/常量名）**未逐条判定**，留批 11 动工时按本清单收。
+
+---
+
+### 10.4 批 2 前置实测：`events` 槽位判定（裁定 23 要求的先测后动）
+
+判据（协调侧裁定 23）：逐条判"发出 → `provides.events` / 监听 → `subscribes` / 混合 → 上报"；
+"从面板撤展示"（§8.4 的 ③）**不采纳**。探针：`var/scratch/c1-batch2-20260922/probe-events-face.mjs`（只读、可复放）。
+
+**净账：声明 11 条，监听 11 条，发出 0 条，混合 0 条，"监听了但没声明"的缺口 0 条。**
+
+| 单元 | `registers.events` 声明 | 该单元 `ctx.on` 实况 | 逐条判定 |
+|---|---|---|---|
+| `toolkit:lib/agent-memory` | 7 | 7（`plugin.js` 七处，与声明 1:1） | **全为监听** |
+| `toolkit:lib/rate-throttle` | 4 | 4（`index.js` 四处，与声明 1:1） | **全为监听** |
+| `lib/compact-router`、`lib/search-router`、`lib/web-search-local`、桶根、`panel/` | 各 0（键在、值为空数组） | 各 0 cordis 信道监听 | 无声明可判 |
+
+承重证据两条：
+1. **生产面零发出者**：全仓 `*.emit('字面量')` 调用点只出现在 `test/agent-memory.test.mjs`（测试自建事件源）、
+   `test/registry.test.mjs`（`fixture/event`）与 `scripts/p24-ui-matrix.mjs`（`data`/`end` 是流事件）
+   ⇒ `lib/`、`registry/`、`contract/`、`doctor/` **无一 emit 任何契约事件** ⇒ 这 11 条事件的发出方是宿主，
+   本仓插件只是消费者 ⇒ "混合"类无样本，裁定 23 的上报分支不触发。
+2. **首版探针的假阳性已纠正（防再犯，按"错账必录方法盲区"办）**：用裸 `.on(` 判监听面会把
+   Node 流/Socket 的 `data`/`end`/`error`/`connect`/`close` 一并计入库面（误读为 panel 4 处、
+   `web-search-local` 4 处）；实测共 **21 处**，逐处定位于
+   `toolkit:panel/index.js`（`request.on(...)`）与 `toolkit:lib/web-search-local/index.js`
+   （`sock.on(...)` / `res.on(...)`）。判 cordis 信道**必须锚 `ctx.on`**，否则结论反向。
+
+**对批 2 的结论（不阻塞）**：`provides` 按定稿三槽 `{services?, commands?, providers?}` 落地，
+**不加 `events` 槽位**。理由：实测本仓零发出者 ⇒ `provides.events` 会是一个"文档写到、仓内无生产者
+无消费者"的空壳字段，正撞 P2-11 点名的 `fix.docsUrl` 同类失真，与用户标准（"文档写到的全部正常实现"）相反。
+
+**遗留待裁（阻塞 B 案改名与批 10 数据落地，不阻塞批 2）**：这 11 条监听声明要有家，两条路成本不等——
+
+| 方案 | 承载处 | 语义 | 跨仓成本（实测） |
+|---|---|---|---|
+| 甲（**建议**） | `requires.events` | 与 `requires.services` 同族，都是"本插件对环境的依赖"；事件由宿主发出，本插件消费 ⇒ 归依赖面为真 | **零 doctor 改动**：doctor 对本仓 `requires` 只放行键名、不校验值（实测 `doctor仓:src/engine.mjs` 无 `parsed.requires` 任何分支；`6839cc1` 自述"值语义归契约层"），且其撞名循环只跑 `services/commands/providers` 三类，`events` 今天就不参与 |
+| 乙 | 新根字段 `subscribes` | 监听面独立成字段，读起来最贴合裁定 23 的字面 | **须再来一笔 doctor 白名单**（与批 1 同型：不放行即判"清单根字段非法"），并把"依赖宿主哪些事件"从 `requires` 拆成两处 |
+
+执行侧不自裁此项：它改的是契约字段表（承诺面）。裁定 23 那句"监听→`subscribes`"是在
+"provides 要不要 events 槽"这一问句下给的**分类法**，是否为此新建根字段属新决策。
+若采甲，连带影响：§8.4 的 B 案输出面须把 `snapshot.mjs` 的 `registers.events` 改挂到依赖面语义，
+`p1-smoke` 的字段名在场断言随之翻面（该条已在 §8.4"须批准三处断言"清单内，非新增）。
 
 ---
 
