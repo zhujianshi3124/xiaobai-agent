@@ -1,0 +1,11 @@
+{
+  "id": "fixture/requires-twin-a",
+  "displayName": "共同依赖夹具 A（依赖容器内真实存在的服务）",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "requires": {
+    "services": [
+      "toolkit/registry"
+    ]
+  }
+}

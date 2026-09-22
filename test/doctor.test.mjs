@@ -339,6 +339,31 @@ test('P5-#2：configSchema 真校验——必填缺失 → 安装阻断并列出
   await stopAll()
 })
 
+test('批 2-②：对偶——两插件共同依赖同一服务（只写 requires.services）不得判撞名（P0-2 假阳性回归钉）', async (t) => {
+  // 依赖名取容器里**真实存在**的 `toolkit/registry`（createRegistry 注册的服务）：
+  // 这样 service-missing（error）不会因别的原因阻断，用例只测"共同依赖会不会被判冲突"这一件事。
+  // 借用未断时（把 doctor.ts 的 ownServices/otherServices 改回 requires.services）本用例必红。
+  const { registry, doctor, stopAll } = makeStack(t, {
+    registryOpts: { precheck: (source) => doctor.precheck(source) },
+  })
+  const a = await registry.install({ kind: 'local', path: fixtureDir('requires-twin-a') })
+  assert.equal(a.ok, true, '第一个依赖者安装成功: ' + JSON.stringify(a.ok ? {} : a.precheck.blocking.map((x) => x.code + ':' + x.message)))
+  const b = await registry.install({ kind: 'local', path: fixtureDir('requires-twin-b') })
+  const blocking = b.ok ? [] : b.precheck.blocking.map((x) => x.code + ':' + x.message)
+  assert.ok(!blocking.some((x) => x.startsWith('reg.name-collision')), '回归钉：requires.services 不再被借用为提供面 ⇒ 共同依赖不判冲突。实际=' + JSON.stringify(blocking))
+  assert.equal(b.ok, true, '第二个依赖者应照常安装。实际=' + JSON.stringify(blocking))
+  await stopAll()
+})
+
+test('批 2-③：provides 与旧 registers 双在场 ⇒ 逐槽 provides 赢（优先读，不是拼合）', async (t) => {
+  const { registry, stopAll } = makeStack(t)
+  const r = await registry.install({ kind: 'local', path: fixtureDir('provides-precedence') })
+  assert.equal(r.ok, true, '双在场夹具应装入成功: ' + JSON.stringify(r.ok ? {} : r.precheck.blocking.map((x) => x.code)))
+  const regs = registry.registersOf('fixture/provides-precedence')
+  assert.deepEqual(regs?.commands, ['fixture.from-provides'], 'commands 槽取 provides 那份（旧 registers 那份被覆盖而非并存）')
+  await stopAll()
+})
+
 test('P5-#3：注册冲突——同 commands 注册面的第二个插件被 reg.name-collision 阻断', async (t) => {
   const { registry, doctor, stopAll } = makeStack(t, {
     registryOpts: { precheck: (source) => doctor.precheck(source) },
@@ -351,6 +376,23 @@ test('P5-#3：注册冲突——同 commands 注册面的第二个插件被 reg.
     const issue = b.precheck.blocking.find((x) => x.code === 'reg.name-collision')
     assert.ok(issue, '第二个被 reg.name-collision 阻断')
     assert.match(issue.message, /fixture\.shared-cmd/)
+  }
+  await stopAll()
+})
+
+test('批 2-①：provides 撞名——同 provides.services 的第二个插件被 reg.name-collision 阻断（提供面正源已切到 provides）', async (t) => {
+  const { registry, doctor, stopAll } = makeStack(t, {
+    registryOpts: { precheck: (source) => doctor.precheck(source) },
+  })
+  const a = await registry.install({ kind: 'local', path: fixtureDir('provides-a') })
+  assert.equal(a.ok, true, '第一个登记该服务的插件安装成功: ' + JSON.stringify(a.ok ? {} : a.precheck.blocking.map((x) => x.code + ':' + x.message)))
+  const b = await registry.install({ kind: 'local', path: fixtureDir('provides-b') })
+  const detail = b.ok ? [] : b.precheck.blocking.map((x) => x.code + ':' + x.message)
+  assert.equal(b.ok, false, 'provides.services 撞名须被阻断（不写进 legacy registers 也要拦）。实际=' + JSON.stringify(detail))
+  if (!b.ok) {
+    const issue = b.precheck.blocking.find((x) => x.code === 'reg.name-collision')
+    assert.ok(issue, '阻断码为 reg.name-collision，且来源是 provides 槽')
+    assert.match(issue.message, /服务 fixture\.shared-svc/)
   }
   await stopAll()
 })

@@ -1,0 +1,11 @@
+{
+  "id": "fixture/provides-b",
+  "displayName": "提供面撞名夹具 B",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "provides": {
+    "services": [
+      "fixture.shared-svc"
+    ]
+  }
+}

@@ -14,6 +14,7 @@ export type {
   ManifestFsPath,
   ManifestExternalApi,
   ManifestRequirements,
+  ManifestProvides,
   PanelDescriptor,
   HealthCheckCtx,
   DshSubPluginManifest,

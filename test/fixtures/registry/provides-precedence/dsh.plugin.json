@@ -1,0 +1,30 @@
+{
+  "id": "fixture/provides-precedence",
+  "displayName": "提供面双在场夹具（provides 优先）",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "provides": {
+    "commands": [
+      "fixture.from-provides"
+    ]
+  },
+  "requirements": {
+    "runtime": {
+      "node": ">=20"
+    },
+    "binaries": [],
+    "packages": {},
+    "registers": {
+      "inject": [],
+      "events": [],
+      "services": [],
+      "commands": [
+        "fixture.from-legacy"
+      ],
+      "providers": []
+    },
+    "exports": {
+      ".": "./index.js"
+    }
+  }
+}

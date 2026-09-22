@@ -37,17 +37,26 @@ import { validateManifest } from '@local/dsh-toolkit/contract'
 import type { DshSubPluginManifest, ManifestIssue, PluginSource } from '@local/dsh-toolkit/contract'
 import type { EntrySource, PluginRegisters, ResolvedPlugin } from './types.js'
 
-/** 归一提取注册面：新契约 requires.services + 旧 requirements.registers.{services,commands,providers}。 */
+/**
+ * 归一提取**提供面**：逐槽优先读新契约 `provides.{services,commands,providers}`，缺席才回落到
+ * 旧 `requirements.registers.*`（回落属迁移期行为，正源在批 10 的数据落地）。
+ * `requires.services` 是**纯依赖面**，不再被借用为提供面 —— 借用会让"共同依赖同一服务"的第二个插件
+ * 被 `reg.name-collision` 误阻断（契约 v1.1 的 P0-2 假阳性，实证见 docs/contract-v1.1-recon.md §7）。
+ */
 function extractRegisters(m: Record<string, unknown> | undefined): PluginRegisters | undefined {
   if (!m) return undefined
-  const requires = m['requires'] as Record<string, unknown> | undefined
-  const contractServices = Array.isArray(requires?.['services']) ? (requires!['services'] as string[]) : undefined
+  const provides = m['provides'] as Record<string, unknown> | undefined
   const legacyRequirements = m['requirements'] as Record<string, unknown> | undefined
   const legacyRegisters = legacyRequirements?.['registers'] as Record<string, unknown> | undefined
-  const legacyServices = legacyRegisters && Array.isArray(legacyRegisters['services']) ? (legacyRegisters['services'] as string[]) : undefined
-  const commands = legacyRegisters && Array.isArray(legacyRegisters['commands']) ? (legacyRegisters['commands'] as string[]) : undefined
-  const providers = legacyRegisters && Array.isArray(legacyRegisters['providers']) ? (legacyRegisters['providers'] as string[]) : undefined
-  const services = contractServices ?? legacyServices
+  const pickSlot = function (slot: 'services' | 'commands' | 'providers'): string[] | undefined {
+    const fromProvides = provides?.[slot]
+    if (Array.isArray(fromProvides)) return fromProvides as string[]
+    const fromLegacy = legacyRegisters?.[slot]
+    return Array.isArray(fromLegacy) ? (fromLegacy as string[]) : undefined
+  }
+  const services = pickSlot('services')
+  const commands = pickSlot('commands')
+  const providers = pickSlot('providers')
   if (!services && !commands && !providers) return undefined
   return {
     ...(services ? { services } : {}),

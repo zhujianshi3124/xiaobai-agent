@@ -270,13 +270,15 @@ export class DoctorService implements ToolkitDoctor {
     }
 
     // 5. 注册冲突（债务 #3 进程内部分）：与已注册条目的 commands/providers/services 撞名。
+    //    比对源只取**提供面**（loader 的 extractRegisters 已按 provides 优先归一）；`requires.services`
+    //    是依赖面，曾在此被借用为提供面 ⇒ "共同依赖同一服务"的第二个插件被误阻断（P0-2，2026-09-22 了断）。
     if (this.registry) {
       const own = resolved.registers
-      const ownServices = manifest.requires?.services ?? []
+      const ownServices = own?.services ?? []
       for (const entry of this.registry.list()) {
         if (entry.manifest.id === manifest.id) continue
         const other = this.registry.registersOf?.(entry.manifest.id)
-        const otherServices = (other?.services ?? entry.manifest.requires?.services ?? [])
+        const otherServices = other?.services ?? []
         const conflicts: string[] = []
         for (const c of own?.commands ?? []) {
           if (other?.commands?.includes(c)) conflicts.push(`命令 ${c}`)
@@ -294,7 +296,7 @@ export class DoctorService implements ToolkitDoctor {
             message: `与已注册插件 "${entry.manifest.id}" 注册面冲突：${conflicts.join('、')}`,
             fix: {
               summary: '改注册名或先卸载冲突插件',
-              steps: ['修改本插件 manifest 的 registers 声明，或在面板卸载占用同名注册面的插件'],
+              steps: ['修改本插件 manifest 的 provides（迁移期旧字段为 requirements.registers）声明，或在面板卸载占用同名注册面的插件'],
             },
           })
         }

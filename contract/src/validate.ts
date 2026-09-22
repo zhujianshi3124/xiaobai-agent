@@ -49,10 +49,14 @@ const KNOWN_CONTRACT_FIELDS = new Set([
   'version',
   'contract',
   'requires',
+  'provides',
   'configSchema',
   'panels',
   'healthCheck',
 ])
+
+/** `provides` 的封闭三槽（契约 v1.1 定稿；events 故意不在内，见 docs/contract.md §2.1 末）。 */
+const PROVIDES_SLOTS = ['services', 'commands', 'providers'] as const
 
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}\/[a-z0-9][a-z0-9-]{0,63}$/
 const ENV_KEY_RE = /^[A-Za-z_][A-Za-z0-9_]*$/
@@ -147,6 +151,48 @@ export function validateManifest(input: unknown): ManifestValidation {
       validateRequirements(requires, errors)
     } else {
       errors.push(issue('requires', 'type', 'error', 'requires 必须是对象', 'object', requires))
+    }
+  }
+
+  // provides：提供面（契约 v1.1 · C-1 第 1 项）。三槽皆可选的非空字符串数组；
+  // 未知子键与顶层未知字段同口径拒绝——拼错槽位名会静默失效（不设"容忍多余键"的口子）。
+  const provides = input['provides']
+  if (provides !== undefined) {
+    if (!isObject(provides)) {
+      errors.push(issue('provides', 'type', 'error', 'provides 必须是对象（{services?, commands?, providers?}）', 'object', provides))
+    } else {
+      for (const slot of PROVIDES_SLOTS) {
+        const list = provides[slot]
+        if (list === undefined) continue
+        if (!Array.isArray(list)) {
+          errors.push(issue(`provides.${slot}`, 'type', 'error', `provides.${slot} 必须是字符串数组`, 'string[]', list))
+          continue
+        }
+        list.forEach((name: unknown, i: number) => {
+          if (typeof name !== 'string' || name.trim() === '') {
+            errors.push(issue(`provides.${slot}[${i}]`, 'type', 'error', `provides.${slot}[${i}] 必须是非空字符串`, 'string', name))
+          }
+        })
+      }
+      for (const key of Object.keys(provides)) {
+        if ((PROVIDES_SLOTS as readonly string[]).includes(key)) continue
+        if (key === 'events') {
+          errors.push(
+            issue(
+              'provides.events',
+              'unknown-field',
+              'error',
+              'provides 不设 events 槽：事件订阅面写在 `requirements.registers.events`（本仓无事件发出方，2026-09-22 裁定采甲）',
+              'requirements.registers.events',
+              provides['events'],
+            ),
+          )
+          continue
+        }
+        errors.push(
+          issue(`provides.${key}`, 'unknown-field', 'error', `provides 未知子字段 "${key}"（拼错槽位名会静默失效，予以拒绝）`, PROVIDES_SLOTS.join(' | '), key),
+        )
+      }
     }
   }
 
