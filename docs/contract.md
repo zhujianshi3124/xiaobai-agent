@@ -61,6 +61,24 @@ error）⇒ "本仓容忍"与"另一仓必填"并存，正是 `docs/debt.md` C-2
 见 `docs/contract-v1.1-recon.md` §7）。【批 2 随 `provides` 落地一并纠正：提供面改由 `provides` 承载，
 `requires.services` 退回纯依赖面】
 
+**事件订阅面 `requirements.registers.events`（2026-09-22 协调侧裁定采甲：位置不动、语义写清、零迁移）**：
+字符串数组（如 `["session/created", "agent/request"]`），语义＝**本插件订阅（监听）宿主发出的事件**。
+三条边界都有实测（取证 `docs/contract-v1.1-recon.md` §10.4）：
+① 本仓**无一是事件的发出方**——全仓 `*.emit('…')` 只落在 `test/` 与 `scripts/`（自建事件源、Node 流事件），
+`lib/`、`registry/`、`contract/`、`doctor/` 的生产面零 emit ⇒ 发出方是宿主；
+② `provides` **不设** `events` 槽位 ⇒ 零生产者的槽位就是第二处 `fix.docsUrl` 式空壳
+（同类失真见 `docs/contract-v1.1-recon.md` §5 的 P2-11，与本契约"文档写到的须真在运行"的标准相反）；
+③ **不新建 `subscribes` 根字段**——"监听 → `subscribes`"是"监听面不进提供面"的分类法，不是新建字段的承诺；
+新建反而把同一族声明拆成两处、制造分叉（零迁移亦即零 breaking）。
+
+位置与呈现：它归 **legacy `requirements.registers` 族**，与 `services/commands/providers` 同处；面板
+"技术详情"里 `events（监听的事件）` 那一行读的就是这份数据（`panel/client/index.js` 的 `TechDetails`
+与 `panel/manager/snapshot.mjs` 的 `registers` 装配），故**撤展示不采纳**（已裁）。
+**校验面须如实读**：本契约对 `requirements.registers.*` 的内部形状**零校验**（`contract/src/validate.ts`
+只在 `KNOWN_LEGACY_FIELDS` 里列过 `requirements`/`registers` 这两个键名）；独立 doctor 只把 `registers`
+当对象做类型检查，其撞名循环只跑 `services/commands/providers` 三类 ⇒ `events` **两处都不参与比对**，
+它是"作者自述 + 面板展示"的数据面，不是被机器校验过的契约面。
+
 ## 3. 命名空间（D5 无根假设，`contract/src/naming.ts`）
 
 一切对外名都带可配置前缀 `servicePrefix`（缺省 `DEFAULT_SERVICE_PREFIX = 'toolkit'`）：
