@@ -27,7 +27,7 @@
 | `configSchema` | ⬜ | Schema 对象或构造函数；JSON 落盘时是 schemastery 纯定义（§5） |
 | `panels` | ⬜ | 数组，每项必须有非空 `id`（`PanelDescriptor`，其余键开放）。**当前无任何消费者**：面板只把 `entry.manifest.panels` 原样透传（`panel/manager/v2-api.mjs` 的 `panels:` 一行），宿主也不认它（§7 D-8 与 `docs/embed-toolkit.md` §5 第 1 条）；它是"呈现面声明"，不是"提供面" |
 | `healthCheck` | ⬜ | **只能是函数**，因此只能由模块导出携带；JSON 里出现即 error。【批 3 落地，当前装载器不绑定它 ⇒ 写了不跑】见 §7 D-9 |
-| `provides` | ⬜ | **拟新增的提供面**：`{services?, commands?, providers?}` —— 表达"本插件注册了什么"。【批 2 落地，当前契约无此字段、写了判 error】现状与语义倒置见 §2.1 末与 §7 D-10 |
+| `provides` | ⬜ | **提供面（契约 v1.1 批 2 已落地）**：`{services?, commands?, providers?}` 三槽，每槽为可选的**非空字符串数组**；未知子键与拼错槽位名一律 error（与"未知顶层字段=error"同口径，`events` 尤甚——它不属提供面，见 §2.1 末）。装载侧 `extractRegisters` **逐槽优先读 `provides`**，缺席才回落到 legacy `requirements.registers.*`（回落属迁移期行为，数据正源待批 10） |
 
 **未知顶层字段 = error**（拼错字段名会静默失效，故拒绝）。迁移期容忍的旧字段清单是封闭的：
 `KNOWN_LEGACY_FIELDS = manifestVersion / name / requirements / registers / exports / aliases /
@@ -55,11 +55,14 @@ error）⇒ "本仓容忍"与"另一仓必填"并存，正是 `docs/debt.md` C-2
 的 E1 前提用例）。本仓**不打算**在 v1.1 合成 `inject`（裁定：推迟为 `docs/debt.md` D-18/D-19，
 立项时必答"与 cordis 上游 REQ-6 对齐还是自创"）。文档正典口径是**重试退避**（§6 末的数字族），
 不是自动唤醒。
-② **它当前被误当作"提供面"参与撞名比对** —— `registry/src/loader.ts` 的 `extractRegisters` 把
-`requires.services` 归一进 `registers.services`，`doctor/src/doctor.ts` 的注册冲突分支再拿它比对，
+② **它曾被误当作"提供面"参与撞名比对（契约 v1.1 批 2 已断）** —— `registry/src/loader.ts` 的
+`extractRegisters` 曾把 `requires.services` 归一进 `registers.services`，`doctor/src/doctor.ts` 的注册冲突分支再拿它比对，
 ⇒ 两个只是共同依赖同一服务的插件，第二个会被 `reg.name-collision` **阻断安装**（假阳性已实测复现，
-见 `docs/contract-v1.1-recon.md` §7）。【批 2 随 `provides` 落地一并纠正：提供面改由 `provides` 承载，
-`requires.services` 退回纯依赖面】
+见 `docs/contract-v1.1-recon.md` §7）。**批 2 落地后**：提供面由 `provides` 承载，比对两侧都只读提供面
+（本插件侧与已注册条目侧**各一处**，同日断掉），`requires.services` 退回纯依赖面；回归钉在
+`test/doctor.test.mjs` 的"批 2-②"，把借用塞回去即翻红。**数据侧遗留**：桶根的 `webServer` 记在
+`requirements.registers.inject` 与 `requires.services` 两处（不是 `registers.services`，recon §4 原文该格已更正），
+倒置纠正留批 10 ⇒ 见 §7 D-10 与 recon §10.3。
 
 **事件订阅面 `requirements.registers.events`（2026-09-22 协调侧裁定采甲：位置不动、语义写清、零迁移）**：
 字符串数组（如 `["session/created", "agent/request"]`），语义＝**本插件订阅（监听）宿主发出的事件**。
@@ -228,7 +231,7 @@ schemastery 重建后校验；④ `{uid,refs}` toJSON 形态 → 重建后校验
 | D-7 | **入口声明的必填性归独立 doctor，不归本契约**：本契约不定义"manifest 必须携带入口声明"，只定义解析行为（§4） | 2026-09-22 裁定（C-1 必答设计题第 2 条）：采"契约管解析行为、doctor 管必填性"；`projects/doctor/src/engine.mjs` 的 `REQUIREMENT_KEYS` 与 `buildExportTargetIssues` 是必填性正源。v1.2 若撤根字段必填须连带处理"键集校验静默空转"（`docs/debt.md` C-2 前置 1） |
 | D-8 | `panels` 是契约字段但**无装配消费者**：宿主不认（`dsh-web-all` 不读），本仓只把它原样透传给面板数据面 | `docs/embed-toolkit.md` §5 第 1 条 + `panel/manager/v2-api.mjs` 的 `panels` 透传行；桶根 manifest 那份 `toolkit-panel` 描述符因此是**自述性数据**，不驱动布局 |
 | D-9 | **`healthCheck` 读方已在、写方从未存在**：体检与快照读 `manifest.healthCheck`，但装载器不绑定模块导出的它（其静态面白名单只有 `name/inject/Config/configSchema/provide/intercept` 六键）⇒ 作者按 §2/§7 D-4 写了不会跑 | 2026-09-22 审定 ★2 定稿=**改代码**，批 3 落地。落地前的事实：本仓**没有任何模块导出 `healthCheck`**（`index.js`/`lib/*`/`panel/` 全量 grep 零命中）⇒ 绑定接通后内置插件的"突然生效面"为 0，只影响第三方契约插件 |
-| D-10 | **契约缺"提供面"字段导致 `requires.services` 被借用**：`extractRegisters` 把依赖面归一进注册面、冲突检查据此比对 ⇒ 共同依赖同服务会被阻断（假阳性已实测） | 2026-09-22 裁定：C-1 第 1 项 `provides` 落地即修（批 2），并须带对偶用例"共同依赖不判撞名"。成因与为何长期潜伏（内置全用 legacy `requirements.registers`、桶根只走宿主通道）见 `docs/contract-v1.1-recon.md` §5.2 P0-2 |
+| D-10 | **契约缺"提供面"字段导致 `requires.services` 被借用**：`extractRegisters` 把依赖面归一进注册面、冲突检查据此比对 ⇒ 共同依赖同服务会被阻断（假阳性已实测） | 2026-09-22 裁定：C-1 第 1 项 `provides` 落地即修（批 2），并须带对偶用例"共同依赖不判撞名"。成因与为何长期潜伏（内置全用 legacy `requirements.registers`、桶根只走宿主通道）见 `docs/contract-v1.1-recon.md` §5.2 P0-2。**【批 2 已清偿行为半边】**：`provides` 三槽进类型与校验、`extractRegisters` 逐槽优先读它、`doctor/src/doctor.ts` 撞名比对的**两处**借用点（本插件侧与对方侧）同日断掉；对偶用例在 `test/doctor.test.mjs` 的"批 2-②"。**数据半边未动**——内置 7 份仍无 `provides`，桶根的倒置留批 10 纠正（实测读数见 recon §10.3 批 2 段） |
 | D-11 | **scoped 包不能走 legacy**：合成 id 只在包名不含 `/` 时加 `legacy/` 前缀；`@scope/name` 原样沿用 ⇒ 被命名空间式小写规则拒绝（`@` 不合法） | 债务 D-15 的文案修复（`e80caea`）：报错点名真实成因。§8 那句"合成的 id 落 `legacy/<name>`"须带此条件；`docs/add-sub-plugin.md` §1 已按此写 |
 | D-12 | **§5 那句"以模块导出为准"当前与实现相反**（实现是 manifest 落盘那份赢） | 2026-09-22 审定 ★3 定稿=**改代码**（批 4），故本文**保留承诺句不改为附和现状**；实现跟上前的实际行为以本行为准，勿据 §5 那一句判断当前行为 |
 
