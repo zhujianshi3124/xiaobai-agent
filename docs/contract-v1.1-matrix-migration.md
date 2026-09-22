@@ -19,7 +19,7 @@
 migration.md 里**没被引用但读者会去找的**：R1/R2/R5 三处裁决标号未给出处（实际在 `TK/docs/p0-recon.md:109/110/113`，属"风险清单"节而非"用户裁决记录"节）。
 
 **门禁口径备忘**（判定"仅门禁"用）：
-- `TK/scripts/ci-local.mjs:21-30` = 4 步 + `--with-scan` 追加第 5 步 `p23-verify`；
+- `TK/scripts/ci-local.mjs` 的 `steps` 数组（按变量名找，别按行号找）= 5 步 + `--with-scan` 追加第 6 步 `p23-verify`；第 4 步 `DOCTOR_CLI ↔ 契约行为对账` 为契约 v1.1 批 2 新增（题 2 条件 a"手动脚本不算守卫"）；
 - `TK/scripts/regression-all.mjs:11-25` = 13 个专项脚本 + `node --test`，**不含 p23-verify、不含 patch-config-check、不含 p23-shadow-scan**（后者根本不在 ci-local 里）；
 - `npm test`（`TK/package.json:14`）= build×3 + pluggable-lint + p4 检查 + typecheck×3 + `node --test`。
 

@@ -18,7 +18,7 @@
 
 ## 1. 主矩阵
 
-> 说明：`有钉` = `test/` 或 `scripts/` 里有真实断言行；`仅门禁` = 只在 `scripts/*` 门禁里断言（门禁正本 = `node scripts/ci-local.mjs`，5 步：`scripts/ci-local.mjs:21-30` = npm test 全链 / `scripts/regression-all.mjs` 13 专项 + `node --test` / doctor dry-run 数字判定 / patch-config-check）；落差性质用「文档超前 / 文档落后 / 实现超前 / 一致 / 文档间互斥」。
+> 说明：`有钉` = `test/` 或 `scripts/` 里有真实断言行；`仅门禁` = 只在 `scripts/*` 门禁里断言（门禁正本 = `node scripts/ci-local.mjs`，5 步：`ci-local.mjs` 的 `steps` 数组 = npm test 全链 / `scripts/regression-all.mjs` 13 专项 + `node --test` / doctor dry-run 数字判定 / DOCTOR_CLI↔契约对账（批 2 新增）/ patch-config-check）；落差性质用「文档超前 / 文档落后 / 实现超前 / 一致 / 文档间互斥」。
 
 | # | 行号 | 文档原文（逐字引） | 承诺类型 | 实现状态 + 代码位置 | 测试覆盖 + 用例名与 file:line | 落差性质 | 处置二选一建议 |
 |---|---|---|---|---|---|---|---|

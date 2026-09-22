@@ -185,7 +185,7 @@ registry 的 legacy 适配器会合成 manifest（id 落 `legacy/<包名>`，无
 npm test                                   # build×3 + pluggable-lint + no-subplugin-import-check + typecheck×3 + node --test
 node scripts/regression-all.mjs            # 回归全跑 14 项
 node /d/dsh-test-sandbox/projects/doctor/src/cli.mjs --scope D:/dsh-plugins/dsh-toolkit   # 真实仓 dry-run 必须 0/0/0
-node scripts/ci-local.mjs --with-scan      # 单命令全链（5 步：上面三步 + patch 行配置校验 + p23-verify）
+node scripts/ci-local.mjs --with-scan      # 单命令全链（6 步：上面三步 + DOCTOR_CLI↔契约对账 + patch 行配置校验 + p23-verify）
 ```
 **单命令全链其实是最后那条**（`regression-all` 不含 `p23-verify`、不含 `patch-config-check`；
 `p23-shadow-scan` 根本不在这条链上，且它会覆写历史证据正本，别随手跑）。

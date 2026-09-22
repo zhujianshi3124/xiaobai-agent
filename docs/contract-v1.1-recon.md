@@ -86,6 +86,13 @@
 三条"数法"必须分开写，否则后续每轮都要重新吵一次：
 ① **有 manifest 的单元 = 7**（5 lib + 桶根 + panel），其中 6 份有 `contract`、1 份没有；② **注册面非空 = 3**；③ **宿主真实装载 body = 6**（`cordis.patch.yml` 的 5 个 insert 行 + `compact-router` 由预设改写挂载，见 `:3` 与 `doctor-signals.json` 的 `presetManagedNames`）；面板卡片数 5（`p1-smoke.mjs:295` 断言的是 `snapshot.mjs` 派生的卡片数，不是 registry 实测数）。
 另：入口形态实测**没有一例**走"顶层 legacy `exports`"或"`index.js` 兜底"——`manifest.exports(legacy)` 与 `package.json#main` 两个 `EntrySource` 值在本仓内置单元上零命中（`index-convention` 只在探针自造夹具里命中，顺带证明其可达），⇒ v1.1 为这两个顺位写的任何迁移说明都**无本仓回归风险、也无本仓测试覆盖**。
+- **§4 桶根行的字段路径更正（2026-09-22 批 2 实测；上表原文照录、不回改）**：那格写的
+  `registers.services=["webServer"]` 实为 **`registers.inject=["webServer"]`**，而
+  `registers.services` 是**空数组**（`{inject:["webServer"],events:[],services:[],commands:[],providers:[]}`）。
+  **倒置结论不变**（同一个名字既出现在注入面又出现在 `requires.services` 依赖面），受影响的是路径写法。
+  连带实测：批 2 断掉借用后，桶根经 `extractRegisters` 的归一 `services` 由 `["webServer"]` → `[]`
+  ——旧结果本来就是靠 `requires.services` 借用才"看起来有"⇒ 读数与影响面见 §10.3 批 2 段、
+  条文侧见 `docs/contract.md` §2.1 ② 与 §7 D-10。已并入 §11 错账清单（第六处）。
 
 ---
 
@@ -446,6 +453,57 @@ schemastery list 正确读法 + 面板测试（`panel-unified` 按 label 定位�
   ⑥ 文档字样面（`docs/` 6 个文件 + `CHANGELOG.md` 命中 `1.0.0`/常量名）**未逐条判定**，留批 11 动工时按本清单收。
 
 ---
+**批 2 · `provides` 进契约 + 提供面正源切换（toolkit 单仓；doctor 仓本批零改动，前提是批 1 的 `2f12f53` 在位）**
+
+- 代码面（5 文件）：`contract/src/types.ts` 加 `ManifestProvides` 与 `provides` 字段，并改掉
+  `ManifestRequirements.services` 注释里残留的"（inject 面）"旧口径（§10.4 补录那条）；
+  `contract/src/validate.ts` 白名单 + `PROVIDES_SLOTS` 封闭三槽 + 逐槽"非空字符串数组"校验 +
+  未知子键 error + `provides.events` 特判（报错点名 `requirements.registers.events`）；
+  `contract/src/index.ts` 导出新类型；`registry/src/loader.ts` 的 `extractRegisters` 改为**逐槽**优先读
+  `provides`；`doctor/src/doctor.ts` 断掉**两处**借用（本插件侧 `ownServices` 与已注册条目侧 `otherServices`，
+  此前只改 loader 会漏掉这里），并把冲突项 `fix.steps` 文案点名 `provides`。
+- 守卫面：新脚本 `scripts/doctor-cli-contract-parity.mjs`（21 条断言：A 存量 7 份不互相打脸 + panel 那处
+  在册分叉钉住 / B 三个根必填的分权边界双向钉 / C provides 接缝四发），**作为门禁第 4 步每轮复跑**
+  （题 2 条件 a："手动脚本不算守卫"）⇒ 门禁由 5 步变 6 步，`docs/add-sub-plugin.md` 与两份矩阵的步数叙述已同步。
+- 用例面：`test/doctor.test.mjs` 12→15（批 2-① provides 撞名被阻断、批 2-② 共同依赖不判撞名的 P0-2 回归钉、
+  批 2-③ 双在场逐槽 provides 赢）；5 个新夹具（`provides-a`/`provides-b`/`requires-twin-a`/`requires-twin-b`/
+  `provides-precedence`）。P5-#3（legacy `registers.commands` 撞名）仍绿 ⇒ 回落通道未被打破。
+  ②的依赖名特意用容器里真实存在的 `toolkit/registry`，否则 `service-missing`（error）会因别的原因阻断、测不到命题。
+- 验收：**门禁 6/6（65.2s）**；真实仓 dry-run `issues 0 (e0/w0/i0/fixable 0)`；**五套件**（新口径第二次复跑）
+  15/8/7/21 全绿 + `acceptance-stage3` a–g `ALL STAGE-3 ACCEPTANCE PASS`、真实 configRoot hash
+  `c585738c646855d4…`（5 files）与批 1 基线**逐字节相同**（前置 `fixable 0` 已先确认）；doctor 仓 `git status` 空。
+- 变异三发（含一次归因纠偏，按"错账必查成因"办）：
+  A 摘 `extractRegisters` 的 provides 优先读 ⇒ ①③ 红（13/2），②不受影响（命题分离干净）；
+  B 把借用塞回 `doctor.ts` ⇒ ①② 红（13/2）——**首跑曾误报 ③ 也红**，成因是只重建了 `build:doctor`、
+  `registry` 的 dist 仍是变异 A 的产物；重建后复测 ③ 绿 ⇒ 变异结论以复测为准，不以首跑为准；
+  C 摘对账步 ⇒ 门禁打印从 6 步降 5 步且该行消失（正码与摘除各实跑一次，65.2s / 66.2s）⇒ "步数可查"成立。
+- **预期边界的如实读数（开工令第 4 条）**：面板可见面**零变化**——`panel/manager/snapshot.mjs` 的 `registers`
+  直读 `manifest.requirements.registers`，不经 `extractRegisters`，且 p1-smoke 314 条断言全绿佐证。
+  装载面唯一变化：**桶根**经 loader 的归一 `services` 由 `["webServer"]` 变 `[]`——因为它
+  `requirements.registers.services` 实为**空数组**，`webServer` 只记在 `requires.services` 与
+  `requirements.registers.inject` 两处，旧算法靠借用才"看起来有"。桶根本身不经 registry（宿主 patch 通道装载）
+  ⇒ 无装载回归；这正是 P0-2 修复在仓内的唯一命中面，数据纠正归批 10（见上条 D-10 状态）。
+- **本轮查出的 recon 自家错账一处**：§4 表桶根行写 `registers.services=["webServer"]`，实为
+  `registers.inject=["webServer"]`、`registers.services=[]` ⇒ 就地留更正指针并入 §11 错账清单
+  （成因：探针 B 直读根字段时把同族键 `inject`/`services` 混记，仍是 §5.2"抄结构不抄行为"一族）。
+  倒置的**结论不变**（桶根确实既声明依赖又声明注入），受影响的是字段路径。
+- 施工自曝：本批两次 Edit 锚点选错（一次吃掉 §10.3 标题、一次吃掉 `test/doctor.test.mjs` 里 P5-#3 的首行），
+  均在提交前发现并复正，复正后以"净 diff 纯新增 / 用例计数复原"自证；教训＝插入型改动必须以**唯一且完整**的
+  上下文为锚，不能只用一行标题。
+- 未做与边界（如实）：未真机（批 2 非真机批，A 授权窗口仍留批 4/6/8）；未碰 `~/.dsh` 与真实引擎配置；
+  `cordis.patch.yml` 判据基准 `e8051fe9` 未动 ⇒ 未变不滚存；内置 7 份 manifest **未**加 `provides`（批 10）；
+  `registers.events` 两仓零校验那笔新失效面**未自裁登记 D-13**，措辞待裁。
+
+
+  `cordis.patch.yml` 判据基准 `e8051fe9` **未动 ⇒ 未变、不滚存**；探针目录 `var/scratch/c1-recon-20260922/`
+  按协调侧令暂留未清。
+- 前置状态：`docs/debt.md` C-1 现状块 ⑤（"分批计划过裁前两仓代码一行不动"）的过裁条件已满足
+  （批 0-11 + 改名批 + 五修正，2026-09-22 协调侧过裁令）⇒ 本批为该裁定之后的**首笔动代码**，
+  debt.md 原文按"错误照录"未改写，状态以本区为准。
+- 连带事实（供后续批引用）：本仓门禁第 3 步经 `DOCTOR_CLI`（缺省 `D:/dsh-test-sandbox/projects/doctor/src/cli.mjs`）
+  直读 doctor 源码 ⇒ doctor 的任何改动都被本仓门禁每轮复跑覆盖，故两仓任一笔动完须复跑门禁 5/5。
+  本区引用为**函数/键名定位**，未写行号（§11 首条规矩）。
+
 
 ### 10.4 批 2 前置实测：`events` 槽位判定（裁定 23 要求的先测后动）
 
@@ -522,5 +580,12 @@ schemastery list 正确读法 + 面板测试（`panel-unified` 按 label 定位�
   （成因：同轮多次改码未回填）；`debt.md:133` B-1 的 10 函数/6 脚本（成因：P7 落账后 P2.4 扩面）；
   **`p0-recon.md:56` 的"120s 超时"**（成因：09-19 改值未回填，且被 `migration.md` §6 复制一次 ⇒ 第五处
   是前四处的**上游源头类**样本，两处已于定稿笔一并更正，成因互引）。
+- **第六处（2026-09-22 批 2 施工时实测，本文自家错账）**：§4 表桶根行把 `webServer` 记在
+  `registers.services`，实为 `registers.inject`（`registers.services` 是空数组）。
+  成因：探针 B 直读根字段时把同族键 `inject`/`services` 混记 ⇒ 仍是 §5.2 那条"抄结构不抄行为"一族，
+  只是这次抄的是**自家探针读数**而非文档。倒置结论与 v1.1 处置（最优先补）不受影响。
+  防再犯：凡"某字段有值"的读数须同时记该字段的**兄弟键实际取值**（本轮已按此补上整份
+  `{inject,events,services,commands,providers}` 原文）。
+
 - **探针与底表**（沙箱 `var/scratch/c1-recon-20260922/`，协调侧令暂留勿删，批次收尾按仓库惯例处置并记录）：`probe-registry-inventory.mjs`（§4 枚举）、`probe-contract-behavior.mjs`（§1/§2 四条承重结论）、`probe-collision-falsepositive.mjs`（§7 假阳性复现）、`raw-matrix-migration.md` / `raw-matrix-embed-toolkit.md`（本文两份附录的原始件）、`raw-test-index.md`（27 个测试文件 / 250 个 `test()` 位点→256 运行用例 + 182 条 `check()` 的逐条索引，供批 0-6 补钉时查"这格有没有人钉过"）、`fixtures/`（探针自造夹具，不在两仓内）。
 - **本轮未做**：未重启宿主、未碰 `~/.dsh`、未跑 `p23-shadow-scan`、未动 `panel/`、未碰 `terminal-acceptance-report.mjs` 硬闸（侦察期未触发）、doctor 仓零改动。`acceptance-stage3.mjs` 未跑（§9）。
