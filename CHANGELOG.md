@@ -107,7 +107,8 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
   provider/mode 路由、不含引擎名；宿主 `~/.dsh/dsh-search-router.json` 只读核对无引擎条目。
   **补充轮（只读）又核了 settings 层**：`~/.dsh/settings.yaml` 无 `web-search-local` 节、
   引擎关键词零命中，运行 profile `profiles/web/` 的 `cordis.yml` 与 `cordis.patch.yml` 都是空 `[]`
-  ⇒ **确认无覆盖层，删除在下次宿主重启时完全生效**（全过程与边界见 `docs/debt.md`
+  ⇒ **确认无覆盖层，删除在宿主重启时完全生效**（该重启已在 2026-09-22 07:50 自然发生、非本侧动作，
+  现场已只读核实为 6 项版本，见 `docs/debt.md` 同节《生效现场补记》；
   《settings 层核查（补充轮）》；该文件也顺带实证了 `profiles/web/package.json` 里的
   `"@local/dsh-toolkit": "link:D:/dsh-plugins/dsh-toolkit"` ⇒ 宿主确实加载本仓那份 patch）。
   **边界如实**：`lib/web-search-local` 的实现、`ENGINES` 表、`ENGINE_LAYERS.cn` 与 `defaultConfig()`
@@ -129,7 +130,9 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
   证据正本** `panel/docs/evidence/TERMINAL-ACCEPTANCE-ROUND10.txt`（与 D-2 同族第二处）⇒ 加了执行硬闸
   （`process.exit(2)`，只拦跑、不改任何取证逻辑与历史结论文本），并把 `evidence/README` 里该行"可重放"
   的表述按只增不改的规矩追加更正。
-- **未做**：没重启宿主（改动经 `@local` 链接在下次自然重启时生效）、没碰 `~/.dsh` 的凭据，也没写任何
+- **未做**：没重启宿主（改动经 `@local` 链接在下次宿主自然重启时生效——实际那次重启已发生于
+  2026-09-22 07:50，是用户侧动作、非本侧，本侧只读核实过新实例加载的是删减后的 6 项版本）、
+  没碰 `~/.dsh` 的凭据，也没写任何
   宿主侧文件（只读核对范围：`dsh-search-router.json`、`settings.yaml`、`profiles/web/` 的配置层——
   结论"无 settings 覆盖层"见 `docs/debt.md`《settings 层核查（补充轮）》）、doctor 独立仓零改动、
   p1-smoke 断言一字未动、未用 `p23-shadow-scan` 生成任何产物。
