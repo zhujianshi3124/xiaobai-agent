@@ -1,4 +1,4 @@
-# 遗留债务清单（终态 · 2026-09-20 项目关闭；2026-09-21 cordis 符合度复核追加；2026-09-21 Pack A–H5 + Pack I 全链收口）
+# 遗留债务清单（终态 · 2026-09-20 项目关闭；2026-09-21 cordis 符合度复核追加；2026-09-21 Pack A–H5 + Pack I 全链收口；2026-09-22 C-1 侦察轮落档）
 
 > 建立：2026-09-19（P4）。**最终化：2026-09-20（P8 终版验收通过，项目关闭）。**
 > **2026-09-21 复核追加**：对照 cordis 4.0.2 做符合度复核，用户裁定"全修"，
@@ -76,14 +76,40 @@
 > 已丢弃并写入《D-7 追加》裁定链第 ③ 步；D-4 补验期间两次"零命中"报告经复核证明是**取证脚本口径缺陷**
 > （非搜索未发生），纠错过程写入 `D4-WEB-SEARCH-HOST-EVIDENCE.md` §三。
 > **冷启动读法**（新会话只看仓库即可接上）：本文件头 → `AGENTS.md` 六条红线 →
+> **`docs/contract-v1.1-recon.md`（C-1 侦察轮正本：草案六项实测修订、三方核对矩阵净账与落差总账、
+> 三题裁定×核对结论、内置插件完整枚举、修订后分批计划批 0-6 + 边界清单 —— 动 v1.1 相关代码前必读；
+> 两份逐行矩阵见同目录 `contract-v1.1-matrix-{migration,embed-toolkit}.md`）** →
 > `panel/docs/evidence/H-REAL-HOST-REVERIFY.md`（H5 真机复验 + 一次宿主整机启动故障的处置，
-> **最新一棒**）→ `panel/docs/evidence/G-REAL-HOST-SMOKE.md`（含补验注记）与 `D4-WEB-SEARCH-HOST-EVIDENCE.md` →
+> **最新一棒真机证据**）→ `panel/docs/evidence/G-REAL-HOST-SMOKE.md`（含补验注记）与 `D4-WEB-SEARCH-HOST-EVIDENCE.md` →
 > 门禁一条命令 `node scripts/ci-local.mjs --with-scan`（**现在含 5 步**，第 5 步是 Pack I 新增的
 > `scripts/patch-config-check.mjs`）。**注意判据基准已滚存两次**：`cordis.patch.yml` 现基准
 > **`e8051fe9…`(3085 B)**（Pack I 引擎清理后）；上一枚 `bb7af96f…`(3099 B，H5 加引号) 与
 > P8/P2.4 时代的 `ce0b0b81…`(3097 B) 均为历史值。恢复工具已按 D-17 退役，
 > **正确恢复动作 = `git checkout HEAD -- cordis.patch.yml`**（先自行留现场）。
 > Pack I（安全网 + 引擎清理）是纯仓内工作、无宿主复验，故**没有新证据正本**，读数记在 A#25 与提交说明里。
+> **2026-09-22 C-1 侦察轮（契约 v1.1 第一阶段 · 纯侦察 · 代码零改动 · doctor 仓零改动）**：按协调侧两轮指令
+> （开工令 + 审核补条一~八 + 三题裁决 + **裁决修订**：标准改为"文档写到的全部正常实现和运行、效果优先"）
+> 完成侦察，产出正本 = `docs/contract-v1.1-recon.md`（+ 两份逐行矩阵 `docs/contract-v1.1-matrix-migration.md`、
+> `docs/contract-v1.1-matrix-embed-toolkit.md`）。**v1.1 的收口定义随之改写：= 三方核对矩阵全绿**
+> （每条文档承诺"已实现 + 有测试钉住"，或"已明确移除/改写并留档"；落差双向不许存续），C-1 六项只是其中一部分。
+> **本轮实测四条承重结论**（探针在沙箱 `var/scratch/c1-recon-20260922/`，只 import 判形状、零写盘、未碰 `~/.dsh`）：
+> ① **`requires.services` 存在语义倒置且假阳性可复现**——`loader.ts:50` 把契约的"依赖面"填进"注册面"、
+> `doctor.ts:275` 再拿它比对撞名 ⇒ 两个只是**共同依赖** `webServer` 的插件，第二个被 `reg.name-collision`
+> **阻断安装**（对照场景同时证明真撞名仍可检出，是倒置不是判定失效）；② **宿主对契约零消费**——宿主全局包
+> 递归 grep `dsh.plugin.json` / `PLUGIN_CONTRACT_VERSION` / `CONTRACT_EVENT_NAMES` / `KNOWN_LEGACY_FIELDS`
+> **全部零命中**，patch 行只带 `id`/`name`/`config` ⇒ v1.1 主体不要求宿主配合、不需为此重启；
+> ③ **今天加 `provides` 两道闸同时红**（契约"未知顶层字段"error + doctor"清单根字段非法"error）⇒ "两仓同批"
+> 是硬依赖且顺序唯一（doctor 白名单先落）；④ `contractEventName(p,'audit:'+x)` 与手工模板串对 8/8 逐字节相同
+> ⇒ 第 2 项可做成零线格式变更的纯收编。**本轮查出既有错账四处（原文不改写，只在此滚存修订 + 成因）**：
+> `:161` 审计事件"7 类"实为 **8**（漏 H1 加的 `state-save-failed`；成因：草案写于 H1 之前）；
+> `:170` "5 个内置插件补 provides" 按实测应为 **3 个非空 + 桶根**（成因：按 `lib/` 目录数数，未核注册面）；
+> `:166-167`/`:173` 行号 `loader.ts:31`→`:41`、`registry.ts:266`→`:381`（成因：同轮多次改码未回填）；
+> `:133` B-1 的"10 个函数 / 6 个验收脚本"实为 **15 / 5**（成因：B-1 写于 P7，其后 P2.4 扩 mount/restore 面；
+> 风险评估结论不变）。**三题裁定已定、实施批准 withheld**（分批计划过裁前代码一行不动）：题 1 走"真相收口 +
+> 补钉"、桥接两项推迟入列；题 2 采"契约管解析行为、doctor 管必填性"；题 3 **整体移出 v1.1** 转 C-2；
+> 第 4 项改裁 **B**（输出面按正确语义改名，`p1-smoke` 如实更新，须用户批准新裁定两处）。
+> **doctor 仓基线已补（方案一，四套件全绿、跑前跑后工作树均干净）**：14/14 + 8/8 + 7/7 + 21/21；
+> `acceptance-stage3.mjs` 按裁**未跑**（e) 块带真实仓根做 apply），其覆盖面记为盲区，留批 1 补。
 > 清零规则按用户终版裁定改为四类归档（不再要求"全部清零"）：
 > **A 已清偿** / **B 显式遗留**（裁定不做或维持现状，附触发条件）/ **C 后续任务**（已立项，附规格草案）/
 > **D 待办**（零散改进，不阻塞关闭）。每条标注**裁定方**。
@@ -133,6 +159,13 @@
   `manager/uninstall.mjs` 的 10 个 plan/execute 函数与 6 个验收脚本（p21/p22/p23/p24-verify、
   p24-ui-matrix、backup-write-test）都以 `putPlan/getPlan/dropPlan` 三个模块函数为契约，改签名即动
   P2.4 深度生命周期资产全链。改造已**完整撤回**（`apply-engine.mjs` 回到 HEAD 逐字节一致）。
+  **【2026-09-22 侦察轮更正本条基数，结论不变】**：原文"**10 个** plan/execute 函数与 **6 个** 验收脚本"经实测为
+  **15 个导出函数**（7 个 plan + 8 个 execute，`panel/manager/uninstall.mjs:375/437/487/513/612/670/705` +
+  `:799/835/887/917/963/981/999/1014`）与 **5 个** 验收脚本（`backup-write-test`/`p21-verify`/`p22-verify`/
+  `p23-verify`/`p24-verify`）——`p24-ui-matrix.mjs` **不引用**这三个模块函数（全仓 grep 为证），被误计入"6 个"。
+  **成因**：B-1 落账于 P7，其后 P2.4 批 1 扩了 mount/restore 面的 plan/execute 函数、未回填本条基数；
+  "6 个"系当时把 p24 两兄弟一并当验收脚本。**风险评估与裁定不受影响**（token 派生、短生命周期、同信任域、
+  patch 域天然只针对一份文件；函数与脚本更多只说明"改签名影响面比原估更大"，即维持现状的理由更强）。
 - **风险面**：plan token 为 sha256 派生、短生命周期、只在同一 loopback+CSRF 信任域内可见；
   且 patch 域天然只针对一份 `cordis.patch.yml`。跨实例消费需要攻击者已握有该信任域与 token。
 - **裁定方**：用户（2026-09-20 终版验收，第 1 项）。
@@ -153,6 +186,23 @@
 
 **裁定方**：用户（2026-09-20 终版验收第 2、3 项：审计事件命名并入 v1.1 不单独修；契约 v1.1 登记为后续任务、
 规格草案全文存 debt.md）。
+
+> **现状（2026-09-22 侦察轮后 · 草案原文按"错误照录、修订滚存"原则一字未改，修订集中在这里）**：
+> ① **收口定义已改写**——v1.1 的 done = **三方核对矩阵全绿**（协调侧裁决修订第一条），下方六项只是矩阵落差的
+> 一个子集；矩阵与落差总账见 `docs/contract-v1.1-recon.md` §5-§6。
+> ② **六项中第 3 项已移出 v1.1**（→ C-2）；第 4 项名单按实测修正（见本文件头四条错账之第二条）；
+> 第 2 项计数 7→8 且"三处消费方"实为一处手工；第 1 项定性由"补字段"改为"修语义倒置"（可复现实证见 recon §7）。
+> ③ **三道必答设计题已裁**：题 1（`requires↔inject`）走"真相收口 + 补测试钉住"，合成 `inject` 与 patch 行
+> `inject:` 声明两项**推迟立项**（见 D-18/D-19，立项时必答"与 cordis 上游 REQ-6 对齐还是自创"，不许无限期悬置）；
+> 题 2（doctor `exports` 必填键分叉）采"**契约管解析行为、doctor 管必填性**"，管辖边界须写进契约文本，
+> `.` = 包主导出 须如实记载，对账用例**必须进门禁每轮复跑**（手动脚本不算守卫）；
+> 题 3 → C-2。**题 2 与题 3 的逻辑一致性已论证**（不矛盾，但 v1.2 撤根字段必会令 doctor 的键集校验
+> **静默空转**，修正方案见 recon §8.3，须随 C-2 一并裁）。
+> ④ **第 4 项口径已改裁为 B**：`snapshot.mjs` 输出面按文档正确语义命名，`p1-smoke` 相应断言如实更新并
+> **报用户批准**（A 方案"只换取数源保持旧键名"经核验**不成立**——`registers.services` 对桶根装的实际是
+> 依赖数据，命中"键名指东、数据装西"的失真即停条件）。B 尚需两处新裁定：`provides` 无 `events` 槽位、
+> 面板 `inject` 键名是否随动（recon §8.4）。
+> ⑤ **实施批准 withheld**：分批计划（recon §10 的批 0-6）过裁前，两仓代码一行不动。
 
 **范围（六项，缺一即不算完成）**：
 
@@ -198,6 +248,50 @@ v1.1 必须择一：**（a）** 契约正式定义入口声明字段（含 `"."`
 
 ---
 
+### C-2 · 契约 v1.2：`KNOWN_LEGACY_FIELDS` 收紧为 error（**自 C-1 第 3 项移出，2026-09-22 用户裁定立项**）
+
+**裁定方**：用户（2026-09-22 C-1 裁决第三节：「整体移出 v1.1，记 v1.2 立项」+ 裁决修订第四节补一致性论证）。
+
+**为什么不进 v1.1（一句话）**：收紧的真实门槛不是"一次引用审计"，而是**要 doctor 撤掉自己的必填集**——
+`projects/doctor/src/engine.mjs:330-337` 把 `manifestVersion`/`name`/`requirements` 判为必填（缺则
+`schema.required-missing` **error**）、`:387-391` 把 `requirements` 五键判为必填；实测本仓 **7/7 份 manifest 靠
+"两套字段都带"的混合形态**才同时过契约与 doctor，这正是 `0/0/0` 今天成立的原因（枚举见
+`docs/contract-v1.1-recon.md` §4）。这些字段一旦转 error，等于把自己的正典 manifest 判死。
+
+**v1.2 立项的完整前置清单（条件 a：一条都不许少）**：
+
+1. **doctor 撤必填集，且必须连带处理"静默空转"耦合**：撤 `:330-337` 的根字段必届时，
+   `:387-391` 的键集校验因 gate 在 `requirements` **存在**之上而**自动不执行**——纯契约 manifest 一条
+   `requirements` 检查都不会跑、也不报红。必须把题 2 交给 doctor 独占的那份管辖权**改述并改码**为
+   "`requirements` **在场时**其键集与 `./` 目标存在性归 doctor；`provides`/`requires` 合法性归契约"，
+   并把 C-1 题 2 已批的那枚 DOCTOR_CLI 对账用例**扩到"不带 `requirements` 的纯契约 manifest"形态**
+   （让空转变成可见断言）。一致性论证全文见 recon §8.3。
+2. **前置②与面板纪律的冲突点须升级用户裁决，不许悄悄消失**：`docs/migration.md:50-51` 原文要求
+   "面板不再读旧字段"，而同一段自己写明 `plugin-registry.mjs` 的 5 插件表与 `snapshot.mjs` 的
+   `ORIGINS/ROW_IDS` 是 **P2.4 深度生命周期资产、面板纪律要求原样保留** ⇒ 该前置**按字面永远满足不了**。
+   可改的只有"读哪个字段"。v1.2 须由用户裁：是把前置改写成"改读来源、不改这张表存在"，还是解除面板纪律。
+3. **本轮已立的核验要求全套沿用（不得放宽）**：
+   ① **方法自证无盲区**——任何"legacy 字段引用审计"必须先自证扫描面覆盖路径与盲区（本轮补条七.2 口径：
+   仓内探针≠端到端；须写明扫了哪些目录、哪些是字符串字面量匹配、`panel/client/index.js` 内嵌 HTML 与
+   `test/fixtures/**` 是否在范围内）。本轮已知的一个真实盲区教训：宿主全局包路径在仓外，工作区外读取会被拦，
+   只能引仓内逐字副本（`scripts/patch-config-check.mjs:279-285`、`test/dual-channel-parity.test.mjs:13-17`）。
+   ② **新增 error 一律走隔离校验通道，禁止装载早期裸抛**——D-16/A#24 的真机教训：静态 patch 通道的校验失败会
+   经 loader 冒到 `dsh-app-boot` 顶层 ⇒ **整个宿主 exit 1**；registry 通道同样失败只伤单条目（`lastError` +
+   退避重试）。故 v1.2 任何新判红都必须落在后者（或落在**提交前门禁**，如 `patch-config-check.mjs` 那条链路），
+   不得让一个收紧后的 legacy 字段在宿主启动期掀整机。
+   ③ **历史记录保留**——错误照录、修订滚存新笔；证据正本只增不改（D-2 同族两处已立硬闸的先例在此沿用）。
+4. **本轮数据复用（条件 b：不丢弃）**：`docs/contract-v1.1-recon.md` §4 的 7 份 manifest 根字段枚举、
+   §5 落差总账、§6 两份折入的逐行判定，两份逐行矩阵，以及沙箱 `var/scratch/c1-recon-20260922/`
+   的 `raw-test-index.md`（27 测试文件 / 256 运行用例 / 182 `check()` 逐条索引）即 v1.2 的起点数据；
+   `KNOWN_LEGACY_FIELDS` 现在只钉了 1/8 个名字（`test/contract.test.mjs:128`），改成 `deepEqual` 全清单
+   + 逐名一条 info + "第 9 名必 error" 是本项开工前的**第一件事**（收紧动作本身不可在无此守卫时进行）。
+
+**验收口径（v1.2 用）**：全量门禁 5/5 + 真实仓 doctor dry-run `0/0/0` **且** 0/0/0 的达成路径必须写明
+"是撤了必填集还是补了字段"（防"改测试凑绿"）；两仓同批、互引 hash；每笔带变异自检（摘掉新校验 ⇒ 指定期望
+翻红）；涉宿主装载面者真机复验、以现场实证为准、不做时点承诺。
+
+---
+
 ### 环境注记（跑门禁前先读这一格）
 
 **Node 24 / Windows 的 libuv 断言**：测试里开真 `http server` + `fetch` 的用例，在**全量** `node --test` 批次中会命中
@@ -234,6 +328,8 @@ v1.1 必须择一：**（a）** 契约正式定义入口声明字段（含 `"."`
 | D-15 | **manifest 无 `contract` 字段 + 包名带 npm scope ⇒ registry 通道必拒，报错文案指向错位**：`manifestHasContract` 只认非空字符串 `contract`（`registry/dist/loader.js:75-77`），缺字段即落 legacy 合成；合成 id 的规则是"含 `/` 直接沿用包名，否则加 `legacy/` 前缀"（`:336-337`），于是包名 `@local/dsh-toolkit` 原样成为 id，被契约的命名空间式小写规则拒绝（`contract/src/validate.ts:111`，`@` 不合法）⇒ 报 `plugin-shape-invalid: legacy 合成 manifest 校验失败：id 必须是命名空间式小写 id`，而真实缺口是"这份 manifest 没有 contract 字段"。实测现场：本仓 `panel/dsh.plugin.json`（`manifestVersion:1`，**无 contract/id**）经 `resolveLocalSource` 装载即撞这条；宿主 loader 通道对同一目录毫无障碍（它不读 manifest）。⇒ 面板只能经 patch 行装载（与 REQ-8 唯一装配点一致），但任何"无 contract 的 scoped 第三方包目录"经面板装进来都会收到这条误导性文案 | 交叉验证轮实测发现（探针见《D-12 追加》）。裁定方：待用户。建议：legacy 合成对 scoped 包名改产 `legacy/<name>` 或报"缺 contract 字段"，二选一都是一行改动 **已关闭（2026-09-21 Pack H3，提交 `e80caea`）**：维持面板不可经 registry 通道自举（防递归装配，属设计而非缺陷），但文案改为点名真实成因——"缺非空 `contract` 字段" vs "目录本就无 manifest"，并附被拿去当 id 的包名与两条修法；用例在 `test/dual-channel-parity.test.mjs` 末例逐条钉文案。未改 legacy 合成的 id 生成规则（改 id 形态会影响来源记账，收益不抵风险）。 |
 | D-16 | **两条装载通道对"配置校验失败"的处理不对称：静态 patch 通道掀整机，registry 动态通道只伤单条目**（H5 真机实测）：宿主 patch 通道里某个插件的 `Config` 校验一失败，`ValidationError` 会经 `cordis-plugin-loader` 的 `Entry._init` 冒到 `dsh-app-boot` 的 `boot()` 顶层并被 rethrow ⇒ **整个宿主进程 exit 1**，面板、其余 4 个内置插件、宿主自带的全部插件一起不可用；而 toolkit 自己的 registry 通道同样撞校验失败时，只把该条目打成 `error`（带 `lastError`、按 `retryLimit` 退避重试、`loadTimeoutMs` 兜超时），其余条目照常运行。**爆炸半径差两个数量级**。 | H5 真机发现（2026-09-21）。**只登记不改**：改不动——顶层 rethrow 是宿主（cordis / dsh-app-boot）行为，红线禁止改宿主。**缓解评估（如实）**：① 唯一可行的侧防是"收紧/启用校验之前，先按宿主的解析方式对真实声明文件跑一次校验"（本轮 A#22 文末的防再犯口径即是此条，本次故障正是漏了它）；② **doctor 安装前预检够不着这一格**——预检覆盖的是经面板安装 API 进来的 source，而本次坏值长在 toolkit 自家 `cordis.patch.yml` 的 patch 行里，宿主启动时直接读，从不经过预检通道；③ 若未来要把校验推广到更多内置入口，应连带考虑"patch 行类型回归闸"（把真实 patch 文件解析后逐条喂 schema 的门禁用例），本轮未建。**裁定方：待用户** **已关闭（2026-09-21 Pack I，A#25）**：兑现"唯一可行侧防"——门禁新增第 5 步 `scripts/patch-config-check.mjs`，按宿主通道语义（真 YAML 标量解析 + `unwrapExports` + `Config['~standard'].validate`）校验 `cordis.patch.yml` 每一行的 config，失败即红且报错点名**文件 + 行号 + 期望类型 + 实际值 + 修法**（正是 H5 评估里 cordis 原文缺的三样）。两条变异自检：还原 `360` 坏值 ⇒ 精确指到 `:61`；解析器自身退化 ⇒ 判"校验器不可信"。**边界如实**：不对称本身（静态通道掀整机 vs 动态通道单条目）仍在，那是宿主（cordis / dsh-app-boot）行为，红线内不改；本步只是**在提交前就拦住**，不让它走到启动。可选加强层（再按 manifest 的 `configSchema` 校验一遍，可覆盖 rate-throttle 等 3 个不带 `Config` 的入口）本轮按任务书口径未做——它明确要求"无 Config 的入口跳过，与 cordis 行为一致"。 |
 | D-17 | **恢复工具与三个时点验收脚本仍指已退役基准 `ce0b0b81…`**：`scripts/restore-cordis-baseline.mjs`（`EXPECTED_SHA`/`EXPECTED_SIZE`）与 `scripts/terminal-acceptance-{probe,probe2,report}.mjs` 内嵌 P8 判据基准字面量。核实结果：**恢复工具在本轮配置修复之前就已失效**——它按"当前 HEAD blob + 追加 toolkit-manager 4 行"重建基准，而 HEAD 如今已含那 4 行 ⇒ 重建出 3202 B / sha `3a522a56…` ≠ 期望 3097 B，**fail-closed 直接不写盘**（本轮 dry-run 实测复现，无写盘风险）。三个 `terminal-acceptance-*` 是 P2.2/P8 的**时点取证脚本**，不在 `regression-all` / `ci-local` 清单内，重跑会报 `NO ✗`。 | 工程侧发现并记录（2026-09-21 H5，随 A#24 基线滚存一并核出）。**本轮不动**：它们要证的各是当时的判据，把字面量改成新值等于伪造那些时点的结论；正确处置是重做一份当前时点的恢复工具（若还需要恢复能力）或直接退役。**裁定方：待用户**（重开条件：有人真要再跑基线恢复，或把 P8 时点脚本归档） **已关闭（2026-09-21 Pack I，A#25）**：逐个判处置完毕。`restore-cordis-baseline.mjs` ⇒ **显式退役**（不修）：两条独立理由写进头注——重建公式「HEAD blob + 追加 toolkit-manager 4 行」自 P2.4 把那 4 行提交进 HEAD 起就不自洽（本轮改动前实测复现 3202 B），且"钉死某一枚 sha"已被滚存判据取代，现行恢复动作就是 `git checkout HEAD -- cordis.patch.yml`（`q2-layer-scan` ④ 已在校验"工作区 == HEAD"）；空壳保留而不删，是为了让下一个想恢复 patch 的人当场撞见结论。三个 `terminal-acceptance-*.mjs` ⇒ **历史冻结**（不删）：probe / probe2 只读不写盘，加时点头注 + 运行时横幅（"今天重跑出现 NO ✗ 属预期时点错位"）。**新查实的危害**：`terminal-acceptance-report.mjs` 末尾会把报告写回 `panel/docs/evidence/TERMINAL-ACCEPTANCE-ROUND10.txt`——那是已入库、evidence/README 已登记 sha `49ef62a0…` / 6689 B 的证据正本 ⇒ 仅靠注释拦不住手滑，故加 `process.exit(2)` 硬闸；MUT-C 实证（摘闸 + 输出重定向到仓外）：重跑会产出 10862 B 的今日报告，时刻行、`cordis.patch.yml` 当前 sha、"基准可重建性 ✗" 全变 ⇒ 该覆写是真的。硬闸只拦执行，未改脚本任何取证逻辑与历史结论文本；`evidence/README` 那一行"可重放"的表述已按只增不改的规矩**追加更正**。 |
+| D-18 | **`requires.services` → cordis `inject` 的合成桥接**（题 1 推迟项之一）：把 manifest 声明的依赖合成为插件对象的 `inject`，使 cordis 真正设门。三条已实测的既有后果（`test/cordis-inject-lifecycle.test.mjs:52/86/134`）：① 只写 manifest 的插件依赖缺席也直接 ACTIVE；② 依赖离开后 cordis 已撤 fiber、registry 仍报 `active`（**批 3 的真相收口只修这一格的"报"，不修"设门"**）；③ `install` 全局互斥 ⇒ 装 provider 去解锁正在等的 consumer 走不通，只能等重试退避 | 用户裁定（2026-09-22）：**移出 v1.1、单独立项**，v1.1 走"真相收口 + 补测试钉住"（依据：四份文档**未承诺自动唤醒**，重试退避即正典，出处 `docs/embed-toolkit.md:35` + `docs/p0-recon.md:97` REQ-6）。**立项时必答：与 cordis 上游 REQ-6 对齐还是自创**——该问题不允许无限期悬置。已知代价三条须连带裁：改变装载时序（原 ACTIVE 者会停 `loading`、超时转 `fiber-load-timeout` 并按 `retryLimit` 计入隔离，A2/FIBER 错误码面全部要重测）；`mergeNamespaceStatics` 是**就地改写**插件对象（`registry/src/loader.ts:314-317` 自陈），合成值会串进宿主通道对同一模块实例的读取；对内置插件无效（它们由宿主 patch 通道装载，实测不经 `resolveLocalSource`） |
+| D-19 | **用宿主原生 `inject:` 声明替代模块自带 `inject`**（题 1 推迟项之二）：`cordis-plugin-loader@1.0.3` 支持在 YAML 行上给 `inject`（`EntryOptions.inject`，经 `Inject.resolve` 合进 fiber，见《D-12 追加》逐字对照），而本仓 `cordis.patch.yml` 的 6 个 insert 行**一条都没用**（全凭模块自带） | 用户裁定（2026-09-22）：同 D-18 移出 v1.1。**这是语义更正解**（门控归宿主、零代码、与 cordis 原生一致），但代价明确：改 `cordis.patch.yml` ⇒ 判据基准**第 3 次滚存**（现值 `e8051fe9…`/3085 B，p24 两处硬闸同步、机制不得放宽）+ `scripts/patch-config-check.mjs` 的解析器与 `iterRows` 要认这个新键（它现在是 fail-closed 的严格子集，未知键会不会抛须先验）+ **必须真机重启复验**（H5 那类"整机起不来"的爆炸半径就在这一行文件上）+ D-16 的不对称仍在 |
 
 ---
 
