@@ -391,9 +391,11 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
     await this.withLock(id, async () => {
       const entry = this.entries.get(id)
       if (!entry) throw new Error(`插件不存在：${id}`)
-      const schema = entry.manifest.configSchema
-        ?? ((entry.pluginObject ?? {}) as Record<string, unknown>)['Config']
-        ?? ((entry.pluginObject ?? {}) as Record<string, unknown>)['configSchema']
+      // ★3（契约 v1.1 批 4）：与 doctor 同序——模块 Config/configSchema 导出优先于 manifest 落盘那份。
+      const pluginLike = (entry.pluginObject ?? {}) as Record<string, unknown>
+      const schema = pluginLike['Config']
+        ?? pluginLike['configSchema']
+        ?? entry.manifest.configSchema
       const result = await validateConfigAgainstSchema(schema, config)
       if (!result.ok) {
         const error = new Error(`配置未通过 configSchema 校验：${result.issues.map((i) => `${i.path}: ${i.message}`).join('；')}`)
