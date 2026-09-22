@@ -187,6 +187,7 @@
 | C-66 | `:101` | D-2 的"门禁必须跑 typecheck×3"仅门禁，无用例（廉价可补：断言 3 份 tsconfig `strict===true` + test 链含 typecheck） | `package.json:9/:14` |
 | C-69 | `:105` | D-6 依据栏仍写"未清偿，交用户复核"，台账已翻面为"已裁定并入契约 v1.1"（`debt.md:109`） | 本轮裁定即其落点 |
 | C-71 | `:110` | "桶在 **precheck 阶段** 判 `contract` 兼容"错位：闸门在 `validate.ts:137`，precheck 只翻译 | `loader.ts:416-419`→`registry.ts:485-504` |
+| C-72 | `§2.1` 末（2026-09-22 裁定采甲**新增**条） | 事件订阅面的正典位置与语义此前**两份正本零提及**（`add-sub-plugin.md` 全文 `events` 零命中），而 7+4 条声明在盘上、面板在展示 ⇒ 反向缺口补全；同笔如实记其另一半：`registers.events` **两仓零校验**却当事实展示 ⇒ 建议登记 D-13（措辞待裁） | 实测 §10.4（探针 `var/scratch/c1-batch2-20260922/probe-events-face.mjs` 可复放）；展示点 `panel/client/index.js` 的 `TechDetails`、装配点 `panel/manager/snapshot.mjs` 的 `registers` |
 
 反向缺口（实现有、`contract.md` 零提及，18 条）：`EntrySource` 7 值枚举、`entryWarnings` 通道（含 `event=entry-declaration` 落盘）、`$from` 继承指针、"显式声明必存在绝不回退"红线、D-15 成因文案、`mergeNamespaceStatics`/`PLUGIN_STATIC_KEYS`（6 键，非 3 键）、`extractRegisters`→注册冲突面、`setConfig` 写回+热重载+`value-invalid`、`install(force)`、`AUDIT_EVENTS` 8 名与 `durability`/`persisted` 面、扩展方法面（`registersOf`/`setHealth`/`retryAttemptsOf`/`attachHost`/`attachRegistry`/`publishReport`/`validate` 等，均不在两个 `interface` 内）、`InspectionReport`、`PluginStatus` 6 态与重试数字族（`retryLimit 3`/`retryBackoffMs 500`/`loadTimeoutMs 30000`/`saveDebounceMs 0`）、`notify()` 吞监听器异常（`emit-failed`）、autoload 恢复语义、`probeTimeoutMs` **惰选项**（声明+赋缺省但全文再未被读取，`apiReachable` 自己硬编码 3000ms）、`via` 的死值、面板对 `panels` 的透传。
 
@@ -474,17 +475,38 @@ schemastery list 正确读法 + 面板测试（`panel-unified` 按 label 定位�
 **不加 `events` 槽位**。理由：实测本仓零发出者 ⇒ `provides.events` 会是一个"文档写到、仓内无生产者
 无消费者"的空壳字段，正撞 P2-11 点名的 `fix.docsUrl` 同类失真，与用户标准（"文档写到的全部正常实现"）相反。
 
-**遗留待裁（阻塞 B 案改名与批 10 数据落地，不阻塞批 2）**：这 11 条监听声明要有家，两条路成本不等——
+**这 11 条监听声明的家——协调侧裁定：采甲（2026-09-22 批 2 动工确认令第三节，零迁移）**。两条路的实测成本差留档：
 
 | 方案 | 承载处 | 语义 | 跨仓成本（实测） |
 |---|---|---|---|
 | 甲（**建议**） | `requires.events` | 与 `requires.services` 同族，都是"本插件对环境的依赖"；事件由宿主发出，本插件消费 ⇒ 归依赖面为真 | **零 doctor 改动**：doctor 对本仓 `requires` 只放行键名、不校验值（实测 `doctor仓:src/engine.mjs` 无 `parsed.requires` 任何分支；`6839cc1` 自述"值语义归契约层"），且其撞名循环只跑 `services/commands/providers` 三类，`events` 今天就不参与 |
 | 乙 | 新根字段 `subscribes` | 监听面独立成字段，读起来最贴合裁定 23 的字面 | **须再来一笔 doctor 白名单**（与批 1 同型：不放行即判"清单根字段非法"），并把"依赖宿主哪些事件"从 `requires` 拆成两处 |
 
-执行侧不自裁此项：它改的是契约字段表（承诺面）。裁定 23 那句"监听→`subscribes`"是在
-"provides 要不要 events 槽"这一问句下给的**分类法**，是否为此新建根字段属新决策。
-若采甲，连带影响：§8.4 的 B 案输出面须把 `snapshot.mjs` 的 `registers.events` 改挂到依赖面语义，
-`p1-smoke` 的字段名在场断言随之翻面（该条已在 §8.4"须批准三处断言"清单内，非新增）。
+（提出时按"执行侧不自裁承诺面"上报：裁定 23 那句"监听→`subscribes`"是在"provides 要不要 events 槽"
+这一问句下给的**分类法**，是否为此新建根字段属新决策。）
+
+**裁定＝采甲，三条理由（协调侧 2026-09-22 批 2 动工确认令第三节）**：① 实测定性（本仓全消费者、宿主为发出方）
+与 `requires` 族语义同构；② 为贴字面新建根字段、把同族声明拆成两处，反而制造新的声明面分叉；
+③ 甲零迁移、零 doctor 改动、零 breaking。
+
+**裁定附条件的兑现情况**：
+- 条件 1（定稿文档写清 events 正典位置与语义并入矩阵）：已随本笔在 `docs/contract.md` §2.1 末补条目，
+  含"两处零校验"的如实记载；本节即矩阵侧入账。
+- 条件 2（§10.4 取证结论入档）：本节。
+- 条件 3（批 10 与改名批解锁，照原编排＝改名批在批 2 之后紧邻批 10）：因**零迁移**，§8.4 的 B 案对
+  `events` **无换源动作**（输出键名与数据源维持 `registers.events`），B 案要处理的只剩 `services` 那侧的
+  倒置（批 2 修行为、批 10 落数据）⇒ `p1-smoke` 的字段名在场断言**不因 events 翻面**。
+  （本笔提出时的相反推测按裁定更正；该推测未提交过，不留错账。）
+
+**本轮实测新暴露两条（登记用，不在批 2 内顺手修）**：
+1. **新失效面**：`requirements.registers.events` 今天**两仓都零校验**（本仓 `validate.ts` 只在
+   `KNOWN_LEGACY_FIELDS` 里列过 `requirements`/`registers` 两个键名；独立 doctor 只把 `registers` 当对象
+   查类型，其撞名循环只跑 `services/commands/providers`），而面板把它当事实展示 ⇒ "展示一份无人校验的数据"。
+   建议登记为 `contract.md` §7 的 **D-13**（措辞待用户/协调侧定，本轮不自裁）。
+2. **批 2 施工点补录（★1 同族残留）**：`contract/src/types.ts` 里 `ManifestRequirements.services` 的注释
+   仍写"依赖的 cordis 服务名（**inject 面**）"——正是 P0-2 已否掉的旧口径（`contract.md` §2.1 ① 明写它
+   **不桥接** `inject`）⇒ 批 2 把 `requires.services` 退回纯依赖面时**须同笔改掉这行注释**，
+   否则代码注释会继续向文档供货（§5.2 总成因的现行样本）。
 
 ---
 
