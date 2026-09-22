@@ -4,7 +4,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import net from 'node:net'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
@@ -394,5 +394,55 @@ test('批 2-①：provides 撞名——同 provides.services 的第二个插件�
     assert.ok(issue, '阻断码为 reg.name-collision，且来源是 provides 槽')
     assert.match(issue.message, /服务 fixture\.shared-svc/)
   }
+  await stopAll()
+})
+
+// ── 批 3（★2 模块静态面绑定）：一律走真装载链，不许再用手工注入条目视图替代 ──────────
+
+test('批 3-①：模块导出的 healthCheck/panels 经装载链绑进 manifest，并被体检真消费（正常与异常两条路）', async (t) => {
+  const mod = await import('./fixtures/registry/runtime-statics/index.js')
+  mod.state.fail = false
+  const { registry, doctor, stopAll } = makeStack(t, { doctorOpts: { failureThreshold: 1 } })
+  doctor.attachRegistry(registry)
+  const installed = await registry.install({ kind: 'local', path: fixtureDir('runtime-statics') })
+  assert.equal(installed.ok, true, '夹具安装成功: ' + JSON.stringify(installed.ok ? {} : installed.precheck.blocking.map((x) => x.code + ':' + x.message)))
+
+  const entry = registry.get('fixture/runtime-statics')
+  assert.equal(typeof entry.manifest.healthCheck, 'function',
+    '★2 绑定在场：此前 healthCheck 在装载链上不可达（读方一直读 manifest.healthCheck，写方从未存在）')
+  assert.deepEqual((entry.manifest.panels || []).map((p) => p.id), ['runtime-statics.main'], 'panels 同样由模块导出绑进')
+
+  const okReport = await doctor.inspect('fixture/runtime-statics')
+  assert.ok(okReport.reports[0].items.some((i) => i.code === 'runtime-statics.ok'),
+    '模块 healthCheck 的产出必须出现在体检报告里（证明读方真拿到并调用，不是只挂了个字段）')
+
+  mod.state.fail = true
+  const badReport = await doctor.inspect('fixture/runtime-statics')
+  assert.ok(badReport.reports[0].items.some((i) => i.code === 'healthcheck-failed' && i.level === 'error'),
+    '同一条真链上的异常路径也计入 healthcheck-failed（与既有手工注入用例同语义，但走的是装载链）')
+  mod.state.fail = false
+  await stopAll()
+})
+
+test('批 3-②：JSON 落盘边界——磁盘上两份形态都不含函数，绑定只活在内存面', async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'doctor-batch3-'))
+  const statePath = join(dir, 'state.json')
+  const onDisk = JSON.parse(readFileSync(join(fixtureDir('runtime-statics'), 'dsh.plugin.json'), 'utf8'))
+  assert.equal('healthCheck' in onDisk, false, '夹具的落盘 manifest 不含 healthCheck（函数装不进 JSON）')
+  assert.equal('panels' in onDisk, false, '夹具的落盘 manifest 不含 panels ⇒ 内存面那份只可能来自模块绑定')
+
+  const { registry, stopAll } = makeStack(t, { registryOpts: { statePath } })
+  const installed = await registry.install({ kind: 'local', path: fixtureDir('runtime-statics') })
+  assert.equal(installed.ok, true)
+  const persistedText = readFileSync(statePath, 'utf8')
+  assert.equal(persistedText.includes('healthCheck'), false, '状态文件不得出现 healthCheck（PersistedPlugin 不含 manifest）')
+  assert.doesNotThrow(() => JSON.parse(persistedText), '状态文件必须可解析（函数不炸盘）')
+  const persisted = JSON.parse(persistedText)
+  assert.equal(Object.prototype.hasOwnProperty.call(persisted.plugins['fixture/runtime-statics'], 'manifest'), false,
+    '守卫：持久化条目形状仍不含 manifest —— 若哪天把 manifest 整体落盘，本断言会先响（函数会被静默丢掉）')
+  const entry = registry.get('fixture/runtime-statics')
+  assert.equal(typeof entry.manifest.healthCheck, 'function', '内存面绑定在场（与落盘面互不污染）')
+  assert.equal('healthCheck' in JSON.parse(JSON.stringify(entry.manifest)), false, '整份 manifest 被序列化时函数静默消失而非抛错')
+  rmSync(dir, { recursive: true, force: true })
   await stopAll()
 })

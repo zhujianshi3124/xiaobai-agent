@@ -65,6 +65,42 @@ function extractRegisters(m: Record<string, unknown> | undefined): PluginRegiste
   }
 }
 
+/**
+ * ★2（契约 v1.1 批 3）：把**模块导出**携带的 `healthCheck` / `panels` 绑进 manifest，接通
+ * "读方已在、写方从未存在"的半截消费链 —— 体检读的是 `manifest.healthCheck`
+ * （`doctor/src/doctor.ts` 的 `inspectEntry`）、面板透传读的是 `entry.manifest.panels`
+ * （`panel/manager/v2-api.mjs`），而此前没有任何一处把模块上的它们写进 manifest（contract.md §7 D-9）。
+ *
+ * 取值顺序：**先插件对象、再模块命名空间**。命名导出在 `export const healthCheck` 这种
+ * default 对象形态下不会出现在 default 上（`mergeNamespaceStatics` 只补 `PLUGIN_STATIC_KEYS` 六键，
+ * 不含这两个），只读插件对象就会重蹈"声明了却读不到"的同一个洞（B2 的教训形）。
+ *
+ * 只补位、不覆盖：`healthCheck` 只能是函数 ⇒ JSON 落盘的 manifest 那份恒为缺席；`panels` 两处都在时
+ * **维持现状（落盘那份赢）**——双在场的优先级属 ★3 同族问题，正由批 4 定案，本批不预判。
+ */
+function bindRuntimeStatics(manifest: DshSubPluginManifest, pluginLike: unknown, modLike: unknown): void {
+  const read = function (key: string): unknown {
+    for (const src of [pluginLike, modLike]) {
+      if (!src || typeof src !== 'object') continue
+      const value = (src as Record<string, unknown>)[key]
+      if (value !== undefined) return value
+    }
+    return undefined
+  }
+  if (manifest.healthCheck === undefined) {
+    const runtimeHealthCheck = read('healthCheck')
+    if (typeof runtimeHealthCheck === 'function') {
+      manifest.healthCheck = runtimeHealthCheck as NonNullable<DshSubPluginManifest['healthCheck']>
+    }
+  }
+  if (manifest.panels === undefined) {
+    const runtimePanels = read('panels')
+    if (Array.isArray(runtimePanels)) {
+      manifest.panels = runtimePanels as NonNullable<DshSubPluginManifest['panels']>
+    }
+  }
+}
+
 export class SourceError extends Error {
   readonly code: 'source-not-supported' | 'path-not-found' | 'entry-not-found' | 'module-load-failed' | 'plugin-shape-invalid'
   /** manifest 校验的逐条 issue（精确字段路径），供预检报告直接引用。 */
@@ -434,6 +470,7 @@ export async function resolveLocalSource(input: PluginSource): Promise<ResolvedP
     if (runtimeSchema !== undefined && manifest.configSchema === undefined) {
       manifest.configSchema = runtimeSchema
     }
+    bindRuntimeStatics(manifest, rec, mod)
     return { manifest, plugin, legacy: false, source: input, entryPath, entrySource, entryWarnings, registers: extractRegisters(manifestRaw) }
   }
 
@@ -460,5 +497,8 @@ export async function resolveLocalSource(input: PluginSource): Promise<ResolvedP
       check.errors,
     )
   }
+  // legacy 分支同样绑定：D-9 那句"作者按文档写了不会跑"对 legacy 作者一样成立，
+  // 只修契约分支等于把同一个半截设计留给无 contract 字段的清单（本仓 panel/ 就是活例）。
+  bindRuntimeStatics(check.manifest, plugin, mod)
   return { manifest: check.manifest, plugin, legacy: true, source: input, entryPath, entrySource, entryWarnings, registers: extractRegisters(manifestRaw) }
 }
