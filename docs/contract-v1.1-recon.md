@@ -550,6 +550,35 @@ schemastery list 正确读法 + 面板测试（`panel-unified` 按 label 定位�
   演练面＝不装新插件、不动真实引擎配置、不改宿主参数。回滚＝本批代码笔单笔 revert + 再重启。
   读数（pid / 时间）在复验后立即上报。
 
+**批 4 真机复验：已尝试但前置不成立，按令停手（2026-09-22 21:17–21:35 现场读数）**
+
+用户走 (a) 路径自行重启宿主后复验，实测：
+
+| 项 | 读数 |
+|---|---|
+| 宿主进程 | 旧 pid 2624 已消失；新 **pid 26004**，`StartTime 2026-09-22 21:17:06`；`127.0.0.1:3080` 在听 |
+| 根插件是否活着 | **活**：`/api/toolkit-panel/v2/snapshot` → 200，`ok:true`、`servicePrefix:"toolkit"`、`doctorAvailable:true`、`durability.state.ok:true`；`profiles/web/package.json` 的 `bundles` 含 `@local/dsh-toolkit` |
+| 子插件面 | `plugins: []` ⇒ **面板卡片数 0（应为 5）**；`/doctor/states` → `states: []` |
+| 挂载来源 | 六份 `~/.dsh/profiles/*/cordis.patch.yml` 哈希**全部同为 `ef189a8c`**、`dsh-toolkit` 行数**全为 0**、mtime 落在 09-12 17:14 ～ 09-19 08:45；预设 `liangshen/agent.cordis.yml` 只余 1 处 `@local/dsh-toolkit/compact-router` 引用 |
+| 我方状态文件 | 仓内 `.registry/state.json`：`plugins` 条数 0、mtime **09-21 21:22**（今日重启**未被写入**）⇒ 今天没有发生过挂载尝试 |
+| 权限面 | 部分路由需凭据（`v2/engines`、`v2/signals` → 401，与 recon §3 当年"3080 匿名 401"一致）⇒ ② 真实搜索我也无从匿名驱动 |
+
+判定：**三项复验全部无法在本环境状态下执行**（①的"5 卡"直接不成立，②③依赖插件在场），按开工令第 3 条
+"异常即停手如实报、不自行放宽断言"处理 ⇒ 本批真机面**未完成、待裁**。
+
+不是本批代码回归的证据（三条，逐条可复放）：(1) 同一份代码在离线门禁里 p1-smoke 314 条全绿，
+其中含面板 5 卡与挂载面断言；(2) 宿主里我们根插件的全部路由正常应答、`durability` 三项 `ok:true`，
+入口模块导入未出错；(3) 承载 5 个子插件的 patch 行**在盘上已不存在**（六份文件 0 命中，且 mtime 早于本轮全部批次）
+⇒ 卡片归零的原因在挂载来源侧，不在装载链代码侧。**本轮我对 `~/.dsh` 与宿主进程只读未写**
+（curl GET / grep / stat / netstat / tasklist / PowerShell 只读查询），未 kill 任何进程。
+
+**批 4 补证项（协调侧第二节要的答案，实证而非推理）**：只把 `registry.setConfig` 那条链翻回旧顺序
+（loader 与 doctor 保持正码）⇒ `test:doctor` **19/19 全绿，无用例翻红**。成因清楚：装载器已把模块值写进
+`manifest.configSchema`，同一入口两种顺序取到的是同一份 ⇒ **该处同序改动今天没有独立钉**，
+它的价值是"绕开装载绑定的条目视图也同口径"的保险。两条处置请裁：
+(i) 补一条**命题就是"绕开装载链的条目"**的消费链用例（明示它与"不许用手工注入替代真链"不冲突——
+后者禁的是拿条目视图冒充装载链验证）；(ii) 维持无钉，在 §5"有钉/仅门禁"面如实标注。我倾向 (i)，成本一发。
+
 
   `cordis.patch.yml` 判据基准 `e8051fe9` **未动 ⇒ 未变、不滚存**；探针目录 `var/scratch/c1-recon-20260922/`
   按协调侧令暂留未清。
