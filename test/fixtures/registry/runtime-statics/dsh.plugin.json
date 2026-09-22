@@ -1,0 +1,6 @@
+{
+  "id": "fixture/runtime-statics",
+  "displayName": "模块静态面绑定夹具",
+  "version": "1.0.0",
+  "contract": "^1.0"
+}
