@@ -675,3 +675,35 @@ schemastery list 正确读法 + 面板测试（`panel-unified` 按 label 定位�
 
 - **探针与底表**（沙箱 `var/scratch/c1-recon-20260922/`，协调侧令暂留勿删，批次收尾按仓库惯例处置并记录）：`probe-registry-inventory.mjs`（§4 枚举）、`probe-contract-behavior.mjs`（§1/§2 四条承重结论）、`probe-collision-falsepositive.mjs`（§7 假阳性复现）、`raw-matrix-migration.md` / `raw-matrix-embed-toolkit.md`（本文两份附录的原始件）、`raw-test-index.md`（27 个测试文件 / 250 个 `test()` 位点→256 运行用例 + 182 条 `check()` 的逐条索引，供批 0-6 补钉时查"这格有没有人钉过"）、`fixtures/`（探针自造夹具，不在两仓内）。
 - **本轮未做**：未重启宿主、未碰 `~/.dsh`、未跑 `p23-shadow-scan`、未动 `panel/`、未碰 `terminal-acceptance-report.mjs` 硬闸（侦察期未触发）、doctor 仓零改动。`acceptance-stage3.mjs` 未跑（§9）。
+
+**批 4 真机"停手"读数更正（2026-09-22 21:50 查因轮 · 本节作废上面"前置不成立"的结论）**
+
+用户令查"挂载静默丢失"成因，实读结果：**根本没有丢失，是我把读数取在了错的面 上**。三条决定性证据：
+
+1. 宿主 v1 路由 `/api/toolkit-panel/snapshot` 的 `snapshot.plugins` = **5 张卡，全部
+   `mounted:true / enabled:true / status:mounted`**（agent-memory、compact-router、rate-throttle、
+   search-router、web-search-local；`managedBy` 四 patch + 一 preset-script）⇒ 面板可见面与挂载状态正常。
+2. `snapshot.patch.path` = **`D:\dsh-plugins\dsh-toolkit\cordis.patch.yml`** —— 宿主实读的是**本仓**那份，
+   size **3085 B**、sha 前缀 **`e8051fe9`**（＝判据基准，未变）、mtime 2026-09-21 22:41、rows 9 条。
+   我上一节拿去推断"来源被重置"的六份 `~/.dsh/profiles/*/cordis.patch.yml` 是 217 B / 4 行的
+   **profile 初始化模板（历来如此）**，从来不是挂载来源。
+3. `/api/toolkit-panel/v2/snapshot` 的 `plugins: []` **本来就是常态**，不是丢失信号——
+   它是我们 toolkit 自己 registry 的安装清单；`panel/docs/evidence/G-REAL-HOST-SMOKE.md` 早在 09-21
+   就写着"改造前基线：`/v2/snapshot` `ok:true`、`plugins:[]`；工具区 5/5 mounted"。
+
+**成因（按"错账必查方法盲区"办，四条）**：① 把 `v2/snapshot.plugins`（registry 面）当成面板卡面（snapshot 面）——
+两个同名 `plugins` 字段分属不同通道，是本轮最贵的一个混淆；② 判据基准所在的 patch 文件路径没有先向宿主取证
+（`snapshot.patch.path` 一行就能定死），而是照目录惯例去 `~/.dsh/profiles/` 找；③ 六份 profile patch 哈希全同
+被我读成"被重置"，实为同一份初始化模板的正常结果；④ 结论强度与证据强度不匹配——我据此出了"停手 + 三选一"，
+并把"另一 agent 动过"的怀疑链接了下去，而这条链没有任何证据要求。
+防再犯（写入口径）：**凡"宿主 X 面"的读数，必须取自宿主自己的自述面**
+（`snapshot.patch.path` 定来源、`snapshot.plugins` 定挂载、`snapshot.custody`/`durability` 定写盘面），
+不得由仓内文件或 profile 目录内容代推；同名不同通道的字段（`v2/snapshot.plugins` 对 `snapshot.plugins`）
+必须先写明是哪一面再引用。
+
+**H1/H2 判定**：两者均不成立——不存在丢失事件，也无需再查第三方操作。
+现有反证一并归档：我方审计流水 `.registry/audit.jsonl` 仅 4 条（09-21 13:20:40 与 13:22:42 的
+`legacy/h5-probe-host-fibers` install/remove，我方探针），今日零写入；本仓 patch 文件 mtime 停在 09-21 22:41。
+
+**批 4 真机面状态随之改判**：复验①（宿主健康 + 5 卡照常）**已在 21:45 前后的实读中通过**；
+②（web-search-local 真实日常搜索）与 ③（14 键生效面／配置表单）仍待做——上一节"三项全数无从执行"作废。
