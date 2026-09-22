@@ -123,6 +123,34 @@
 | **P2-15** | `contract.md:112` | legacy 合成 id 落 `legacy/<name>` | 有条件：`loader.ts:369` 包名含 `/` 时**原样沿用** ⇒ scoped 包必被 `ID_RE` 拒（即 D-15），文档未写该条件 | 改文档 |
 | **P3** | `debt.md:133`（B-1） | 「`manager/uninstall.mjs` 的 **10 个** plan/execute 函数与 **6 个**验收脚本（含 p24-ui-matrix）」 | 实测 **15 个导出函数**（7 plan + 8 execute）、以 `putPlan/getPlan/dropPlan` 为契约的验收脚本 **5 个**（`p24-ui-matrix.mjs` 不引用这三个函数）⇒ B-1 的风险评估基数是错账 | 已核（本轮 V7/V8）。成因：B-1 写于 P7，其后 P2.4 扩了 mount/restore 面。⇒ 随本笔更正 debt.md，**不改 B-1 的裁定结论** |
 
+### 5.2 原因列（任务 A · git 考古成品，2026-09-22 审定轮并入）
+
+定性口径：**1 = 文档超前（从未实现/已废弃的设计）；2 = 实现回归（曾一致、某笔改坏）；3 = 文档漂移
+（实现演进了没跟上 / 写的时候就错）**。方法：`git log -S'<条文特征串>'` 定位条文写入笔，
+`git show <sha>:<文件>` 复写时点行号与上下文，再用 pickaxe 定位实现定型笔。
+
+| 落差 | 条文写入 | 实现定型 | 是否曾一致 | 定性 | 决定性证据 |
+|---|---|---|---|---|---|
+| P0-1 缺席类只产 warn/info | `8407e55`（09-20，四份正本同一笔诞生） | `doctor/src/rules.ts` **诞生即产 error**（`5af0a49` 09-19；`44545c0` 09-19 补强） | **从未** | **3（张冠李戴）** | 那句纪律的真源头是**本行左列这份文档自己**：`docs/p0-recon.md:55`「缺席/缺依赖类只产 info/warning 绝不 error」讲的是**独立 CLI 仓级审计**（其验收红线是 `0/0/0`），被 `8407e55` 抄进 `add-sub-plugin.md §2 要点 4` 后**换了主语**（进程内 `requires` 合成规则）⇒ 文档抄文档、丢限定语 |
+| P0-2 `requires.services` 即 inject 面 + 示例自陷 | 注释源头 `8ccc374`（09-19 P1）；文档 `8407e55` | 借用为提供面始于 **`44545c0`（09-19 P5）**：同笔引入 `extractRegisters` 的 `contractServices ?? legacyServices` 与 `doctor.ts` 的 `ownServices` | **从未** | **1 + 3 复合**（"inject 面"那半句是从未实现的**类型 1**；"当提供面"那半句是实现自创、文档未记的**类型 3**） | `44545c0` 提交说明自陈意图「注册冲突 reg.name-collision，registry 暴露 registersOf」——P5 建冲突检查时 `provides` 从未存在，只有 `requires.services` 可借。**长期潜伏成因（实测）**：5 个 lib 插件全部 `requires.services=null`（走 legacy `requirements.registers`），唯一带它的桶根只由宿主 patch 通道装载、从不经 registry ⇒ 借用对内置静默、对外部契约插件致命 |
+| P0-3 `healthCheck`/`panels` 走模块导出 | `8407e55`（09-20）；语源 `8ccc374` 注释（末尾"**（P4 面板消费）**"＝前瞻性设计意图） | 读方 `doctor.ts:347` 自 `5af0a49`（09-19）就在读 `manifest.healthCheck`；写方**从未存在**：`PLUGIN_STATIC_KEYS` 由 `d2dd56f`（09-20 B2）引入、六键从无 healthCheck | **从未** | **1（读方在、写方无的半截设计）** | `loader.ts` 全文 `healthCheck` 零命中；`d2dd56f` 标题即「default 不再吞掉 name/inject」⇒ 目标从来只是静态元数据面。**审定后新增事实**：本仓**没有任何模块导出 `healthCheck`**（`index.js`/`lib/*`/`panel/` 全量 grep 零命中）⇒ 批 3 接通后内置插件"突然生效面 = 0" |
+| P0-4 configSchema 以模块导出为准 | 注释源头 **`8ccc374`（09-19 P1）**，文档与 `validate.ts:356` 注释同源 | 反方向实现（`manifest.configSchema === undefined` 条件）由 **`8d84729`（09-19 P2）** 引入 | **从未**（P1 与 P2 相差一天，同日之内两边就是反的） | **1（设计从未实现）＋ 传播** | 污染链完整：`8ccc374` 注释 → `8407e55` 抄进 `contract.md §5` → 同笔又经 `migration.md §5` 以"两者并列、暗示等价"复述。**协调侧裁定：定稿=改代码（批 4），文档保留承诺句不附和现状**，另立 D-12 记"当前实现相反" |
+| P1-5 120s 超时 | `8407e55`（09-20） | `8f6b392`（09-18）确为 `timeout: 120000` ⇒ **曾为真**；`b3b1575`（09-19，P2.4 批 2 单元 3「doctor-runner 增 spawn 助手」）放宽为 180000 | **曾经一致** | **3（实现演进没跟上），机制是"文档抄文档"** | 改值在 09-19、文档 09-20 才写，却仍写 120s ⇒ 抄的是 `docs/p0-recon.md:56`；**该源头行至今未改，本轮随定稿笔一并更正（第五处错账）** |
+| P1-6 `contract.md §4` 停在两级顺序 | `8407e55`（09-20，**当时完全正确**） | 顺序改判 `23de06a`（09-21）：`git show --stat` = **17 文件全在 `registry/` 与 `test/`、零 docs** | **曾经一致** | **3** | 收尾文档笔是次一笔 `a6e7457`（09-21「Pack F 收尾落账」），四级正典条文由它写进 `add-sub-plugin.md`（pickaxe `正典位置` 命中该笔）⇒ **同笔只更新一份正本、未回改 contract.md、也未留失效指针** |
+| P2-9 三形态 vs 四分支 | `8407e55`（09-20） | 第 4 分支（`uid`/`refs`）`44545c0`（09-19） | **从未** | **3（写时即已落后）** | 标题"三形态"与正文 ①②③④ 自相矛盾；`via:'schemastery-json'` 死值 |
+| P2-12 `curl localhost:3080` | `8407e55`（09-20） | `isLoopbackAddress` 自 `2b05777`（09-17）只认 `127.0.0.1`/`::1`；`git log -S'"localhost"' -- panel/index.js` **零命中** | **从未** | **3（写时即错）** | 且 `test/`＋`scripts/` 全文 `localhost` 零出现 ⇒ 无任何实现或测试曾假定其可用。**协调侧此前"补 localhost 支持"的裁决因原因查明而作废反转，定稿=示例改 `127.0.0.1`** |
+| 六处失效行号（`loader.ts:135/:110/:233/:181/:31`、`registry.ts:266`、`types.ts:158`） | `8407e55`（09-20） | 漂移主因 `23de06a`（正典段前 +55 行）与 `b59f730`（registry.ts 增行） | **写时全对** | **3** | 实证：`git show 8407e55:registry/src/loader.ts` 第 **135** 行正是 `function resolveEntry`、`git show 8407e55:registry/src/registry.ts` 第 **266** 行正是 `audit:\${event}` ⇒ 属"后来漂"，非"写时错"。`add-sub-plugin.md:12-13` 后来自立的"按函数名找"规矩正是对这次漂移的反应，但**没回改 contract.md** |
+
+**总成因（一条，覆盖 P0 全部四项）**：四份正本文档在同一笔 `8407e55` 诞生，该笔自述"事实来源＝代码"，
+实际取材方式是**抄代码注释、抄类型定义、抄旁证文档（`p0-recon.md`），未核行为与测试**。
+**没有一项是类型 2（实现回归）** ⇒ 修法上不存在"回滚某笔代码即恢复一致"的路径，只能逐条二选一
+（改文档 或 改代码）—— 这正是"说明书须由用户逐条定稿"的原因，也是 ★4/★5 两笔先前裁决
+因原因查明而作废反转的依据。
+
+**未查（如实，协调侧已"放下采信"）**：`p4` 守卫的收窄历史、`fix.docsUrl`/`autoFixId` 空壳字段的引入笔、
+`embed-toolkit.md:93/:99` 两处失效指针的具体成因链（疑与 debt 四类归档重排同批，未证）、
+`8407e55` 之前是否另有入口文档。用户审定若触及相关条文再补挖。
+
 ### 测试覆盖净账（"有钉"缺口的可执行清单）
 
 实现有、断言无（矩阵标 无钉 的高频项，按修复成本排序）：
@@ -279,28 +307,76 @@ B 需要两处新裁定（执行侧不自裁）：
 
 ---
 
-## 10. 修订后的分批计划（以矩阵为基准）
+## 10. 分批计划（2026-09-22 条文审定后重排版，取代本节此前的 v1 草案）
 
-裁定一（矩阵定收口）与 §5 净账改变了范围：v1.1 的收口定义 = **矩阵全绿**，六项只是其中一部分。批次判据 = 独立门禁绿 + 独立回退的最小单元；每批验收 = 门禁 5/5 + 变异自检 + 证据滚存；涉行为变更批标真机；预测句收尾前复查现场。
+判据不变：批次 = **独立门禁绿 + 独立回退**的最小单元；每批验收显式含 **门禁 5/5 + 变异自检 + 证据滚存**；
+涉行为变更批标真机（现场实证为准、不做时点承诺；"重启后生效"类句子收尾前复查现场）；
+两仓编排：doctor 白名单先落、批内分笔、互引 hash。
+**本轮被裁定移除的批次项**：P0-1 的"缺席类降级为 warn"代码项（定稿=维持 error，改文档处理）、
+"补 `localhost` 识别"代码项（定稿=文档示例改 `127.0.0.1`）——两笔原裁决因 §5.2 原因查明而作废反转。
 
 | 批 | 内容 | 仓 | 验收口径 | 真机 |
 |---|---|---|---|---|
-| **批 0 · 文档追赶（零代码）** | P0-1/P0-2/P0-3/P0-4 四句**改文档**（实现侧是否补齐见批 2 的裁定点）；`contract.md` §4 重写为四级正典并把入口管辖让给 `add-sub-plugin.md`（终结三副本）；§5 六处失效行号 + §1 三处计数错账 + `debt.md` B-1 的 10/6→15/5（成因：B-1 写于 P7、其后 P2.4 扩 mount/restore 面）；`migration.md:76` 120s→180s/60s 分档；反向缺口补文档（`EntrySource`/`entryWarnings`/不回退红线/重试数字族/D-15 文案/`panels` 无消费者） | toolkit docs-only | 门禁 5/5；**引用守卫**：新增一条 lint/用例核对文档内 `文件:行号` 指向的符号存在（把 §5-C-1 的自我约束变成可红）；证据滚存=文档即痕迹，`cordis.patch.yml` 未动 ⇒ **如实记"判据基准 `e8051fe9…` 未变、不滚存"** | 否 |
-| **批 1 · doctor 白名单（跨仓前置）** | doctor `MANIFEST_TOP_KEYS:42-46` 加 `provides`；doctor 自己的四套件复跑 + **本批首次跑 acceptance-stage3**（补 §9 盲区） | **doctor 仓**（首次动代码，独立可 revert） | doctor 四套件 14/8/7/21 不降 + 真实仓 dry-run 仍 0/0/0；变异：摘白名单 ⇒ 期望 toolkit 侧 `provides` 夹具报"清单根字段非法" | 否 |
-| **批 2 · 契约能力（承 P0-2/P0-3 的实现裁定）** | 契约加 `provides`（types + `KNOWN_CONTRACT_FIELDS` + 结构校验）；`extractRegisters` 优先读 `provides`；**把 `requires.services` 从冲突面摘出**（P0-2 的实现侧了断，或按裁定保留混合口径时须显式记档）；`healthCheck`/`panels` 是否接入 `PLUGIN_STATIC_KEYS`（P0-3 二选一）；DOCTOR_CLI 行为对账用例进门禁（§8.2 第 3 条） | toolkit | 门禁 5/5 + 0/0/0；**必带用例三发**：provides 撞名被阻断、**共同依赖不判撞名**（对偶）、纯契约 manifest 在 doctor 侧报什么；变异三发：摘 `provides` 优先读 ⇒ 第①条翻红；把 `requires.services` 塞回冲突面 ⇒ 第②条翻红；摘 doctor 对账用例 ⇒ 门禁步数变化可查 | 否（内置不经 registry，实测） |
-| **批 3 · 题 1 真相收口** | registry status 随 fiber 实况回写；**翻面 `cordis-inject-lifecycle:86-113` 那条钉假象的断言**；重试退避数字族补进 `contract.md` §6 | toolkit | 门禁 5/5；变异：摘回写 ⇒ "依赖撤走仍报 active"翻红；须防与 A#18（转 ACTIVE 即清 `lastError`）/A#20（计数按当段）冲突——两枚既有用例必须同跑同绿 | 条件真机：仅当面板可见状态面变化时 |
-| **批 4 · 数据落地（按 §4 实测名单）** | `provides` 补 compact-router / search-router / web-search-local **三份** + **桶根**（纠正倒置）；`rate-throttle`/`agent-memory` 空即如实不补；`panel/` 不动并记档 | toolkit | 门禁 5/5 + 0/0/0；`q2-layer-scan:152`（只扫 `lib/*`，桶根不在其计数内）与 `s6-contract-migration` 镜像复核；五.b 的换源变异证据（若与 §8.4 的 B 同批） | 条件真机：面板技术详情显示面变化时 |
-| **批 5 · 第 4 项 B 的输出面改名** | `snapshot.mjs` 输出面按正确语义改名 + `p1-smoke:295/:337` 如实更新（**须用户批准 §8.4 两处新裁定与断言更新**） | toolkit | 门禁 5/5；`p1-smoke` 条数仍 314（改断言不改条数）；`panel-unified`/`panel-v2` 零放宽；**这是唯一一处会碰升级用户可见面的批次，单独可 revert** | 是：真机复验（面板渲染 + 快照读数），以现场实证为准 |
-| **批 6 · 版本提升（收尾）** | `PLUGIN_CONTRACT_VERSION`→1.1.0；`doctor.ts:464` 硬编码改引用常量；`contract.md` 四处版本字样；CHANGELOG + 迁移说明（含"勿提前写 `^1.1`"的实测反向 case） | toolkit | 门禁 5/5；实测对偶已备（`^1.0` 放行 1.1.0 / `^1.0` 放行 1.1.0、`^1.1` 在 1.0.0 上 false） | 否 |
-| **C-2（v1.2，不在本轮）** | 题 3 收紧；题 1 的 `inject` 合成与 patch 行 `inject:` 声明（必答 REQ-6 对齐）；`agent-memory` 的 `.` 语义（破包语义 ⇒ 主版本级） | 两仓 | 前置清单见 `docs/debt.md` C-2 与 D 区新行 | — |
+| **批 0** | **定稿笔（本笔，已完成）**：四份正本按 20 条定稿修订 + `p0-recon.md` 第五处错账 + 本文并入 §5.2 原因表 + `debt.md` 审定记录/教训条/作废记录 | toolkit，纯 docs | 门禁不需重跑（纯文档），但复跑受影响判据面以自证：doctor 真实仓 dry-run（实测 `exit=0`，且实测 doctor 只扫 `.json`/`.cordis.yml`、`.md` 不进扫描面）+ `q2-layer-scan` 14/14；`git status` 非 docs 文件必须为空 | 否 |
+| **批 1** | doctor `MANIFEST_TOP_KEYS` 加 `provides`（零值校验，照 `requires`/`panels` 先例）；**补跑 `acceptance-stage3.mjs`** 还 §9 盲区 | **doctor**（首次动代码，独立可 revert） | doctor 四套件 14/8/7/21 不降 + 真实仓 dry-run 仍 `0/0/0`；变异：摘白名单 ⇒ toolkit 侧 `provides` 夹具报"清单根字段非法" | 否 |
+| **批 2** | C-1 第 1 项：契约加 `provides`（类型 + 白名单 + 结构校验）+ `extractRegisters` 优先读 `provides` + **`requires.services` 退回纯依赖面**（★1 的行为半边、P0-2 了断）+ DOCTOR_CLI 行为对账用例**进门禁**（题 2 条件 a） | toolkit | 门禁 5/5 + `0/0/0`；用例三发：`provides` 撞名被阻断、**共同依赖不判撞名**（对偶，已备复现夹具）、纯契约 manifest 在 doctor 侧报什么；变异三发（摘优先读 ⇒ 第①翻红；塞回借用 ⇒ 第②翻红；摘对账用例 ⇒ 门禁步数可查）；判据基准 `cordis.patch.yml` 未动 ⇒ 如实记"未变、不滚存" | 否（宿主零消费，§3 实测） |
+| **批 3** | ★2：把模块导出的 `healthCheck`（及 `panels`）绑进 manifest，接通读方已在的消费链 | toolkit | 门禁 5/5；用例走**真装载链**（不许再用手工注入条目视图替代）；`doctor.ts` 的 `healthCheckTimeoutMs`/失败计入降级同时被真实路径覆盖；**受影响插件清单见本节末**（内置激活面 0 ⇒ 无回归面）；变异：摘绑定 ⇒ 新用例翻红 | 否（内置不经 registry；面板侧若显示健康项则顺带观察） |
+| **批 4** | ★3：configSchema 两处都在 ⇒ **模块导出赢**（含 `validate.ts` 注释、`doctor.ts`、`registry.ts` 三处同序消费方） | toolkit | 门禁 5/5；新用例"双在场 ⇒ 模块值生效"；**存量前提已实测**：门禁第 4 步 `patch-config-check.mjs` 已按宿主语义（`unwrapExports` + `Config['~standard'].validate`）校验过真实 patch 行 ⇒ web-search-local 的模块 14 键 Config 认现有配置 | **是**（本批改动宿主通道与本仓通道对同一入口的口径合流，须真机确认宿主装载与面板表单都照常） |
+| **批 5** | ★16：校验降级（`via:'skipped'`）不再返回 `ok:true` 而谎称通过 —— 状态如实透出并让两个调用方看见 | toolkit | 门禁 5/5；用例须同时钉"构建失败 ⇒ 保存被拒/被标注"与"正常路径不受影响"；`config-schema-invalid` 规则的既有断言不得放宽 | 否 |
+| **批 6** | ★10：`entry-not-found` 不回退红线**扩到第③级**（package.json 的 exports/main 指向不存在文件时不再静默落 index.js） | toolkit | 门禁 5/5；**存量核验已过**（见本节末）⇒ 新红线不打断任何仓内声明；用例补 ③ 的两个形态（exports 字符串 / main）各一发；变异：改回静默回退 ⇒ 期望第②级既有用例之外的新用例翻红 | **是**（改的是装载行为，按 A#22 口径真机过装载） |
+| **批 7** | ★13：面板守卫扩面（`p4` 判据从"5 个内置名"泛化 + 扫描面覆盖 `panel/manager` 其余文件） | toolkit | 门禁 5/5；守卫自证：造一个"面板文件里出现第三方插件字面量"的反例 ⇒ 期望红；既有的"有意保留"例外（patch 域生命周期区）必须显式列入豁免并写清依据（否则与 `migration.md` §4 前置 2 打架） | 否 |
+| **批 8** | ★19：`install/confirm` 补逐字 confirm（含客户端按钮与"确认安装"文案） | toolkit | 门禁 5/5；`p1-smoke` 路由数与断言条数不变（314）；面板测试补 confirm 缺失 ⇒ 400 一发；改的是用户操作面 ⇒ 客户端与服务端同批，禁"只改服务端导致按钮点了没反应" | **是**（用户操作面真机可验） |
+| **批 9** | C-1 第 2 项：`audit:*` 入枚举 + 收编 `audit()` 拼装 + 客户端孪生表随动 | toolkit | 门禁 5/5；**零线格式变更须被证明**：8 条名字在收编前后逐字节相等的断言（探针已给基线读数）；`panel-sse-dispose` 的 `5 + AUDIT_EVENTS.length` 与 `toolkit-root` 孪生表核对不得手改字面量 | 否 |
+| **批 10** | C-1 第 4 项（按 §4 实测名单）：`provides` 补 **compact-router / search-router / web-search-local** 三份 + **桶根**（纠正倒置）；`rate-throttle`/`agent-memory` 注册面为空 ⇒ 空即如实不补；`panel/` 不动并记档 | toolkit | 门禁 5/5 + `0/0/0`；`q2-layer-scan` 只扫 `lib/*`（桶根不在其计数内）须写明；若与 §11 的输出面改名同批，须带协调侧条件 b 的换源变异证据 | 条件真机（面板可见面变化时） |
+| **批 11** | C-1 第 6 项：`PLUGIN_CONTRACT_VERSION` → `1.1.0`；`doctor.ts` 的 `'1.0.0'` 字面量改引用常量；版本字样与迁移说明 | toolkit | 门禁 5/5；实测对偶已备（`^1.0` 放行 1.1.0；`^1.1` 在 1.0.0 上判不通过 ⇒ 文档明写"勿提前写 `^1.1`"） | 否 |
+| **不排批** | C-2（v1.2 收紧，前置含"撤必填会令键集校验静默空转"的连带修正）；D-18/D-19（题 1 两项推迟，立项必答"与 cordis REQ-6 对齐还是自创"）；`agent-memory` 的 `.` 语义（破包语义 ⇒ 主版本级） | — | — | — |
 
-两仓纪律：doctor 只有批 1 一笔，且**批 1 必须先于批 2 与批 4**；每批 toolkit/doctor 各一笔、commit message 互引 hash；任一批失败以单笔 revert 收口，不留半批。
+### 10.1 两个评估项的结论（进 v1.1 还是后置，请协调侧定）
+
+**★11 面板状态实时化**：技术前提已核——`entry.fiber` 由 registry 长期持有
+（`registry/src/types.ts` 的 `FiberLike` 带 `state`），`setStatus` 已是"单点修、三面同步"的成熟收口点
+（A#18/A#20 两个先例），事件面可直接复用既有 `registry:status-changed` ⇒ **面板与 SSE 零改动**。
+四件活：周期性"实况对齐"（必须走 registry 既有 timers 封装并纳入 `stop()`，否则会污染
+`panel-sse-dispose` 的句柄计数——环境注记②有前科）、fiber→status 映射定义（不得与
+"隔离后不自动重试"打架）、**必须翻面 `test/cordis-inject-lifecycle.test.mjs` 那条钉"仍报 active"假象的断言**
++ 新增撤依赖/回恢复用例、与 doctor 巡检 `service-missing` 的分工写清（否则面板同屏两处真相不一致）。
+风险点：`ACTIVE↔PENDING` 抖动会变成事件风暴，需要去抖或滞后判定。**判断**：与批 5 同期做收益最大
+（同为"别把未成立的事说成成立"），但它**不是** v1.1 任何一条的前置 ⇒ 若压缩面积可后置，
+文档半边本轮已定稿、且 doctor 巡检是已存在的补偿控制。
+
+**★17 array / union 表单真渲染**：实测是**单点**改动——`panel/client/index.js` 的 `v2RenderField`
+array 分支（约 `:1793-1800`），且 `panel/client/panel.html` **根本不渲染配置表单**（关键字 0 命中）
+⇒ 没有内联孪生要同步，成本比预估低。工作量在"对象数组的逐项编辑 + 值收集回写 + union 的
+schemastery list 正确读法 + 面板测试（`panel-unified` 按 label 定位的风格）"。
+**需求侧事实**：内置 manifest 里的 array 共 8 处、**全部是一维字符串数组**（`throttleProviders`
+`logProviders` `excludeProviders`? 属 staticGroups 的对象数组在 schema 之外、`officialProviders`
+`officialProviderPatterns` `officialModelPatterns` `engines`），**对象数组 0 处** ⇒ 真渲染的收益只对外部插件。
+**判断**：属"文档已如实、实现按需"类，可后置；若进 v1.1，建议与批 5 同期（同在配置校验/呈现面上）。
+
+### 10.2 两个前置核查的结果（协调侧条件 3、4 要求的清单）
+
+- **★2 激活面清单（批 3 前置）**：`index.js`、`lib/*/index.js`、`lib/*/plugin.js`、`lib/*/lib/*.js`、
+  `panel/index.js` 全量 grep ⇒ **模块导出 `healthCheck` 0 处、导出 `panels` 0 处**；唯一带 `panels` 的是
+  桶根 manifest 里那个 JSON 描述符（落盘形态，不走模块绑定）。⇒ 绑定接通后**没有任何内置行为会突然生效**，
+  风险面限于"第三方插件的 healthCheck 第一次真的开始跑"（含超时/失败计入降级的新路径）。
+- **★10 存量声明核验（批 6 前置）**：`package.json#exports` 12 个条目目标**全部存在**（逐一实测）；
+  7 份 manifest 的 `requirements.exports` 目标亦全部存在，且独立 doctor 的 `buildExportTargetIssues`
+  今天就在对 `./` 条目做存在性断言 ⇒ **真实仓 `0/0/0` 本身已隐含"存量声明无一缺失"**。
+  ⇒ 把红线扩到第③级不会打断任何仓内声明；需新增测试的只是"指向缺失时须报错而非回退"这一行为本身。
 
 ---
 
 ## 11. 边界、错账与探针清单
 
-- **本文自身也是文档**：其中的 `file:line` 同样会漂。仓库既有口径 `add-sub-plugin.md:12-13`「按函数名找，别按行号找」适用于本文全部引用；批 0 的引用守卫应覆盖本文。
-- **本轮查出的既有错账四处**（各给成因，不改写原文、只滚存修订）：`debt.md:161` 审计事件"7 类"（成因：草案早于 Pack H1）；`debt.md:170` "5 个内置插件补 provides"（成因：草案按 lib 目录数数，未按注册面实况）；`debt.md:166-167`/`:173` 行号 `loader.ts:31`、`registry.ts:266`（成因：同轮多次改码未回填）；`debt.md:133` B-1 的 10 函数/6 脚本（成因：P7 落账后 P2.4 扩面）。
+- **本文自身也是文档**：其中的 `file:line` 同样会漂。仓库既有口径 `add-sub-plugin.md` §1「按函数名找，
+  别按行号找」适用于本文全部引用。**新增的待办**：原批 0 计划里的"文档引用守卫"（核对文档内
+  `文件:行号` 指向的符号存在）未随定稿笔落地，已挂 `docs/debt.md` D-20 —— §5.2 的结论正是"行号当时对、
+  后来漂"，没有守卫就一定再漂一次。
+- **本轮查出的既有错账五处**（各给成因，不改写原文、只滚存修订）：`debt.md:161` 审计事件"7 类"
+  （成因：草案早于 Pack H1）；`debt.md:170` "5 个内置插件补 provides"（成因：草案按 lib 目录数数，
+  未按注册面实况）；`debt.md:166-167`/`:173` 行号 `loader.ts:31`、`registry.ts:266`
+  （成因：同轮多次改码未回填）；`debt.md:133` B-1 的 10 函数/6 脚本（成因：P7 落账后 P2.4 扩面）；
+  **`p0-recon.md:56` 的"120s 超时"**（成因：09-19 改值未回填，且被 `migration.md` §6 复制一次 ⇒ 第五处
+  是前四处的**上游源头类**样本，两处已于定稿笔一并更正，成因互引）。
 - **探针与底表**（沙箱 `var/scratch/c1-recon-20260922/`，协调侧令暂留勿删，批次收尾按仓库惯例处置并记录）：`probe-registry-inventory.mjs`（§4 枚举）、`probe-contract-behavior.mjs`（§1/§2 四条承重结论）、`probe-collision-falsepositive.mjs`（§7 假阳性复现）、`raw-matrix-migration.md` / `raw-matrix-embed-toolkit.md`（本文两份附录的原始件）、`raw-test-index.md`（27 个测试文件 / 250 个 `test()` 位点→256 运行用例 + 182 条 `check()` 的逐条索引，供批 0-6 补钉时查"这格有没有人钉过"）、`fixtures/`（探针自造夹具，不在两仓内）。
 - **本轮未做**：未重启宿主、未碰 `~/.dsh`、未跑 `p23-shadow-scan`、未动 `panel/`、未碰 `terminal-acceptance-report.mjs` 硬闸（侦察期未触发）、doctor 仓零改动。`acceptance-stage3.mjs` 未跑（§9）。

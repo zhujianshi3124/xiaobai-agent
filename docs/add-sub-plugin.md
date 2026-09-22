@@ -3,12 +3,17 @@
 > 建立：2026-09-20（P8，债务 #6）。目标：任何人做一个 DSH 插件，toolkit 的**唯一面板**就能
 > 自适应地管理它——安装 / 启停 / 配置 / 重载 / 卸载 / 健康，全部零代码改动（DoD ③）。
 > 反过来说：**如果你为了接入新插件改了面板代码，那就是 bug**（守卫：`scripts/p4-no-subplugin-import-check.mjs`）。
+>
+> **2026-09-22 条文审定轮的修订已落在本文**（★1–★20 逐条结论见 `docs/debt.md`「用户审定记录」）。
+> 文中凡挂 `【批 N 落地，当前…】` 的句子，表示**已裁定改代码、实现尚未跟上**——在那之前请以小字为准，
+> 不要按主句判断当前行为。
 
 ## 1. 最小可用形态（连 manifest 都不用写）
 
 一个普通 DSH 插件（导出 `name` / `inject` / `apply`，或 default 对象）就能被装：
 registry 的 legacy 适配器会合成 manifest（id 落 `legacy/<包名>`，无包名则用入口文件名），
-面板卡片带 **legacy 徽标**并如实说明受限项（无环境预检、无自定义健康检查、无配置表单）。
+面板卡片带 **legacy 徽标**并如实说明受限项（**无环境预检、无自定义健康检查**；
+配置表单则取决于模块有没有导出 `Config` —— 见本节末尾，缺它才是"无配置表单"）。
 `configSchema` 若以模块导出 `Config` 存在，legacy 包装也会拾取（`registry/src/loader.ts` 的
 `synthLegacyManifest`——按函数名找，别按行号找，行号会漂）。
 
@@ -58,20 +63,32 @@ registry 的 legacy 适配器会合成 manifest（id 落 `legacy/<包名>`，无
 }
 ```
 
+⚠️ **上面这份"最小例"只过本仓契约，不过独立 doctor CLI。** 独立 doctor 把 `manifestVersion` / `name` /
+`requirements` 三项定为**必填**，且要求 `requirements` 必含 `runtime`/`binaries`/`packages`/`registers`/
+`exports` 五键（缺一条即 `schema.required-missing` error）。本仓 7 份 manifest 全部两套字段都带，
+正是因为要同时过两个校验器。分权口径见 `docs/contract.md` §4 与 §7 D-7、`docs/debt.md` C-1 现状注记。
+
 要点：
 
-1. **入口解析（三级正典顺序，2026-09-21 D-7 裁定后已实现；本节是单一事实源）**，
+1. **入口解析（四级顺位，2026-09-21 D-7 裁定「三级正典」后已实现；本节是解析行为的正本叙述）**，
    实现见 `registry/src/loader.ts` 的 `resolveEntry`：
    - **① `requirements.exports['.']` —— 正典位置。** doctor 独立仓把 `exports` 定为
-     `requirements` 的必填键，并逐条断言其目标文件真实存在；顶层 `exports` 反而不在 doctor 的
-     清单根字段白名单（`MANIFEST_TOP_KEYS`）里，写上去当场产 error。
-     套件根可写继承指针 `{"$from":"package.json#exports"}`，此时正典表就是 `package.json#exports`。
+     `requirements` 的必填键，并对**以 `./` 开头**的条目逐条断言目标文件真实存在（非 `./` 写法
+     —— 如 `x.js`、绝对路径、`file://` —— doctor 直接放过，别把"逐条"读成"无例外"）；
+     顶层 `exports` 反而不在 doctor 的清单根字段白名单（`MANIFEST_TOP_KEYS`）里，写上去当场产 error。
+     **套件根的继承指针是强制而非可选**：套件根**必须**写 `{"$from":"package.json#exports"}` 且
+     `requirements.exports` **只能有 `$from` 这一个键**；非套件根**禁止**用 `$from`（两种违反都产
+     error）。本仓装载器对 `子插件写 $from` 不校验、照单全收 ⇒ 按本节写没问题，按"可选"理解会撞红。
    - **② 顶层 `exports['.']` —— legacy 兼容位。** 命中一定打 warn（经 registry 的 A1 warn 通道
      落日志，event=`entry-declaration`）；与正典并存时**正典赢**，warn 点名被忽略的那一份。
    - **③ `package.json` 的 `exports['.']`（字符串或 `{".":{default|node}}`）→ `main`；
      ④ `index.js`/`index.mjs` 目录惯例** —— 仅当前两级都没有声明时才走到这里（宿主 Node 约定，T0/G1）。
    - **红线：显式声明（①②）指向不存在的文件 ⇒ 直接 `entry-not-found` 并给拼好的绝对路径，
      绝不静默回退后面的顺位**（回退就是拿惯例掩盖 manifest 与实现不同步）。
+     【批 6 落地，当前只覆盖①②】现状：第③级的 `exports['.']`/`main` 指向不存在的文件时**会继续静默
+     落到第④级**，而 package.json 同样是作者显式写的声明 ⇒ 已裁定把红线扩到第③级。
+   - **来源直接给 `.js`/`.mjs` 文件路径时完全绕过上面四级**（`entrySource='explicit-file'`、
+     `entryWarnings` 恒空）⇒ 它会**静默忽略** manifest 里相反的 `.` 声明；`.cjs` 与无扩展名路径按目录处理。
    - 解析结果的可观测面：`ResolvedPlugin.entrySource`（七种来源值，见 `registry/src/types.ts`）
      与 `entryWarnings`。
    - ⚠️ **`.` 是"包主导出"，不必然是插件入口。** 本仓 `lib/agent-memory` 即此形态：
@@ -80,42 +97,87 @@ registry 的 legacy 适配器会合成 manifest（id 落 `legacy/<包名>`，无
      因此**按目录路径装它会得到 `plugin-shape-invalid`**，报错文案会点名同表可改装的文件；
      这不是缺陷（装载器不代为挑选），要装请按文件路径装。
    - monorepo 根没有入口时，预检报错会直接列出**可改装的插件子包候选**
-     （T0 实测：装 monorepo 壳目录会失败，装 `packages/*` 才对）。
+     （T0 实测：装 monorepo 壳目录会失败，装 `packages/*` 才对）。**边界**：只扫 `packages/` 直下
+     一层、最多列 8 个，且要求该子包自身有可解析入口 ⇒ `apps/*` 与 `packages/@scope/x` 不会被报出来。
    - **建议写法**：入口交给 `package.json` 的 `exports`/`main` 或目录下的 `index.js`，
      并让 `requirements.exports["."]` 与之一致——三处一致时上面任何一级都会解析到同一个文件。
 
-2. **configSchema 落盘用纯定义 JSON、零默认值**（P5 起的仓内口径）。面板按它递归渲染表单
-   （object/array/union/boolean/number/string + 必填标注），保存走 `registry.setConfig`，
-   写回前服务端**真校验**（必填缺失阻断）。
-3. **函数型成员走模块导出**：`healthCheck(ctx) => Promise<HealthItem[]>`、`Config`（schemastery/zod
-   实例）、`panels`。JSON 里出现 `healthCheck` 直接判 error。
-4. **`requires` 越诚实，预检越有用**：宿主 doctor 会按它合成规则（运行时版本 / 依赖服务在场 /
-   二进制版本真探测 / envVar 存在性 / 端口 / 文件路径 / 外部 API 可达）。缺席类只产 warn/info，
-   不产 error（doctor 验收红线 0/0/0 的口径）。
+2. **configSchema 落盘用纯定义 JSON、零默认值**（P5 起的仓内口径）。面板按它渲染表单，
+   **实际支持的类型比原列的窄**（`panel/client/index.js` 的 `v2RenderField`）：`object` 真递归、
+   `number`/`boolean`/`string` 直出对应控件、**`array` 只给"逗号分隔"文本框**（数组元素是对象时
+   填不出来，读出来还会变成 `[object Object]`）、**`union` 只在枚举项带 `value` 时可用的下拉**
+   （schemastery 的 union 列表项通常没有 `value` ⇒ 选项会显示 `undefined`）、其余类型落文本框；
+   **根节点必须是 `type:'object'`** 才出表单，否则整块提示"插件未声明 configSchema"（该文案在此情形下不实）。
+   【★17 评估中，见 `docs/contract-v1.1-recon.md` §10 的评估结论；array-of-object 与 union 的真渲染
+   当前**无任何测试覆盖**，且后备页 `panel/client/panel.html` 根本不渲染配置表单 ⇒ 不是双份实现】
+   保存走 `registry.setConfig`，写回前服务端真校验（必填缺失阻断）。
+   【批 5 落地，当前有一格静默放行】构建/重建 Schema 失败时校验降级为 `via:'skipped'` 却仍返回
+   `ok:true`，而调用方只看 `ok` ⇒ schemastery 不可用时任意配置都能写回；已裁定把降级状态如实透出。
+   zod 实例（函数型 `Config` 无 `toJSON`）当前**拿不到表单**（面板提示"未声明 configSchema"），
+   但服务端仍能校验它 —— 这条降级路径此前无人记载。
+3. **函数型成员走模块导出**：`Config`（schemastery/zod 实例）当前生效；`healthCheck(c: HealthCheckCtx)`
+   （入参是 `{config, ctx}` 对象，**不是** cordis 的 ctx —— 原文写成 `healthCheck(ctx)` 已订正）与
+   `panels` **在当前装载链上不会被消费**：装载器绑定模块静态面时只认
+   `name/inject/Config/configSchema/provide/intercept` 六键，而体检与快照读的是 `manifest.healthCheck`
+   ⇒ 写了不跑。【批 3 落地，当前未实现】JSON 里出现 `healthCheck` 直接判 error（这条是已实现的）。
+4. **`requires` 越诚实，预检越有用**：本仓进程内体检会按它合成 8 条规则（运行时版本 / 依赖服务在场 /
+   子插件 / envVar 存在性 / 二进制版本真探测 / 端口 / 文件路径 / 外部 API 可达）。
+   **严重级按"必需/可选"分级，不是一律警告**：必需项缺席 = **error 且阻断安装**（版本不符、依赖服务缺席、
+   必需 envVar 缺失、二进制不在 PATH、低于 `minVersion`、非 shared 端口占用、路径不可访问）；
+   仅"探测不到版本 / 可选缺席 / shared 端口占用 / 网络瞬断"为 warn。
+   （★4 定稿：原文"缺席类只产 warn/info，不产 error"是**把另一套 doctor 的纪律串到了这里**——
+   独立 doctor CLI 的仓级审计才承诺一律不产 error，因为它的验收红线是真实仓 `0/0/0`。
+   两仓分工详见 `docs/contract.md` §6 与 §7 D-7。）
+   ⚠️ 另两条与直觉相反的实况：① `requires.services` **不桥接** cordis 的 `inject`，只写它不设门
+   （依赖缺席也照样 ACTIVE，正典解锁路径是重试退避）；② 该字段当前还被**当作提供面**参与撞名比对，
+   ⇒ 两个只是共同依赖同一服务的插件，第二个会被 `reg.name-collision` 拒装【批 2 随 `provides` 纠正】。
 
 ## 3. 装进来之后你会看到什么（自适应，零代码改动）
 
 面板「插件管理（registry · 自适应）」区：卡片自动出现（SSE `registry:plugin-added`，**不用刷新**），
 带状态徽标、契约版本、legacy 标注，五个操作齐备：停用 / 重载 / 卸载 / 健康详情 / 配置。
-所有写操作都要**逐字 confirm 插件 id**（`confirm-missing` 一律 400），启停/卸载另有知情确认勾选。
+**除安装确认外**所有写路由都要**逐字 confirm 插件 id**（`confirm-missing` 一律 400），启停/卸载另有
+知情确认勾选。【批 8 落地，当前 `install/confirm` 不要求 confirm —— 以预检通过为闸，已裁定补上】
+状态徽标的语义边界（★11）：`status` 是"**装入那一次**的结论"，插件依赖中途离场时 cordis 已把 fiber 撤下、
+面板仍显示"运行中"，要等下一轮体检报 `service-missing` 才对得上；正典解锁路径是重试退避（§2 要点 4）。
+【评估项，进 v1.1 或后置由协调侧定；结论见 `docs/contract-v1.1-recon.md` §10】
+"是否真的落盘"面板也会说：写不进磁盘时条目带 `persisted:false`、卡片如实标注"未落盘（重启会丢）"。
 
 ## 4. 注册冲突检查（"提供面"目前怎么写）
 
 ⚠️ **契约目前没有"提供面"字段**（`DshSubPluginManifest` 只有 `requires.services` = 依赖的服务）。
-doctor 的 `reg.name-collision` 规则要比对"插件声明会注册的服务/命令/提供者"，目前只能从**旧字段**
-`requirements.registers.{services,commands,providers}` 提取（`loader.ts:31` `extractRegisters`）。
-⇒ 想被冲突检查覆盖，就在 manifest 里带上这段旧字段（迁移期 info 级容忍）。该缺口已记入
-`docs/debt.md` #12。
+`reg.name-collision`（本仓进程内规则，`doctor/src/doctor.ts`）要比对"插件声明会注册的服务/命令/提供者"，
+当前的取数口径是：**services 优先取 `requires.services`（★ 语义错位：那是依赖面，被当提供面用）、
+缺席时退回旧字段**；commands / providers **只**取旧 `requirements.registers.{commands,providers}`
+（提取处：`registry/src/loader.ts` 的 `extractRegisters`，按函数名找）。
+⇒ 现状可用做法（**批 2 引入 `provides` 后即被取代**）：想让冲突检查覆盖到你的服务/命令/提供者，
+就在 manifest 里带上 `requirements.registers.{services,commands,providers}` 这段旧字段（迁移期 info 级容忍）。
+**别指望 `requires.services` 是声明提供面** —— 它现在会被拿去比对，两个都声明依赖同一名服务的插件
+会被判撞名（假阳性，已实测复现）；`provides` 落地后该字段退回纯依赖面。
+独立 doctor CLI 侧的同名检查（`reg.name-collision`，读 `requirements.registers`）与本仓规则是两套实现、
+两个数据源，别当同一条闸。缺口立项见 `docs/debt.md` C-1 第 1 项。
 
-## 5. 红线（AGENTS.md 六条，加新插件时必须守住）
+## 5. 红线（`AGENTS.md` 六条中与"加新插件"直接相关的五条，编号对齐 AGENTS）
 
-1. 禁止模块加载期静态 import 兄弟插件代码——兄弟能力只用运行时惰性探测（try-catch + 动态 import）
+1. （AGENTS 1）禁止模块加载期静态 import 兄弟插件代码——兄弟能力只用运行时惰性探测（try-catch + 动态 import）
    或 `optionalDeps` 声明。
-2. 禁止跨插件边界的 eager re-export（`export ... from` 会重建整条依赖链）。
-3. 跨插件测试：存在性门控 + 动态 import，兄弟缺席必须 skip 不得红。
-4. 声明了 `optionalDeps` 就必须真能降级（manifest 与实现同步）。
-5. 面板/引擎零插件名硬编码（`node scripts/pluggable-lint.mjs` +
-   `node scripts/p4-no-subplugin-import-check.mjs` 会抓，扫描面含 toolkit 根入口 `index.js`）。
+2. （AGENTS 2）禁止跨插件边界的 eager re-export（`export ... from` 会重建整条依赖链）。
+3. （AGENTS 3）跨插件测试：存在性门控 + 动态 import，兄弟缺席必须 skip 不得红。
+5. （AGENTS 5）声明了 `optionalDeps` 就必须真能降级（manifest 与实现同步）。
+   **当前状态如实**：`optionalDeps` 不是契约字段（只在校验器的"已知旧字段"清单里）、运行时无人读取、
+   全仓只有 `lib/compact-router` 用了一处 ⇒ 这条红线**目前无机械判据**，靠人工评审。
+4. （AGENTS 4）doctor 仓库：新检查知识写进声明文件，engine 零硬编码插件名。
+   （原文把它写成"面板/引擎零插件名硬编码"，与 AGENTS 第 4 条不是一条，已按编号拆开。）
+
+**"改了面板代码就是 bug"这条纪律的守卫覆盖面**（★13，别把它读成通用守卫）：
+`scripts/p4-no-subplugin-import-check.mjs` 目前**只盯 5 个内置插件名**、**只扫 6 个指定文件**
+（根 `index.js`、`panel/manager/registry-host.mjs`、`v2-api.mjs`、`realtime-connector.mjs`、
+`panel/index.js`、`panel/client/index.js`〔仅模块导入形态〕）；`panel/manager/` 其余文件不在扫描面，
+**第三方新插件名也不在判据里** ⇒ 为一个第三方插件改面板代码，现有守卫抓不到。
+`scripts/pluggable-lint.mjs` 则**只扫 `lib/` 与 `test/`**、不碰面板（原文明确指给它了，属张冠李戴）。
+【批 7 落地，当前如上】另注：面板 patch 域生命周期区（`plugin-registry.mjs` 的插件表、
+`snapshot.mjs` 的 `ORIGINS/ROW_IDS`）带内置插件名是**有意保留的资产**（`docs/migration.md` §4 前置 2），
+不算违反本纪律。
 
 ## 6. 自测清单（提交前）
 
@@ -123,16 +185,42 @@ doctor 的 `reg.name-collision` 规则要比对"插件声明会注册的服务/�
 npm test                                   # build×3 + pluggable-lint + no-subplugin-import-check + typecheck×3 + node --test
 node scripts/regression-all.mjs            # 回归全跑 14 项
 node /d/dsh-test-sandbox/projects/doctor/src/cli.mjs --scope D:/dsh-plugins/dsh-toolkit   # 真实仓 dry-run 必须 0/0/0
+node scripts/ci-local.mjs --with-scan      # 单命令全链（5 步：上面三步 + patch 行配置校验 + p23-verify）
 ```
+**单命令全链其实是最后那条**（`regression-all` 不含 `p23-verify`、不含 `patch-config-check`；
+`p23-shadow-scan` 根本不在这条链上，且它会覆写历史证据正本，别随手跑）。
+独立 doctor 的扫描面**整体排除 `test/` 目录**（防测试夹具污染真实仓闸），`lib/` 直下名为 `test` 的
+目录是例外（那是在案本体位）——你在自己仓里放无效 manifest 夹具会撞红，这条豁免只在仓根一层生效。
+
 再加一次真面板走查（面板 → 安装向导填**绝对路径** → ① 预检 → 确认安装 → 卡片免刷新出现 →
-配置保存 → 停用/启用 → 健康详情）。CLI 也可验：`curl -s localhost:3080/api/toolkit-panel/v2/snapshot`。
+配置保存 → 停用/启用 → 健康详情）。CLI 也可验，但**必须用 loopback IP 作 Host**：
+`curl -s http://127.0.0.1:3080/api/toolkit-panel/v2/snapshot`
+（★5 定稿：原文的 `localhost:3080` **按字面执行会被拒** —— 面板只把 socket 对端与 Host 认
+`127.0.0.1`/`::1` 为本机，`localhost` 按非本机处理 ⇒ 落到配对校验、匿名 403；历史上从未支持过
+`localhost`。经宿主 `remote-web-ui` 隧道访问时还要配对凭据。）
 
 ## 7. 装不上时看什么
 
-预检失败会返回 `blocking[]`，每条带 `fix.summary` / `fix.steps`：
+预检失败会返回 `blocking[]`，每条带 `fix.summary`（`fix.steps` **视错误类别可缺席**——
+5 类来源码齐备，manifest 字段派生的阻断项目前只有 summary）：
 - `path-not-found` ⇒ 提示"请填绝对路径 + 示例形态 + 相对路径按服务进程工作目录解析"；
   面板前端现在会在**提交前**就拦下相对路径（`need-absolute-path`），不让你看到拼错路径的报错。
 - `entry-not-found` ⇒ 写清已读取到什么、缺哪个字段、monorepo 子包候选、补什么（带 JSON 片段示例）。
 - `module-load-failed` / `plugin-shape-invalid` ⇒ 给模块路径与原因；shape 类会说明接受哪些导出形态
   （按目录装"`.` 声明的是数据库"那类包时，文案还会点名同表里可改装的插件子路径）。
 - `source-not-supported` ⇒ npm 来源未实现（Q1），给"仅本地路径"的如实说明。
+
+**上面四类只是"来源侧"的码**（到 `install()` 边界统一带 `source/` 前缀）。装不进、或装进了但不对劲，
+还要看这些（★20 定稿：补齐清单）：
+- `id-conflict` —— 同 id 已被占用（先卸旧插件或改 id）；
+- `service-missing` —— `requires.services` 里声明的宿主服务当前不在（预检阻断；本仓真实服务名探测已
+  修过原型链误判，`toString`/`constructor` 这类名字的服务名不会假装在场）；
+- `reg.name-collision` —— 注册面撞名（见 §4 的现状与坑）；
+- `config-schema-invalid` —— 当前配置值不过 `configSchema`（必填缺失会阻断）；
+- `value-invalid` —— 写回配置时值不过校验 / 不是合法布尔字面量；
+- `fiber-failed` / `fiber-disposed` / `fiber-unloading-timeout` / `fiber-load-timeout` —— 等待期
+  错误码（`fiber-load-timeout` 的典型成因就是 `inject` 的服务始终缺席）；
+- `quarantined` —— 连续失败达 `retryLimit` 后进隔离，不自动重试；恢复动作是**手动启用或 reload**
+  （两者都会把重试计数归零），面板与 `/v2/snapshot` 会带最近错误原文；
+- `plugin-added`/`status-changed` 等 SSE 事件名用的是**短名**（全名的前缀在 `hello` 帧里给），
+  非缺省 `servicePrefix` 时全名是 `${prefix}/registry:...`，排查时别按缺省前缀拼名字。

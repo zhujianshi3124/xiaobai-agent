@@ -7,12 +7,22 @@
 
 - 包级入口：`package.json` `exports["."] = "./index.js"`；另有 `exports["./panel"]`（R12：
   面板挂载行可由 `file://` 绝对路径迁到包子路径）。
+  **别把这一句当入口解析的全部事实**：本仓根 manifest 的 `requirements.exports` 写的是
+  `{"$from":"package.json#exports"}`（**套件根的强制继承形式**），所以最终仍解析到 `./index.js`。
+  四级顺位、legacy 顶层位的告警、`$from` 的两条硬规则、"显式声明不回退"红线与可观测面的**正本叙述**
+  在 `docs/add-sub-plugin.md` §2 要点 1（行为口径归本仓契约 §4，必填性归独立 doctor ⇒ §7 D-7）。
 - 模块形态（`index.js`）：`name = 'dsh-toolkit'`、`inject = ['webServer']`（与面板同源）、
   `apply(ctx, config)` **委派给** `panel/index.js`——面板一直是 registry + doctor 的装配现场，
   根入口不复制逻辑，避免出现第二个装配点。
 - 自描述：根入口 `export const manifest`，内容 = 读盘上 `dsh.plugin.json` 过
   `validateManifest`（**唯一事实来源是那份 JSON**；校验失败即抛，宁可装不上也不带错误自描述去预检别人）。
-  `id = dsh/toolkit`、`requires.services = ["webServer"]`、`panels` 只有一个描述符。
+  `id = dsh/toolkit`、`requires.services = ["webServer"]`（**语义是"本插件依赖宿主注入 webServer"**，
+  与模块的 `inject` 是两处独立声明、互不桥接；另注意该字段当前还被装载器归一进"注册面"并被冲突检查
+  当提供面比对 ⇒ 经面板装 toolkit 根之后再装任何需要 `webServer` 的插件，会被 `reg.name-collision`
+  拒装。`docs/contract.md` §2.1 与 §7 D-10，批 2 纠正）、
+  `panels` 只有一个描述符（宿主不读它，见 §5 第 1 条与 `docs/contract.md` §7 D-8）。
+- 装载本入口与装载 `@local/dsh-toolkit/panel` 是同一个面板的两种入口写法，**同一进程内二选一**
+  （两个都装 = 同名路由注册两次；前缀不同则各管各的）。
 - 装载本入口与装载 `@local/dsh-toolkit/panel` 是同一个面板的两种入口写法，**同一进程内二选一**
   （两个都装 = 同名路由注册两次；前缀不同则各管各的）。
 
@@ -44,7 +54,8 @@ toolkit.apply(ctx, { servicePrefix: 'mybucket' })       // config 全部可选�
 | 面 | 缺省 `toolkit` | 换成 `tk2` |
 |---|---|---|
 | 服务 | `toolkit/registry`、`toolkit/doctor` | `tk2/registry`、`tk2/doctor` |
-| 事件 | `toolkit/registry:plugin-added` … `toolkit/audit:installed` | `tk2/…` 同名一套 |
+| 事件（契约枚举内 5 个） | `toolkit/registry:plugin-added`、`…plugin-removed`、`…status-changed`、`…health-changed`、`toolkit/doctor:issue-found` | `tk2/…` 同名一套 |
+| 事件（审计 8 个，**当前不经 `contractEventName`**） | `toolkit/audit:{installed,removed,enabled,disabled,reloaded,quarantined,config-changed,state-save-failed}` | `tk2/audit:…` 同名一套 |
 | HTTP（32 条） | `/api/toolkit-panel/{ui,snapshot,plan,execute,plan/status,toggle/plan,config/plan,uninstall/plan,uninstall/execute,custody,restore/plan,restore/execute,mount/plan,mount/execute,doctor/dry-run,doctor/states,doctor/apply/plan,doctor/apply/execute,doctor/rollback/plan,doctor/rollback/execute,snapshot-restore/plan,snapshot-restore/execute}` + `/v2/{snapshot,health,install/precheck,install/confirm,uninstall,enabled,reload,config,events}` + `/v2/connector.js` | 同样 32 条，整体前缀换成 `/api/tk2-panel/…` |
 
 验收证据：`test/p7-embed.test.mjs`（双实例路由零冲突、A 装的插件不进 B、B 的 SSE 收不到 A 的事件、
@@ -76,6 +87,10 @@ ctx 上，`toolkit/*` 与 `tk2/*` 两组服务名各自可查、互不撞名（c
   **OR** 该服务缺席时退到 `devicesFile` hasOwn 兜底）。
 - 写：loopback socket **AND**（Host loopback **OR** 服务严格校验），**禁止 hasOwn 兜底**（P2.0②），
   外加 CSRF（`sec-fetch-site ≠ cross-site` 且 `origin.host == Host`）。
+- **"loopback"的取值域（★5 定稿，此前两份文档都没界定过，害得 `curl localhost:3080` 按字面执行必 403）**：
+  socket 对端与 Host 都只认字面量 **`127.0.0.1`** 与 **`::1`**（可带 `::ffff:` 前缀与 `[]` 包裹），
+  **`localhost` 判为非本机** ⇒ 落到配对校验、匿名请求 403。经宿主隧道访问还需配对凭据；宿主自身的
+  `/api/*` 面匿名一律 401（本侧不取用凭据）。历史上从未支持过 `localhost` 识别。
 - 配对服务归宿主：toolkit 只 `ctx.get('remoteWebUiPairing')`，取不到就 fail-closed（拒绝），
   绝不自己造一个。
 
@@ -91,13 +106,26 @@ ctx 上，`toolkit/*` 与 `tk2/*` 两组服务名各自可查、互不撞名（c
    实例，其 React 标签页仍指向缺省基址；该实例的**完整管理面**经 `${apiBase}/ui` 兜底页可达（已实测）。
    同页多实例的标签页隔离需要宿主提供"按实例注入基址/模块 id"的能力，超出零宿主改造范围（Q2 裁决）。
 3. **`apply-engine.PLAN_STORE` 仍是模块级 Map**（同进程双实例共用待确认 plan 池）。曾改为按实例持有，
-   连带 7 项回归红（`uninstall.mjs` 10 个函数与 6 个验收脚本都以 `putPlan/getPlan/dropPlan` 模块函数为
-   契约），已撤回。风险与重做触发条件见 `docs/debt.md` #11(a)。
+   连带 7 项回归红（`uninstall.mjs` 的 plan/execute 函数与验收脚本都以 `putPlan/getPlan/dropPlan` 模块函数为
+   契约），已撤回。风险与重做触发条件见 **`docs/debt.md` B-1**（本文原写"#11(a)"，该编号已在四类归档
+   重排中变为 B-1）。**基数已按 2026-09-22 实测更正**：`uninstall.mjs` 现导出 **15 个** plan/execute 函数
+   （7 plan + 8 execute），以那三个模块函数为契约的验收脚本是 **5 个**
+   （`backup-write-test`/`p21`/`p22`/`p23`/`p24-verify`；`p24-ui-matrix` 不引用它们）——
+   原文的"10 个 / 6 个"是 P7 落账后的扩面未回填，裁定结论不变（函数更多 ⇒ 维持现状的理由更强）。
 4. **`doctorCli` 缺省值是本机开发布局的绝对路径**（仓级文件面按裁决留在独立仓）。嵌入别的机器请用
-   `config.doctorCli` 或 `TOOLKIT_PANEL_DOCTOR_CLI`；CLI 不在场时体检路由返回 `degraded`，不假装可用。
+   `config.doctorCli` 或 `TOOLKIT_PANEL_DOCTOR_CLI`；CLI 不在场时**按路由分述**（★15 定稿，原句笼统）：
+   `/doctor/states` → `200 {ok:false, degraded:true}`；`/doctor/dry-run` → `500 {ok:false}`（无 `degraded`
+   字段）；apply/rollback/快照恢复 → `500` + `doctor-spawn-failed`。三条都不假装可用，但只有第一条带
+   `degraded` 标记。spawn 超时缺省 **180s**（`--states` 用 60s）。
 5. **npm 来源未实现**（Q1）：`{kind:'npm'}` 一律 `source-not-supported`，并给"仅本地路径"的如实指引。
-6. **真实生效仍需重启宿主**：面板写的是 patch 文本（boot 权威，18/18 生效路径已钉死，见 P2.3 结论）；
-   registry 的运行时装入/卸出是另一条通道，两者优先级模型见 `docs/migration.md` §3。
+6. **真实生效仍需重启宿主**：面板写的是 patch 文本（boot 权威，18/18 生效路径已钉死，见 P2.3 结论
+   —— 注意其中含只在全链扫描下才跑的 `p23-verify`，`docs/debt.md` D-3 挂着未并）；
+   registry 的运行时装入/卸出是另一条通道，两者优先级模型见 **`docs/migration.md` §2**
+   （本文原写"§3"，§3 是 compact-router 预设挂载特例，指向错了）。
+   同一插件既在 patch 行又被 registry 装入 ⇒ 两份 fiber，面板不替你合并（`migration.md` §2 末句）。
+
+> **本节条数会随复核增长**：`docs/debt.md` 与 CHANGELOG 里"§5 六条边界"的说法是 2026-09-20 的快照，
+> 后续每加一条"没做到的事"，那个数字就成假账 —— 已按实况改为不锁条数。
 
 ## 6. 装载 toolkit 后如何确认"装上了 / 卸干净了"
 

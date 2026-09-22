@@ -53,7 +53,7 @@
 | 去硬编码机制 | `doctor-signals.json`（toolkit 根）声明 hostProviderKeys/providerDependencies；engine 零插件名，事实全部来自声明文件 + 磁盘 manifest。**残留硬编码**：默认 scope `D:\dsh-plugins\dsh-toolkit`、yaml 从宿主全局安装路径动态 import（`engine.mjs:8-11` 绝对 URL）、面板侧 doctorCli 硬编码沙箱路径 |
 | 输出结构 | `schemaVersion / generatedAt / scope{plugins} / environment / summary{error,warning,info,safe,rewrite,destructive,manual,fixable} / issues[]{id,category,severity,file,line,occurrence,message,old,new,fix{class,plan}}` |
 | 验收纪律 | `0/0/0`（error/warning/info 全零），AGENTS.md 红线 6；缺席/缺依赖类只产 info/warning 绝不 error |
-| 运行时监测 | **没有**。纯一次性静态扫描；无 setInterval/watch/服务；被面板以 `execFile` 子进程按需调起（120s 超时，`panel/manager/doctor-runner.mjs:3-32`） |
+| 运行时监测 | **没有**。纯一次性静态扫描；无 setInterval/watch/服务；被面板以 `execFile` 子进程按需调起（**缺省 180s、`--states` 用 60s**，见 `panel/manager/doctor-runner.mjs` 的 `spawnDoctor`。本行原写"120s @ `:3-32`"：120s 是 2026-09-18 诞生时的真值，`b3b1575`（09-19）放宽后未回填，且该过期值被 `docs/migration.md` §6 复制过一次 —— 两处已于 2026-09-22 条文审定轮一并更正） |
 
 ### 1.3 管理面板栈
 
