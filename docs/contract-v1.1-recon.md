@@ -501,7 +501,34 @@ schemastery list 正确读法 + 面板测试（`panel-unified` 按 label 定位�
   上下文为锚，不能只用一行标题。
 - 未做与边界（如实）：未真机（批 2 非真机批，A 授权窗口仍留批 4/6/8）；未碰 `~/.dsh` 与真实引擎配置；
   `cordis.patch.yml` 判据基准 `e8051fe9` 未动 ⇒ 未变不滚存；内置 7 份 manifest **未**加 `provides`（批 10）；
-  `registers.events` 两仓零校验那笔新失效面**未自裁登记 D-13**，措辞待裁。
+  `registers.events` 两仓零校验那笔新失效面**已按裁定分层登记为 D-13**（见 `docs/contract.md` §7 与 §10.4）。
+
+**批 3 · ★2 模块静态面绑定（toolkit 单仓；doctor 仓零改动）**
+
+- 笔：`15871af`（代码 + 用例）＋本 docs 笔。绑定收在 `registry/src/loader.ts` 的 `bindRuntimeStatics`，
+  **契约分支与 legacy 分支都调**——只修契约分支等于把同一个半截设计留给无 `contract` 字段的清单
+  （本仓 `toolkit:panel/` 就是活例）。取值顺序"先插件对象、再模块命名空间"：default 形态下的兄弟命名导出
+  不挂在 default 上（`mergeNamespaceStatics` 只补 `PLUGIN_STATIC_KEYS` 六键），只读插件对象就会重蹈
+  B2 那一类"声明了却读不到"。
+- 与批 4 的接缝：`panels` **双在场时维持现状（落盘那份赢）**，本批不预判优先级——那是 ★3 同族问题、
+  批 4 一并定案；`healthCheck` 无此问题（函数落不了盘，JSON 那份恒缺席，绑定必然是补位）。
+- 验收：门禁 **6/6（67.0s）**；`test:doctor` 15→17；typecheck 三仓净——首版两处赋值踩中
+  `exactOptionalPropertyTypes`，改 `NonNullable` 窄化解决，**不是放宽编译配置**。
+- 两条新用例都走**真装载链**（本批验收明令不许再用手工注入条目视图替代）：
+  批 3-① 装夹具 ⇒ `manifest.healthCheck` 是函数、`panels` 已绑进，且 `doctor.inspect` 报告里出现该
+  healthCheck **自己产出的条目**（正常路）与 `healthcheck-failed`（异常路，同一条链）——证明读方真调用而非
+  只挂字段；批 3-② 落盘边界 ⇒ 夹具 JSON 与 registry 状态文件都不含 `healthCheck`、`JSON.parse` 不炸，
+  并守卫"持久化条目形状不含 manifest"（若哪天整体落盘，函数会被静默丢掉，这条先响）。
+  既有那条手工注入用例**保留**（它钉的是异常语义面），本批补的是"真链可达"，非替换关系。
+- 激活面维持 0 的复核：全仓（排除 `test/` 与 `dist/`）grep 模块导出 `healthCheck`/`panels` ⇒ **唯一命中是
+  本批自己那行注释** ⇒ 内置行为与面板可见面都不变（p1-smoke 314 条在门禁内全绿佐证）。
+- 变异（照 debt 教训条二：**先重建 `registry/dist` 再取读数**）：摘掉两处绑定调用 ⇒ 批 3-①② 双双翻红（15/2）、
+  其余 15 条不动；恢复后复跑 17/17。
+- **新登记待裁**：`panels` 经模块绑定会**绕过** `validateManifest`（后者只校 JSON 面）⇒ 模块那份"每项须有
+  非空 `id`"今天无人校。本批按"不扩面"处理（原样透传），是否补装载侧守卫请协调侧定（与 D-13 的
+  "最小形状校验"同族，可并批）。
+- 未做与边界：未真机（面板观察项照原计划并入批 8 窗口）；`cordis.patch.yml` 基准 `e8051fe9` 未动 ⇒ 不滚存；
+  doctor 仓 `git status` 空（本批零改动），五套件按新口径复核 15/8/7/21 + stage3 a–g 全绿。
 
 
   `cordis.patch.yml` 判据基准 `e8051fe9` **未动 ⇒ 未变、不滚存**；探针目录 `var/scratch/c1-recon-20260922/`
