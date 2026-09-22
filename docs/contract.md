@@ -172,6 +172,11 @@ schemastery 重建后校验；④ `{uid,refs}` toJSON 形态 → 重建后校验
 落盘口径（P5 起，用户裁决）：**仓内 manifest 的 configSchema 一律 schemastery 纯定义 JSON、零默认值**
 （运行时行为不变；默认值仍在插件代码里。"零默认值"目前是**约定而非判据**，无任何校验或门禁用例查它）。
 函数型 Schema 只作为模块导出存在，两处同时在场时**以模块导出为准**（★3 定稿）。
+**批 4 起此句与实现一致**（此前长期相反，见 §7 D-12）：收口点在装载器
+`registry/src/loader.ts` 的 `bindRuntimeStatics` 与 configSchema 绑定处，`doctor` 预检链与
+`registry.setConfig` 校验链**同序改为模块优先**（三处同序消费方齐改）。**`panels` 随本批同族同向**：
+模块导出与落盘 JSON 双在场时也是模块赢（2026-09-22 批 3 验收令第二节裁定），与 `configSchema` 同序、同一批实现；
+`healthCheck` 不涉优先级（函数落不了盘，绑定恒为补位）。
 【批 4 落地，当前实现相反】现状是 `loader.ts` 的 `resolveLocalSource` 只在 manifest 的 `configSchema`
 **缺席**时才用模块值 ⇒ 盘上 JSON 赢；`doctor.ts` 与 `registry.ts` 两个消费方同序，
 `contract/src/validate.ts` 的 `validateModuleExports` 头注也写着本文这句（污染源头见 recon §5.2）。
@@ -233,7 +238,7 @@ schemastery 重建后校验；④ `{uid,refs}` toJSON 形态 → 重建后校验
 | D-9 | **`healthCheck` 读方已在、写方从未存在**：体检与快照读 `manifest.healthCheck`，但装载器不绑定模块导出的它（其静态面白名单只有 `name/inject/Config/configSchema/provide/intercept` 六键）⇒ 作者按 §2/§7 D-4 写了不会跑 | 2026-09-22 审定 ★2 定稿=**改代码**，批 3 落地。落地前的事实：本仓**没有任何模块导出 `healthCheck`**（`index.js`/`lib/*`/`panel/` 全量 grep 零命中）⇒ 绑定接通后内置插件的"突然生效面"为 0，只影响第三方契约插件。**【批 3 已落地】**：写方由 `registry/src/loader.ts` 的 `bindRuntimeStatics` 接上（两条装载分支都绑），真装载链用例 `test/doctor.test.mjs` 的"批 3-①/②"钉住"模块那份能被体检读到"与"函数不落盘、不炸盘"；摘掉绑定调用即翻红。**批 3 复核维持**：全仓（排除 `test/` 与 `dist/`）仍无任何模块导出 `healthCheck`/`panels` ⇒ 内置行为零变化 |
 | D-10 | **契约缺"提供面"字段导致 `requires.services` 被借用**：`extractRegisters` 把依赖面归一进注册面、冲突检查据此比对 ⇒ 共同依赖同服务会被阻断（假阳性已实测） | 2026-09-22 裁定：C-1 第 1 项 `provides` 落地即修（批 2），并须带对偶用例"共同依赖不判撞名"。成因与为何长期潜伏（内置全用 legacy `requirements.registers`、桶根只走宿主通道）见 `docs/contract-v1.1-recon.md` §5.2 P0-2。**【批 2 已清偿行为半边】**：`provides` 三槽进类型与校验、`extractRegisters` 逐槽优先读它、`doctor/src/doctor.ts` 撞名比对的**两处**借用点（本插件侧与对方侧）同日断掉；对偶用例在 `test/doctor.test.mjs` 的"批 2-②"。**数据半边未动**——内置 7 份仍无 `provides`，桶根的倒置留批 10 纠正（实测读数见 recon §10.3 批 2 段） |
 | D-11 | **scoped 包不能走 legacy**：合成 id 只在包名不含 `/` 时加 `legacy/` 前缀；`@scope/name` 原样沿用 ⇒ 被命名空间式小写规则拒绝（`@` 不合法） | 债务 D-15 的文案修复（`e80caea`）：报错点名真实成因。§8 那句"合成的 id 落 `legacy/<name>`"须带此条件；`docs/add-sub-plugin.md` §1 已按此写 |
-| D-12 | **§5 那句"以模块导出为准"当前与实现相反**（实现是 manifest 落盘那份赢） | 2026-09-22 审定 ★3 定稿=**改代码**（批 4），故本文**保留承诺句不改为附和现状**；实现跟上前的实际行为以本行为准，勿据 §5 那一句判断当前行为 |
+| D-12 | ~~**§5 那句"以模块导出为准"当前与实现相反**（实现是 manifest 落盘那份赢）~~ **已清偿（批 4）** | 2026-09-22 审定 ★3 定稿=**改代码**（批 4），故本文**保留承诺句不改为附和现状**；实现跟上前的实际行为以本行为准，勿据 §5 那一句判断当前行为。**【批 4 落地后本条失效指针】**：实现已翻正为**模块导出赢**（装载器绑定 + doctor 预检链 + registry 写回链三处同序），§5 那句自此为真 ⇒ **不再需要"以本行为准"的告警**；回归钉在 `test/doctor.test.mjs` 的"批 4-①/②"（各钉装载侧与 doctor 侧，翻回旧顺序即红）。真机复验（宿主装载 + 面板表单）另见 `docs/contract-v1.1-recon.md` §10.3 批 4 段 |
 | D-13 | **事件订阅面 `requirements.registers.events` 两仓零校验，却被面板当事实展示**：契约侧只在 `KNOWN_LEGACY_FIELDS` 里列过 `requirements`/`registers` 两个键名（不校验 `registers.*` 内部形状）；独立 doctor 只把 `registers` 当对象查类型，其撞名循环只跑 `services/commands/providers` ⇒ 形状写错无人拦，而"技术详情"里 `events（监听的事件）` 那一行照原样展示 | 2026-09-22 协调侧裁定**分层登记**（裁定方：协调侧，批 2 验收令第三节）：① **最小形状校验进 v1.1**——`events` 须为字符串数组且成员非空（与 `provides` 三槽同族收紧），由**契约单层**落地（独立 doctor 零改动，甲案"位置不动"边界不变），并入批 10 邻近笔，配正反用例与变异自检；② **深度校验挂账**——"声明的事件名与宿主发出面是否对得上"须经宿主事件面正典化，真门槛不在本仓 ⇒ 移入 `docs/debt.md` C-2（v1.2）评估，与题 3 的真门槛同构，不硬塞 v1.1；③ **面板展示维持**（撤展示不采纳，已裁）。取证见 `docs/contract-v1.1-recon.md` §10.4，第六处错账与防再犯口径见同文 §11 |
 
 ## 8. 兼容性规则

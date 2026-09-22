@@ -530,6 +530,26 @@ schemastery list 正确读法 + 面板测试（`panel-unified` 按 label 定位�
 - 未做与边界：未真机（面板观察项照原计划并入批 8 窗口）；`cordis.patch.yml` 基准 `e8051fe9` 未动 ⇒ 不滚存；
   doctor 仓 `git status` 空（本批零改动），五套件按新口径复核 15/8/7/21 + stage3 a–g 全绿。
 
+**批 4 · ★3 configSchema 模块导出赢 + panels 同族同向（toolkit 单仓；离线面已完成，真机复验待用户过目）**
+
+- 三处同序消费方齐改：`registry/src/loader.ts`（绑定处由"manifest 有值即不采纳模块值"改为**覆盖式**，
+  `bindRuntimeStatics` 里 panels 同步改为模块赢）、`doctor/src/doctor.ts` 预检链、`registry/src/registry.ts`
+  的 `setConfig` 校验链（两处都改成 模块 `Config`/`configSchema` → `manifest.configSchema`）。
+  新夹具 `test/fixtures/registry/schema-precedence`：落盘那份要 `fromManifest`（可选）、模块那份要
+  `fromModule`（必填），panels 两侧 id 也不同 ⇒ 优先级可被行为观测。用例 `test:doctor` 17→19。
+- **两条用例分工明确（变异证据给出的好性质）**：把装载器翻回旧顺序后 ⇒ 批 4-① 红、批 4-② **仍绿**，
+  因为 ② 走的是 doctor 自己那条已同序的预检链，装载器退化被它独立挡住 ⇒ ① 钉装载侧、② 钉 doctor 侧，
+  不是冗余。附带口径：消费侧同序改动在装载绑定在场时**不可单独观测**，它是"绕开绑定的路径也同口径"的保险。
+- 踩坑如实记：变异版第一写触发 `TS2352`（`as typeof manifest.configSchema` 在该分支被窄化成 `undefined`）
+  ⇒ **变异写法自己必须先能编译**，否则读到的是构建失败而不是用例红；改成与旧代码逐字同形后才取得有效读数。
+- 存量前提复核（本批是行为翻转，最怕打断存量）：门禁第 5 步 `patch-config-check.mjs` 今天就是按**宿主语义**
+  （`unwrapExports` + `Config['~standard'].validate`）校验真实 patch 行 ⇒ 翻转后生效的 14 键模块 Config
+  对现有配置已通过；`p1-smoke` 314 条在翻转后全绿；真实仓 doctor dry-run 仍 `0/0/0`。门禁 6/6（63.8s）。
+- **待办（真机，本批未完）**：按批 4 开工令第 3 条，真机方案先行并等用户过目后才重启宿主复验；
+  复验清单＝宿主整体健康 + web-search-local 日常搜索 + 生效面 14 键确认（面板表单按模块 Config 渲染）。
+  演练面＝不装新插件、不动真实引擎配置、不改宿主参数。回滚＝本批代码笔单笔 revert + 再重启。
+  读数（pid / 时间）在复验后立即上报。
+
 
   `cordis.patch.yml` 判据基准 `e8051fe9` **未动 ⇒ 未变、不滚存**；探针目录 `var/scratch/c1-recon-20260922/`
   按协调侧令暂留未清。
