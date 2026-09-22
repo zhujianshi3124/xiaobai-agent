@@ -234,6 +234,7 @@ schemastery 重建后校验；④ `{uid,refs}` toJSON 形态 → 重建后校验
 | D-10 | **契约缺"提供面"字段导致 `requires.services` 被借用**：`extractRegisters` 把依赖面归一进注册面、冲突检查据此比对 ⇒ 共同依赖同服务会被阻断（假阳性已实测） | 2026-09-22 裁定：C-1 第 1 项 `provides` 落地即修（批 2），并须带对偶用例"共同依赖不判撞名"。成因与为何长期潜伏（内置全用 legacy `requirements.registers`、桶根只走宿主通道）见 `docs/contract-v1.1-recon.md` §5.2 P0-2。**【批 2 已清偿行为半边】**：`provides` 三槽进类型与校验、`extractRegisters` 逐槽优先读它、`doctor/src/doctor.ts` 撞名比对的**两处**借用点（本插件侧与对方侧）同日断掉；对偶用例在 `test/doctor.test.mjs` 的"批 2-②"。**数据半边未动**——内置 7 份仍无 `provides`，桶根的倒置留批 10 纠正（实测读数见 recon §10.3 批 2 段） |
 | D-11 | **scoped 包不能走 legacy**：合成 id 只在包名不含 `/` 时加 `legacy/` 前缀；`@scope/name` 原样沿用 ⇒ 被命名空间式小写规则拒绝（`@` 不合法） | 债务 D-15 的文案修复（`e80caea`）：报错点名真实成因。§8 那句"合成的 id 落 `legacy/<name>`"须带此条件；`docs/add-sub-plugin.md` §1 已按此写 |
 | D-12 | **§5 那句"以模块导出为准"当前与实现相反**（实现是 manifest 落盘那份赢） | 2026-09-22 审定 ★3 定稿=**改代码**（批 4），故本文**保留承诺句不改为附和现状**；实现跟上前的实际行为以本行为准，勿据 §5 那一句判断当前行为 |
+| D-13 | **事件订阅面 `requirements.registers.events` 两仓零校验，却被面板当事实展示**：契约侧只在 `KNOWN_LEGACY_FIELDS` 里列过 `requirements`/`registers` 两个键名（不校验 `registers.*` 内部形状）；独立 doctor 只把 `registers` 当对象查类型，其撞名循环只跑 `services/commands/providers` ⇒ 形状写错无人拦，而"技术详情"里 `events（监听的事件）` 那一行照原样展示 | 2026-09-22 协调侧裁定**分层登记**（裁定方：协调侧，批 2 验收令第三节）：① **最小形状校验进 v1.1**——`events` 须为字符串数组且成员非空（与 `provides` 三槽同族收紧），由**契约单层**落地（独立 doctor 零改动，甲案"位置不动"边界不变），并入批 10 邻近笔，配正反用例与变异自检；② **深度校验挂账**——"声明的事件名与宿主发出面是否对得上"须经宿主事件面正典化，真门槛不在本仓 ⇒ 移入 `docs/debt.md` C-2（v1.2）评估，与题 3 的真门槛同构，不硬塞 v1.1；③ **面板展示维持**（撤展示不采纳，已裁）。取证见 `docs/contract-v1.1-recon.md` §10.4，第六处错账与防再犯口径见同文 §11 |
 
 ## 8. 兼容性规则
 

@@ -3,6 +3,9 @@
 > 性质：**侦察落档笔**，纯文档、零代码。不构成实施批准。
 > 基准：本仓 HEAD `4131260`（master，落档前工作树干净）；doctor 独立仓 HEAD `6839cc1`（main，本阶段**零改动**，且本笔不落 doctor 仓）。
 > 落档时点：2026-09-22。门禁基线：`node scripts/ci-local.mjs --with-scan` **5/5 全绿，56.9s**（npm test / 回归全跑 13 项+`node --test` / doctor 真实仓 dry-run `issues=0 (e0/w0/i0)` / patch 行配置校验 / p23-verify）。
+> **基线滚存（同日两次变更，上面那行按当时读数照录）**：批 2 起门禁 = **6/6**（新增 DOCTOR_CLI↔契约对账一步，默认 5 步）、
+> doctor 侧验收 = **五套件**。批 2 终态实测：门禁 6/6（65.6s）、五套件 15/8/7/21 全绿 + stage3 a–g ALL PASS、
+> 真实 `~/.dsh` 扫描面 hash 与批 1 基线逐字节相同。变更依据与不回改表格的说明见 §10 判据段的两个裁定块。
 > 取证手法：两仓源码逐字读 + 三个只读探针（`resolveLocalSource` / `DoctorService.precheck` / `validateManifest` 真调用，零写盘、零安装状态、未碰 `~/.dsh`、未重启宿主、未跑 `p23-shadow-scan`）。探针与原始底表留在沙箱 `var/scratch/c1-recon-20260922/`。
 > 配套逐行矩阵：`docs/contract-v1.1-matrix-migration.md`、`docs/contract-v1.1-matrix-embed-toolkit.md`。`contract.md` 与 `add-sub-plugin.md` 两份的逐行判定已折进本文 §6（这两份的判定与 v1.1 六项重叠最密，拆开反而丢上下文）。
 
@@ -194,7 +197,7 @@
 | C-66 | `:101` | D-2 的"门禁必须跑 typecheck×3"仅门禁，无用例（廉价可补：断言 3 份 tsconfig `strict===true` + test 链含 typecheck） | `package.json:9/:14` |
 | C-69 | `:105` | D-6 依据栏仍写"未清偿，交用户复核"，台账已翻面为"已裁定并入契约 v1.1"（`debt.md:109`） | 本轮裁定即其落点 |
 | C-71 | `:110` | "桶在 **precheck 阶段** 判 `contract` 兼容"错位：闸门在 `validate.ts:137`，precheck 只翻译 | `loader.ts:416-419`→`registry.ts:485-504` |
-| C-72 | `§2.1` 末（2026-09-22 裁定采甲**新增**条） | 事件订阅面的正典位置与语义此前**两份正本零提及**（`add-sub-plugin.md` 全文 `events` 零命中），而 7+4 条声明在盘上、面板在展示 ⇒ 反向缺口补全；同笔如实记其另一半：`registers.events` **两仓零校验**却当事实展示 ⇒ 建议登记 D-13（措辞待裁） | 实测 §10.4（探针 `var/scratch/c1-batch2-20260922/probe-events-face.mjs` 可复放）；展示点 `panel/client/index.js` 的 `TechDetails`、装配点 `panel/manager/snapshot.mjs` 的 `registers` |
+| C-72 | `§2.1` 末（2026-09-22 裁定采甲**新增**条） | 事件订阅面的正典位置与语义此前**两份正本零提及**（`add-sub-plugin.md` 全文 `events` 零命中），而 7+4 条声明在盘上、面板在展示 ⇒ 反向缺口补全；同笔如实记其另一半：`registers.events` **两仓零校验**却当事实展示 ⇒ **已登记 D-13**（2026-09-22 分层：最小形状校验进 v1.1 由契约单层落、深度校验挂 C-2/v1.2、展示维持） | 实测 §10.4（探针 `var/scratch/c1-batch2-20260922/probe-events-face.mjs` 可复放）；展示点 `panel/client/index.js` 的 `TechDetails`、装配点 `panel/manager/snapshot.mjs` 的 `registers` |
 
 反向缺口（实现有、`contract.md` 零提及，18 条）：`EntrySource` 7 值枚举、`entryWarnings` 通道（含 `event=entry-declaration` 落盘）、`$from` 继承指针、"显式声明必存在绝不回退"红线、D-15 成因文案、`mergeNamespaceStatics`/`PLUGIN_STATIC_KEYS`（6 键，非 3 键）、`extractRegisters`→注册冲突面、`setConfig` 写回+热重载+`value-invalid`、`install(force)`、`AUDIT_EVENTS` 8 名与 `durability`/`persisted` 面、扩展方法面（`registersOf`/`setHealth`/`retryAttemptsOf`/`attachHost`/`attachRegistry`/`publishReport`/`validate` 等，均不在两个 `interface` 内）、`InspectionReport`、`PluginStatus` 6 态与重试数字族（`retryLimit 3`/`retryBackoffMs 500`/`loadTimeoutMs 30000`/`saveDebounceMs 0`）、`notify()` 吞监听器异常（`emit-failed`）、autoload 恢复语义、`probeTimeoutMs` **惰选项**（声明+赋缺省但全文再未被读取，`apiReachable` 自己硬编码 3000ms）、`via` 的死值、面板对 `panels` 的透传。
 
@@ -320,7 +323,7 @@ B 需要两处新裁定（执行侧不自裁）：
 
 ## 10. 分批计划（2026-09-22 条文审定后重排版，取代本节此前的 v1 草案）
 
-判据不变：批次 = **独立门禁绿 + 独立回退**的最小单元；每批验收显式含 **门禁 5/5 + 变异自检 + 证据滚存**；
+判据不变：批次 = **独立门禁绿 + 独立回退**的最小单元；每批验收显式含 **门禁全绿（现基线 6/6）+ 变异自检 + 证据滚存**；
 涉行为变更批标真机（现场实证为准、不做时点承诺；"重启后生效"类句子收尾前复查现场）；
 两仓编排：doctor 白名单先落、批内分笔、互引 hash。
 
@@ -331,6 +334,12 @@ B 需要两处新裁定（执行侧不自裁）：
 > `c585738c646855d4e6745c9e64434899dd75693526f809313002060ebfce0bd9`（5 files，批 1 实测）；hash 漂移时
 > 先归因（宿主自然写入 vs stage3 所致）再放行，**归因不清即报告**。
 > 上方各批行里"四套件 14/8/7/21 不降"的表述按当时口径成立，**不回改**。
+>
+> **★门禁基线同步（2026-09-22 批 2 验收令，裁定方：协调侧）**：批 2 把 DOCTOR_CLI↔契约对账接成门禁独立一步
+> ⇒ 基线由 **5/5 变 6/6**（`--with-scan`；默认 4→5 步）。各批行内"门禁 5/5"字样系当时基线，
+> **一律按 6/6 判、表格不回改**；判据句已改述为"门禁全绿（现基线 6/6）"。
+> 同轮立的口径：**跨子包变异自检必须重建受影响子包的 dist 后再测，不以首跑读数为准**
+> （批 2 变异 B 首跑误报一条，成因即在此；已入 `docs/debt.md` 教训条）。
 
 **本轮被裁定移除的批次项**：P0-1 的"缺席类降级为 warn"代码项（定稿=维持 error，改文档处理）、
 "补 `localhost` 识别"代码项（定稿=文档示例改 `127.0.0.1`）——两笔原裁决因 §5.2 原因查明而作废反转。
@@ -560,7 +569,8 @@ schemastery list 正确读法 + 面板测试（`panel-unified` 按 label 定位�
 1. **新失效面**：`requirements.registers.events` 今天**两仓都零校验**（本仓 `validate.ts` 只在
    `KNOWN_LEGACY_FIELDS` 里列过 `requirements`/`registers` 两个键名；独立 doctor 只把 `registers` 当对象
    查类型，其撞名循环只跑 `services/commands/providers`），而面板把它当事实展示 ⇒ "展示一份无人校验的数据"。
-   建议登记为 `contract.md` §7 的 **D-13**（措辞待用户/协调侧定，本轮不自裁）。
+   **已登记为 `contract.md` §7 D-13**（2026-09-22 批 2 验收令第三节，分层：最小形状校验进 v1.1 由契约单层落、
+   并入批 10 邻近笔；深度校验＝与宿主发出面对账，挂 C-2/v1.2；面板展示维持）。
 2. **批 2 施工点补录（★1 同族残留）**：`contract/src/types.ts` 里 `ManifestRequirements.services` 的注释
    仍写"依赖的 cordis 服务名（**inject 面**）"——正是 P0-2 已否掉的旧口径（`contract.md` §2.1 ① 明写它
    **不桥接** `inject`）⇒ 批 2 把 `requires.services` 退回纯依赖面时**须同笔改掉这行注释**，
