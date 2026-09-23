@@ -1389,7 +1389,8 @@ window.__ModuleLoader__.load({
 					var body = await res.json();
 					if (!body.ok) { setMsg(body.error || ("HTTP " + res.status)); return; }
 					var isInstall = body.plan.steps && body.plan.steps.some(function (s) { return s.op === "install-package"; });
-					setDlg({ copy: isInstall ? CONSOLE_INSTALL : CONSOLE_REPAIR, issueId: issue.id, plan: body.plan, phase: "confirm" });
+					var copy = isInstall ? CONSOLE_INSTALL : CONSOLE_REPAIR;
+					setDlg({ kind: copy.kind, copy: copy, issueId: issue.id, plan: body.plan, phase: "confirm" });
 				} catch (e) {
 					setMsg(String(e && e.message || e));
 				} finally {
@@ -1407,7 +1408,7 @@ window.__ModuleLoader__.load({
 					});
 					var body = await res.json();
 					if (!body.ok) { setMsg(body.error || ("HTTP " + res.status)); return; }
-					setDlg({ copy: CONSOLE_ROLLBACK, entry: entry, plan: body.plan, phase: "confirm" });
+					setDlg({ kind: CONSOLE_ROLLBACK.kind, copy: CONSOLE_ROLLBACK, entry: entry, plan: body.plan, phase: "confirm" });
 				} catch (e) {
 					setMsg(String(e && e.message || e));
 				} finally {
@@ -1425,7 +1426,7 @@ window.__ModuleLoader__.load({
 					});
 					var body = await res.json();
 					if (!body.ok) { setMsg(body.error || ("HTTP " + res.status)); return; }
-					setDlg({ copy: CONSOLE_SNAPSHOT, snap: snap, plan: body.plan, phase: "confirm" });
+					setDlg({ kind: CONSOLE_SNAPSHOT.kind, copy: CONSOLE_SNAPSHOT, snap: snap, plan: body.plan, phase: "confirm" });
 				} catch (e) {
 					setMsg(String(e && e.message || e));
 				} finally {
@@ -1433,14 +1434,19 @@ window.__ModuleLoader__.load({
 				}
 			}, []);
 
+			// dlg.kind 既选 execute 端点、又是"将执行/变化预览"两屏的开关 ⇒ 未知一律本地报错，
+			// 绝不静默落到某个端点（这里曾因三处 setDlg 漏传 kind 让修正/回滚每次吃 400）。
+			var CONSOLE_EXEC_PATHS = { fix: "/doctor/apply/execute", rollback: "/doctor/rollback/execute", snapshot: "/snapshot-restore/execute" };
 			var confirmDlg = react.useCallback(async function () {
 				if (!dlg) return;
 				setBusy(true);
 				setMsg("");
 				try {
-					var execUrl = dlg.kind === "fix" ? PANEL_API + "/doctor/apply/execute"
-						: dlg.kind === "rollback" ? PANEL_API + "/doctor/rollback/execute"
-						: PANEL_API + "/snapshot-restore/execute";
+					if (!dlg.kind || !CONSOLE_EXEC_PATHS[dlg.kind]) {
+						setMsg("未知操作类型（kind=" + String(dlg.kind) + "），已停止提交——请关闭本窗后重开一次");
+						return;
+					}
+					var execUrl = PANEL_API + CONSOLE_EXEC_PATHS[dlg.kind];
 					var res = await fetch(execUrl, {
 						method: "POST", cache: "no-store", headers: { "content-type": "application/json" },
 						body: JSON.stringify({ token: dlg.plan.token })
