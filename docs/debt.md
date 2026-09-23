@@ -90,6 +90,8 @@
 > **`docs/contract-v1.1-recon.md`（C-1 侦察轮正本：草案六项实测修订、三方核对矩阵净账与落差总账、
 > 三题裁定×核对结论、内置插件完整枚举、修订后分批计划批 0-6 + 边界清单 —— 动 v1.1 相关代码前必读；
 > 两份逐行矩阵见同目录 `contract-v1.1-matrix-{migration,embed-toolkit}.md`）** →
+> **`docs/feature-inventory-20260923.md`（功能全量清单 · 仓内正本，冻结于 toolkit `916b7d1` / doctor 仓 `2f12f53`；
+> 排修任何"缺/坏"项前**必须先读该文件开头的缺口申报**：呈审稿到手即缺"对象①-B React 标签页"与"对象⑥"两节）** →
 > `panel/docs/evidence/H-REAL-HOST-REVERIFY.md`（H5 真机复验 + 一次宿主整机启动故障的处置，
 > **最新一棒真机证据**）→ `panel/docs/evidence/G-REAL-HOST-SMOKE.md`（含补验注记）与 `D4-WEB-SEARCH-HOST-EVIDENCE.md` →
 > 门禁一条命令 `node scripts/ci-local.mjs --with-scan`（**现在含 5 步**，第 5 步是 Pack I 新增的
