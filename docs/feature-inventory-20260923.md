@@ -18,6 +18,10 @@
 >
 > **正文自带的三问尚未批复，照录待裁**：① 面板 React 三通道要不要先安排真机复验；② H2（两套必填集）是否
 > 作为正典清单的独立条目；③ 批 5–10 未落地条目是留清单内标"未实现"还是先剔出正典。
+>
+> **【2026-09-23 续档状态更新】** 上面申报的缺两节已按协调侧 C1-004 回执第四节做**代码级重建**并续档在文末
+> 《续档 · 缺失两节的代码级重建》（新增 F-69…F-91 共 22 条；探针不足一事已如实记在该节开头）。
+> 上面分割线以下的呈审稿正文**一字未改**；覆盖账口径与原稿 74 条的对账问题见该节末《续档后状态》。
 
 ---
 
@@ -294,3 +298,147 @@ safe/destructive 两个 fix.class 是否曾被 A 的任一历史版本产出过�
 批 5 正在并行推进（schemastery 降级透出）：它一旦落地，对象①星标"批 5"那条即从"未实现"翻正；批 6/8/9/10 同理。落档笔建议标注"冻结于 916b7d1，批 5+ 落地后需回改的行已逐条标出"。
 
 清单到此。你检查后批复口径（尤其三件事：面板 React 三通道要不要先当真机复验项、H2 两套必填集是否作为正典清单的独立条目、批 5–10 未落地条目是留清单内标"未实现"还是先剔出正典），我再随落档笔一次入库。
+
+---
+
+## 续档 · 缺失两节的代码级重建（2026-09-23 · 笔 3 · 不改写上面任何一行）
+
+**依据**：协调侧 C1-004 过裁回执第四节缺节处理令。令面第 1 步"先查 `var/scratch/feature-inventory*` 探针"已执行，
+**实测探针不足**：该目录只有 `cfg/profiles` 与 `probe-a/dsh.plugin.json`、`probe-b/dsh.plugin.json` 共 5 个文件，
+两枚 manifest 是 H2（两套必填清单）的复现夹具——probe-a 纯契约形态、probe-b 纯 CLI 形态带 `healthCheck:true`——
+**不含 ①-B / ⑥ 的任何底表**。按令面第 2 条本应"报协调侧由上会话呈审稿补转"；第 3 条又要求"重建件另笔续档"，
+故本节按**执行侧自己回代码取证**重建，并把它与波 0 断点普查合并做（同一批读码两用）。
+**取证代理口径**：两条通路的读码由两路只读代理完成，承重结论我**逐条抽验**（见每节末《我方抽验》），未抽验的标"代理实读"。
+定位一律按符号/行号给到 `toolkit:` 仓内位置，行号为 2026-09-23 实况（D-20 守卫未建，日后按符号找）。
+
+### 对象①-B toolkit 面板 React 标签页（重建件）
+
+星标区
+
+★F-69 体检操作台三入口 `setDlg` **漏传 `kind`** ⇒ 修正/回滚恒 400 + 两屏恒不渲染 ——
+`panel/client/index.js` 的 `beginFix`/`beginRollback`/`beginSnapshot` 三处 `setDlg({copy, issueId|entry|snap, plan, phase})` 都没写 `kind`，
+而消费侧四处全按 `dlg.kind` 分派：`confirmDlg` 的三目式恒落最后一条 ⇒ 请求恒打 `/snapshot-restore/execute`
+⇒ 服务端 `panel/index.js` 的 `plan.kind !== "snapshot-restore"` 命中 `plan-kind-mismatch` ⇒ 400；
+`:1475` `dlg.kind==="fix"`（"将执行"清单）、`:1483` `dlg.kind==="snapshot"`（"变化预览"）恒不成立；`:1493` 完成文案恒取末支。
+**关键补充（比呈审稿口径更精确）**：`kind` **本来就在同一份 copy 描述符上**——`CONSOLE_REPAIR:1288`/`CONSOLE_INSTALL:1299`
+的 `kind:"fix"`、`CONSOLE_ROLLBACK:1310` 的 `"rollback"`、`CONSOLE_SNAPSHOT:1321` 的 `"snapshot"`；
+且卸载/恢复五处 `setDlg`（`:1085/1107/1129/1148/1181`）都规规矩矩写了 `kind` ⇒ **属漏传一个已在场的字段，不是缺设计**。
+⇒ 正解是一处写法：`kind: copy.kind`（取 copy 自带值），而非三处各钉一个字面量。状态：有出入（开工令高危①）
+★F-70 修正/安装弹窗的标题与正文读 `p.old`/`p.file`/`p.new`，而服务端 `/doctor/apply/plan` 只下发
+`plan.steps[].old/new`（`extra` 仅 install-package 形态非 null）⇒ **每次点"执行"，标题与正文渲染出 `undefined`**，
+与 F-69 同屏但**根因独立**（F-69 是判别字段漏传，这条是取数层级错）。状态：有出入（代理实读，我方抽验 `:1287-1298` 成立）
+★F-71 健康徽标"（含插件自定义健康检查）"永不出现 —— `:1867` 读 `parsed.hasHealthCheck`，
+而 payload 在 `:1850-1854` 只装 `{status, items, history}`；真值在 `p.hasHealthCheck`（`panel/manager/v2-api.mjs` 下发）⇒ 恒 undefined。
+叠加 F-72/F-83 后，"健康"这一列对内置插件是**整列皆断**。状态：有出入（代理实读）
+★F-72 "健康详情"第二次点击不折叠且恒重发请求 —— `:1845` 判 `open === "health"`，但同一 handler 紧接
+`:1850` 把 `open` 写成 `"health:"+json` ⇒ `"health"` 字面值永不被读到。状态：有出入（代理实读）
+★F-73 恢复弹窗的 `custody` 恒 undefined —— 三处 `setDlg({kind:"restore", …})` 均未写 `custody`，
+而 `:1258` 传 `dlg.custody`；且 `restoreCopyOf(plugin, mode, custody)`（`:883`）**函数体完全不引用第三形参**
+⇒ 双重死参数（传得错、就算传对也没人读）。状态：有出入（代理实读）
+★F-74 `:1518` 引用 `styles.issueWarn`，而 `styles` 里只有 `issueWarning` ⇒ 该警示条无样式（代理做全量 key 比对，唯一一例）。状态：有出入
+★F-75 **通用 `/execute` 不校验 `plan.kind`** ⇒ `toggle` / `config-edit` / `snapshot-restore` 任一 token 都能从这一条通道落盘
+（`panel/index.js` 的 `/execute` 直调 `executePlan(token)`；`panel/manager/apply-engine.mjs` 只在
+`createTogglePlan:314`/`createConfigPlan:446`/`createSnapshotRestorePlan:707` 处**写** kind，`executePlan` 内**不判**），
+而 `/uninstall/execute`、`/snapshot-restore/execute`、`/doctor/apply/execute` 都带 kind 闸 ⇒ **同类通道安全口径不对称**。
+状态：有出入（我方抽验 `executePlan` 与三个创建点的 kind 分布成立）⇒ **归 W11 越权写收紧，不归 R1**
+★F-76 真卸载兜底文案恒死 —— `:54` `ABSENCE_COPY_FALLBACK["true-uninstalled"]` 与服务端 `snapshot.mjs:201` 不同字，
+而服务端对**一切非 mounted 态**都发 `statusCopy`（`:384`）⇒ `:248/:869` 的兜底分支不可达。
+（这是对原稿 F-22"兜底文案过时"的**收窄**：文案确实过时，但它今天永不显示 ⇒ 危害等级低于原稿描述。）状态：有出入
+★F-77 客户端 `CONFIG_FIELDS` 的 `type:"num"`/`"bool"` 与服务端 `config-whitelist.mjs` 的 `type:"number"` 字面不一致
+（客户端只用 `"bool"` ⇒ 无功能影响，纯口径漂移）。状态：有出入（轻）
+★F-78 `draft` 以扁平 path 为键，`v2RenderField` 回传的是嵌套对象，两者在嵌套 schema 下可同屏（**代理推断，未实测**）。状态：未核实
+
+在案区（重建件，均：一致除非句内标注）
+
+操作通路 30 格实测（五插件 × 配置/停用/启用/重载/卸载/健康；patch 行 id：`agent-memory-runtime`/无(preset)/`rate-throttle`/`web-search-router`/`web-search-local`）——
+**配置**：只有 `rate-throttle` 真可写（18 字段白名单 → `/config/plan` → `validateConfigValue` 类型/范围/YAML 字符拒绝/跨字段 → `/execute` → 写 patch + `.panel-write-backups/<stamp>/`）；
+`search-router` 只读呈现 mode（生效值+来源，写入口按第 19 轮裁定不给）；`agent-memory`/`compact-router`/`web-search-local` **无入口（设计如此：`configPanel.editable:false`）**。
+**停用/启用**：四卡有（`/toggle/plan|execute`，只改 patch 行 `disabled` 字面量；现值是 `!!js` 表达式 ⇒ `value-not-literal` 拒；停用方向附 `buildCrossRefs` 只告知不阻断）；
+`compact-router` 无 patch 行 ⇒ 无此格（设计）。**重载**：五内置**全部无入口**——唯一 reload 在 `POST /v2/reload`，需 registry 条目，
+而 `.registry/state.json` 实测 `plugins:{}` ⇒ 内置永不可达（设计：patch 域改配置须重启）。
+**卸载**：五卡全有（软=摘块+`.panel-custody/soft-uninstalls.json`；真=再删 `lib/<dir>`+收据；`search-router`/`web-search-local` 额外 unset `web` 行的
+`searchProvider`/`fetchProvider`；`compact-router` 走 spawn `apply-preset-patch.mjs --undo`）。
+**健康**：**五卡全无入口 = 整列断**（唯一健康详情通道 `GET /v2/health` 需 registry 条目 ⇒ 内置恒不可达；
+面板上能看到的"健康"只有整仓级 `POST /doctor/dry-run` 与 `/doctor/states` 两份 CLI 报告，不是逐插件健康）。**这一格是缺陷不是设计**：
+桶内 `manifest.healthCheck` 读链已在（批 3 接通），但内置零模块导出它（H3）⇒ 无数据可显示，而契约又承诺逐插件健康。
+卡片状态文案权威面：三态 label 硬编码在客户端 `stateOf:239-272`，缺席态文案在服务端 `snapshot.mjs:197-205 ABSENCE_COPY`，依赖态在 `plugin-registry.mjs:83 DEPENDENCIES` ⇒ 三处三份。
+fetch 面共 28 条，客户端调用与服务端 exact 路由**零缺口**（无"客户端打不存在的路由"、无"客户端有调用但服务端未注册"）；
+写路由一律 `guard({change:true})` + `isAllowedWrite`（loopback socket+loopback Host，或配对严格判定）+ `isSafeStateChange`（`sec-fetch-site`、Origin.host==Host）；
+客户端**从不显式带**任何 CSRF/配对头，靠浏览器注入 Origin/Sec-Fetch 与 `credentials:'same-origin'` 送 `dsh_pair` cookie ⇒ Host 非 loopback 时全 403。
+`/v2/install/precheck` 是**唯一"带请求体的 POST 却按只读闸"**的路由（`change:false`）⇒ 与 F-19 同格，裁决 4 维持、口径入 W11 安全梳理。
+
+我方抽验（把代理结论升为事实的部分）：F-69 三处 `setDlg` 与四处消费点逐字读；`CONSOLE_*.kind` 四枚字段在场；卸载/恢复五处写 `kind` 的对照写法。
+F-70 的 `title/what` 取数与 `:1287-1298` 逐字读。F-75 的 `executePlan` 不判 kind（`panel/index.js` `/execute` handler + `apply-engine.mjs` 三处 `kind:` 写入点全仓 grep）。
+其余 F-71/72/73/74/76/77 为代理实读、我方未逐字复看 ⇒ 动工到该条时先复算再钉（不拿未抽验读数当依据）。
+
+### 对象⑥ web-search-local（重建件）
+
+星标区
+
+★F-79 `cacheTtlMs` / `cacheMax` 声明并被读、**但不生效** —— 二者在 `Config` 有声明、`defaultConfig()` 有缺省、
+`makeCache` 内也确实读（`WSL:319` TTL、`:324` 容量），可是 `makeCache` 全站**唯一调用点**是
+`WSL:1454 const cache = makeCache(defaultConfig())` —— 传的是硬默认，不是 `cfg`/`currentCfg()`
+⇒ settings 层或 patch 层怎么写这两个键都到不了缓存。**且 `:1452-1453` 注释自陈"钉住默认以保稳定"**
+⇒ 性质是"实现有意取舍 + 对外承诺未撤"，与裁决 5（放开生效）方向相反，属**已裁待改**而非未知缺陷。状态：有出入
+★F-80 基本面**零覆盖**（外来件零测试）—— 扫过 `test/`(27 文件)+`scripts/`(31 文件)+`panel/manager/`+`registry/`+`contract/`+`doctor/`，
+24 个关键词（`runSearch`/`engineList`/`requestedEngines`/`layerList`/`ENGINES`/`ENGINE_LAYERS`/`mergeRoundRobin`/8 个引擎函数名/
+`makeCache`/`resolveProxy`/`cacheTtlMs`/`cacheMax`/`fetchUrl`/`unwrapUrl`/`parseDate`/`SETTINGS_NAMESPACE`/`web_search_engine`/`local-multi`/`local-fetch` 等）**全部零命中**；
+现有触及全是**外围结构面**（`dual-channel-parity` 的 `name/inject/Config` 三元组、`loader-entry-resolution` 入口、
+`panel-crossrefs` 字符串与 providers 对账、`s6-contract-migration` 的 1 键 schema 校验与 patch 镜像、门禁第 5 步按宿主语义校验真 patch 行、p1/p22/p23/p24 挂卸与卡行）。
+⇒ 搜索行为、引擎链、缓存、HTML 解析**一面都没钉**。状态：有出入（开工令"测试空白区"之③）
+★F-81 点名越部署名单（开工令高危②）—— `requestedEngines` 只对照 `ENGINES` 注册表、`runSearch` 里
+`requestedEngines(searchReq) ?? engineList(cfg)` ⇒ 显式点名整体取代部署链；`ENGINES` 8 项含 `sogou`/`'360'`，
+部署名单 `cordis.patch.yml:61` 6 项 ⇒ 点名未部署引擎照样真打外网。状态：有出入（我方直接实读，非引用）
+★F-82 引擎注册表与部署配置两份名单并存且无对账 —— `ENGINES`(8) / `ENGINE_LAYERS.cn` / `defaultConfig().engines` 三处各自维护，
+只有 `cordis.patch.yml` 那一份是"部署事实"；`requestedEngines` 的错误文案还把**全 8 项**当"known"打给用户
+⇒ 与部署名单直接矛盾，会教模型去点未部署引擎。状态：有出入
+★F-83 逐插件健康面对本插件同样不可达 —— 它**没有** `healthCheck` 模块导出（H3），
+且面板"健康"列对它恒不可达（F 表①-B 在案区）⇒ 与内置五卡同格。状态：有出入（并入 ①-B 健康格一起处置）
+★F-84 模块级跨实例共享 —— `engineCooldowns:619`/`engineLastAt:620`/`probeCache:363`（10 分钟）都在**模块作用域**，
+而 `cache` 随 `apply()` 每实例一份 ⇒ 同进程双实例会**共享冷却与节流、不共享结果缓存**（第二实例的限速会被第一实例带动）。状态：有出入
+★F-85 `proxyMemo` 是 `WeakMap` 且以 cfg 对象为键（`:336/:347-352`），而 `currentCfg()` 每次**新建对象**（`:147`）
+⇒ 该 memo 实际永不命中（**代理推断**，由对象身份得出，未实测）。状态：未核实
+★F-86 `manifest.id` 与挂载名/行 id 三者不同字 —— `dsh.plugin.json:4` 写 `dsh/web-search-local`，
+patch 行 id 与 `default.name` 都是 `web-search-local`；对内置无影响（宿主 patch 通道按 `name` 装载），
+但经 registry 通道装它时 `reg.name-collision`/卸载台账按哪个名字记账须写明（`uninstall.mjs` 按 `lib/<dir>` 目录名）。状态：有出入（轻）
+★F-87 `web_search_engine` 工具**无声明面** —— 实现在 `WSL:1351` 经 `ctx.get('tools').register(...)` 注册工具
++ `:1355` 一段 systemPrompt；而 manifest `registers` 根本没有 tools 槽、`commands:[]` ⇒ 契约缺表达（与 H3/批 10 同族，
+provides 三槽也不含 tools）。状态：有出入：契约无表达
+★F-88 未声明的依赖面 —— `inject` 只声明 `["web"]`，实现另开 `ctx.inject(['settings'], …)`（`:1443`）并
+`ctx.get('tools')`/`ctx.get('systemPrompt')`（`:1351/:1354`）⇒ 三个未声明环境面（有 try/catch 兜底，但宿主是否保证在场仓内无契约可查；
+`doctor仓:host-faces.json` 的 8 个面里也没有 `tools`/`systemPrompt`）。状态：有出入（与"未能确认"第 5 条同源，本条给出精确名单）
+★F-89 `maxResults` 半死 —— 工具侧把 `maxResults` 当参数收（`:1368-1372` 参数表、`:1405` 常量 8），
+但 `runSearch` 全程不读 `searchReq.maxResults`、缓存键 `` `${query}::${engines}` ``（`:1170`）也不含它
+⇒ 调用方以为可调，实际恒由 `cfg.maxSources` 定；缓存键对引擎顺序与大小写敏感。状态：有出入
+★F-90 `manifest.configSchema` 只 1 键而生效面是 14 键 —— 批 4 之后"模块导出赢"，面板与 registry 写回链按
+`Config` 的 14 键校验；盘上 manifest 那份仍写 1 键 ⇒ **声明与生效不一致**（原稿 F-8 桶根同族，这里是子插件实例）。
+`Config` 14 键逐个被读（含 `searxngBaseUrl`/`proxyUrl`/`skipWithoutProxy`/三类超时与冷却/`userAgent`），除 F-79 那两个之外无死键。状态：有出入
+★F-91 剔除外来 MIT 件的耦合面（为两阶段目标第 2 步预置的清单，非缺陷）—— `package.json:29` 导出映射、
+桶根 `dsh.plugin.json:66` alias、`cordis.patch.yml:58-61` 与 `:8` 的 `fetchProvider: local-fetch`、
+`lib/search-router/index.js:36 DELEGATE_LOCAL="local-multi"` 硬编码 provider id、`panel/manager/{plugin-registry,snapshot,uninstall,custody}.mjs` 的表与按目录名 rmSync、
+`doctor-signals.json` 的 `requiresProviders`、面板客户端与 `panel.html` 文案。**静态 import 桶内该模块者：零**（红线 1 已守）。状态：在案（开源前置工作项）
+
+在案区（重建件）
+
+注册面：`name:'web-search-local'`、`inject:['web']`、`Config`（default 对象与模块级双挂，为 H3 双通道一致）、
+provider id `local-multi`/`local-fetch`（`ctx.effect` 内注册、dispose 摘除）、零命令、零 cordis 信道事件监听
+（13 处 `.on(` 全是 socket/req/res 流监听，与 recon §10.4 的"必须锚 `ctx.on`"口径一致）、模块级具名导出 10 个。
+缓存：纯内存 `Map`（无落盘），TTL 惰性判过期即删、容量按**插入序 FIFO**（`get` 命中不刷新序 ⇒ 不是 LRU），
+只在有结果分支写回；`fetchUrl` 无缓存。配置层序"内置默认 → patch 行 → settings 节"（`resolveConfig` 两档 `{...defaultConfig(), ...section}`）。
+归属：`snapshot.mjs` 的 `ORIGINS` 记 `origin:derived` / upstream `@gausszhou/dsh-web-search-local` / license MIT，
+面板卡片如实显示作者与许可证（与 D 区"外来件保留原名归属"口径一致）。
+
+我方抽验：F-79（`makeCache(defaultConfig())` 与注释逐字读）、F-81/F-82（`requestedEngines`/`runSearch`/`ENGINES`/patch:61 四处实读）。
+其余为代理实读、未逐字复看 ⇒ 落批时先复算再钉。
+
+### 续档后状态（覆盖账口径变化，协调侧须知）
+
+1. 本节新增 **22 条**（F-69…F-91，F-83 与 ①-B 健康格共享），全仓 ★ 条目由 68 升至 **90**。
+2. 令面"74 条星标落差"是**原稿口径**：原稿那 6 条差额内容从未到达，我的重建**多于且不限于**它 ⇒
+   "正典清单 74/74 对账"（过裁二.2 收口件之一）**在补转到达前无法闭合**。两条路请裁：
+   (a) 以本重建件为准，收口批改判"90/90 对账"；(b) 等原稿 ①-B/⑥ 到手做差集，再定终数。
+3. 原稿"未能确认"第 1 条（React 三通道未真机点过）**在本节里被消掉一半**：F-69/F-70/F-75 已升为代码级事实，
+   不需要真机即可定性；仍需真机的是"用户视角症状确认"，已排在批 8 观察窗。
+4. 原稿"未能确认"第 2 条（宿主读不读桶根 manifest 的 `panels`/`slot`/`order`/`managedBy`）**未消**：仍在两仓之外，
+   本次只补了一条相邻事实——`snapshot.self` 显示宿主对面板行取的是 `file:///…/panel/index.js`（按 name 装载，与 `panels` 无关）。
+   该格保留"未核实"，并作为 P-2 之外的第二个用户侧/开源后动作项。
