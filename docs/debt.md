@@ -92,6 +92,8 @@
 > 两份逐行矩阵见同目录 `contract-v1.1-matrix-{migration,embed-toolkit}.md`）** →
 > **`docs/feature-inventory-20260923.md`（功能全量清单 · 仓内正本，冻结于 toolkit `916b7d1` / doctor 仓 `2f12f53`；
 > 排修任何"缺/坏"项前**必须先读该文件开头的缺口申报**：呈审稿到手即缺"对象①-B React 标签页"与"对象⑥"两节）** →
+> **`docs/repair-plan-20260923.md`（修复总动员 + C-1 剩余批 + 断点普查 的合流总批计划 · **草案待协调侧过裁**；
+> 含高危四条的代码级取证结论与对清单的两处读数更正 —— 动任何修复代码前必读 §1 通则与 §7 待裁清单）** →
 > `panel/docs/evidence/H-REAL-HOST-REVERIFY.md`（H5 真机复验 + 一次宿主整机启动故障的处置，
 > **最新一棒真机证据**）→ `panel/docs/evidence/G-REAL-HOST-SMOKE.md`（含补验注记）与 `D4-WEB-SEARCH-HOST-EVIDENCE.md` →
 > 门禁一条命令 `node scripts/ci-local.mjs --with-scan`（**现在含 5 步**，第 5 步是 Pack I 新增的
