@@ -22,15 +22,31 @@ import {
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
-// ── 操作台的三份数据桩 ─────────────────────────────────────────────────────
+// ── 操作台的三份数据桩（**逐字段照 panel/index.js 的真实下发形状抄**，不是我自己编的形态：
+//    apply/plan 带 file/line/severity/steps/extra（extra 仅 install-package 形态非 null）；
+//    rollback/plan 带 stamp/action/files/packages 且**没有 steps**；snapshot-restore/plan 带 stamp/diff
+//    且**没有 steps**。弹窗文案的取数面就是这份 plan，桩不贴真形就会钉出假结论。）────────────
 const FIX_ISSUE = {
   id: 'ref.unresolvable-local', file: 'package.json', line: 12, severity: 'error',
   message: '旧包名引用已失效',
   fix: { class: 'rewrite', plan: [{ op: 'replace', file: 'package.json', old: '@local/dsh-compact-router', new: '@local/dsh-toolkit/compact-router' }] },
 }
-const APPLY_PLAN = { token: 'T-FIX', kind: 'doctor-apply', steps: [{ op: 'replace', file: 'package.json', old: '@local/dsh-compact-router', new: '@local/dsh-toolkit/compact-router' }] }
-const ROLLBACK_PLAN = { token: 'T-RB', kind: 'doctor-rollback', steps: [{ op: 'replace', file: 'x.json', old: 'a', new: 'b' }] }
-const SNAPSHOT_PLAN = { token: 'T-SN', kind: 'snapshot-restore', steps: [], diff: ['-  old line', '+  new line'] }
+const APPLY_PLAN = {
+  token: 'T-FIX', kind: 'doctor-apply', issueId: FIX_ISSUE.id, severity: 'error',
+  message: FIX_ISSUE.message, file: 'package.json', line: 12,
+  steps: [{ op: 'replace', file: 'package.json', old: '@local/dsh-compact-router', new: '@local/dsh-toolkit/compact-router' }],
+  extra: null, summary: { error: 1 }, createdAt: '2026-09-23T03:00:00.000Z', expiresAt: '2026-09-23T03:05:00.000Z',
+}
+const ROLLBACK_PLAN = {
+  token: 'T-RB', kind: 'doctor-rollback', stamp: '2026-09-23T01-00-00.000Z', action: 'apply',
+  entryCreatedAt: '2026-09-23T01:00:00.000Z', files: 1, packages: 0, backupRoot: 'D:/x/doctor-backups',
+  createdAt: '2026-09-23T03:00:00.000Z', expiresAt: '2026-09-23T03:05:00.000Z',
+}
+const SNAPSHOT_PLAN = {
+  token: 'T-SN', kind: 'snapshot-restore', stamp: '2026-09-23T02-00-00.000Z',
+  diff: ['-  old line', '+  new line'], expectedSha: 'a'.repeat(64), nextSha: 'b'.repeat(64),
+  createdAt: '2026-09-23T03:00:00.000Z', expiresAt: '2026-09-23T03:05:00.000Z',
+}
 const APPLY_ENTRY = { action: 'apply', stamp: '2026-09-23T01-00-00.000Z', files: 1, packages: 0 }
 const SNAPSHOT_ROW = { stamp: '2026-09-23T02-00-00.000Z', reason: 'panel', sha256: 'abcdef1234567890', bytes: 3085 }
 
@@ -129,6 +145,38 @@ test('快照恢复通路：端点今天恰好落对（兜底位），但"变化�
     assert.equal(exec.rb.length, 0, '对照：回滚端点不得被牵连')
     assert.ok(text(panel.tree).includes('快照恢复完成'), '完成态文案须按 snapshot 取')
   } finally { panel.dispose() }
+})
+
+test('修正弹窗的标题与正文必须取 steps[0] 的真值，屏上不得出现 undefined（R1-b）', async () => {
+  const { panel } = await openConsole()
+  try {
+    buttonOf(panel.tree, '执行').props.onClick()
+    await panel.done()
+    const shown = text(panel.tree)
+    assert.ok(shown.includes('修正失效的引用名「@local/dsh-compact-router」'), '标题取 steps[0].old')
+    assert.ok(shown.includes('改成新名字「@local/dsh-toolkit/compact-router」'), '正文取 steps[0].new')
+    assert.ok(shown.includes('《package.json》'), '正文取 plan.file')
+    assert.ok(!shown.includes('undefined'), '整块弹窗文本里不得出现 undefined（取错层级就是这个表征）')
+  } finally { panel.dispose() }
+})
+
+test('回滚与快照两个弹窗同样不得出现 undefined（防止合并顺序改动牵连既有取数面）', async () => {
+  const a = await openConsole()
+  try {
+    buttonOf(a.panel.tree, '回滚').props.onClick()
+    await a.panel.done()
+    const shown = text(a.panel.tree)
+    assert.ok(shown.includes('回滚体检操作（2026-09-23T01-00-00.000Z）'), '标题取 plan.stamp')
+    assert.ok(shown.includes('把当时改动过的 1 个文件'), '正文取 plan.files')
+    assert.ok(!shown.includes('undefined'), '回滚弹窗整块不得出现 undefined')
+  } finally { a.panel.dispose() }
+
+  const b = await openConsole()
+  try {
+    buttonOf(b.panel.tree, '恢复').props.onClick()
+    await b.panel.done()
+    assert.ok(!text(b.panel.tree).includes('undefined'), '快照弹窗整块不得出现 undefined')
+  } finally { b.panel.dispose() }
 })
 
 test('命题分离：三条 execute URL 互不混用，且 kind 未知时不得静默选端点（源码形状钉）', async () => {

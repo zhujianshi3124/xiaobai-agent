@@ -1469,9 +1469,15 @@ window.__ModuleLoader__.load({
 			var dlgKids = null;
 			if (dlg) {
 				var c = dlg.copy;
+				// 文案取数面收敛成一个对象：plan 形态下 rewrite 类的 old/new 只在 steps[0] 里，
+				// 直接把 plan 交给 title/what 就会渲染出「undefined」；install 类的 pkg/source/version/range 在 extra 里。
+				var firstStep = (dlg.plan && Array.isArray(dlg.plan.steps) && dlg.plan.steps[0]) || {};
+				var copyData = dlg.plan
+					? Object.assign({}, dlg.plan, { old: firstStep.old, new: firstStep.new, file: dlg.plan.file != null ? dlg.plan.file : firstStep.file }, dlg.plan.extra || {})
+					: (dlg.entry || dlg.snap || {});
 				var lines = [
-					react.createElement("div", { key: "t", style: styles.dlgTitle }, c.title(dlg.plan || dlg.entry || dlg.snap)),
-					react.createElement("div", { key: "w", style: styles.dlgLine }, c.what(dlg.plan && dlg.plan.extra ? Object.assign({ file: dlg.plan.file, old: dlg.plan.steps[0].old, new: dlg.plan.steps[0].new }, dlg.plan.extra) : (dlg.plan || dlg.entry || dlg.snap))),
+					react.createElement("div", { key: "t", style: styles.dlgTitle }, c.title(copyData)),
+					react.createElement("div", { key: "w", style: styles.dlgLine }, c.what(copyData)),
 				];
 				if (c.why) lines.push(react.createElement("div", { key: "why", style: styles.dlgLine }, c.why));
 				if (c.version && dlg.plan && dlg.plan.extra) lines.push(react.createElement("div", { key: "ver", style: styles.dlgLine }, c.version(dlg.plan.extra)));
