@@ -168,6 +168,17 @@ schemastery 重建后校验；④ `{uid,refs}` toJSON 形态 → 重建后校验
 而两个调用方（`setConfig` 写回、体检 `config-schema-invalid` 规则）只看 `ok` ⇒ schemastery 不可用时
 任意配置都能写回。已裁定改为**把降级状态如实透出、不再谎称通过**；在落地之前，"不谎称已校验"这句只成立到
 `via` 字段上、不成立到通过/不通过的判定上。【批 5 落地】
+**【2026-09-25 批 5-1 已落地】** 判定改为三轴：`ok`（有没有发现不合法）／`verified`（这次到底跑没跑校验）／
+`via`（用哪种形态跑的）。降级面（③④ 构建或重建后拿不到"可执行校验的东西"、⑤ schema 形态完全不认识）
+一律 **`ok:false + verified:false`**；只有"本来就没有 schema 可验"保留 `ok:true + verified:false`。
+两个调用方各自把原因说清并 fail-closed：`registry.setConfig` 拒写、错误码 `config-schema-unverified`
+（真不合法仍是 `value-invalid`，两码不互串）；体检预检另开 `config-schema-unverified` 阻断项，
+**`config-schema-invalid` 的语义与既有断言一字未放宽**（`test/config-schema-degradation.test.mjs` 两条
+反向钉：合法 schema 的写回照常通过、真不合法的默认配置仍报 `config-schema-invalid`）。
+仓内 6 份真实 manifest 的 configSchema 实测仍全部 `verified:true` ⇒ 存量面零回归。
+顺带补记（本笔实测所得）：`Schema` 对**未知 type 是"构建成功、调用时才抛"** ⇒ 那条路是
+`verified:true + ok:false`（真校验发现不合法），不是降级；而 `{uid,refs}` 坏值走"构建不抛错但返回
+不可执行校验的值"，修复前正是这一格静默返回 `ok:true`。
 
 落盘口径（P5 起，用户裁决）：**仓内 manifest 的 configSchema 一律 schemastery 纯定义 JSON、零默认值**
 （运行时行为不变；默认值仍在插件代码里。"零默认值"目前是**约定而非判据**，无任何校验或门禁用例查它）。

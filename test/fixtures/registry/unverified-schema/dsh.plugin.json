@@ -1,0 +1,21 @@
+{
+  "manifestVersion": 1,
+  "name": "@local/dsh-toolkit/unverified-schema",
+  "id": "dsh/unverified-schema",
+  "displayName": "校验降级夹具（重建结果不可执行校验）",
+  "version": "0.1.0",
+  "contract": "^1.0",
+  "requirements": {
+    "runtime": { "node": ">=20" },
+    "binaries": [],
+    "packages": {},
+    "registers": { "inject": [], "events": [], "services": [], "commands": [], "providers": [] },
+    "exports": { ".": "./index.js" }
+  },
+  "configSchema": {
+    "uid": 1,
+    "refs": {
+      "0": { "type": "__not_a_real_schemastery_type__" }
+    }
+  }
+}

@@ -252,15 +252,25 @@ export class DoctorService implements ToolkitDoctor {
         'configSchema 校验',
       )
       if (!check.ok) {
+        // ★16（批 5）：`config-schema-invalid` 既有语义（默认配置不合法）**原样保留、不放宽**；
+        // 降级（根本没跑成校验）另开一个码，两种原因不再共用"配置不合法"这一句诊断。
+        const unverified = check.verified === false
         for (const i of check.issues) {
           blocking.push({
-            code: 'config-schema-invalid',
+            code: unverified ? 'config-schema-unverified' : 'config-schema-invalid',
             level: 'error',
-            message: `configSchema 默认配置校验失败 [${i.path}]：${i.message}（必填缺失或类型不符）`,
-            fix: {
-              summary: '补齐配置必填项或修正类型',
-              steps: ['按 schema 在安装后于面板"配置"中填写，或调整 configSchema 的 required 声明'],
-            },
+            message: unverified
+              ? `configSchema 无法执行校验，已按未通过处理 [${i.path}]：${i.message}`
+              : `configSchema 默认配置校验失败 [${i.path}]：${i.message}（必填缺失或类型不符）`,
+            fix: unverified
+              ? {
+                summary: '让校验真的能跑：装回 schemastery，或改用可执行校验的 schema 形态',
+                steps: ['检查 @deepseek-ai/schemastery 是否可解析', '或把 configSchema 改为模块导出的 Schema 实例 / zod schema'],
+              }
+              : {
+                summary: '补齐配置必填项或修正类型',
+                steps: ['按 schema 在安装后于面板"配置"中填写，或调整 configSchema 的 required 声明'],
+              },
           })
         }
       }
