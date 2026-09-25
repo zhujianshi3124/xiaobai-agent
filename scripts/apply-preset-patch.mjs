@@ -42,7 +42,7 @@ const ROW_NEW = [
   "        mode: auto",
   "        fallbackOnRateLimit: true",
   "        archive: true",
-  "        agentMemoryRoot: <USER_HOME>\.agent-memory",
+  "        agentMemoryRoot: <USER_HOME>\\.agent-memory",
 ].join("\n");
 
 const OLD_ROW_V2 = [
@@ -52,7 +52,7 @@ const OLD_ROW_V2 = [
   "        mode: auto",
   "        fallbackOnRateLimit: true",
   "        archive: true",
-  "        agentMemoryRoot: <USER_HOME>\.agent-memory",
+  "        agentMemoryRoot: <USER_HOME>\\.agent-memory",
 ].join("\n");
 
 const OLD_NAME_LINE = "      name: '@local/dsh-compact-router'";
