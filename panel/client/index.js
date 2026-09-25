@@ -236,6 +236,22 @@ window.__ModuleLoader__.load({
 			if (exact) return exact.value;
 			return null;
 		}
+		// ── F-49 专案（唯一判定点）：rate-throttle 在 config 顶层与 config.routing 下各有一个 enabled ──
+		// 顶层那枚管主动节流（总装补丁按设计关掉），routing 那枚管路由/冷却/降档 —— 后者才是本插件主功能
+		// （消费点见 lib/rate-throttle/index.js:656、:781；缺省语义 `routingCfg.enabled !== false` 见 :167）。
+		// 判据只取服务端已下发的 configPanel.values.routing（值=patch 原文，P2.3 已钉死无遮蔽）。
+		// 返回 null 表示"这一层面板没读到"，调用方必须退回通用语义 —— 面板不替插件臆断没读到的开关。
+		// 出现第二家双同名 enabled 的插件时再按 debt.md#31 的边界行泛化，勿在此之外散 if 链。
+		// ⚠ 与 panel/client/panel.html 里的 rateThrottleRoutingOn 是同一判据的两份实现（两渲染器无共享
+		//   文案源，见 p22-cards-ui 的 E 节双渲染器同判钉子）⇒ 改一处必改两处。
+		function rateThrottleRoutingOn(plugin) {
+			if (!plugin || plugin.dir !== "rate-throttle") return null;
+			var routing = ((plugin.configPanel || {}).values || {}).routing;
+			if (!routing || typeof routing !== "object") return null;
+			if (!Object.prototype.hasOwnProperty.call(routing, "enabled")) return true;
+			var v = String(routing.enabled).trim();
+			return v === "true" ? true : (v === "false" ? false : null);
+		}
 		function stateOf(plugin, patchText) {
 			var row = plugin.patchRow;
 			// ---- P2.4 缺席态优先：服务端 status/statusCopy 为权威，不在场就不该再报「运行中」----
@@ -251,8 +267,9 @@ window.__ModuleLoader__.load({
 				};
 			}
 			if (plugin.dir === "compact-router") {
-				// compact-router 由预设脚本管理，不在 patch 里；视为已加载且在生效
-				return { kind: "running", label: "运行中 · 正在生效", style: styles.stateOn, dot: styles.dotOn };
+				// F-45：这里只到"本体在 + 预设行已改"这一层判据（status 已在上面拦过缺席态）。
+				// 面板不查宿主的加载结果，预设托管的改动更要重启才落地 ⇒ 不写"正在生效"。
+				return { kind: "running", label: "运行中 · 预设托管，预设的改动要重启 DSH 才生效", style: styles.stateOn, dot: styles.dotOn };
 			}
 			if (!row) {
 				return { kind: "config-off", label: "配置层停用 · 未加载", style: styles.stateOff, dot: styles.dotOff };
@@ -265,7 +282,24 @@ window.__ModuleLoader__.load({
 			if (row.enabled !== true) {
 				return { kind: "config-off", label: "配置层停用 · 未加载", style: styles.stateOff, dot: styles.dotOff };
 			}
-			if (innerSwitchValue(plugin, patchText) === false) {
+			var inner = innerSwitchValue(plugin, patchText);
+			// F-49 专案：rate-throttle 的状态以主功能（路由/冷却/降档）为准，主动节流并列说清；
+			// 只有两层都关才配得上"暂不生效"。取不到 routing 时 routingOn=null，走下面通用语义。
+			var routingOn = rateThrottleRoutingOn(plugin);
+			if (routingOn !== null) {
+				var throttleOn = inner !== false;
+				if (routingOn && throttleOn) {
+					return { kind: "running", label: "运行中 · 路由/冷却/降档与主动节流都开着", style: styles.stateOn, dot: styles.dotOn };
+				}
+				if (routingOn) {
+					return { kind: "running", label: "运行中 · 路由/冷却/降档开着，主动节流未开", style: styles.stateOn, dot: styles.dotOn };
+				}
+				if (throttleOn) {
+					return { kind: "running", label: "运行中 · 主动节流开着，路由/冷却/降档未开", style: styles.stateOn, dot: styles.dotOn };
+				}
+				return { kind: "loaded-off", label: "已加载 · 功能开关关闭，暂不生效", style: styles.stateWarn, dot: styles.dotWarn };
+			}
+			if (inner === false) {
 				return { kind: "loaded-off", label: "已加载 · 功能开关关闭，暂不生效", style: styles.stateWarn, dot: styles.dotWarn };
 			}
 			return { kind: "running", label: "运行中 · 正在生效", style: styles.stateOn, dot: styles.dotOn };
@@ -283,6 +317,27 @@ window.__ModuleLoader__.load({
 		function DualSwitchNotice(props) {
 			var plugin = props.plugin;
 			if (plugin.patchRow && plugin.patchRow.enabled === true && innerSwitchValue(plugin, props.patchText) === false) {
+				// F-49 专案：rate-throttle 主功能（路由）开着时，这一框不能说"所以现在没生效"。
+				if (rateThrottleRoutingOn(plugin) === true) {
+					return react.createElement("div", { style: styles.dualBox },
+						react.createElement("div", { style: styles.dualHead }, "⚠ 两个同名的 enabled 各管各的：主功能开着，主动节流没开"),
+						react.createElement("div", { style: styles.dualLine },
+							"第一层（配置文件）：", react.createElement("span", { style: styles.dualCode }, "已启用"), " —— 插件已被加载。",
+							react.createElement("br"),
+							"主动节流（config.enabled）：", react.createElement("span", { style: styles.dualCode }, "关闭"), " —— 限速那一档没工作。",
+							react.createElement("br"),
+							"路由/冷却/降档（config.routing.enabled）：", react.createElement("span", { style: styles.dualCode }, "开着"),
+							" —— 这才是本插件一直在做的主功能。",
+							react.createElement("br"),
+							"要让它真正工作（这里指主动节流），需要把插件配置里的 ", react.createElement("span", { style: styles.dualCode }, "enabled"),
+							" 改为 ", react.createElement("span", { style: styles.dualCode }, "true"), "；改的是配置文件，重启 DSH 后才落地。",
+							react.createElement("br"),
+							"提示：本面板只负责第一层（加载与否）—— 第二层的参数编辑已随 ",
+							react.createElement("span", { style: styles.dualCode }, "P2.3 配置编辑"),
+							" 上线，见本卡下方", react.createElement("span", { style: styles.dualCode }, "「参数编辑」"), "。"
+						)
+					);
+				}
 				return react.createElement("div", { style: styles.dualBox },
 					react.createElement("div", { style: styles.dualHead }, "⚠ 两层开关不一致，所以现在没生效"),
 					react.createElement("div", { style: styles.dualLine },

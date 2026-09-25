@@ -376,5 +376,144 @@ for (const [label, plan, effectSentence] of [
   check("Q1 html: the write button is disabled", /class="tglAsk"[^>]*\sdisabled/.test(hp));
 }
 
+// ============================================================
+// E. 批 5-3：两处显示失真（F-45 compact-router 状态行 / F-49 rate-throttle 双同名 enabled）
+//    钉子先行：E1/E2/E3 断的是**修后应有的读数**，实现前必红。
+// ============================================================
+
+// 专案判据的唯一来源：服务端已下发的 configPanel.values.routing（值=patch 原文）。
+// 面板不臆断——这一层取不到时沿用现语义，取到了才按主功能判定。
+const rtBase = snap.plugins.find((x) => x.dir === "rate-throttle");
+if (!rtBase.configPanel || !rtBase.configPanel.values || !rtBase.configPanel.values.routing
+  || rtBase.configPanel.values.routing.enabled !== "true") {
+  throw new Error("fixture 自检失败：真实 patch 里 routing.enabled 必须为 \"true\"，否则 E1 三态没有对照面");
+}
+const RT_LABEL = {
+  bothOn: "运行中 · 路由/冷却/降档与主动节流都开着",
+  mainOn: "运行中 · 路由/冷却/降档开着，主动节流未开",
+  throttleOnly: "运行中 · 主动节流开着，路由/冷却/降档未开",
+  bothOff: "已加载 · 功能开关关闭，暂不生效",
+};
+const COMPACT_LABEL = "运行中 · 预设托管，预设的改动要重启 DSH 才生效";
+
+/** 造一张 rate-throttle 卡：层1、层2（主动节流）、routing 层各取一个值。 */
+function rtCombo(rowEnabled, cfgEnabled, routing) {
+  const plug = combo(rowEnabled, cfgEnabled);
+  if (routing === "__no_panel__") return plug;          // 服务端没下发 routing ⇒ 面板不该臆断
+  const cp = JSON.parse(JSON.stringify(rtBase.configPanel));
+  if (routing === "__no_key__") delete cp.values.routing.enabled;  // 键缺席 = 源码缺省 true
+  else cp.values.routing.enabled = routing;
+  plug.configPanel = cp;
+  return plug;
+}
+
+const htmlLabelOf = (p) => htmlR.stateOf(p).label;
+const reactCardOf = (p, patchText) => {
+  const t = reactR.render({ plugins: [p], patch: snap.patch, self: snap.self, toolkitName: "x", toolkitVersion: "0" }, patchText || PATCH_TEXT);
+  return reactR.cardsOf(t)[0] || null;
+};
+const reactLabelOf = (p, patchText) => { const c = reactCardOf(p, patchText); return c ? reactR.stateLabelOf(c) : null; };
+const reactNoticeOf = (p, patchText) => {
+  const c = reactCardOf(p, patchText);
+  const tree = c ? c.type(c.props) : null;
+  const els = tree ? findAll(tree, (n) => typeof n.type === "function" && n.type.name === "DualSwitchNotice") : [];
+  return els.map((el) => textOf(el.type(el.props)).join(" ")).join(" ");
+};
+htmlR.setPatch(PATCH_TEXT);
+
+// ---- E1 · F-49 三态真值表（两渲染器同判） ----
+const RT_TABLE = [
+  { cfg: "false", routing: "true", expect: RT_LABEL.mainOn, why: "顶层关 + 路由开 ⇒ 主功能开着（F-49 实况）" },
+  { cfg: "true", routing: "true", expect: RT_LABEL.bothOn, why: "顶层开 + 路由开" },
+  { cfg: "true", routing: "false", expect: RT_LABEL.throttleOnly, why: "顶层开、路由关 ⇒ 只剩主动节流" },
+  { cfg: "false", routing: "false", expect: RT_LABEL.bothOff, why: "两层全关 ⇒「暂不生效」方诚实" },
+  { cfg: "false", routing: "__no_key__", expect: RT_LABEL.mainOn, why: "routing 键缺席 ⇒ 源码缺省 true（rate-throttle/index.js:167）" },
+  { cfg: "false", routing: "__no_panel__", expect: RT_LABEL.bothOff, why: "面板取不到 routing ⇒ 不臆断，沿用现语义" },
+  // 主动节流那层同理：config.enabled 整键缺席 ⇒ 源码缺省 `config.enabled !== false` = 开着（:157）
+  { cfg: "__absent__", routing: "true", patch: PATCH_NO_INNER, expect: RT_LABEL.bothOn, why: "顶层键缺席 ⇒ 主动节流缺省开 + 路由开" },
+  { cfg: "__absent__", routing: "false", patch: PATCH_NO_INNER, expect: RT_LABEL.throttleOnly, why: "顶层键缺席 ⇒ 主动节流缺省开、路由关" },
+];
+for (const r of RT_TABLE) {
+  const plug = rtCombo(true, r.cfg, r.routing);
+  const patchForCase = r.patch || PATCH_TEXT;
+  htmlR.setPatch(patchForCase);
+  check("E1 html [" + r.why + "] → " + r.expect, htmlLabelOf(plug) === r.expect, htmlLabelOf(plug));
+  check("E1 react [" + r.why + "] → " + r.expect, reactLabelOf(plug, patchForCase) === r.expect, String(reactLabelOf(plug, patchForCase)));
+}
+htmlR.setPatch(PATCH_TEXT);
+// 主功能开着时，整卡任何一处都不得再宣称"暂不生效"
+for (const [caseName, plug] of [["实况", rtCombo(true, "false", "true")], ["缺省", rtCombo(true, "false", "__no_key__")], ["顶层缺省", rtCombo(true, "__absent__", "true")]]) {
+  const patchForCase = caseName === "顶层缺省" ? PATCH_NO_INNER : PATCH_TEXT;
+  htmlR.setPatch(patchForCase);
+  const hTxt = htmlLabelOf(plug) + " " + htmlR.dualSwitchNotice(plug);
+  const rTxt = reactLabelOf(plug, patchForCase) + " " + reactNoticeOf(plug, patchForCase);
+  check("E1 " + caseName + ": html 整卡不宣称「暂不生效」", !hTxt.includes("暂不生效"), hTxt.slice(0, 120));
+  check("E1 " + caseName + ": react 整卡不宣称「暂不生效」", !rTxt.includes("暂不生效"), rTxt.slice(0, 120));
+}
+htmlR.setPatch(PATCH_TEXT);
+
+// ---- E1b · 黄警告框在专案下要说清两层真况（不得再说"所以现在没生效"） ----
+{
+  const onNoticeH = htmlR.dualSwitchNotice(rtCombo(true, "false", "true"));
+  const onNoticeR = reactNoticeOf(rtCombo(true, "false", "true"));
+  for (const [face, n] of [["html", onNoticeH], ["react", onNoticeR]]) {
+    check("E1b " + face + ": 路由开着时不说「所以现在没生效」", !n.includes("所以现在没生效"), n.slice(0, 120));
+    check("E1b " + face + ": 并列点名两个同名开关", n.includes("主动节流") && n.includes("路由"));
+    // A2 的三条既有文案要求在专案分支上继续成立（防把恢复指引改掉）
+    check("E1b " + face + ": 仍给恢复指引三件套",
+      n.includes("要让它真正工作") && n.includes("本面板只负责第一层") && n.includes("P2.3 配置编辑"));
+  }
+  const offNoticeH = htmlR.dualSwitchNotice(rtCombo(true, "false", "false"));
+  const offNoticeR = reactNoticeOf(rtCombo(true, "false", "false"));
+  check("E1b html: 两层全关时「所以现在没生效」仍是实话", offNoticeH.includes("两层开关不一致") && offNoticeH.includes("所以现在没生效"));
+  check("E1b react: 两层全关时「所以现在没生效」仍是实话", offNoticeR.includes("两层开关不一致") && offNoticeR.includes("所以现在没生效"));
+}
+
+// ---- E2 · F-49 反向钉：专案不得外溢到其余四卡 ----
+{
+  const am = JSON.parse(JSON.stringify(snap.plugins.find((x) => x.dir === "agent-memory")));
+  am.patchRow.config = Object.assign({}, am.patchRow.config, { enabled: "false" });
+  check("E2 html: agent-memory 的内部开关关 ⇒ 仍报「已加载 · 功能开关关闭，暂不生效」",
+    htmlLabelOf(am) === RT_LABEL.bothOff, htmlLabelOf(am));
+  check("E2 react: agent-memory 同上", reactLabelOf(am) === RT_LABEL.bothOff, String(reactLabelOf(am)));
+  const amNotice = htmlR.dualSwitchNotice(am);
+  check("E2 html: agent-memory 的黄警告文案一字未动",
+    amNotice.includes("两层开关不一致，所以现在没生效") && amNotice.includes("第二层（插件内部）")
+    && amNotice.includes(">关闭</span> —— 功能被自己关掉了"), amNotice.slice(0, 120));
+  const amNoticeR = reactNoticeOf(am);
+  check("E2 react: agent-memory 的黄警告文案一字未动",
+    amNoticeR.includes("两层开关不一致，所以现在没生效") && amNoticeR.includes("第二层（插件内部）")
+    && amNoticeR.includes("关闭") && amNoticeR.includes("功能被自己关掉了"), amNoticeR.slice(0, 120));
+  // 专案的边界钉在"只认 rate-throttle 这一家"：伪造一张带同名嵌套开关的别家卡，专案也不许接管。
+  // （第二家真出现时按 debt.md#31 边界行泛化，那时这条钉要同时翻面。）
+  const impostor = JSON.parse(JSON.stringify(am));
+  impostor.configPanel = JSON.parse(JSON.stringify(rtBase.configPanel));
+  check("E2 html: 别家卡即使出现 routing.enabled 也不被专案接管",
+    htmlLabelOf(impostor) === RT_LABEL.bothOff, htmlLabelOf(impostor));
+  check("E2 react: 别家卡即使出现 routing.enabled 也不被专案接管",
+    reactLabelOf(impostor) === RT_LABEL.bothOff, String(reactLabelOf(impostor)));
+  for (const dir of ["agent-memory", "search-router", "web-search-local"]) {
+    const p = snap.plugins.find((x) => x.dir === dir);
+    check("E2 反向钉 " + dir + ": 真实卡状态行不受牵连（html）", htmlLabelOf(p) === "运行中 · 正在生效", htmlLabelOf(p));
+    check("E2 反向钉 " + dir + ": 真实卡状态行不受牵连（react）", reactLabelOf(p) === "运行中 · 正在生效", String(reactLabelOf(p)));
+  }
+}
+
+// ---- E3 · F-45：compact-router 状态行去掉无判据的"正在生效"，并如实标注重启边界 ----
+{
+  const cr = snap.plugins.find((x) => x.dir === "compact-router");
+  check("E3 html: compact-router 不再宣称「正在生效」", !htmlLabelOf(cr).includes("正在生效"), htmlLabelOf(cr));
+  check("E3 react: compact-router 不再宣称「正在生效」", !String(reactLabelOf(cr)).includes("正在生效"), String(reactLabelOf(cr)));
+  check("E3 html: compact-router 如实标注预设托管+重启", htmlLabelOf(cr) === COMPACT_LABEL, htmlLabelOf(cr));
+  check("E3 react: compact-router 如实标注预设托管+重启", reactLabelOf(cr) === COMPACT_LABEL, String(reactLabelOf(cr)));
+  // 可观测性自证：缺席态确实走 status 那条拦截（F-45 原文"卸载后仍说它在生效"高估的成因面）
+  const crOff = JSON.parse(JSON.stringify(cr));
+  crOff.status = "soft-unmounted";
+  check("E3 html: 软卸载态被 status 拦截（不是运行中）",
+    htmlLabelOf(crOff) === "已软卸载 · 本体保留 · 可一键恢复", htmlLabelOf(crOff));
+  check("E3 react: 软卸载态被 status 拦截（不是运行中）",
+    reactLabelOf(crOff) === "已软卸载 · 本体保留 · 可一键恢复", String(reactLabelOf(crOff)));
+}
+
 console.log("\n" + passed + "/" + (passed + failed) + " PASS");
 process.exit(failed === 0 ? 0 : 1);
