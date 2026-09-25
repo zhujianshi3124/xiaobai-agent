@@ -28,6 +28,39 @@ export const DEFAULT_PLAN_TTL_MS = 5 * 60 * 1000; // 5 分钟
 export const BACKUP_KEEP_COUNT = 20; // 保留策略：最近 20 份
 export const BACKUP_KEEP_DAYS = 30; // 保留策略：或 30 天
 
+// ── W11-a（F-75）：token 与执行路由的归属面 ────────────────────────────────────────
+// PLAN_STORE 是全池共享的一张表，`/uninstall|restore|mount/execute` 与
+// `/doctor/{apply,rollback}/execute`、`/snapshot-restore/execute` 六族都判 plan.kind，
+// 唯独通用 `/execute` 只按 token 取方案就写盘 ⇒ 别族的 token 能在这里被"跨种消费"，
+// 绕掉那条族自己的语义与确认层（SHA 闸/锚点复验是共同防线，看不出走错了门）。
+// 判据：`/execute` 只接受"锚点 + 文本替换"这一族。**新增方案族必须显式选边**——
+// 进 GENERIC_EXECUTE_KINDS 或进 DEDICATED_EXECUTE_ROUTE_BY_KIND，两边都不进就是 fail-closed
+// 被拒（test/panel-execute-kind.test.mjs 有一条把"现存族必须被显式覆盖"钉住）。
+export const PLAN_KIND_PATCH_EDIT = "patch-edit";
+export const PLAN_KIND_TOGGLE = "toggle";
+export const PLAN_KIND_CONFIG_EDIT = "config-edit";
+
+export const GENERIC_EXECUTE_KINDS = new Set([
+  PLAN_KIND_PATCH_EDIT,
+  PLAN_KIND_TOGGLE,
+  PLAN_KIND_CONFIG_EDIT,
+]);
+
+/** kind → 该走的专用 execute 路由（拒绝时要点名给用户/面板看）。 */
+export const DEDICATED_EXECUTE_ROUTE_BY_KIND = {
+  "doctor-apply": "/doctor/apply/execute",
+  "doctor-rollback": "/doctor/rollback/execute",
+  "snapshot-restore": "/snapshot-restore/execute",
+  "uninstall-soft-patch": "/uninstall/execute",
+  "uninstall-true-patch": "/uninstall/execute",
+  "uninstall-soft-preset": "/uninstall/execute",
+  "uninstall-true-preset": "/uninstall/execute",
+  "restore-soft-patch": "/restore/execute",
+  "restore-preset": "/restore/execute",
+  "mount-patch": "/mount/execute",
+  "mount-preset": "/mount/execute",
+};
+
 export function sha256Of(text) {
   return createHash("sha256").update(text).digest("hex");
 }
@@ -311,7 +344,7 @@ export function createTogglePlan({ file, rowId, enabled, backupRoot, ttlMs = DEF
       .update(file + "|toggle|" + rowId + "|" + String(enabled) + "|" + sha256Of(text) + "|" + now)
       .digest("hex")
       .slice(0, 32),
-    kind: "toggle",
+    kind: PLAN_KIND_TOGGLE,
     file,
     rowId,
     key: "disabled",
@@ -443,7 +476,7 @@ export function createConfigPlan({ file, rowId, path, value, backupRoot, ttlMs =
       .update(file + "|config|" + rowId + "|" + path + "|" + String(value) + "|" + sha256Of(text) + "|" + now)
       .digest("hex")
       .slice(0, 32),
-    kind: "config-edit",
+    kind: PLAN_KIND_CONFIG_EDIT,
     file,
     rowId,
     key: path,
@@ -650,6 +683,9 @@ export function createPlan({ file, rowId, key, value, backupRoot, ttlMs = DEFAUL
       .update(file + "|" + rowId + "|" + key + "|" + String(value) + "|" + sha256Of(text) + "|" + now)
       .digest("hex")
       .slice(0, 32),
+    // W11-a：通用写方案此前没有 kind（池里唯一"无归属"形态）⇒ 补一个显式值，
+    // 让 /execute 的白名单是"认识才放行"，不是"不认识就放行"。
+    kind: PLAN_KIND_PATCH_EDIT,
     file,
     rowId,
     key,
