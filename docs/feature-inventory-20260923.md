@@ -393,6 +393,18 @@ F-70 的 `title/what` 取数与 `:1287-1298` 逐字读。F-75 的 `executePlan` 
 ★F-82 引擎注册表与部署配置两份名单并存且无对账 —— `ENGINES`(8) / `ENGINE_LAYERS.cn` / `defaultConfig().engines` 三处各自维护，
 只有 `cordis.patch.yml` 那一份是"部署事实"；`requestedEngines` 的错误文案还把**全 8 项**当"known"打给用户
 ⇒ 与部署名单直接矛盾，会教模型去点未部署引擎。状态：有出入
+**【2026-09-25 R3 笔落位读数 · F-81 与 F-82 的点名半边已修】** ① `requestedEngines(searchReq, cfg)` 追加与
+`engineList(cfg)` 的交集判定：越界点名 ⇒ `WebError` 且**请求一次都不发出**（`test/web-search-local-engines.test.mjs`
+以 fetch 观测面计数实证，含 `'360'` 字符串与 YAML 裸数字 `360` 两种形态、以及"混含已部署+未部署整体拒绝"）；
+② 错误文案改列部署名单并点名 `not deployed`，`unknown search engine` 一支只留给能力表里真没有的名字；
+③ **本条"会教模型去点未部署引擎"那半已一并收**：`web_search_engine` 的工具描述与 `tool:web_search_engine`
+systemPrompt 段原以模块级 `Object.keys(ENGINES)` 枚举 8 项，现改由 `engineList(currentCfg())` 生成 ⇒
+模型可见名单与点名闸**同源**（以注册时刻的生效配置为准）。反向对照已钉：把 `sogou` 真写进部署名单则点名
+它必须放行 ⇒ 闸比的是部署面，不是把两个引擎写死禁用；`cordis.patch.yml` 一字未动 ⇒ 判据基准 `e8051fe9` 不滚存。
+F-81 状态由"有出入"翻正为**已修复**；F-82 的"两份名单各自维护 + 无对账"那半**仍未清**（`ENGINES`/`ENGINE_LAYERS`/
+`defaultConfig().engines` 三处副本没有一致性钉，属 W1/W7 面）。
+**F-80 只收窄不清账**：本笔给引擎点名链补了 10 条用例（该条申报的"基本面零覆盖"由此**部分**改善），
+但**搜索行为、缓存、HTML 解析、代理与跳转还原等其余面仍零钉** ⇒ F-80 状态维持"有出入"，待 W7 续补。
 ★F-83 逐插件健康面对本插件同样不可达 —— 它**没有** `healthCheck` 模块导出（H3），
 且面板"健康"列对它恒不可达（F 表①-B 在案区）⇒ 与内置五卡同格。状态：有出入（并入 ①-B 健康格一起处置）
 ★F-84 模块级跨实例共享 —— `engineCooldowns:619`/`engineLastAt:620`/`probeCache:363`（10 分钟）都在**模块作用域**，
