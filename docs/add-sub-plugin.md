@@ -82,11 +82,15 @@ registry 的 legacy 适配器会合成 manifest（id 落 `legacy/<包名>`，无
    - **② 顶层 `exports['.']` —— legacy 兼容位。** 命中一定打 warn（经 registry 的 A1 warn 通道
      落日志，event=`entry-declaration`）；与正典并存时**正典赢**，warn 点名被忽略的那一份。
    - **③ `package.json` 的 `exports['.']`（字符串或 `{".":{default|node}}`）→ `main`；
-     ④ `index.js`/`index.mjs` 目录惯例** —— 仅当前两级都没有声明时才走到这里（宿主 Node 约定，T0/G1）。
-   - **红线：显式声明（①②）指向不存在的文件 ⇒ 直接 `entry-not-found` 并给拼好的绝对路径，
+     ④ `index.js`/`index.mjs` 目录惯例** —— 第④级仅在当前三级**都没有声明**时才走到（宿主 Node 约定，T0/G1）。
+   - **红线：显式声明（①②③）指向不存在的文件 ⇒ 直接 `entry-not-found` 并给拼好的绝对路径，
      绝不静默回退后面的顺位**（回退就是拿惯例掩盖 manifest 与实现不同步）。
-     【批 6 落地，当前只覆盖①②】现状：第③级的 `exports['.']`/`main` 指向不存在的文件时**会继续静默
-     落到第④级**，而 package.json 同样是作者显式写的声明 ⇒ 已裁定把红线扩到第③级。
+     【批 6（★10）已落地】第③级同样算作者显式写的声明：`package.json` 的 `exports['.']`（裸字符串 /
+     映射里的字符串 / 对象形态 `default`|`node`）或 `main` 声明了却指向不存在的文件 ⇒ 当场报错，
+     **不再静默落到目录惯例**。三种情形仍视为"本级没声明"、继续走目录惯例：`exports` 表里没有 `.` 键；
+     `.` 的对象形态既无 `default` 也无 `node`（例如只有 `types`）；`main` 是空串。
+     收紧前已核存量：`package.json#exports` 12 条目与 7 份 manifest 的 `requirements.exports` 目标全部存在
+     （recon §10.2），`main` 形态由批 6 补核（15 个在③级有声明的目录，缺失 0 个）。
    - **来源直接给 `.js`/`.mjs` 文件路径时完全绕过上面四级**（`entrySource='explicit-file'`、
      `entryWarnings` 恒空）⇒ 它会**静默忽略** manifest 里相反的 `.` 声明；`.cjs` 与无扩展名路径按目录处理。
    - 解析结果的可观测面：`ResolvedPlugin.entrySource`（七种来源值，见 `registry/src/types.ts`）

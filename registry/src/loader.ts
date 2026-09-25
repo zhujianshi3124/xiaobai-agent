@@ -17,9 +17,10 @@
  *         按继承语义把表换成 `package.json#exports`。
  *      ② 顶层 `exports['.']` —— legacy 兼容位，命中必打 warn；与正典并存时正典赢并
  *         warn 指出忽略了哪一份重复声明。
- *      ③ `package.json` 的 `exports['.']` → `main`（宿主 Node 约定，T0/G1）→
- *         `index.js`/`index.mjs` 目录惯例（仅前三级都没有声明时兜底）。
- *      **任一显式声明（①②）指向不存在的文件即报 entry-not-found，绝不静默回退**
+ *      ③ `package.json` 的 `exports['.']` → `main`（宿主 Node 约定，T0/G1）。package.json
+ *         同样是作者显式写的声明 ⇒ **★10 红线（批 6）已扩到本级**。
+ *      ④ `index.js`/`index.mjs` 目录惯例 —— 仅当前三级都没有声明时才兜底。
+ *      **任一显式声明（①②③）指向不存在的文件即报 entry-not-found，绝不静默回退**
  *      （manifest 与实现同步是红线；回退就是在掩盖）。找不到入口时报可执行 fix 文案
  *      （含 monorepo 根的插件子包候选指引）。
  *   3. 动态 import 入口；插件对象形态归一（default / 命名导出 / 函数）。
@@ -125,22 +126,30 @@ function manifestHasContract(m: Record<string, unknown>): boolean {
   return typeof m['contract'] === 'string' && m['contract'] !== ''
 }
 
-/** package.json 的 exports['.'] 目标解析（字符串形态 + 对象形态 default/node）。返回存在的文件路径。 */
-function resolvePkgExportsTarget(dir: string, exportsField: unknown): string | undefined {
-  let dot: unknown = exportsField
-  if (exportsField && typeof exportsField === 'object' && !Array.isArray(exportsField)) {
-    dot = (exportsField as Record<string, unknown>)['.']
-    if (dot && typeof dot === 'object' && !Array.isArray(dot)) {
-      const rec = dot as Record<string, unknown>
-      let found: string | undefined
-      for (const key of ['default', 'node'] as const) {
-        const v = rec[key]
-        if (typeof v === 'string' && v !== '') { found = v; break }
-      }
-      dot = found
+/**
+ * 读 package.json `exports` 里 `"."` 的**声明值**（不判存在性）：裸字符串、映射里的字符串、
+ * 或 `{".":{default|node}}` 对象形态。都没有 ⇒ undefined（= 本级没声明入口，可继续往下兜底）。
+ * 只有一种情形刻意算"没声明"：对象形态里既无 default 也无 node（例如只有 types）——今天就不产出入口。
+ */
+function pkgDotDeclaration(exportsField: unknown): string | undefined {
+  if (typeof exportsField === 'string') return exportsField !== '' ? exportsField : undefined
+  if (!exportsField || typeof exportsField !== 'object' || Array.isArray(exportsField)) return undefined
+  let dot: unknown = (exportsField as Record<string, unknown>)['.']
+  if (typeof dot === 'string') return dot !== '' ? dot : undefined
+  if (dot && typeof dot === 'object' && !Array.isArray(dot)) {
+    const rec = dot as Record<string, unknown>
+    for (const key of ['default', 'node'] as const) {
+      const v = rec[key]
+      if (typeof v === 'string' && v !== '') return v
     }
   }
-  if (typeof dot !== 'string' || dot === '') return undefined
+  return undefined
+}
+
+/** package.json 的 exports['.'] 目标解析（字符串形态 + 对象形态 default/node）。返回存在的文件路径。 */
+function resolvePkgExportsTarget(dir: string, exportsField: unknown): string | undefined {
+  const dot = pkgDotDeclaration(exportsField)
+  if (dot === undefined) return undefined
   const p = join(dir, dot)
   return existsSync(p) ? p : undefined
 }
@@ -228,7 +237,7 @@ function declaredExportsHint(manifest: Record<string, unknown> | undefined, base
  *   ③ package.json 的 exports['.'] → main（宿主 Node 约定，T0/G1）
  *   ④ index.js / index.mjs 目录惯例（前面各级都没有声明时才兜底）
  *
- * 红线：①② 这类**显式声明**指向不存在的文件 ⇒ 直接 entry-not-found 并给出该绝对路径，
+ * 红线：①②③ 这类**显式声明**指向不存在的文件 ⇒ 直接 entry-not-found 并给出该绝对路径，
  * 绝不静默回退到后面的顺位（回退就是拿惯例掩盖 manifest 与实现不同步）。
  */
 function resolveEntry(dir: string, manifest: Record<string, unknown> | undefined): EntryResolution {
@@ -286,13 +295,21 @@ function resolveEntry(dir: string, manifest: Record<string, unknown> | undefined
     return { path: p, source: 'manifest.exports(legacy)', warnings }
   }
 
-  // ③ 宿主 Node 约定（T0/G1：字符串与 {".":{default|node}} 两种形态都收）
-  const fromPkgExports = pkg ? resolvePkgExportsTarget(dir, pkg['exports']) : undefined
-  if (fromPkgExports) return { path: fromPkgExports, source: 'package.json#exports', warnings }
+  // ③ 宿主 Node 约定（T0/G1：裸字符串、映射里的字符串、{".":{default|node}} 三种形态都收）
+  // ★10 红线扩到本级（批 6）：package.json 同样是作者显式写的声明 ⇒ 声明了却指向不存在的文件
+  // 就报 entry-not-found，**不静默落到 ④ 目录惯例**（回退即拿惯例掩盖声明与实现不同步）。
+  // 只有"本级确实没声明"才继续兜底：exports 表里没有 "." 键、对象形态只带 types、或没有 package.json。
+  const pkgExportsDot = pkgDotDeclaration(pkg?.['exports'])
+  if (pkgExportsDot !== undefined) {
+    const p = join(dir, pkgExportsDot)
+    if (!existsSync(p)) throw new SourceError('entry-not-found', pkgDeclaredMissingMessage('exports["."]', pkgExportsDot, p, dir))
+    return { path: p, source: 'package.json#exports', warnings }
+  }
   const main = pkg?.['main']
-  if (typeof main === 'string') {
+  if (typeof main === 'string' && main !== '') {
     const p = join(dir, main)
-    if (existsSync(p)) return { path: p, source: 'package.json#main', warnings }
+    if (!existsSync(p)) throw new SourceError('entry-not-found', pkgDeclaredMissingMessage('main', main, p, dir))
+    return { path: p, source: 'package.json#main', warnings }
   }
 
   // ④ 目录惯例兜底（仅当上面各级都没有声明/都没有命中）
@@ -322,6 +339,16 @@ function declaredMissingMessage(
     parts.push(`该 requirements.exports 表声明的键：${others.map((k) => `'${k}'`).join('、')}`)
   }
   parts.push(`修复：把 "${dot}" 指向 ${dir} 下真实存在的入口文件，或改正拼写后重装`)
+  return `${parts.join('。')}。`
+}
+
+/** ③ 级（package.json）显式声明指向不存在文件时的文案：与 ①② 同构，但不涉及 manifest 表。 */
+function pkgDeclaredMissingMessage(field: string, value: string, absPath: string, dir: string): string {
+  const parts = [
+    `package.json 声明了入口却指向不存在的文件：${field}="${value}" → ${absPath}（该文件不存在）`,
+    '声明与实现必须同步，装载器**不会**回退到 index.js/index.mjs 目录惯例去猜一个能用的入口',
+    `修复：把 package.json 的 ${field} 指向 ${dir} 下真实存在的入口文件（本体未构建请先构建），或改正拼写后重装`,
+  ]
   return `${parts.join('。')}。`
 }
 

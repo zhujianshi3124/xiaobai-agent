@@ -129,16 +129,22 @@ error）⇒ "本仓容忍"与"另一仓必填"并存，正是 `docs/debt.md` C-2
 |---|---|---|
 | ① | **`requirements.exports['.']` —— 正典位置** | 命中即返回；`{"$from":"package.json#exports"}`（**只允许套件根这么写，且必须只有 `$from` 一个键**）时按继承语义换成 `package.json#exports` 的表，此时若表里没有 `.` 映射会带一条告警 |
 | ② | 顶层 `exports['.']` —— legacy 兼容位 | 命中**必打 warn**（经 registry 的 warn 通道落日志，`event=entry-declaration`）；与正典并存时**正典赢**，warn 点名被忽略的那一份并说明它在 doctor 侧判 error |
-| ③ | `package.json` 的 `exports['.']`（字符串或 `{".":{default\|node}}`）→ `main` | 宿主 Node 约定（T0/G1） |
-| ④ | `index.js` / `index.mjs` 目录惯例 | 仅当前三级都没有声明/都没有命中时才走到 |
+| ③ | `package.json` 的 `exports['.']`（字符串或 `{".":{default\|node}}`）→ `main` | 宿主 Node 约定（T0/G1）。**本级同样是显式声明：声明了却指向不存在的文件 ⇒ `entry-not-found`，不回退第④级（批 6 / ★10）** |
+| ④ | `index.js` / `index.mjs` 目录惯例 | 仅当前三级**都没有声明**时才走到（"声明了但目标缺失"已在当场报错，不再靠惯例兜底） |
 
 - **`.` 的语义是"包主导出"，不必然是插件入口**（本仓 `lib/agent-memory` 即此形态：`.` 指向数据层、
   插件在 `./plugin`）⇒ 按目录装它会得到 `plugin-shape-invalid`，报错点名同表可改装的文件；
   **装载器不代为挑选**，要装请按文件路径装。这是终态设计行为，不是缺陷（`docs/debt.md`《D-7 追加》情形 A）。
 - **红线：显式声明指向不存在的文件 ⇒ 直接 `entry-not-found` 并给拼好的绝对路径，绝不静默回退后面的顺位**
-  （回退就是拿惯例掩盖 manifest 与实现不同步）。【批 6 落地，当前只覆盖①②】现状：第③级
-  （package.json 的 exports/main）目标不存在时**仍会**落到第④级，而 package.json 同样是作者显式写的
-  声明 —— 已裁定把红线扩至第③级；扩前须核存量声明全部有效（`docs/contract-v1.1-recon.md` §10 的核验结果）。
+  （回退就是拿惯例掩盖 manifest 与实现不同步）。**批 6（★10）已把本级红线扩到第③级**：
+  `package.json` 的 `exports['.']`（裸字符串 / 映射里的字符串 / `{".":{default|node}}` 三种形态）或
+  `main` 只要是**作者写下的声明**且目标不存在，当场报错并给绝对路径，不再静默落到目录惯例。
+  第④级 `index.js`/`index.mjs` 因此只在**前三级都没声明**时才走到（"声明了但没命中"已不是回退理由）。
+  口径细节：`exports` 表里没有 `.` 键、`.` 的对象形态既无 `default` 也无 `node`、`main` 是空串——
+  三种都算"本级没声明"（与 `exports['.']===""` 同口径），仍走目录惯例。
+  扩前存量核验：`package.json#exports` 12 条目 + 7 份 manifest 的 `requirements.exports` 目标全部存在
+  （`docs/contract-v1.1-recon.md` §10.2）；`main` 形态 recon 未核，批 6 落地前补做（两仓 15 个在③级有声明
+  的目录，"声明了却不存在"0 个，探针 `var/scratch/exe-boot-003-20260925/b6-stock-main-audit.mjs`）。
 - **可观测面**：`ResolvedPlugin.entrySource`（七值枚举：`manifest.requirements.exports`、
   `…($from)`、`manifest.exports(legacy)`、`package.json#exports`、`package.json#main`、
   `index-convention`、`explicit-file`）与 `entryWarnings`。
