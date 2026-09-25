@@ -202,14 +202,33 @@ ACTIVE"才动手（防 cordis 在依赖翻转瞬间的抖动变成事件风暴�
    （原文把它写成"面板/引擎零插件名硬编码"，与 AGENTS 第 4 条不是一条，已按编号拆开。）
 
 **"改了面板代码就是 bug"这条纪律的守卫覆盖面**（★13，别把它读成通用守卫）：
-`scripts/p4-no-subplugin-import-check.mjs` 目前**只盯 5 个内置插件名**、**只扫 6 个指定文件**
-（根 `index.js`、`panel/manager/registry-host.mjs`、`v2-api.mjs`、`realtime-connector.mjs`、
-`panel/index.js`、`panel/client/index.js`〔仅模块导入形态〕）；`panel/manager/` 其余文件不在扫描面，
-**第三方新插件名也不在判据里** ⇒ 为一个第三方插件改面板代码，现有守卫抓不到。
-`scripts/pluggable-lint.mjs` 则**只扫 `lib/` 与 `test/`**、不碰面板（原文明确指给它了，属张冠李戴）。
-【批 7 落地，当前如上】另注：面板 patch 域生命周期区（`plugin-registry.mjs` 的插件表、
-`snapshot.mjs` 的 `ORIGINS/ROW_IDS`）带内置插件名是**有意保留的资产**（`docs/migration.md` §4 前置 2），
-不算违反本纪律。
+`scripts/p4-no-subplugin-import-check.mjs`（**批 7 / ★13 已泛化 + 扩面**）。三条判据：
+
+1. `name`——子插件名字面引用。**名字集从仓内派生**（`lib/` 下每个子目录名 ∪ 套件 manifest
+   `aliases` 各值末段），不再手写"5 个内置名" ⇒ 加第 6 个内置插件，判据自己长出来。
+2. `identity`——插件身份形状：任何 `"@scope/name"` 字面量，只要该名字**不是 `package.json` 里
+   声明过的依赖/开发依赖**，就按插件身份算 ⇒ **为第三方插件改面板代码，现在会被抓到**；
+   真框架依赖（`@deepseek-ai/*` 那族）不误报。
+3. `module`——`lib/` 模块引用（`from` / `import()` / `require` 三形态，P4 原始那条一字未改）。
+
+扫描面同样改为**动态**：根 `index.js` + `panel/index.js` + `panel/manager/` 下**全部** `.mjs`
+（当前 13 个，新增文件自动进面）+ 客户端两文件（`panel/client/index.js`、`panel/client/panel.html`
+〔仅模块导入形态——UI 文案常量按设计点名五个目录名，属呈现资产不属数据面；本批起 `panel.html`
+也进面，此前它不在任何守卫里〕）。注释行不参与判据：这条纪律管"面板代码依赖具体插件"，
+散文里提一个名字不是依赖。
+
+**有意保留的点名豁免（登记在守卫里的 `NAME_EXEMPTIONS`，每条带依据）**：
+`plugin-registry.mjs`（P2.4 插件表 + `DEPENDENCIES`）、`snapshot.mjs`（`ORIGINS`/`ROW_IDS` +
+P2.3 `buildConfigPanel` 按插件分支）、`config-whitelist.mjs`（P2.3 唯一可写行与 18 键白名单）、
+`uninstall.mjs`（compact-router 预设托管通路）——依据同前：`docs/migration.md` §4 前置 2 明文要求
+原样保留。**豁免只免"点名"，从免不掉 `lib/` import**：这四个文件里出现兄弟插件模块引用照样翻红。
+死条目（挂着豁免却没有真实命中）由 `test/p4-panel-guard.test.mjs` 判红，防豁免腐烂。
+
+两条如实的限制（不夸成"全面守卫"）：① 豁免是**文件级**，所以这四个文件里"新增的点名"不受检——
+要收到行级得先给每处点名加锚，另批处理；② `identity` 只认 `@scope/name` 形状，一个**不带 scope 的
+第三方插件名**（裸词）与英文散文无法机械区分，抓不到 ⇒ 本守卫不承诺覆盖那一形。
+`scripts/pluggable-lint.mjs` 的职责是另一面：它只管 `lib/` 与 `test/` 里的**兄弟插件静态 import /
+eager re-export**，不碰面板（旧文本把面板纪律记到它头上属张冠李戴，已按面指对）。
 
 ## 6. 自测清单（提交前）
 
