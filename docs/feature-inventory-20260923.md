@@ -74,6 +74,7 @@ dsh 功能全量清单 · 呈审稿（未入库）
 ★package.json#files 声明 README.md，桶根无此文件；docs/ 里 REQ 编号引用的《toolkit 泛化规格》正本不在两仓任何位置。状态：文档未记 + 引用无源
 
 ★契约正本挂 5 处"已裁定改代码、实现未跟上"：批 5（schemastery 不可用时降级为 via:'skipped' 却仍返回通过，写回与体检只看 ok ⇒ 任意配置能落盘）、批 6（入口第③级指向不存在文件仍静默落第④级，红线只覆盖①②）、批 8（面板 install/confirm 不要求 confirm）、批 9（审计事件名入枚举）、批 10 邻近（provides 数据半边 + events 最小形状校验）。状态：未实现（各批已裁定，落地前按小字为准）
+【2026-09-25 更新：五处里**批 5 那一处已落地**（批 5-1 笔）】判据改三轴 `ok/verified/via`，降级（含"重建结果不可执行校验"与"schema 形态完全不认识"两格）一律 `ok:false + verified:false`，两个调用方（`registry.setConfig`、体检预检）各自 fail-closed 并分码（`config-schema-unverified`），`config-schema-invalid` 既有语义与断言未放宽 ⇒ 本行余下 **批 6 / 批 8 / 批 9 / 批 10 邻近四处仍挂"未实现"**。钉子：`test/config-schema-degradation.test.mjs`（10 条，含两条反向钉）。
 
 在案区（均状态：一致，除非句内另有标注）
 

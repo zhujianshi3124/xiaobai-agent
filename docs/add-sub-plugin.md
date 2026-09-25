@@ -113,6 +113,11 @@ registry 的 legacy 适配器会合成 manifest（id 落 `legacy/<包名>`，无
    保存走 `registry.setConfig`，写回前服务端真校验（必填缺失阻断）。
    【批 5 落地，当前有一格静默放行】构建/重建 Schema 失败时校验降级为 `via:'skipped'` 却仍返回
    `ok:true`，而调用方只看 `ok` ⇒ schemastery 不可用时任意配置都能写回；已裁定把降级状态如实透出。
+   **【2026-09-25 批 5-1 已收这一格】** 降级现返回 `ok:false + verified:false`，`setConfig` 据此**拒写**并
+   报 `config-schema-unverified`（文案点名"未能执行真校验"，与"配置真不合法"的 `value-invalid` 分开）；
+   体检预检同理由只看 `ok` 改为看 `ok + verified`，降级另开 `config-schema-unverified` 阻断项。
+   ⇒ 现在"面板写回成功"这句话成立的前提是**校验真的跑过**；判据与反向钉见
+   `test/config-schema-degradation.test.mjs`（含"合法 schema 写回照常通过"一条）。
    zod 实例（函数型 `Config` 无 `toJSON`）当前**拿不到表单**（面板提示"未声明 configSchema"），
    但服务端仍能校验它 —— 这条降级路径此前无人记载。
 3. **函数型成员走模块导出**：`Config`（schemastery/zod 实例）当前生效；`healthCheck(c: HealthCheckCtx)`

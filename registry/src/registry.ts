@@ -398,8 +398,14 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
         ?? entry.manifest.configSchema
       const result = await validateConfigAgainstSchema(schema, config)
       if (!result.ok) {
-        const error = new Error(`配置未通过 configSchema 校验：${result.issues.map((i) => `${i.path}: ${i.message}`).join('；')}`)
-        ;(error as Error & { code?: string }).code = 'value-invalid'
+        // ★16（批 5）：降级（没跑成校验）与"配置真不合法"必须分得开 —— 前者原因是环境/形态，
+        // 不是用户填错。两种都拒写（fail-closed），但错误码与文案各说各的。
+        const detail = result.issues.map((i) => `${i.path}: ${i.message}`).join('；')
+        const unverified = result.verified === false
+        const error = new Error(unverified
+          ? `配置无法校验，已拒绝写回（未执行 configSchema 校验 ⇒ 不假定合法）：${detail}`
+          : `配置未通过 configSchema 校验：${detail}`)
+        ;(error as Error & { code?: string }).code = unverified ? 'config-schema-unverified' : 'value-invalid'
         throw error
       }
       entry.config = config
