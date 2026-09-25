@@ -342,6 +342,18 @@ safe/destructive 两个 fix.class 是否曾被 A 的任一历史版本产出过�
 `createTogglePlan:314`/`createConfigPlan:446`/`createSnapshotRestorePlan:707` 处**写** kind，`executePlan` 内**不判**），
 而 `/uninstall/execute`、`/snapshot-restore/execute`、`/doctor/apply/execute` 都带 kind 闸 ⇒ **同类通道安全口径不对称**。
 状态：有出入（我方抽验 `executePlan` 与三个创建点的 kind 分布成立）⇒ **归 W11 越权写收紧，不归 R1**
+**【2026-09-25 W11-a 笔已修】** `toolkit:panel/index.js` 的通用 `/execute` 补 kind 白名单：只放行"锚点 +
+文本替换"三族，其余（含 `kind` 缺失或不认识）一律 `plan-kind-not-allowed`（400）拒、文案点名该走的专用
+路由（新增指路表 `apply-engine#DEDICATED_EXECUTE_ROUTE_BY_KIND` 覆盖 11 个专用 kind），与 R1 把客户端兜底
+改 fail-closed 同构 ⇒ 两端闭合。**本条的成因面也一并收**：通用写方案此前**根本没有 kind**（正是"只在三处
+写 kind"那句话点出的缝），现补 `patch-edit` ⇒ 白名单是"认识才放行"而非"没标注就放行"。
+钉子：`toolkit:test/panel-execute-kind.test.mjs`（11 条：三族放行且真落盘 / 四族 token 被拒且**不消耗
+token、零写入** / 未知与无 kind 一律拒 / 不存在 token 仍 `plan-not-found`(404) 语义不变 /
+反向不对称：patch-edit 打 `/snapshot-restore/execute` 仍被那条自己的闸拒 / 现存族必须被白名单或指路表
+显式覆盖）。变异四发：摘闸 ⇒ 恰 5 条拒绝类红；白名单放宽一档（塞进 snapshot-restore）⇒ 恰 1 条红；
+摘掉 `patch-edit` 赋值（过窄方向）⇒ 恰 2 条红；拒绝时顺手吃 token ⇒ 恰 4 条"不被消耗"红。
+本条状态由"有出入"翻正为**已修复**；W11 的另半边（`POST /plan` 可指任意本地文件，`F-19`）**未动**，
+按 C1-006 批复走"先只读对账、名单经快批后才改代码"。
 ★F-76 真卸载兜底文案恒死 —— `:54` `ABSENCE_COPY_FALLBACK["true-uninstalled"]` 与服务端 `snapshot.mjs:201` 不同字，
 而服务端对**一切非 mounted 态**都发 `statusCopy`（`:384`）⇒ `:248/:869` 的兜底分支不可达。
 （这是对原稿 F-22"兜底文案过时"的**收窄**：文案确实过时，但它今天永不显示 ⇒ 危害等级低于原稿描述。）状态：有出入

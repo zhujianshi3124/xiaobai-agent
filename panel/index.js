@@ -15,6 +15,8 @@ import {
   getPlan,
   dropPlan,
   PlanError,
+  GENERIC_EXECUTE_KINDS,
+  DEDICATED_EXECUTE_ROUTE_BY_KIND,
 } from "./manager/apply-engine.mjs";
 import {
   createSoftUninstallPlan,
@@ -220,6 +222,8 @@ const PLAN_ERROR_STATUS = {
   "doctor-step-failed": 500,
   "doctor-rollback-failed": 500,
   "plan-kind-mismatch": 400,
+  // W11-a（F-75）：通用 /execute 只收"锚点+文本替换"族，别族 token 打这里一律拒
+  "plan-kind-not-allowed": 400,
   "snapshot-not-found": 404,
   "snapshot-identical": 409,
 };
@@ -876,6 +880,19 @@ export function apply(ctx, config = {}) {
         try {
           const body = await readJsonBody(request);
           const token = String(body.token || "");
+          // W11-a（F-75）：token 池是全族共享的，别族方案（体检修复/回滚、快照恢复、卸载、恢复、
+          // 挂载）各有自己的 execute 路由且都判 kind —— 唯独这里过去不判 ⇒ 跨种消费会绕掉那条族
+          // 自己的语义与确认层。现在只放行"锚点 + 文本替换"族，其余一律拒（含无 kind / 不认识的
+          // kind，fail-closed）。**先验 kind 再交给 executePlan**：拒绝路径不消耗 token、零写入。
+          const staged = getPlan(token);
+          if (staged && !GENERIC_EXECUTE_KINDS.has(staged.kind)) {
+            const route = DEDICATED_EXECUTE_ROUTE_BY_KIND[staged.kind];
+            throw new PlanError(
+              "plan-kind-not-allowed",
+              "该 token 是「" + (staged.kind == null ? "未标注 kind" : staged.kind) + "」方案，不能走通用 /execute"
+                + (route ? "，请走 " + apiBase + route : "（kind 未被认识 ⇒ 按 fail-closed 拒绝）"),
+            );
+          }
           const result = executePlan(token);
           sendJson(response, 200, result);
         } catch (error) {
