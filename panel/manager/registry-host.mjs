@@ -139,6 +139,11 @@ export function createToolkitServices(ctx, config = {}, logger = console) {
 
   registry.start()
   if (hasEvents && (doctorCfg.watchInterval ?? 30000) > 0) doctor.startWatch()
+  // 批 5-2（★11）：fiber 实况对齐与上面 doctor 巡检**同一条启停规则** —— 只有真有事件面的宿主
+  // 才启动（常驻定时器不许由最小宿主/离线脚本吞下，成因见本文件 hasEvents 那条原注：
+  // 并行线 ui-matrix 的 mock ctx 无 on，HEAD 靠这条规则才不会留下悬挂定时器）。
+  // 启过来就必须停：`registry.stop()` 内部无条件清它（见下面的 stop）。
+  if (hasEvents) registry.startStatusAlign()
 
   /**
    * 两面"是否真在落盘"的单一事实源（H1 / D-11 可见化）：

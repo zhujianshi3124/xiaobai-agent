@@ -33,8 +33,9 @@ import type { ToolkitRegistry } from '@local/dsh-toolkit/contract'
 import type { RegistryOptions } from './types.js'
 
 export interface CreatedRegistry {
-  registry: ToolkitRegistry
-  /** 停机：级联卸载全部子插件 fiber、取消重试（REQ-6）。 */
+  /** 具体实现类（契约面 `ToolkitRegistry` 之外的装配/诊断口：`setPrecheck`、`startStatusAlign`、`stateSaveStatus` 等）。 */
+  registry: ToolkitRegistryCore
+  /** 停机：停实况对齐器（批 5-2）+ 取消全部重试 + 级联卸载全部子插件 fiber（REQ-6）。 */
   stop(): Promise<void>
 }
 

@@ -14,6 +14,9 @@
  * - 操作互斥：同一插件 id 的操作串行；install 全局互斥（REQ-2）。
  * - 错误隔离：每个子插件独立派生 ctx（host.plugin()）；装入失败/超时 → error，
  *   指数退避自动重试，达 retryLimit → quarantined；手动 enable/reload 清零重试（REQ-6）。
+ * - 实况对齐（批 5-2 / ★11）：周期读 `fiber.state`，把 status 从"装入那一次的结论"修正为
+ *   当前实况（cordis 的 inject 门控会自行撤下/放回 fiber）。只读不装、降级去抖、
+ *   成因面仍归 doctor 巡检 —— 三条硬边界见"fiber 实况对齐"节头注。
  * - 持久化：state.json 记录 source/enabled/config/quarantined/lastError；
  *   autoload 按记录恢复，失败项进 error 并保留 lastError（REQ-7）；转 ACTIVE 即清空
  *   lastError（D-8：它是"当前状态"字段，历史在审计 JSONL 里），磁盘记录同步回写。
@@ -66,6 +69,15 @@ export const FIBER_FAILED = 3
 export const FIBER_DISPOSED = 4
 export const FIBER_UNLOADING = 5
 const POLL_MS = 5
+
+/**
+ * 批 5-2（★11 面板状态实时化）：fiber 实况对齐的缺省周期与去抖次数。
+ * 周期与 doctor 巡检（`watchInterval` 缺省 30s）刻意不同档：对齐器读的是一次属性
+ * （`fiber.state`，零探测、零子进程、零 IO），代价近于 0，而它要治的是"面板正对着
+ * 用户撒谎"这一格 —— 30s 才修一次太慢，1s 又没有必要。
+ */
+const ALIGN_INTERVAL_MS = 5_000
+const ALIGN_CONFIRM_COUNT = 2
 
 /**
  * 装入等待期间的 fiber 终态判定错误。`name` 即 `lastError.code`
@@ -141,7 +153,7 @@ export function sourceFixAdvice(code: string): { summary: string; steps: string[
 export class ToolkitRegistryCore implements ToolkitRegistry {
   readonly serviceName: string
   private readonly host: HostContext
-  private readonly opts: RegistryOptions & Required<Pick<RegistryOptions, 'servicePrefix' | 'statePath' | 'autoload' | 'retryLimit' | 'retryBackoffMs' | 'loadTimeoutMs' | 'saveDebounceMs'>>
+  private readonly opts: RegistryOptions & Required<Pick<RegistryOptions, 'servicePrefix' | 'statePath' | 'autoload' | 'retryLimit' | 'retryBackoffMs' | 'loadTimeoutMs' | 'saveDebounceMs' | 'statusAlignIntervalMs' | 'statusAlignConfirmCount'>>
   private readonly log: RegistryLogger
   private readonly timers: NonNullable<RegistryOptions['timers']>
   private readonly entries = new Map<string, RegistryEntry>()
@@ -151,6 +163,9 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
   /** 最近一次状态落盘的结果（H1 / D-11 可见化；`ok:false` 即"内存生效、磁盘未落"）。 */
   private lastSave: { ok: boolean; path: string; at?: number; error?: string; advice?: string[] }
   private saveTimer: unknown
+  /** 对齐器（批 5-2 / ★11）的定时器句柄；`undefined` 即"未在跑"。 */
+  private alignTimer: unknown
+  private alignWatching = false
   private stopped = false
 
   constructor(host: HostContext, options: RegistryOptions) {
@@ -162,6 +177,8 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
       retryBackoffMs: 500,
       loadTimeoutMs: 30_000,
       saveDebounceMs: 0,
+      statusAlignIntervalMs: ALIGN_INTERVAL_MS,
+      statusAlignConfirmCount: ALIGN_CONFIRM_COUNT,
       ...options,
     }
     this.log = options.logger ?? defaultLogger()
@@ -181,6 +198,10 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
     if (this.opts.autoload) {
       void this.autoload()
     }
+    // 实况对齐器**不在这里启动**：与 doctor 的周期巡检同一条规则（见
+    // `panel/manager/registry-host.mjs` 的 `hasEvents` 判据与其"避免留下悬挂定时器"原注）——
+    // 常驻定时器归装配现场决定，`start()` 只管"注册服务 + 恢复记录"两件事。
+    // 但只要启过来就必须停：`stop()` 无条件清它（见下面 `stopStatusAlign`）。
   }
 
   /** 注入安装预检实现（P3 doctor.precheck；缺省用内置契约级预检）。 */
@@ -191,6 +212,9 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
   /** 停机：取消全部重试、卸载全部子插件 fiber（REQ-6 卸载级联清理）。 */
   async stop(): Promise<void> {
     this.stopped = true
+    // 先停对齐器：否则"拆 fiber"这件事会被对齐器解读成"插件掉了"，在停机过程中
+    // 往外发一堆 status-changed（REQ-6 级联清理期间不该再有新叙事）。
+    this.stopStatusAlign()
     if (this.saveTimer) this.timers.clearTimeout(this.saveTimer)
     for (const entry of this.entries.values()) {
       this.cancelRetry(entry)
@@ -202,6 +226,104 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
         }
         entry.fiber = undefined
       }
+    }
+  }
+
+  // ── fiber 实况对齐（批 5-2 / ★11 面板状态实时化）────────────────────────
+  //
+  // 治的是哪一格：`entry.status` 是"装入那一次"的结论（A#18/A#20 把它收成状态源单点），
+  // 而 cordis 的 `inject` 门控是**持续**的——依赖离场时它会把 fiber 从 ACTIVE 撤回
+  // PENDING 并拆掉 effect，依赖回来时再自己跑一次 apply（真值实测见
+  // `test/cordis-inject-lifecycle.test.mjs`）。这两套真相之间此前**没有任何回写通路**，
+  // 后果是面板同屏撒谎：插件早不在了，卡片还写"active"。`docs/add-sub-plugin.md` §3
+  // 把这条如实写成了"语义边界"（★11 文档半边定稿），本节把它从"文档承认的落差"
+  // 变成"实现的实况"。
+  //
+  // 三条硬边界（越界即抢别人的活，见各条依据）：
+  // ① **只读、不装**：只 `entry.fiber.state`，绝不新建 fiber、绝不 reload、绝不调度重试
+  //    ⇒ "隔离后不自动重试"（REQ-6）不被打破；quarantined/error/disabled 条目本就无
+  //    fiber（`loadEntry` 失败路径与 `unloadEntry` 都置 undefined），这里再挡一道状态判据。
+  // ② **只碰两类条目**：状态为 `active` 的（降级方向），以及**被本对齐器降级过**的
+  //    （`alignGated`，恢复方向）。`loadEntry` 在飞时的 'loading' 没有这枚标记 ⇒ 不插手，
+  //    装入超时/重试归因仍由 `loadEntry` 那一套说了算（A2 的错误码面不受扰动）。
+  // ③ **只说"在不在跑"，不说"为什么"**：降级方向不写 `lastError`，成因面
+  //    （`service-missing` 等）仍归 doctor 巡检（`doctor/src/rules.ts` 的 requires 合成规则
+  //    + `failureThreshold` 发布 + 环形历史）。同一张卡片上：状态徽标 = registry 实况，
+  //    健康行 = doctor 判语，面板不新增第三真相源（与 D-8"状态源唯一"同口径）。
+  //    连带一条如实申报：doctor 的 `requires/subPlugins` 规则按 `entry.status === 'active'`
+  //    判依赖在场（`doctor/src/doctor.ts#subPluginInstalled`），故本对齐器把某条降成
+  //    loading 后，依赖它的插件会多出一条 `subplugin-missing` warn —— 那是"更真"，不是回归。
+
+  /**
+   * 启动实况对齐（装配现场调用；`stop()` 负责兜底清理）。
+   * 返回 `true` = 本轮之后在跑；`false` = 因 `statusAlignIntervalMs<=0` 或已停机而拒绝启动。
+   * 幂等：已在跑再调一次不会多出定时器（句柄数可被 `statusAlignRunning()` 复核）。
+   */
+  startStatusAlign(): boolean {
+    if (this.stopped) return false
+    if (this.opts.statusAlignIntervalMs <= 0) return false
+    if (this.alignWatching) return true
+    this.alignWatching = true
+    const loop = () => {
+      // 复用 registry 既有 timers 封装（与重试/防抖同一个注入口），并纳入 stop()。
+      this.alignTimer = this.timers.setTimeout(() => {
+        this.alignTimer = undefined
+        this.alignOnce()
+        if (this.alignWatching) loop()
+      }, this.opts.statusAlignIntervalMs)
+    }
+    loop()
+    return true
+  }
+
+  /** 对齐器当前是否在跑（供装配面守卫用例与诊断面复核，不驱动任何行为）。 */
+  statusAlignRunning(): boolean {
+    return this.alignWatching
+  }
+
+  stopStatusAlign(): void {
+    this.alignWatching = false
+    if (this.alignTimer !== undefined) {
+      this.timers.clearTimeout(this.alignTimer)
+      this.alignTimer = undefined
+    }
+  }
+
+  /** 一轮对齐：把每条在册条目的 status 修正成 fiber 的当前实况（受去抖约束）。 */
+  private alignOnce(): void {
+    for (const entry of this.entries.values()) {
+      const fiber = entry.fiber
+      if (!fiber) continue
+      const isActiveFace = entry.status === 'active'
+      if (!isActiveFace && entry.alignGated !== true) continue
+      const state = fiber.state
+      if (state === FIBER_ACTIVE) {
+        entry.alignObserved = 0
+        if (entry.alignGated) {
+          entry.alignGated = false
+          this.setStatus(entry, 'active', 'align-recovered')
+        }
+        continue
+      }
+      entry.alignObserved = (entry.alignObserved ?? 0) + 1
+      if (entry.alignObserved < this.opts.statusAlignConfirmCount) continue
+      entry.alignObserved = 0
+      if (state === FIBER_FAILED || state === FIBER_DISPOSED) {
+        // 真失败 / 已被销毁：这一格不会自己回来 ⇒ 落 error 面并给码（码值取自契约既有枚举）。
+        const code = state === FIBER_FAILED ? 'fiber-failed' : 'fiber-disposed'
+        const message =
+          state === FIBER_FAILED
+            ? 'fiber 已处于 FAILED（cordis 侧装载失败或被撤下后未能恢复）'
+            : 'fiber 已被销毁（cordis 侧 dispose，registry 未参与）'
+        const error = { code, message }
+        entry.lastError = { ...error, at: Date.now() }
+        entry.alignGated = false
+        this.setStatus(entry, 'error', 'align-lost', error)
+        continue
+      }
+      // PENDING / LOADING / UNLOADING：等依赖或正在收敛 ⇒ "注册着、当前没在跑"。
+      entry.alignGated = true
+      this.setStatus(entry, 'loading', 'align-gated')
     }
   }
 
@@ -624,6 +746,10 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
 
   private unloadEntry(entry: RegistryEntry): void {
     this.cancelRetry(entry)
+    // 对齐器的观察字段是"当段"事实（与 retryAttempts 同口径）：手动卸载/重载另起一段，
+    // 留着 alignGated 会让下一次装载被对齐器"替它恢复"。
+    entry.alignGated = false
+    entry.alignObserved = 0
     if (entry.fiber) {
       try {
         entry.fiber.dispose()
