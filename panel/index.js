@@ -224,6 +224,8 @@ const PLAN_ERROR_STATUS = {
   "plan-kind-mismatch": 400,
   // W11-a（F-75）：通用 /execute 只收"锚点+文本替换"族，别族 token 打这里一律拒
   "plan-kind-not-allowed": 400,
+  // W11-b（F-19）：通用 /plan 的写目标只有 patch 域一条，越界目标一律拒
+  "plan-target-unsupported": 400,
   "snapshot-not-found": 404,
   "snapshot-identical": 409,
 };
@@ -404,8 +406,21 @@ export function apply(ctx, config = {}) {
         }
         try {
           const body = await readJsonBody(request);
+          // W11-b（F-19）：通用 /plan 的写目标**只有 patch 域这一条**。修复前 `target != "patch"`
+          // 会把客户端传来的 file 字段直接当目标文件 ⇒ 只要该文件里有唯一 `- id:` 锚，任意本地
+          // 文件都能签出写方案并落盘（写前还会自动备份，但备份不是允许写它的理由）。
+          // 全仓对账（C1-006 批复附注）：两套界面、全部 scripts/test 里**没有任何调用方**用非 patch
+          // 目标，预设向与保管区写入根本不走本路由 ⇒ 关闭整条客户端指定文件通道零功能损失。
+          // 现在本路由只字不看请求里的 file 字段（塞了也不算），越界 target 一律拒且零写入。
           const target = String(body.target || "patch");
-          const file = target === "patch" ? join(toolkitRoot, "cordis.patch.yml") : String(body.file || "");
+          if (target !== "patch") {
+            throw new PlanError(
+              "plan-target-unsupported",
+              "通用 /plan 只接受 target=\"patch\"（写入目标固定为 " + join(toolkitRoot, "cordis.patch.yml")
+                + "），收到 target=\"" + target + "\"；改其它目标不经本路由，请走它自己的 plan/execute 通道。",
+            );
+          }
+          const file = join(toolkitRoot, "cordis.patch.yml");
           const plan = createPlan({
             file,
             rowId: String(body.rowId || ""),
