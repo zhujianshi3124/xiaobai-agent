@@ -468,13 +468,18 @@ const CARDS = [
 
   // (d) 面板呈现依据的原则：层 1 是「有没有加载」，层 2 是「加载了但自己关掉」
   //     两套渲染器都必须先判层 1、再判层 2（顺序即优先级），且不合并成一个值
+  //     锚点说明（批 5-3 翻面）：原文本锚 `innerSwitchValue(...) === false` 在 5-3 里被提成 `inner`
+  //     局部量（rate-throttle 专案要同时用两层判据），锚点随之外移 ⇒ 现钉 `if (inner === false)`
+  //     这一句，它只在 stateOf 里出现一次，优先级语义不变；行为面另有 p22-cards-ui 的 B/E 节真值表钉。
   const clientSrc = readFileSync(join(root, "panel", "client", "index.js"), "utf8");
   const htmlSrc = readFileSync(join(root, "panel", "client", "panel.html"), "utf8");
   const l1 = (src, a, b) => { const i = src.indexOf(a); const j = src.indexOf(b); return i >= 0 && j >= 0 && i < j; };
   check("Q2: react client resolves layer 1 BEFORE layer 2 (gating order)",
-    l1(clientSrc, "row.enabled !== true", "innerSwitchValue(plugin, patchText) === false"));
+    l1(clientSrc, "row.enabled !== true", "if (inner === false)"));
   check("Q2: fallback page resolves layer 1 BEFORE layer 2 (gating order)",
-    l1(htmlSrc, "p.patchRow.enabled !== true", "innerSwitchValue(p, PATCH_TEXT) === false"));
+    l1(htmlSrc, "p.patchRow.enabled !== true", "if (inner === false)"));
+  check("Q2: 层 2 判定式在两渲染器各只有一处（防锚点被复制后失真）",
+    clientSrc.split("if (inner === false)").length === 2 && htmlSrc.split("if (inner === false)").length === 2);
 }
 
 
