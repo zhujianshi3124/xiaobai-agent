@@ -11,6 +11,18 @@
 //   依赖再来 → 再 ACTIVE，apply 第 2 次跑。
 //
 // 不改动任何装载语义：不合成 inject、不改装载次序（那是 debt.md C-1 契约 v1.1 的活）。
+//
+// 【2026-09-25 批 5-2（★11）翻面记录 —— 这一段是本文件的承重变更】
+// 原第 3 条用例的名字与断言钉的是"依赖离开后 cordis 已把插件撤下、registry 却**仍报
+// active**"这一假象（当时的两套真相，`docs/add-sub-plugin.md` §3 把它写成"语义边界"）。
+// 批 5-2 落了 registry 的 fiber 实况对齐器 ⇒ 那条假象不再成立，故按"翻面不删命题"办：
+//   · 用例改名，撤依赖那一半改为断言 **registry 报 loading**（`reason: 'align-gated'`）；
+//   · doctor 那一半**原样保留**（同一次撤依赖，`service-missing` 仍是 error）⇒ 两面同屏
+//     各说各的：registry 说"当前没在跑"，doctor 说"为什么没在跑"，这正是五条件之④的口径；
+//   · 回恢复那一半新增在再激活用例里（依赖回来 → 一次观察内回 active，reason
+//     'align-recovered'，且 apply 第 2 次由 cordis 自己放、不是对齐器装的）。
+// 未开对齐器的缺省口径（`statusAlignIntervalMs` 缺省 5000、用例内等待远低于该值）在本文件
+// 其余用例里保持不变 —— 只有这三条显式开闸，避免把"装载链本身"与"对齐器"混在一条红里。
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtempSync, rmSync } from 'node:fs'
@@ -20,6 +32,7 @@ import { Context } from '@deepseek-ai/cordis'
 
 import { createRegistry, cordisHost, resolveLocalSource, FIBER_ACTIVE } from '@local/dsh-toolkit/registry'
 import { DoctorService } from '@local/dsh-toolkit/doctor'
+import { contractEventName } from '@local/dsh-toolkit/contract'
 
 const fixtureDir = (name) => join(import.meta.dirname, 'fixtures', 'registry', name)
 const consumerFixture = fixtureDir('inject-consumer-plugin')
@@ -46,6 +59,9 @@ async function makeStack(t, registryOpts = {}) {
     ...registryOpts,
   })
   t.after(() => created.stop())
+  // 批 5-2：实况对齐器的启动口（缺省周期 5000ms，本文件只有显式传 statusAlignIntervalMs
+  // 的那两条用例会真的在窗口内跑到；其余用例的等待都远短于缺省周期 ⇒ 行为与 HEAD 一致）。
+  created.registry.startStatusAlign()
   return { ctx, registry: created.registry, state, tmp }
 }
 
@@ -83,24 +99,29 @@ test('E1 正向：依赖后到 → cordis 把 fiber 从 PENDING 放成 ACTIVE，
   unprovide()
 })
 
-test('E1 分歧面（如实记录）：依赖离开后 cordis 已把插件撤下，registry 却仍报 active', async (t) => {
-  const { ctx, registry, state } = await makeStack(t)
+test('E1 分歧面【批 5-2 已合流】：依赖离开 → registry 如实改报 loading，doctor 仍独立报 service-missing', async (t) => {
+  const { ctx, registry, state } = await makeStack(t, { statusAlignIntervalMs: 5, statusAlignConfirmCount: 2 })
+  const transitions = []
+  ctx.on(contractEventName('toolkit', 'registry:status-changed'), (p) => transitions.push(p))
   const installing = registry.install({ kind: 'local', path: consumerFixture }, { force: true })
   await tick()
   const unprovide = ctx.reflect.provide(NEED, { ok: 1 })
   await installing
   assert.equal(state.loads, 1)
+  transitions.length = 0
 
   unprovide()
-  await tick(80)
-  const viaCtx = ctx[NEED]
-  assert.equal(viaCtx, undefined, 'cordis 侧：服务已下线')
-  // registry 的 status 是"装入那次"的结论，此后不随 inject 门变化回写——
-  // 这就是两套真相。不掩盖，直接钉住，等 C-1 决定怎么桥接。
-  assert.equal(registry.get(ID).status, 'active', 'registry 侧仍报 active（已知分歧，非本用例引入）')
+  await waitFor(registry, ID, 'loading', 2000)
+  assert.equal(ctx[NEED], undefined, 'cordis 侧：服务已下线')
+  // 这里原来是 `assert.equal(registry.get(ID).status, 'active')`（钉假象）。翻面后钉的是实况：
+  // registry 不再持有"装入那一次"的结论，而是随 fiber 回写。
+  assert.equal(registry.get(ID).status, 'loading', 'registry 侧随 fiber 回写为 loading（对齐器已生效）')
   assert.equal(state.loads, 1, 'apply 不重跑（fiber 只是被撤下，没被销毁）')
+  const downgrades = transitions.filter((p) => p.reason === 'align-gated')
+  assert.equal(downgrades.length, 1, `降级只播报一次，实际 ${JSON.stringify(transitions)}`)
+  assert.equal(registry.get(ID).lastError, undefined, '③ 分工：对齐器只说"没在跑"，不把成因写成错误')
 
-  // 补偿控制确实在：doctor 下一轮巡检会把这条差异查出来
+  // 补偿控制确实在（原样保留）：doctor 那一面独立查出"为什么没在跑"。
   const doctor = new DoctorService({ servicePrefix: 'toolkit', watchInterval: 0, failureThreshold: 1, historySize: 5, logger: silent })
   doctor.attachHost(cordisHost(ctx))
   doctor.attachRegistry(registry)
@@ -112,8 +133,10 @@ test('E1 分歧面（如实记录）：依赖离开后 cordis 已把插件撤下
   )
 })
 
-test('E1 再激活：依赖回来 → cordis 重新跑 apply（effect 重建），registry 无需任何动作', async (t) => {
-  const { ctx, registry, state } = await makeStack(t)
+test('E1 再激活：依赖回来 → cordis 重新跑 apply（effect 重建），registry 一轮观察内如实回 active', async (t) => {
+  const { ctx, registry, state } = await makeStack(t, { statusAlignIntervalMs: 5, statusAlignConfirmCount: 2 })
+  const transitions = []
+  ctx.on(contractEventName('toolkit', 'registry:status-changed'), (p) => transitions.push(p))
   const installing = registry.install({ kind: 'local', path: consumerFixture }, { force: true })
   await tick()
   const un1 = ctx.reflect.provide(NEED, { ok: 1 })
@@ -121,11 +144,19 @@ test('E1 再激活：依赖回来 → cordis 重新跑 apply（effect 重建）�
   assert.equal(state.loads, 1)
 
   un1()
-  await tick(80)
+  await waitFor(registry, ID, 'loading', 2000)
+  transitions.length = 0
   const un2 = ctx.reflect.provide(NEED, { ok: 2 })
-  await tick(80)
+  await waitFor(registry, ID, 'active', 2000)
   assert.equal(state.loads, 2, '依赖回来 ⇒ apply 第 2 次执行（这是 cordis inject 的既有语义，registry 只是别把它当一次性事件）')
   assert.equal(registry.get(ID).status, 'active')
+  const recoveries = transitions.filter((p) => p.reason === 'align-recovered')
+  assert.equal(recoveries.length, 1, `恢复只播报一次，实际 ${JSON.stringify(transitions)}`)
+  assert.deepEqual(
+    { from: recoveries[0].from, to: recoveries[0].to },
+    { from: 'loading', to: 'active' },
+    '恢复方向走的是既有 registry:status-changed（面板与 SSE 零改动）',
+  )
   await registry.uninstall(ID)
   assert.equal(registry.get(ID), undefined)
   un2()

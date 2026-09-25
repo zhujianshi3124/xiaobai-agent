@@ -44,6 +44,19 @@ export interface RegistryOptions {
   loadTimeoutMs?: number
   /** 状态写入防抖 ms（0 = 立即写）。默认 0。 */
   saveDebounceMs?: number
+  /**
+   * fiber 实况对齐周期 ms（批 5-2 / ★11）。`<=0` 关闭对齐器（回到"status 只是装入那次
+   * 的结论"这一旧口径，且不留句柄）。默认 5000。
+   *
+   * 这是**代码级注入点**（与 `timers`/`logger`/`precheck` 同族），**不是**面板的 18 个
+   * 配置键之一 —— 没接线就不声明，免得又造出一格"填了等于没填"（同债 F-11 那一族）。
+   */
+  statusAlignIntervalMs?: number
+  /**
+   * 降级方向需要**连续**多少次观察到"fiber 不在 ACTIVE"才改写 status（去抖，默认 2）。
+   * 恢复方向不去抖（见 `registry.ts` 对齐器头注）。
+   */
+  statusAlignConfirmCount?: number
   /** 预检实现（P2 内置契约级预检；P3 doctor.precheck 注入替换）。 */
   precheck?: (source: PluginSource, resolved: ResolvedPlugin) => Promise<PrecheckReport>
   logger?: RegistryLogger
@@ -125,6 +138,18 @@ export interface RegistryEntry extends PluginEntry {
   retryAttempts?: number | undefined
   /** 正在进行中的重试句柄（卸载/重载时必须取消）。 */
   retryHandle?: unknown | undefined
+  /**
+   * 对齐器（批 5-2 / ★11）：本条目**连续**观察到"fiber 非 ACTIVE"的次数。
+   * 任一 ACTIVE 观察即清零；翻面后归零，不跨状态结转（与 D-9 的"当段"口径同源）。
+   * 内部字段，不进 `toEntry()` ⇒ 契约面与面板零变更。
+   */
+  alignObserved?: number | undefined
+  /**
+   * 对齐器标记：这条目是**被对齐器**从 active 降成 loading 的（= cordis 仍可能自己放回来）。
+   * 只有带这枚标记的非 active 条目才允许被对齐器改回 active ——
+   * `loadEntry` 在飞时的 'loading' 没有这枚标记，因此对齐器不会插手别人的状态机。
+   */
+  alignGated?: boolean | undefined
 }
 
 export type StatusListener = (payload: {

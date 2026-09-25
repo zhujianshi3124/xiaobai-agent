@@ -22,6 +22,8 @@ import { contractEventName } from '@local/dsh-toolkit/contract'
 const ROOT = resolve(import.meta.dirname, '..')
 const FIXTURE = join(ROOT, 'test', 'fixtures', 'registry', 'flaky-probe-plugin')
 const ID = 'fixture/flaky-probe-plugin'
+/** 本栈显式钉住的对齐器周期（不用实现缺省值，免得缺省一改本文件的分账就失真）。 */
+const ALIGN_MS = 5000
 const probe = await import(pathToFileURL(join(FIXTURE, 'index.js')).href)
 const silent = { info: () => {}, warn: () => {}, error: () => {} }
 
@@ -42,13 +44,15 @@ async function waitFor(label, predicate, timeoutMs = 5000) {
 
 function makeTimers() {
   const queued = new Map()
+  const label = { alignMs: 0 }
   let seq = 0
+  const isAlign = (t) => t.ms === label.alignMs && label.alignMs > 0
   return {
     timers: {
       setTimeout: (fn, ms) => {
         if (ms < 50) return setTimeout(fn, ms) // fiber 轮询等短延时走真定时器
         const id = ++seq
-        queued.set(id, fn)
+        queued.set(id, { fn, ms })
         return id
       },
       clearTimeout: (handle) => {
@@ -56,14 +60,24 @@ function makeTimers() {
         else clearTimeout(handle)
       },
     },
-    /** 放行当前排队的那些退避定时器（不等它们跑完，由 waitFor 收敛）。 */
+    /**
+     * 放行当前排队的**重试**定时器（不等它们跑完，由 waitFor 收敛）。
+     * 【批 5-2 起本栈里有两枚常驻 ≥50ms 定时器】重试退避 + fiber 实况对齐器。
+     * 对齐器那一枚**按周期点名、不混进重试计数**（`pendingAlign()`），
+     * 这样"恰好一次重试"这句话仍然是它原来的意思 —— 不是放宽，是把新增那只句柄记账清楚。
+     */
     fireAll: () => {
-      const list = [...queued.entries()]
-      queued.clear()
-      for (const [, fn] of list) fn()
+      const list = [...queued.entries()].filter(([, t]) => !isAlign(t))
+      for (const [id] of list) queued.delete(id)
+      for (const [, t] of list) t.fn()
       return list.length
     },
-    pending: () => queued.size,
+    pending: () => [...queued.values()].filter((t) => !isAlign(t)).length,
+    /** 对齐器定时器当前挂着几枚（0 = 已关或被清）。 */
+    pendingAlign: () => [...queued.values()].filter(isAlign).length,
+    setAlignMs: (ms) => {
+      label.alignMs = ms
+    },
   }
 }
 
@@ -72,16 +86,22 @@ function makeRegistry(t, opts) {
   t.after(() => rmSync(dir, { recursive: true, force: true }))
   const ctx = new Context()
   const clock = makeTimers()
-  const { registry } = createRegistry(ctx, {
+  clock.setAlignMs(ALIGN_MS) // 先登记周期，再 start() ⇒ 对齐器那枚可被单独点名
+  const created = createRegistry(ctx, {
     servicePrefix: 'toolkit',
     statePath: join(dir, 'state.json'),
     autoload: false,
     retryBackoffMs: 500,
     loadTimeoutMs: 300,
+    statusAlignIntervalMs: ALIGN_MS,
     logger: silent,
     timers: clock.timers,
     ...opts,
   })
+  // 批 5-2：对齐器的启动口归装配现场（生产在 registry-host 的 hasEvents 分支），
+  // 这里显式启一次，让"退避定时器 + 对齐器定时器"两枚同栈共存的分账被真跑到。
+  created.registry.startStatusAlign()
+  const registry = created.registry
   t.after(() => registry.stop())
   const transitions = []
   ctx.on(contractEventName('toolkit', 'registry:status-changed'), (payload) => transitions.push(payload))
@@ -98,6 +118,7 @@ test('D-9：重试若干次后成功 ⇒ 计数归零（修复前会把上一段
   assert.equal(result.ok, true)
   assert.equal(status(), 'error')
   assert.equal(attempts(), 1, '首段第一次失败')
+  assert.equal(clock.pendingAlign(), 1, '批 5-2 记账：对齐器那枚定时器在场，且与重试分开数（不许混进"重试次数"）')
 
   assert.equal(clock.fireAll(), 1, '应当恰好排着一次重试')
   await waitFor('第二次尝试失败', () => attempts() === 2)

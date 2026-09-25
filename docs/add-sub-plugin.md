@@ -143,9 +143,32 @@ registry 的 legacy 适配器会合成 manifest（id 落 `legacy/<包名>`，无
 带状态徽标、契约版本、legacy 标注，五个操作齐备：停用 / 重载 / 卸载 / 健康详情 / 配置。
 **除安装确认外**所有写路由都要**逐字 confirm 插件 id**（`confirm-missing` 一律 400），启停/卸载另有
 知情确认勾选。【批 8 落地，当前 `install/confirm` 不要求 confirm —— 以预检通过为闸，已裁定补上】
-状态徽标的语义边界（★11）：`status` 是"**装入那一次**的结论"，插件依赖中途离场时 cordis 已把 fiber 撤下、
-面板仍显示"运行中"，要等下一轮体检报 `service-missing` 才对得上；正典解锁路径是重试退避（§2 要点 4）。
-【评估项，进 v1.1 或后置由协调侧定；结论见 `docs/contract-v1.1-recon.md` §10】
+状态徽标的语义（★11 · **批 5-2 起是"实况"而不是"装入那一次的结论"**）：registry 内有一条
+fiber 实况对齐器（`registry/src/registry.ts#alignOnce`，缺省每 5s 一轮）读 `entry.fiber.state`
+并把 `status` 回写成当前实况 ⇒ 依赖中途离场时卡片不再停在 `active`，而是随 cordis 撤下 fiber
+变 `loading`（事件 `reason: 'align-gated'`）；依赖回来 cordis 自己放回 fiber，一轮内回 `active`
+（`reason: 'align-recovered'`）。三条边界，如实：
+① **最坏延迟 ≈ 两个周期**（缺省 5000ms × 去抖 2 次 = 10s）：降级方向要**连续**两次观察到"非
+ACTIVE"才动手（防 cordis 在依赖翻转瞬间的抖动变成事件风暴），恢复方向不去抖。周期与次数是
+**代码级注入点** `statusAlignIntervalMs` / `statusAlignConfirmCount`（`<=0` 即整机关闭、回到旧口径
+且不留定时器），**不进面板那 18 个配置键** —— 没接线的东西就不声明，免得再造一格"填了等于没填"。
+② **对齐器只答"在不在跑"，不答"为什么"**：降级方向不写 `lastError`；成因面（依赖服务缺席等）
+仍归进程内体检的下一轮巡检（`service-missing` 等 error）。同一张卡片上状态徽标 = registry 实况、
+健康行 = doctor 判语，面板没有第三个真相源。连带一条如实申报：doctor 的 `requires/subPlugins`
+规则按 `entry.status === 'active'` 判依赖在场，故某条被降成 `loading` 后，依赖它的插件会多出
+一条 `subplugin-missing` warn —— 那是"更真"，不是回归。
+③ **只覆盖经 registry 装载的条目**：五个内置插件由宿主 patch 通道挂载、不进 registry（横切 H3 与
+断点普查 P-1 那条"内置卡面另算"同族），它们卡片上的状态是 `panel/client/index.js#stateOf`
+那套算法（批 5-3 在治其中两处失真）。
+另有三条"不越权"边界：装载在飞的条目（`loadEntry` 自己的 `loading`）对齐器不插手；
+`quarantined` / `error` / `disabled` 条目本就无 fiber，对齐器**只读不装**（不新建 fiber、不 reload、
+不调度重试）⇒ REQ-6"隔离后不自动重试"原样成立；契约类型 `PluginStatus` 六值一字未动、
+事件复用既有 `registry:status-changed` ⇒ 面板与 SSE 零改动。
+**启停位置**：启动口是 `registry.startStatusAlign()`，由**唯一装配现场**（`panel/manager/registry-host.mjs`）
+在宿主真有事件面时调用 —— 与 doctor 的周期巡检同一条规则（最小宿主/mock ctx 无 `ctx.on` 时不起，
+免得给离线路径留下永不退场的常驻定时器）；只要启过来，`registry.stop()` 就无条件清它。
+钉子：`test/registry-status-align.test.mjs`（12 条）+ `test/cordis-inject-lifecycle.test.mjs`
+（撤依赖 / 回恢复两条自本笔**翻面** —— 那里原文钉的正是"registry 却仍报 active"这个假象）。
 "是否真的落盘"面板也会说：写不进磁盘时条目带 `persisted:false`、卡片如实标注"未落盘（重启会丢）"。
 
 ## 4. 注册冲突检查（"提供面"目前怎么写）
