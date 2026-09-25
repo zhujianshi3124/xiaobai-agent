@@ -170,6 +170,7 @@ panel/dsh.plugin.json 不声明面板、无 configSchema、无 id/version（全�
 ★configSchema 是空的 {} —— 代码实读 21 个自建键 + 3 个透传父类键，且本入口不导出 Config，宿主通道与 patch-config-check 门禁都拿它没办法（那门禁只认 Config['~standard']）。状态：有出入：声明形同虚设
 
 ★预设补丁脚本的反斜杠转义在搬仓时丢了，已在 HEAD 里 —— 旧版写 "agentMemoryRoot: C:\\Users\\..."，套件版 45/55 两处写成单反斜杠，JS 串求值实测得 C:UsersLENOVO.agent-memory（自 b83cb52 起在案）。当前盘上四份预设内容仍正确、且 preset-patch-state.json 的 patchedSha 与实算 sha256 4/4 逐字节相同 ⇒ 今天 --status 判 patched、apply 是 no-op；坏路径只在"新预设首次 apply"或"--undo 后重打"时写进去（写进去后 compact-router 的台账/存档路径指向不存在目录）。状态：有出入：潜伏缺陷，现被磁盘旧内容掩盖，无任何门禁或文档记过它
+【2026-09-25 R2 笔已修 + 本条两处读数更正】(1) **归属与成因**：不是"搬仓时丢了"、也不自 `b83cb52` 起在案 —— 该脚本首支 `1bc831f` 两行均正确，`8007e22`（2026-09-14「预设补丁覆盖用户预设层并登记梁神回滚链」）同笔改写行块时丢转义 ⇒ **类型 2 实现回归**（取证见 `docs/repair-plan-20260923.md` §2 高危③）。(2) **"被磁盘旧内容掩盖"改述为"被 marker sha 兜底掩盖"**：`apply-preset-patch.mjs#classify` 里"盘上内容命中 `ROW_NEW`"那一支对这四份预设**并不成立**（坏串 ≠ 真串），判 patched 走的是最后一条兜底 `rec.patchedSha === hash`；marker 缺席或新预设 id ⇒ `unknown` ⇒ `applyOne` REFUSED（fail-closed）⇒ 无第三种暴露面。(3) **现状**：两行已双写还原，坏值经实测**从未落盘**（四份 `agent.cordis.yml` 现值全为正确形态），钉子为 `test/preset-patch-escape.test.mjs`（3 条求值级断言，纯静态、不写盘、不碰 `~/.dsh`）⇒ 本条状态由"有出入：潜伏缺陷"翻正为**已实现/已修复**。
 
 ★面板对 compact-router 无脑报"运行中·正在生效" —— client 里 if (plugin.dir === "compact-router") return running，不查预设行、不查加载结果 ⇒ 卸载或预设回滚后面板仍说它在生效。状态：有出入
 

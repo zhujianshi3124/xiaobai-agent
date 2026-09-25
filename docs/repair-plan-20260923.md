@@ -97,6 +97,14 @@
   另记：这是 C-1 考古以来**第一条类型 2**（§5.2 的四条 P0 全落"从未一致"），所以"回滚即恢复"对这一条**确实成立** —— 正解就是 `1bc831f` 的形态。
 - **为什么至今没爆**（清单这条读数我方复算成立、方向正确）：盘上四份预设内容本就正确，且 `preset-patch-state.json` 的
   `patchedSha` 与实算 sha 相同 ⇒ 今天 `--status` 判 patched、apply 是 no-op。**坏路径只在"新预设首次 apply"或"--undo 后重打"时写进去**。
+- **【2026-09-25 · R2 笔落位时对本格的更正】上一条结论成立、成因指错一半**：判 `patched` 的**不是**"盘上内容本就正确"那一支 ——
+  坏串（`C:Users…`）与盘上真串（`C:\Users…`）并不相等，`text.includes(ROW_NEW)` 根本不命中；实际命中的是
+  `toolkit:scripts/apply-preset-patch.mjs#classify` 的**最后一条兜底** `rec.patchedSha === hash`（marker 记账 sha）
+  ⇒ 准确说法是"**被 marker sha 兜底掩盖**"，不是"被磁盘旧内容掩盖"。连带三条实测：① `--status` 只读实跑 **4/4 patched**、
+  跑前跑后 `preset-patch-state.json` sha 相同（`83a3dbee…`）⇒ 该模式零写盘**已实证**（原为推断）；② 坏值**从未落盘**
+  （四份 `agent.cordis.yml` 的 `agentMemoryRoot` 现值全为正确形态）；③ marker 缺席或出现新预设 id ⇒ 落 `unknown`
+  ⇒ `#applyOne` **REFUSED**（fail-closed）⇒ **不存在第三种暴露面**。本格建议修法（下一条）已随 **R2 笔**落地，
+  读数与变异结果见 §10.1 R2 格与本笔提交说明，钉子为 `toolkit:test/preset-patch-escape.test.mjs`（3 条）。
 - **建议修法（单笔 R2）**：两行改回 `\\`；**并加一条静态断言**（读脚本源码求值 `ROW_NEW`/`OLD_ROW_V2` ⇒ 断言含 `C:\Users\LENOVO\.agent-memory` 真反斜杠、
   且 `!/(C:Users|agent-memory)/` 粘连形态）进 `test/` 或 `regression-all`，否则下次编辑还会丢。
   该断言**不写盘、不跑 `--apply`**（红线：`~/.dsh` 只读）。是否顺手把路径改为不写死用户名（`homedir()` 派生）—— **属扩面，请裁**（建议本笔不做，单独立项）。
