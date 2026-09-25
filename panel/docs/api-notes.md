@@ -173,7 +173,7 @@
 | `/api/toolkit-panel/ui` | `panel/index.js:225` | 只读 | GET | 读（直连后备页 HTML） |
 | `/api/toolkit-panel/snapshot` | `:238` | 只读 | GET | 读（实时快照） |
 | `/api/toolkit-panel/doctor/dry-run` | `:250` | **`{ change: true }` @ `:259`** | POST | ⚠️ **有意过度收口**（见下） |
-| `/api/toolkit-panel/plan` | `:265` | **`{ change: true }` @ `:306`** | POST | 写（只读计算**但签发写令牌**） |
+| `/api/toolkit-panel/plan` | `:265` | **`{ change: true }` @ `:306`** | POST | 写（只读计算**但签发写令牌**）。**W11-b 起：写目标只有 `toolkitRoot/cordis.patch.yml` 一条**——`target != "patch"` ⇒ `plan-target-unsupported`(400)，请求里的 `file` 字段本路由**一字不看**（修复前它是"可指任意本地文件"的门，全仓零调用方使用该分支） |
 | `/api/toolkit-panel/toggle/plan` | `:314` | **`{ change: true }` @ `:360`** | POST | 写（同上，另含停用前交叉引用扫描） |
 | `/api/toolkit-panel/execute` | `:365` | **`{ change: true }` @ `:381`** | POST | 写（**唯一落盘入口**） |
 | `/api/toolkit-panel/plan/status` | `:386` | 只读 | GET | 读（方案查询） |

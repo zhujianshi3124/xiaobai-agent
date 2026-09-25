@@ -355,6 +355,15 @@ token、零写入** / 未知与无 kind 一律拒 / 不存在 token 仍 `plan-no
 摘掉 `patch-edit` 赋值（过窄方向）⇒ 恰 2 条红；拒绝时顺手吃 token ⇒ 恰 4 条"不被消耗"红。
 本条状态由"有出入"翻正为**已修复**；W11 的另半边（`POST /plan` 可指任意本地文件，`F-19`）**未动**，
 按 C1-006 批复走"先只读对账、名单经快批后才改代码"。
+**【同日 W11-b 笔已落地，F-19 翻正】** 通用 `/plan` 只接受 `target="patch"`（目标固定 `toolkitRoot/cordis.patch.yml`），
+`target != "patch"` ⇒ 新错误码 `plan-target-unsupported`(400)，**整个"客户端指定文件"通道关闭**（连 `target="patch"`
+时塞 `file` 也不看）。对账结论（批复已采信）：全仓仅此一处接受客户端传路径，两套界面与全部 scripts/test **零调用方**
+使用非 patch 目标，保管区/预设面各走自己的路由 ⇒ 收紧比原口径（"patch 域 + 保管区白名单"）更紧且零功能损失。
+硬证据（tmp 沙箱内两步 HTTP 请求，真仓与 `~/.dsh` 零触碰）：**修复前** `/plan{target:"file",file:<诱饵>}` → 200
+签发、`/execute{token}` → 200 落盘，诱饵文件 sha `1442c138521c` → `8fa956003caf`（真被改写）；
+**修复后**同序列第 1 步即 400 拒、诱饵 sha 前后不变。钉子：`test/plan-target-gate.test.mjs`（5 条，含端到端正向
+一发与"塞 file 也无效"反向钉 + 一条防回潮静态钉）。⇒ **W11 两半（a token 跨种消费 / b 任意文件写）至此全闭**；
+真机复验统一挂批 8 观察窗。
 ★F-76 真卸载兜底文案恒死 —— `:54` `ABSENCE_COPY_FALLBACK["true-uninstalled"]` 与服务端 `snapshot.mjs:201` 不同字，
 而服务端对**一切非 mounted 态**都发 `statusCopy`（`:384`）⇒ `:248/:869` 的兜底分支不可达。
 （这是对原稿 F-22"兜底文案过时"的**收窄**：文案确实过时，但它今天永不显示 ⇒ 危害等级低于原稿描述。）状态：有出入
