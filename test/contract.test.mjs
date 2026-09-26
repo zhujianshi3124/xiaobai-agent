@@ -203,6 +203,49 @@ test('manifest 校验边界：非对象、healthCheck 落盘、panels 结构', (
   assert.ok(withPanels.errors.some((e) => e.path === 'panels[1].id'));
 });
 
+// ── events 订阅面最小形状（D-13 ①，批 10 邻近笔）──────────────────────────
+//
+// 裁定口径（docs/contract.md §7 D-13）：甲案"位置不动"——events 仍写在 legacy
+// `requirements.registers.events`，契约单层校验"字符串数组且成员非空"（与 provides
+// 三槽同族收紧）；独立 doctor 对该面零校验是已裁边界（两仓分权不动）。
+
+test('D-13①：requirements.registers.events 须为字符串数组且成员非空（修前红）', () => {
+  const base = { id: 'dsh/x', displayName: 'X', version: '1.0.0', contract: '^1.0' };
+
+  // 非数组 → error，路径点到位
+  const nonArray = validateManifest({ ...base, requirements: { registers: { events: 'agent/request' } } });
+  assert.equal(nonArray.ok, false);
+  assert.ok(nonArray.errors.some((e) => e.path === 'requirements.registers.events' && e.code === 'type'));
+
+  // 空串 / 纯空白 / 非字符串成员 → error，成员下标定位
+  const withBlank = validateManifest({ ...base, requirements: { registers: { events: ['ok/event', ''] } } });
+  assert.equal(withBlank.ok, false);
+  assert.ok(withBlank.errors.some((e) => e.path === 'requirements.registers.events[1]'));
+
+  const withSpace = validateManifest({ ...base, requirements: { registers: { events: ['ok/event', '   '] } } });
+  assert.equal(withSpace.ok, false);
+  assert.ok(withSpace.errors.some((e) => e.path === 'requirements.registers.events[1]'));
+
+  const withNumber = validateManifest({ ...base, requirements: { registers: { events: ['ok/event', 42] } } });
+  assert.equal(withNumber.ok, false);
+  assert.ok(withNumber.errors.some((e) => e.path === 'requirements.registers.events[1]'));
+});
+
+test('D-13①：合法 events 形状与边界不受牵连（正向，修前即绿）', () => {
+  const base = { id: 'dsh/x', displayName: 'X', version: '1.0.0', contract: '^1.0' };
+
+  // 空数组 / 合法数组 / 缺席 → 照旧放行
+  assert.equal(validateManifest({ ...base, requirements: { registers: { events: [] } } }).ok, true);
+  assert.equal(validateManifest({ ...base, requirements: { registers: { events: ['agent/request', 'session/event'] } } }).ok, true);
+  assert.equal(validateManifest({ ...base, requirements: { registers: {} } }).ok, true);
+  assert.equal(validateManifest(base).ok, true);
+
+  // 边界钉（防收紧过围）：registers 非对象维持既有容忍——D-13 只裁 events 形状，
+  // registers 本体与"声明事件名 vs 宿主发出面"的深度校验都归 C-2/v1.2，本批不动。
+  assert.equal(validateManifest({ ...base, requirements: { registers: 'nope' } }).ok, true);
+  assert.equal(validateManifest({ ...base, requirements: { registers: { events: undefined } } }).ok, true);
+});
+
 // ── 模块导出（运行时绑定）校验 ────────────────────────────────────────────
 
 test('绑定校验：configSchema/panels/healthCheck 的函数型导出形态', () => {
