@@ -103,6 +103,7 @@ exports.$from 继承语义 —— 根 manifest 的 requirements.exports={"$from"
 ★真卸载兜底文案过时 —— ABSENCE_COPY_FALLBACK["true-uninstalled"] 仍写"本体已移入保管区·可一键恢复"，与销毁式 v2（零副本、不可恢复）相反；服务端 statusCopy 正常遮蔽它，兜底方向误导。状态：有出入
 
 ★archivedExpected —— /uninstall/plan 在 mode=true 时恒返 true，语义"预期有存档"实为收据零副本，客户端与测试零消费。状态：文档未记：字段名与承诺反义
+【2026-09-26 W2 余笔已修】复算升级原判：双向反义——mode="true" 返 true 而销毁式 v2 恰零副本不可恢复（Q2'-a）；mode="soft" 返 false 而本体保留在 lib/。字段概念整个是"真卸载移入保管区存档"的 v2 前旧思维残留；全仓零消费（客户端两通道、测试零引用）⇒ 整字段移除（诚实收口、输出面零消费者）。钉 test/f23-archived-expected.test.mjs 2 条（服务端零命中＋客户端零消费反向钉）；变异 1 发字段回潮恰主钉红。实现笔 toolkit@39b99f5。
 
 ★保管区迁移工具 purgeCustodyBodies() —— 全仓零调用点，只被注释引用。状态：未实现（未接线；设计稿裁"不自动执行"，但也没给手动入口）
 
@@ -344,12 +345,15 @@ safe/destructive 两个 fix.class 是否曾被 A 的任一历史版本产出过�
 而 payload 在 `:1850-1854` 只装 `{status, items, history}`；真值在 `p.hasHealthCheck`（`panel/manager/v2-api.mjs` 下发）⇒ 恒 undefined。
 叠加 F-72/F-83 后，"健康"这一列对内置插件是**整列皆断**。状态：有出入（代理实读）
 【2026-09-26 W2-2 复算更正：本条判**读数错账、不复现**】git -S 全量考古：`parsed.hasHealthCheck` 在 panel/client/index.js **任何历史版本零命中**，健康徽标自 44545c0（P5）诞生即读 `p.hasHealthCheck`（数据源＝v2 snapshot entryView 下发的 `hasHealthCheck`，v2-api.mjs 实测在案）⇒ "读错字段／下发缺字段"两前提均不成立，徽标链路成立（:399 "代理实读、我方未逐字复看"的未抽验族被本复算推翻第一条）。锚点漂移另证：原文 `:1867` 现值已漂至 `:1937`。防翻面钉 `test/w2-health-badge.test.mjs` 2 条；**本条不修代码、不改徽标行为**。
+★F-93 "健康详情"载入**挂起态**二次点击折叠后被决议回调重开 —— F-72 施工邻接自曝、C1-006 批复立项（沿 F-92 先例：执行侧编号＋协调侧追认）：点击 2 命中守卫折叠（open===""）后，`/v2/health` 决议回调无条件 `setOpen("health:"+json)` ⇒ 用户刚表达的折叠意图被推翻（重开）。状态：已修复
+【2026-09-26 W2 余笔已修】修法＝决议写入改函数式 setState（prev==="" 保持折叠，折叠意图优先于回调重开）；catch 分支不动并记边界（错误降级提示行是"暂不可用"告知非详情重开）。钉＝test/w2-health-fold.test.mjs 增 F-93 格（可控决议路由：挂起点击折叠→决议保持折叠且 0 补发→再点重开重新拉取），修前红正中"决议后保持折叠"格；F-72 既有格保持绿＝两钉逐格隔离；变异 1 发守卫回退恰 F-93 钉红。实现笔 toolkit@dd1bdeb。
 ★F-72 "健康详情"第二次点击不折叠且恒重发请求 —— `:1845` 判 `open === "health"`，但同一 handler 紧接
 `:1850` 把 `open` 写成 `"health:"+json` ⇒ `"health"` 字面值永不被读到。状态：有出入（代理实读）
 【2026-09-26 W2 余笔已修】快核现 HEAD 复现成立（守卫现锚 `:1928`、写入现锚 `:1933`，原 `:1845/:1850` 漂移与 §21.3 记载一致）⇒ 守卫补 `indexOf("health:")===0` 前缀判据与渲染分支同判；钉 `test/w2-health-fold.test.mjs`（真实 bundle 行为三步：首点恰 1 请求／二次点击折叠且 0 新请求／三次点击重开重新拉取），修前红正中折叠格→修后绿；变异 1 发守卫回退恰此钉红。实现笔 `toolkit@6a3f5cd`；边界：载入挂起态二次点击的先折叠后重开竞态不在判据内未修、记账呈裁。
 ★F-73 恢复弹窗的 `custody` 恒 undefined —— 三处 `setDlg({kind:"restore", …})` 均未写 `custody`，
 而 `:1258` 传 `dlg.custody`；且 `restoreCopyOf(plugin, mode, custody)`（`:883`）**函数体完全不引用第三形参**
 ⇒ 双重死参数（传得错、就算传对也没人读）。状态：有出入（代理实读）
+【2026-09-26 W2 余笔已修】复算复现成立（React 三处 setDlg 不带 custody＋:1329 传 dlg.custody＋restoreCopyOf 第三参不被引用；HTML restoreDialogHtml 同族死参、三处调用传 null）⇒ 诚实收死参：双通道签名与调用链去 custody、弹窗 props 去 custody 字段，输出面零变化；"弹窗展示卸载收据信息"记档为产品级选项呈协调侧。钉 test/f73-custody-dead-param.test.mjs 3 条静态源码钉；变异 1 发签名回潮恰钉红；连带 p24-ui-matrix 工装三处旧 4 参调用对齐（冲突三态 2 格连带翻面复绿）。实现笔 toolkit@905715f。
 ★F-74 `:1518` 引用 `styles.issueWarn`，而 `styles` 里只有 `issueWarning` ⇒ 该警示条无样式（代理做全量 key 比对，唯一一例）。状态：有出入
 ★F-75 **通用 `/execute` 不校验 `plan.kind`** ⇒ `toggle` / `config-edit` / `snapshot-restore` 任一 token 都能从这一条通道落盘
 （`panel/index.js` 的 `/execute` 直调 `executePlan(token)`；`panel/manager/apply-engine.mjs` 只在
@@ -382,7 +386,9 @@ token、零写入** / 未知与无 kind 一律拒 / 不存在 token 仍 `plan-no
 （这是对原稿 F-22"兜底文案过时"的**收窄**：文案确实过时，但它今天永不显示 ⇒ 危害等级低于原稿描述。）状态：有出入
 ★F-77 客户端 `CONFIG_FIELDS` 的 `type:"num"`/`"bool"` 与服务端 `config-whitelist.mjs` 的 `type:"number"` 字面不一致
 （客户端只用 `"bool"` ⇒ 无功能影响，纯口径漂移）。状态：有出入（轻）
+【2026-09-26 W2 余笔已修】复算校正原判表述：服务端字面集 {bool,int,number}，"bool" 两端一致（原判那半不成立）；真漂移＝backoffFactor 与 routing.downgradeContextMargin 客户端 "num"（服务端 "number"）两处；两通道 CONFIG_FIELDS 各 18 字段与服务端白名单集合双向相等；客户端 type 仅驱动控件分支 ⇒ 对齐零行为变化。修＝两通道各 2 处 num→number。钉 test/config-fields-type-parity.test.mjs 4 条常设化对账（双通道逐字段一致/集合双向相等/逐字段 type 同/服务端字面集恰三种反向钉）；变异 2 发逐格。实现笔 toolkit@56dd57d。
 ★F-78 `draft` 以扁平 path 为键，`v2RenderField` 回传的是嵌套对象，两者在嵌套 schema 下可同屏（**代理推断，未实测**）。状态：未核实
+【2026-09-26 W2 余笔复算翻正＝判据不成立（照 F-71 先例：不修代码）】复算：扁平 path 键 draft 属 rate-throttle patch 域 ConfigEditor（editValues[f.path]），嵌套对象 draft 属 v2 RegistryPluginCard（:1975 setDraft 收 v2RenderField 整根回传）——互斥渲染面、独立 state、全仓无共享写入点 ⇒ "同一 draft 被两种形态写入而同屏"前提不成立。防翻面钉 test/f78-v2-draft-shape.test.mjs 1 条（嵌套 schema 编辑叶子 → 保存载荷纯嵌套零扁平点键且编辑值生效）；变异 1 发＝保存载荷回退 T0 前形态恰钉红。实现笔 toolkit@53096f6（纯测试笔）。
 
 在案区（重建件，均：一致除非句内标注）
 
@@ -452,6 +458,7 @@ patch 行 id 与 `default.name` 都是 `web-search-local`；对内置无影响�
 ★F-87 `web_search_engine` 工具**无声明面** —— 实现在 `WSL:1351` 经 `ctx.get('tools').register(...)` 注册工具
 + `:1355` 一段 systemPrompt；而 manifest `registers` 根本没有 tools 槽、`commands:[]` ⇒ 契约缺表达（与 H3/批 10 同族，
 provides 三槽也不含 tools）。状态：有出入：契约无表达
+【2026-09-26 W2 余笔复算确认＋处置呈裁】现 HEAD 锚漂至 `lib/web-search-local/index.js:1384`（tools.register）与 `:1377-1383`（systemPrompt section 'tool:web_search_engine'）；manifest registers={inject:[web],events:[],services:[],commands:[],providers:[local-multi,local-fetch]}、provides 仅 providers——原判"契约无表达"成立。补声明＝契约扩槽（provides 第四槽/registers.tools）＝契约语义变更，越 W2"面板可见面与文案诚实化"授权且触碰契约协调边界 ⇒ 按升级规则不自裁，报协调侧裁归属（建议随契约 v1.2/W9）。W2 内无码可修、无钉。
 ★F-88 未声明的依赖面 —— `inject` 只声明 `["web"]`，实现另开 `ctx.inject(['settings'], …)`（`:1443`）并
 `ctx.get('tools')`/`ctx.get('systemPrompt')`（`:1351/:1354`）⇒ 三个未声明环境面（有 try/catch 兜底，但宿主是否保证在场仓内无契约可查；
 `doctor仓:host-faces.json` 的 8 个面里也没有 `tools`/`systemPrompt`）。状态：有出入（与"未能确认"第 5 条同源，本条给出精确名单）
