@@ -342,6 +342,7 @@ safe/destructive 两个 fix.class 是否曾被 A 的任一历史版本产出过�
 ★F-71 健康徽标"（含插件自定义健康检查）"永不出现 —— `:1867` 读 `parsed.hasHealthCheck`，
 而 payload 在 `:1850-1854` 只装 `{status, items, history}`；真值在 `p.hasHealthCheck`（`panel/manager/v2-api.mjs` 下发）⇒ 恒 undefined。
 叠加 F-72/F-83 后，"健康"这一列对内置插件是**整列皆断**。状态：有出入（代理实读）
+【2026-09-26 W2-2 复算更正：本条判**读数错账、不复现**】git -S 全量考古：`parsed.hasHealthCheck` 在 panel/client/index.js **任何历史版本零命中**，健康徽标自 44545c0（P5）诞生即读 `p.hasHealthCheck`（数据源＝v2 snapshot entryView 下发的 `hasHealthCheck`，v2-api.mjs 实测在案）⇒ "读错字段／下发缺字段"两前提均不成立，徽标链路成立（:399 "代理实读、我方未逐字复看"的未抽验族被本复算推翻第一条）。锚点漂移另证：原文 `:1867` 现值已漂至 `:1937`。防翻面钉 `test/w2-health-badge.test.mjs` 2 条；**本条不修代码、不改徽标行为**。
 ★F-72 "健康详情"第二次点击不折叠且恒重发请求 —— `:1845` 判 `open === "health"`，但同一 handler 紧接
 `:1850` 把 `open` 写成 `"health:"+json` ⇒ `"health"` 字面值永不被读到。状态：有出入（代理实读）
 ★F-73 恢复弹窗的 `custody` 恒 undefined —— 三处 `setDlg({kind:"restore", …})` 均未写 `custody`，
