@@ -1925,7 +1925,10 @@ window.__ModuleLoader__.load({
 				};
 			};
 			var toggleHealth = function () {
-				if (open === "health" || open === "health-error") { setOpen(""); return; }
+				// F-72：载入成功后 open 是 "health:"+JSON（下方 setOpen 写入），守卫此前只判
+				// "health"/"health-error" 字面 ⇒ 二次点击永不折叠且恒重发。补前缀判据，
+				// 与渲染分支（indexOf("health:") === 0）同判。
+				if (open === "health" || open === "health-error" || open.indexOf("health:") === 0) { setOpen(""); return; }
 				setOpen("health");
 				v2Api("/health?id=" + encodeURIComponent(p.id)).then(function (data) {
 					var items = (data.report && data.report.items) || [];
