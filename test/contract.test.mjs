@@ -26,9 +26,31 @@ const fixture = (name) => JSON.parse(readFileSync(join(here, 'fixtures', 'contra
 
 // ── 契约身份 ──────────────────────────────────────────────────────────────
 
-test('契约版本常量为 1.0.0 且 semver 合法', () => {
-  assert.equal(PLUGIN_CONTRACT_VERSION, '1.0.0');
+test('契约版本常量为 1.1.0 且 semver 合法（批 11 升次版本；钉的命题不变＝常量是当前生效契约版本且可解析）', () => {
+  assert.equal(PLUGIN_CONTRACT_VERSION, '1.1.0');
   assert.ok(parseSemver(PLUGIN_CONTRACT_VERSION));
+});
+
+// ── 批 11：版本提升的对偶与红线解除 ─────────────────────────────────────────
+// recon §1 第 6 项/§4-⑤ 的实测对偶：^1.0 放行 1.1.0（旧 manifest 零迁移）；
+// ^1.1 在 1.0.0 上判不通过 ⇒ "勿提前写 ^1.1"红线曾由此得证。批 11 落地后
+// ^1.1 自此可写（红线解除，migration 说明同步）；破坏性变更才升主版本的红线未触碰。
+
+test('批11·对偶：常量被 ^1.0 放行、^1.1 自此放行而 1.0.0 仍被拒（修前红：常量未升）', () => {
+  assert.ok(versionSatisfies(PLUGIN_CONTRACT_VERSION, '^1.0'), '旧清单 ^1.0 继续可用（零迁移）');
+  assert.ok(versionSatisfies(PLUGIN_CONTRACT_VERSION, '^1.1'), '^1.1 红线解除（实现已在位）');
+  assert.ok(!versionSatisfies('1.0.0', '^1.1'), '对偶成立：^1.1 确实拒绝旧版本');
+});
+
+test('批11·contract 值错误的提示串引用常量（防升版漏改，recon §4-③ 漏项；修前红：提示串硬编码 1.0.0）', () => {
+  const verdict = validateManifest({ id: 'dsh/x', displayName: 'X', version: '1.0.0', contract: '^2.0' });
+  assert.equal(verdict.ok, false);
+  const err = verdict.errors.find((e) => e.path === 'contract' && e.code === 'value');
+  assert.ok(err, '存在 contract 值错误');
+  assert.ok(
+    String(err.expected).includes(PLUGIN_CONTRACT_VERSION),
+    `expected 提示须含当前常量值 ${PLUGIN_CONTRACT_VERSION}，实际：${JSON.stringify(err.expected)}`,
+  );
 });
 
 // ── semver 解析与比较 ─────────────────────────────────────────────────────
@@ -169,13 +191,13 @@ test('反向 fixture：未知顶层字段（拼写错误）按 error 拒绝', ()
   assert.equal(unknown.code, 'unknown-field');
 });
 
-test('反向 fixture：contract 范围必须兼容当前契约版本 1.0.0', () => {
+test('反向 fixture：contract 范围必须兼容当前契约版本（消息点名常量现值；批 11 起钉常量不钉字面）', () => {
   const result = validateManifest(fixture('invalid-contract-range.json'));
   assert.equal(result.ok, false);
   const contractIssue = result.errors.find((e) => e.path === 'contract');
   assert.ok(contractIssue);
   assert.equal(contractIssue.code, 'value');
-  assert.match(contractIssue.message, /1\.0\.0/);
+  assert.match(contractIssue.message, new RegExp(PLUGIN_CONTRACT_VERSION.replace(/\./g, '\\.')));
 });
 
 test('manifest 校验边界：非对象、healthCheck 落盘、panels 结构', () => {

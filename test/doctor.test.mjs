@@ -485,3 +485,13 @@ test('批 4-②：doctor 预检同序——默认配置按**模块** schema 判�
   }
   await stopAll()
 })
+
+// ── 批 11：ToolkitDoctor.validate() 引用契约常量（F-68 / recon §4-②）──────────
+
+test('批11·validate() 引用契约常量——contract \x22^1.1\x22 放行（修前红：硬编码 1.0.0 必拒）', (t) => {
+  const { doctor, stopAll } = makeStack(t, {})
+  const manifest = { id: 'fixture/future-ok', displayName: 'X', version: '1.0.0', contract: '^1.1' }
+  assert.equal(doctor.validate(manifest), true, '^1.1 自此放行（常量 1.1.0 满足该范围）')
+  assert.equal(doctor.validate({ ...manifest, contract: '^2.0' }), false, '不兼容范围照旧拒绝')
+  return stopAll()
+})

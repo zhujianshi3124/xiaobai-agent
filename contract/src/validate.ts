@@ -140,7 +140,7 @@ export function validateManifest(input: unknown): ManifestValidation {
     errors.push(issue('contract', 'format', 'error', 'contract 必须是合法 semver 范围', '^1.0 / >=1.0 <2.0.0', contract))
   } else if (!versionSatisfies(PLUGIN_CONTRACT_VERSION, contract)) {
     errors.push(
-      issue('contract', 'value', 'error', `contract 范围必须兼容当前契约版本 ${PLUGIN_CONTRACT_VERSION}`, '范围须放行 1.0.0，如 ^1.0', contract),
+        issue('contract', 'value', 'error', `contract 范围必须兼容当前契约版本 ${PLUGIN_CONTRACT_VERSION}`, `范围须放行 ${PLUGIN_CONTRACT_VERSION}，如 ^1.0`, contract),
     )
   }
 
