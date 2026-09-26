@@ -49,12 +49,15 @@ window.__ModuleLoader__.load({
 		}
 
 		// ---- P2.4 缺席态六态（服务端 statusCopy 为权威；此处只作兜底）----
+		// W2-1（F-22+F-76）：兜底表与服务端 snapshot.mjs ABSENCE_COPY **逐字同步**
+		// ——真卸载是销毁式（零副本、不可恢复），兜底曾写"移入保管区·可一键恢复"
+		// 方向相反；改动文案必须两处同笔（钉 test/absence-copy-parity.test.mjs）。
 		var ABSENCE_COPY_FALLBACK = {
 			"soft-unmounted": "已软卸载 · 本体保留 · 可一键恢复",
-			"true-uninstalled": "已卸载（真）· 本体已移入保管区 · 可一键恢复",
+			"true-uninstalled": "已卸载（无副本）· 重新安装后面板可挂载",
 			"installed-unmounted": "已安装未挂载（不是面板卸载的）· 可从面板重新挂载",
 			"dangling-mount": "挂载行存在，但本体缺失 · 异常态",
-			"unknown-absent": "未安装"
+			"unknown-absent": "未安装 · 本体与挂载行都不在"
 		};
 		// §2 用的中文名。注意与卡片副标题的 CN_NAMES **不同源**（§2 里 compact-router 叫
 		// 「压缩」，副标题叫「上下文压缩」）—— 弹窗一律以 panel/docs/p24-test-plan-batch1.md
