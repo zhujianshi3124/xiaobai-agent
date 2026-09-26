@@ -18,6 +18,18 @@ export const CONTRACT_EVENT_NAMES = [
   'registry:status-changed',
   'registry:health-changed',
   'doctor:issue-found',
+  // 批 9（F-17 契约五挂账第 4 条 / 债务 #11b 裁定）：审计事件名入枚举——registry 的 audit()
+  // 由此经 contractEventName 发名（收编为零线格式变更：8 条对外名与旧手工模板逐字节相同，
+  // 见 test/audit-event-enum.test.mjs；字面量与 types.ts 的 AUDIT_EVENTS 一一对应，漂移即红）。
+  // 注意 contractEventName 运行时不校验事件名，编译期约束才是本笔收益。
+  'audit:installed',
+  'audit:removed',
+  'audit:enabled',
+  'audit:disabled',
+  'audit:reloaded',
+  'audit:quarantined',
+  'audit:config-changed',
+  'audit:state-save-failed',
 ] as const
 
 export type ContractEventName = (typeof CONTRACT_EVENT_NAMES)[number]

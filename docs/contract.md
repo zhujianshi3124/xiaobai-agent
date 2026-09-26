@@ -89,23 +89,23 @@ error）⇒ "本仓容忍"与"另一仓必填"并存，正是 `docs/debt.md` C-2
 | 面 | 拼法 | 缺省值 |
 |---|---|---|
 | 服务名 | `contractServiceName(p, 'registry' \| 'doctor')` → `${p}/registry` | `toolkit/registry` |
-| 事件名 | `contractEventName(p, event)` → `${p}/${event}`，`event ∈ CONTRACT_EVENT_NAMES` | `toolkit/registry:plugin-added` 等 5 个 |
+| 事件名 | `contractEventName(p, event)` → `${p}/${event}`，`event ∈ CONTRACT_EVENT_NAMES` | `toolkit/registry:plugin-added` 等 13 条（5 契约 + 8 审计，批 9 起） |
 | HTTP 基址 | `contractHttpBase(p)` → `/api/${p}-panel`（P7 嵌入新增） | `/api/toolkit-panel` |
 
 **缺省前缀下三张表逐字节等于 P6 之前的历史值** ⇒ 装载 toolkit 的既有宿主 URL/服务名/事件名零变化。
 前缀非法（空、含 `/`、首尾空白）时：`normalizeServicePrefix` 只把"缺席/空串/纯空白"回落缺省，
 其余交给三个拼装函数 **抛 TypeError（fail-closed）**。
 
-⚠️ 已知不一致（债务 #11b → **已裁定并入契约 v1.1，第 2 项**）：审计事件由 `registry/src/registry.ts`
-的 `audit()` 手工拼 `${servicePrefix}/audit:${event}`，不经 `contractEventName`——因为
-`CONTRACT_EVENT_NAMES` 的联合类型不含 `audit:*`。它**已命名空间、无冲突**。同步面实测只剩**一处手工**：
-①`panel/manager/v2-api.mjs` 的 SSE 名表**已经**由契约 `AUDIT_EVENTS` 派生（`...AUDIT_EVENTS.map(...)`）；
-②真正手抄的是 `panel/client/index.js` 的 `V2_EVENT_NAMES`（13 条字面量，一致性由
-`test/toolkit-root.test.mjs` 逐名核对锁住）；③SSE `hello` 帧只带 `servicePrefix`、不带事件名清单 ⇒ 无同步项。
-**条数是 8 不是 7**（第 8 项 `state-save-failed` 由 Pack H1 追加）。
-【批 9 落地：入枚举 + 收编】实测 `contractEventName(p,'audit:'+x)` 与手工模板串对 8/8 **逐字节相同**
-⇒ 收编是**零线格式变更**（对外事件名、审计流水、SSE 帧全不变），收益在编译期类型约束；
+审计事件（债务 #11b → 批 9 **已落地**）：**`audit:*` 八条已入 `CONTRACT_EVENT_NAMES`**（批 9 起共 13 条），
+`registry/src/registry.ts` 的 `audit()` 发名已收编为 `contractEventName(p, `audit:${event}`)`——与收编前
+手工模板对 8/8 **逐字节相同** ⇒ **零线格式变更**（对外事件名、审计流水、SSE 帧全不变），收益在编译期
+类型约束（`AuditEvent` ⊂ `ContractEventName`，模板字面量类型零 cast）。同步面三处现状：
+①`panel/manager/v2-api.mjs` 的 SSE 名表由契约 `AUDIT_EVENTS` 派生（保持不动）；
+②真正手抄的只剩 `panel/client/index.js` 的 `V2_EVENT_NAMES`（13 条字面量，一致性由
+`test/toolkit-root.test.mjs` ⑥ 逐名核对锁住）；③SSE `hello` 帧只带 `servicePrefix`、不带事件名清单 ⇒ 无同步项。
 注意 `contractEventName` 运行时**不校验**事件名（未知名照拼），不要把它当运行时守卫。
+验收断言：`test/audit-event-enum.test.mjs` 四格（枚举完整性／零线字节等 8/8（`BEFORE_WIRE` 硬编码参照）／
+registry 发名静态防回潮／条数联动）。
 
 ## 4. 来源与安装（`PluginSource`，`contract/src/types.ts` 的 `PluginSource`）
 
