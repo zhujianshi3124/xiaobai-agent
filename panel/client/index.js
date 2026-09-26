@@ -1585,7 +1585,7 @@ window.__ModuleLoader__.load({
 					}),
 				react.createElement("h2", { style: styles.h2 }, "体检回滚（doctor 域 · 每次改动可还原）"),
 				st.loading ? react.createElement("div", { style: styles.muted }, "读取中…") : null,
-				!st.loading && st.error ? react.createElement("div", { style: styles.issueWarn }, "体检回滚暂不可用：" + st.error) : null,
+				!st.loading && st.error ? react.createElement("div", { style: styles.issueWarning }, "体检回滚暂不可用：" + st.error) : null,
 				!st.loading && !st.error && applyEntries.length === 0 ? react.createElement("div", { style: styles.allGood }, CONSOLE_ROLLBACK.empty) : null,
 				applyEntries.map(function (entry) {
 					return react.createElement("div", { key: entry.stamp, style: styles.issue },
