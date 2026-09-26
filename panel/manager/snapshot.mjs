@@ -267,7 +267,21 @@ export function searchRouterModeShadow({ envMode, hot }) {
  *   - agent-memory / compact-router / web-search-local：插件 config 无 enabled 键且
  *     源码不读 ⇒ 「无内部开关」，无可写入口。
  */
-function buildConfigPanel(dir, rowId, patchText, { hotRouterPath, envMode }) {
+/**
+ * W2 余件（断点修复批②的 W2 半边）：四卡"改完要重启"提示位。
+ * rate-throttle 早有 effectNote（可写参数框内渲染），其余四卡此前**零说明位**
+ * （断点取证：panel/docs/evidence/BREAKPOINT-FORENSICS-20260923.md——"重载"列
+ * 恒不可达是设计，但用户视角无提示）。文案按各卡**真实配置来源**逐卡给词，
+ * 不许一串通抄：agent-memory／web-search-local／search-router 三行的 config 块
+ * 实测在 cordis.patch.yml（2026-09-26 复算）；compact-router 无 patch 行、预设托管。
+ */
+const RESTART_EFFECT_NOTE = {
+  "agent-memory": "本卡没有面板配置入口；配置在 cordis.patch.yml 的 agent-memory-runtime 行里，改完要重启 DSH 才生效。",
+  "compact-router": "本卡没有面板配置入口；配置由预设托管（apply-preset-patch.mjs 维护），预设的改动要重启 DSH 才生效。",
+  "web-search-local": "本卡没有面板配置入口；配置在 cordis.patch.yml 的 web-search-local 行里，改完要重启 DSH 才生效。",
+};
+
+export function buildConfigPanel(dir, rowId, patchText, { hotRouterPath, envMode } = {}) {
   if (dir === "rate-throttle") {
     const scalars = rowId ? parseConfigScalars(patchText, rowId) : { top: {}, routing: {} };
     return {
@@ -284,9 +298,11 @@ function buildConfigPanel(dir, rowId, patchText, { hotRouterPath, envMode }) {
       rowId,
       mode: searchRouterModeShadow({ envMode, hot }),
       note: "本面板不提供 mode 编辑（判定侧第 15 轮方案 1：热 JSON 已有 mode 键，patch 编辑会被它盖住）。需调整请编辑 ~/.dsh/dsh-search-router.json（热改即生效）。",
+      effectNote: "mode：热 JSON 热改即生效（无需重启）；patch 行改动要重启 DSH 才生效，且热 JSON 在场时会被它盖住。",
     };
   }
-  return { editable: false, noInternalSwitch: true };
+  // 严格映射：不在表内的目录不发明通用文案（缺席就是缺席，如实不下发）。
+  return { editable: false, noInternalSwitch: true, effectNote: RESTART_EFFECT_NOTE[dir] };
 }
 
 export async function buildSnapshot({ toolkitRoot, hotRouterPath = join(homedir(), ".dsh", "dsh-search-router.json"), envMode = process.env.DSH_WEB_SEARCH_ROUTER_MODE } = {}) {
