@@ -951,7 +951,7 @@ window.__ModuleLoader__.load({
 		}
 
 		// ---- §2.9b 软卸载恢复确认页（无文件回写）／挂载确认页（重装后）----
-		function restoreCopyOf(plugin, mode, custody) {
+		function restoreCopyOf(plugin, mode) {
 			var name = p24Name(plugin);
 			if (mode === "mount") {
 				return {
@@ -1080,7 +1080,7 @@ window.__ModuleLoader__.load({
 		function RestoreDialog(props) {
 			var plugin = props.plugin;
 			var mode = props.mode;
-			var c = restoreCopyOf(plugin, mode, props.custody);
+			var c = restoreCopyOf(plugin, mode);
 			var kids = [
 				react.createElement("div", { key: "t", style: styles.dlgTitle }, c.title),
 				react.createElement(DialogLine, { key: "b", text: c.body })
@@ -1326,7 +1326,6 @@ window.__ModuleLoader__.load({
 					key: "dlg-r",
 					plugin: plugin,
 					mode: dlg.mode,
-					custody: dlg.custody,
 					conflict: dlg.conflict,
 					choices: dlg.choices,
 					busy: busy,
