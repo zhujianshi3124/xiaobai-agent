@@ -11,7 +11,9 @@
 // 反向钉两条：① 仓内 6 份真实 manifest 的 configSchema 必须仍 verified:true（正常路径不受影响）；
 // ② 合法 schema 的 setConfig 必须仍然写得进去。
 import test from 'node:test'
+import { after } from 'node:test'
 import assert from 'node:assert/strict'
+import { registerHooks } from 'node:module'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -22,6 +24,33 @@ import { createRegistry } from '@local/dsh-toolkit/registry'
 import { createDoctor } from '@local/dsh-toolkit/doctor'
 
 const fixtureDir = (name) => join(import.meta.dirname, 'fixtures', 'registry', name)
+
+// ── D-21 · 注入替身（C1-006 批复裁方案 (a)；注入面先例＝doctor 仓 R4 探测替身）──────────
+// 债务 D-21：`#isUsableSchema` 由 ③（{type} 纯定义构建后不可执行校验）与 ④（{uid,refs} 重建后
+// 不可执行校验）共用，但真实 schemastery 造不出"③ 构建不抛错却返回不可执行值"（债条原文：
+// 本笔不编造触发条件）⇒ ③ 格此前无钉，守卫被摘不会翻红。本区块把注入替身做成 resolve 钩子：
+// 默认放行（`__d21SchemasteryDouble` 未配置 ⇒ 一切照旧，下面既有十格证据形态零变化）；
+// 仅当替身配置后，config-schema.ts 里的 `await import('@deepseek-ai/schemastery')` 被短接到
+// data: URL 替身模块——其 default(def) 回读 globalThis 上的替身工厂，返回"构建不抛错但
+// 不可执行校验"的值。registerHooks 是线程内同步钩子，测试与钩子共享同一 globalThis
+// （须 Node ≥ 23.5；本机门禁 Node 24.19 实测）。文件末尾 after() 注销钩子（装配现场收尾）。
+const D21_TYPE_DEF = { type: 'object', dict: { a: { type: 'string' } } }
+const D21_MOCK_URL = 'data:text/javascript,' + encodeURIComponent(
+  'export default function (definition) {\n'
+  + '  const make = globalThis.__d21SchemasteryDouble\n'
+  + '  if (typeof make !== "function") throw new Error("D-21: 替身未配置")\n'
+  + '  return make(definition)\n'
+  + '}\n',
+)
+const unregisterD21Hooks = registerHooks({
+  resolve(specifier, context, nextResolve) {
+    if (specifier === '@deepseek-ai/schemastery' && globalThis.__d21SchemasteryDouble) {
+      return { url: D21_MOCK_URL, format: 'module', shortCircuit: true }
+    }
+    return nextResolve(specifier, context)
+  },
+})
+after(() => unregisterD21Hooks.deregister())
 
 // 两个装配口都返回 createRegistry 的产物本身（{ registry, stop }），用例走 .registry.xxx
 function makeRegistry(t, registryOpts = {}) {
@@ -175,4 +204,54 @@ test('批5-1 · 反向：真不合法的默认配置仍走 config-schema-invalid
   const codes = blocked.precheck.blocking.map((x) => x.code)
   assert.ok(codes.includes('config-schema-invalid'), '实得: ' + codes.join(','))
   assert.equal(codes.includes('config-schema-unverified'), false, 'schema 能验、只是默认配置不合法 ⇒ 不该报降级')
+})
+
+// ── 四、D-21 · ③ 判据格单独成口（注入替身三格；C1-006 批复裁方案 (a)）──────────────────
+// 真实 schemastery 造不出"③ 构建不抛错却返回不可执行值"⇒ 由注入替身供给该条件。
+// 三格互斥点：③ 文案"构建结果不可执行校验"、④ 文案"重建结果不可执行校验"、通杀格（第⑤支）
+// 文案"无法识别的 configSchema 形态"——③ 守卫被摘时替身产物落进第⑤支，本区第一格即翻红。
+test('D-21 · ③ 判据格单独成口：{type} 纯定义＋替身返回不可执行校验的值 ⇒ 降级且文案点名③', async () => {
+  globalThis.__d21SchemasteryDouble = () => ({})
+  try {
+    const r = await validateConfigAgainstSchema(D21_TYPE_DEF, { a: 'x' })
+    assert.equal(r.ok, false, '降级绝不能算通过')
+    assert.equal(r.verified, false)
+    assert.equal(r.via, 'skipped')
+    assert.equal(r.issues[0].path, 'config')
+    assert.match(
+      r.issues[0].message,
+      /schemastery 构建结果不可执行校验（得到 object）/,
+      '③ 专属文案；守卫被摘会落到第⑤通杀格（"无法识别的 configSchema 形态"）⇒ 此断言翻红',
+    )
+  } finally {
+    delete globalThis.__d21SchemasteryDouble
+  }
+})
+
+test('D-21 · ③④ 不共用命中：同一替身下 {uid,refs} 命中④专属文案，与③文案互斥', async () => {
+  globalThis.__d21SchemasteryDouble = () => ({})
+  try {
+    const third = await validateConfigAgainstSchema(D21_TYPE_DEF, {})
+    const fourth = await validateConfigAgainstSchema({ uid: 1, refs: { 0: { type: 'string' } } }, {})
+    assert.equal(fourth.ok, false)
+    assert.equal(fourth.verified, false)
+    assert.equal(fourth.via, 'skipped')
+    assert.match(
+      fourth.issues[0].message,
+      /schemastery 重建结果不可执行校验（得到 object）/,
+      '④ 专属文案（真实行为钉见本文件批5-1 的 ④ 格，替身钉与其同命题双证）',
+    )
+    assert.notEqual(third.issues[0].message, fourth.issues[0].message, '③ 与 ④ 的命中必须分得开，不共用同一格')
+  } finally {
+    delete globalThis.__d21SchemasteryDouble
+  }
+})
+
+test('D-21 · 反向钉：钩子在、门控关 ⇒ 动态导入走真实 schemastery，正常路径零污染', async () => {
+  const manifest = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'dsh.plugin.json'), 'utf8'))
+  const real = await validateConfigAgainstSchema(manifest.configSchema, {})
+  assert.equal(real.verified, true, '真实 manifest 必须仍走真校验: ' + JSON.stringify(real.issues))
+  assert.notEqual(real.via, 'skipped')
+  const handBuilt = await validateConfigAgainstSchema(D21_TYPE_DEF, {})
+  assert.equal(handBuilt.verified, true, '同一 {type} 定义门控关时必须真的构建并调用（真实 schemastery）')
 })
