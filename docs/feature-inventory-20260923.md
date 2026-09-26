@@ -273,6 +273,7 @@ panel/dsh.plugin.json 不声明面板、无 configSchema、无 id/version（全�
 ★契约接口与实现面不等 —— 契约 ToolkitDoctor 只承诺 precheck/inspect/registerRule；DoctorService 实际还公开 attachHost/attachRegistry/history/startWatch/stopWatch/publishReport/validate/serviceName，且便捷装配 createDoctor() 在生产链上没有任何调用方(面板按 REQ-8 自己 new DoctorService)。状态：有出入：契约面窄于实现面
 
 ★validate() 硬编码契约版本字面量 '1.0.0' —— 不引用 PLUGIN_CONTRACT_VERSION 常量 ⇒ 升 1.1.0 时这处必漏。状态：文档未记
+【2026-09-26 批 11 兑现：本条翻正】`ToolkitDoctor.validate()` 改引用常量（toolkit@e8880c8）；"必漏"的前提已随批 11 升版消失，钉子 `test/doctor.test.mjs` 批 11 validate 钉（contract "^1.1" 放行，硬编码回潮即红）。
 
 在案区
 
