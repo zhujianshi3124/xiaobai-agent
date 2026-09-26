@@ -1004,3 +1004,116 @@ p1-smoke 三处断言更新＋换源变异证据）。契约五挂账 **5/5 全�
 照 §3 表序进**改名批**（`snapshot.mjs` 输出面按文档正确语义改名＋`p1-smoke` 仅动批准过的
 三处断言＋换源变异证据）。**注意**：§11 五.a 的"方案报用户批准"门未见过批复记录——具体
 改名方案（各输出键新名）执行侧不自裁，随合并申报呈协调侧转用户批准后再动工。
+
+## 20. 改名批方案呈文（2026-09-26 · 纯文档笔；C1-006 批复第三节第 1 令，呈用户批准，批准到达前不动工）
+
+> 依据：§3 改名批格（`snapshot.mjs` 输出面按文档正确语义改名＋p1-smoke 断言更新；换源变异证据）＋
+> recon §11 五.a（"键名叫注册面却装着依赖"＝键名指东数据装西，裁定采 B 案）＋五.b（换源变异证据）＋
+> 五.c（旧键名再改名属未来事项，本呈文不为它预支）。呈文由执行侧考古后起草，翻译呈用户批准，
+> **批准到达前改名批零动工**。批 10 已落 provides 数据（三份 lib＋桶根，与 legacy registers 同槽
+> 同值并有钉）⇒ 本方案的"换源"对输出**值**零影响，只换**键名与数据来源正典**。
+
+### 20.1 对象与现状（考古实测，2026-09-26 @ f9a903a）
+
+输出面唯一产地＝`panel/manager/snapshot.mjs:373-378`（v1 `/api/toolkit-panel/snapshot` 每卡）：
+
+```js
+registers: {
+  events:   (manifest.requirements.registers || {}).events   || [],
+  services: (manifest.requirements.registers || {}).services || [],
+  commands: (manifest.requirements.registers || {}).commands || [],
+  providers:(manifest.requirements.registers || {}).providers|| [],
+},
+```
+
+数据源是 **legacy `requirements.registers.*` 直读**（不经 loader 的 `extractRegisters` provides
+优先口径）；provides 落地后正典提供面在 `manifest.provides`，输出面仍读旧字段 ⇒ 正源错位
+（这正是五.a 判"键名指东数据装西"的延续）。全部消费点（全仓 grep 普查，`.panel-backups/`
+历史档除外）：
+
+| # | 读点 | 用法 |
+|---|---|---|
+| 1 | `panel/client/index.js:381`（TechDetails，react） | `plugin.registers` → :393-396 四行 TechRow（services/commands/providers/events） |
+| 2 | `panel/client/panel.html:279`（兜底页，html） | 同构读 `p.registers` |
+| 3 | `test/p22-cards-ui.mjs:264` | 测试工装构造卡片数据时 `registers: base.registers` 透传 |
+| 4 | `test/helpers/panel-client-harness.mjs:228/235` | 夹具数据 `registers: {}` |
+| 5 | 宿主侧（dsh-web-all） | **未证**：snapshot 输出是面板自有 HTTP 数据面，宿主按 embed 口径只承载路由；仓内无任何宿主读取证据，也无法证宿主不解析该 JSON 体——如实标"未证"，风险列见 20.6 |
+
+### 20.2 逐条对照表（主案）
+
+| 输出键（现） | 数据源（现） | → 新键（主案） | 数据源（新） | 动机（一句） |
+|---|---|---|---|---|
+| `registers.services` | legacy `requirements.registers.services` | `provides.services` | `manifest.provides.services`（缺席回落 legacy，同 loader 口径） | 提供面数据挂提供面名，正源随批 10 落地（五.a） |
+| `registers.commands` | 同上 | `provides.commands` | 同上（回落同） | 同上 |
+| `registers.providers` | 同上 | `provides.providers` | 同上（回落同） | 同上 |
+| `registers.events` | legacy `requirements.registers.events` | **`events`（顶层平铺）**【方案细节甲，见 20.3】 | 不变（甲案：manifest 位置不动，recon §10.4） | "注册面"装"监听面"同属键名错位；平铺后键名与 TechRow 标签"events（监听的事件）"同义 |
+| `inject` | legacy `requirements.registers.inject` | **不改名**（recon §8.4 议题 2 建议） | **不换源**（复核后不采"只改数据来源"，见下） | inject 是宿主装载声明面，键名与语义相符 |
+| `entry` / `managedBy` / `enabled` / `patchRow` / 其余卡字段 | — | **一律不动** | — | 无语义错位，防扩面（20.5 明确不改清单） |
+
+**`inject` 数据来源复核（议题 2 的"只改数据来源"不采，理由）**：recon 建议注入数据源改走
+契约 `requires.services`；实测 5 份 lib manifest 的 `requires.services` 全部**缺声明**（null），
+而 `registers.inject` 有真声明（compact-router 4 项、rate-throttle 2 项、search-router/
+web-search-local 各 1 项）⇒ 换源=卡面 inject 行**变空**（信息丢失+可见面变化）。故维持
+registers.inject 数据源；`requires.services` 与 inject 声明不一致是 H2/迁移期议题，归 W10/C-2
+（本呈文不为它扩面）。
+
+### 20.3 需用户批准的方案细节（一处）
+
+`registers.events` 的去处，两案：
+
+- **甲（呈文推荐）**：`events` 顶层平铺（新输出 `events: [...]`，数据源不变）。理由：
+  registers 键删除后 events 无处嵌套；"监听面"挂"监听"键名最诚实；recon :640 "输出键名与
+  数据源维持 registers.events" 裁定的是 **events 不参与换源**（数据正源不动），平铺不改
+  数据源、只随对象结构调整键位——若用户按字面理解为"键名必须保留 registers. 前缀"，
+  则请裁乙案。
+- **乙（保守备选）**：输出同时保留 `registers: { events }`（只装监听）＋新增
+  `provides: { services, commands, providers }`。字面完全合规，但"registers 只装 events"
+  本身仍是一处语义残差（技术详情展示无影响）。
+
+### 20.4 实施面（批准后的动工清单，本呈文不动工）
+
+1. `registry/src/loader.ts`：`extractRegisters` 加 `export`（单源化——snapshot 不自建第二份
+   优先级逻辑，直接复用；返回 undefined 时 snapshot 置空对象）。
+2. `panel/manager/snapshot.mjs`：输出对象按 20.2 对照表改造（provides 三槽走 extractRegisters；
+   events 按批准稿）。
+3. `panel/client/index.js` TechDetails＋`panel/client/panel.html` 兜底页：读点同步
+   （TechRow 中文标签**零变化**——标签本来就写对了语义；改的是取数字段）。客户端 bundle
+   改后 `node --check`（常设口径⑥）。
+4. 测试工装同步：`p22-cards-ui.mjs:264`、`helpers/panel-client-harness.mjs:228/235`。
+5. **换源变异证据（五.b）**：临时改某份 manifest 的 provides 源数据 ⇒ snapshot 输出随之
+   变化且 p1-smoke 断言仍绿（工装落 var/scratch，内存 pristine 写回）。
+6. p1-smoke 断言面处置（呈文勘察结论，待批）：`:295`（5 卡计数）输出形状不变 ⇒ **不动**；
+   `:337`（`["managedBy","inject","services","commands"]` 字符串在场）——client 源里四个词
+   改后仍在（provides.services 含 "services"）⇒ **预计不翻、不动**；`:305`（doctor 0/0/0）
+   属批次序问题非改名问题 ⇒ 不动。**若实施中任一断言翻红，按"仅动批准过的三处"边界停下
+   报协调侧，不自行扩改断言。**
+7. 账面：计划 §21＋debt #39＋CHANGELOG（对外可见：snapshot 输出键名变更，客户端为唯一
+   已知消费方）。
+
+### 20.5 明确不改清单（防扩面）
+
+- `inject` 键名与数据源（20.2 复核）；
+- `registers.events` 的 **manifest 侧**位置（甲案 D-13 已裁，深度对账仍挂 C-2/v1.2）；
+- loader/registry/contract/doctor 内部的 `registers`（`ResolvedPlugin.registers`、
+  `registersOf` 等）——那是装载面提供语义（批 2 已修正），与 v1 snapshot 输出键名无关；
+- `panel-crossrefs.test.mjs:114`、`plugin-registry.mjs:13` 等直读 manifest 的点（读的是
+  manifest 本体，不是输出面）；
+- `.panel-backups/` 历史档（只增不改纪律）；
+- 旧键名是否兼容双写（`registers` 与 `provides` 并存过渡）——**不做**：消费方全在本仓
+  两文件＋两测试工装（20.1 普查），一次切净，不留双写残面（五.c：旧键名再改名属未来事项）。
+
+### 20.6 风险列表
+
+| # | 风险 | 处置 |
+|---|---|---|
+| 1 | 宿主侧是否解析 snapshot JSON 体**未证** | 键名变更对"不读"无影响；若宿主有未知读点，观察窗暴露——列入真机观察需求（见 #3） |
+| 2 | client/panel.html 两处读点漏改 → 卡面技术详情空列 | 普查清单锁定两处＋grep 复核；p22 127/127＋client 渲染断言兜底 |
+| 3 | 面板可见面：TechRow **标签与数据值零变化**（仅内部取数字段名变） ⇒ 按批 10 同口径**预计不触发条件真机**；但为对齐"输出面键名变更"的字面影响，**观察需求报协调侧排窗裁定**，执行侧不自裁 | 批 8 先例：代码半先行，观察窗一次打包 |
+| 4 | 换源后 provides 缺席的第三方插件（legacy）输出变空 | extractRegisters 回落 legacy registers（迁移期口径与 loader 一致），值不变 |
+| 5 | 测试工装（p22/harness）与生产读点漂移 | 工装同步列入实施清单第 4 条，与生产同笔 |
+
+### 20.7 独立回退路径
+
+单笔提交（代码 `snapshot.mjs`＋`loader.ts` export＋client 两文件＋工装两文件），回退＝
+`git revert` 该笔即整链还原；无数据迁移、无宿主耦合、无 manifest 改动（provides 数据批 10
+已落且本批不动 manifest）。变异工装沿用内存 pristine＋写回口径， revert 不涉未提交改动。
