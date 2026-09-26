@@ -1117,3 +1117,60 @@ registers.inject 数据源；`requires.services` 与 inject 声明不一致是 H
 单笔提交（代码 `snapshot.mjs`＋`loader.ts` export＋client 两文件＋工装两文件），回退＝
 `git revert` 该笔即整链还原；无数据迁移、无宿主耦合、无 manifest 改动（provides 数据批 10
 已落且本批不动 manifest）。变异工装沿用内存 pristine＋写回口径， revert 不涉未提交改动。
+
+## 21. W2 开工落账（第一至三笔）＋改名批呈文交出（2026-09-26 · 纯追加，不回改上面任何一行）
+
+### 21.1 本节三笔（C1-006 批复第三节开工令：第一件呈文已交、第二件 W2 开工、D-21 小笔待下一净节点）
+
+1. **呈文笔 `bbaead9`（第一件，纯文档）**：改名批方案呈文＝本计划 §20——旧名→新名逐条
+   对照表＋动机＋影响面普查（client 两读点＋p22/harness 两工装；宿主侧**未证**如实标注）＋
+   明确不改清单＋独立回退路径＋风险列表；`registers.{services,commands,providers}` →
+   `provides.*`（换源走 extractRegisters 单源化），`events` 顶层平铺（甲）vs 嵌套保留（乙）
+   **两案呈裁**；`inject` 换源经复核**不采**（5 份 lib `requires.services` 缺声明，换源＝
+   卡面 inject 行变空、信息丢失）；p1-smoke 三断言勘察结论如实附（预计零翻、不动）。
+   **批准到达前改名批零动工。**
+2. **W2-1 `237eecd`**：真卸载兜底文案翻正（F-22+F-76 同族）——客户端
+   `ABSENCE_COPY_FALLBACK` 与服务端 `ABSENCE_COPY` 逐键逐字对齐（true-uninstalled 由
+   "移入保管区·可一键恢复"翻正为"已卸载（无副本）· 重新安装后面板可挂载"＝销毁式 v2
+   语义；unknown-absent 补齐全句）。钉 `test/absence-copy-parity.test.mjs` 3 条
+   （键集⊆权威＋逐字＋反向钉"不得再宣称保管区/可一键恢复"）；修前红 2/绿 1→3/3；
+   变异 3 发逐格各红各的（客户端回潮／服务端改字／简写漂移；b21-mutate.mjs）。
+3. **W2-2 `83d6c71`**：F-71 复算翻正＝**读数错账、不复现**——git -S 全量考古
+   `parsed.hasHealthCheck` 在 client 任何历史版本零命中，徽标自 44545c0 起即读
+   `p.hasHealthCheck`（下发面 entryView 在案）⇒ "永不出现"两前提均不成立；
+   **不修代码**，清单 :336 行后追加更正注（原文照录）＋防翻面钉
+   `test/w2-health-badge.test.mjs` 2 条（读取面/下发面）；变异 2 发逐格各红各的
+   （b22-mutate.mjs）。
+4. **W2-3 `f6635ea`**：F-74 复算**复现**翻正——client :1588 引用 `styles.issueWarn`
+   而定义只有 `issueWarning` ⇒ "体检回滚暂不可用"警示条无样式；引用改正一行＋
+   **styles 引用全量对账钉** `test/client-styles-keys.test.mjs`（所有 styles.XXX 引用
+   ⊆ 定义键集，常设化——F-74 类失真不再靠人眼）；修前红（精确报出 issueWarn）→
+   1/1；变异 2 发两向可证（引用侧回潮/定义侧摘键；b23-mutate.mjs）。
+
+### 21.2 读数与边界
+
+- 每笔三道锁全跑全绿：门禁 **6/6**＋doctor 四套件 **26/8/7/21**＋stage3 **a–g 全 PASS**＋
+  `~/.dsh` hash 前后 `c585738c…0bd9`/5 files 逐字节相同；`node --test`
+  **419→422→424→425**（+3/+2/+1 全来自新钉）；`p1-smoke` **314/0** 不减；
+  `p22-cards-ui` **127/127**；真实仓 dry-run **0/0/0**。**基线口径更新入账：`node --test` 425。**
+- F-71（不复现）与 F-74（复现）两族复算结论分路，各带钉/各带更正注——"未抽验代理读数
+  动工前先复算"纪律（§15 ②）首批两次应用的实证：一条被推翻、一条被证实。
+- 真机观察需求（W2 批末统一报，执行侧不自行排窗）：W2-1 兜底文案与 W2-3 警示条配色
+  均属**异常路径可见面**（statusCopy 缺失/体检回滚失败才上屏），正常卡面零变化；
+  F-71 链路成立但徽标端到端点亮未真机点（面板 React 三通道老边界）。
+- `cordis.patch.yml` 一字未动（基准 `e8051fe9`）；宿主 pid 29520 现场未触；
+  `~/.dsh` 零触碰（hash 逐笔前后同）。
+
+### 21.3 W2 余件清单（在途，下一净节点续）
+
+- **四卡"改完要重启"提示位**（断点修复批②的 W2 半边；rate-throttle 已有 effectNote，
+  补 compact-router/agent-memory/search-router/web-search-local 四卡）；
+- **F-72** 健康详情第二次点击不折叠且恒重发（复算复现：`:1915` 判 `open === "health"`
+  字面而 open 实为 `"health:"+json`；锚点 :1914-1915）；
+- **F-73** 恢复弹窗 custody 恒 undefined（三处 setConfirm/弹窗描述符未带）——动工前先复算
+  （代理实读未抽验族）；
+- **卡片静态描述落差族**（`:191`/`:214` 卡片文案与实现面，批复令面点名）；
+- **F-77** CONFIG_FIELDS type:"num"/"bool" 与服务端 "number" 字面不一致（复算后修）；
+- **F-78** draft 扁平键 vs 嵌套回传同屏（清单原判"未核实"⇒ 先复算再定）；
+- **F-87**、**F-21**（tab 基址随 servicePrefix 或文档如实收边界）、**F-23**（archivedExpected
+  反义字段）——照 §3/§9.6 W2 格续。
