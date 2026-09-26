@@ -24,6 +24,68 @@ function healthCalls(router) {
   return router.calls.filter((u) => u.includes('/v2/health?')).length
 }
 
+test('F-93 · 挂起态二次点击：折叠意图优先于回调重开（F-72 施工邻接自曝，C1-006 批复立项）', async () => {
+  // 复算（本会话 F-72 施工时邻接发现、批复令先复现）：点击 1 后 open==="health"（挂起态），
+  // 此时点击 2 命中既有守卫字面 ⇒ 折叠；但决议回调无条件 setOpen("health:"+json) ⇒
+  // 用户刚表达的折叠意图被回调推翻（重开）。修法＝决议写入改函数式 setState，
+  // prev===""（用户已折叠）时不写。
+  const router = makeRouter()
+  baseRoutes(router)
+  let resolveHealth = null
+  router.routes.push(
+    {
+      match: '/api/toolkit-panel/v2/snapshot',
+      handler: () => ({ status: 200, json: async () => v2SnapshotPayload([ENTRY]) }),
+    },
+    {
+      match: '/api/toolkit-panel/v2/health',
+      handler: () => ({
+        status: 200,
+        json: () => new Promise((resolve) => { resolveHealth = resolve }),
+      }),
+    },
+  )
+  const panel = mountUnifiedPanel({ router })
+  try {
+    await panel.done()
+
+    // 点击 1：发出请求并停在挂起态（open === "health"，详情未上屏）
+    const btn1 = buttonOf(panel.tree, '健康详情')
+    assert.ok(btn1, 'v2 卡上必须有「健康详情」按钮')
+    btn1.props.onClick()
+    await flush(6)
+    assert.ok(resolveHealth, 'health 请求应已发出且停在挂起')
+    assert.equal(healthCalls(router), 1)
+    assert.ok(!text(panel.tree).includes('当前状态：'), '挂起态详情未上屏（等待决议）')
+
+    // 点击 2（挂起中）：折叠意图——既有守卫已折叠（F-72 前笔已钉此格）
+    const btn2 = buttonOf(panel.tree, '健康详情')
+    assert.ok(btn2, '挂起态按钮仍在')
+    btn2.props.onClick()
+    await flush(6)
+    assert.ok(!text(panel.tree).includes('当前状态：'), '挂起态二次点击应折叠')
+
+    // F-93 本格：决议到达，不得推翻用户折叠意图
+    resolveHealth({ ok: true, report: { status: 'active', items: [] }, history: [{ status: 'active' }] })
+    await flush(10)
+    assert.ok(!text(panel.tree).includes('当前状态：'), '决议后必须保持折叠（修前：then 回调无条件重开）')
+    assert.equal(healthCalls(router), 1, '决议不重开 ⇒ 不得补发请求')
+
+    // 用户再点：重新展开并重新拉取（折叠不是卡死）
+    const btn3 = buttonOf(panel.tree, '健康详情')
+    assert.ok(btn3, '折叠态按钮仍在')
+    btn3.props.onClick()
+    await flush(6)
+    assert.ok(resolveHealth, '第三次点击应重新发出请求')
+    assert.equal(healthCalls(router), 2)
+    resolveHealth({ ok: true, report: { status: 'active', items: [] }, history: [{ status: 'active' }] })
+    await flush(10)
+    assert.ok(text(panel.tree).includes('当前状态：'), '用户再次展开后详情正常上屏')
+  } finally {
+    panel.dispose()
+  }
+})
+
 test('F-72 · 健康详情：二次点击折叠且不重发，三次点击重开并重新拉取', async () => {
   const router = makeRouter()
   baseRoutes(router)
