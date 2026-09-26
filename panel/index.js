@@ -645,7 +645,6 @@ export function apply(ctx, config = {}) {
               nextSha: plan.nextSha || null,
               removedLines: plan.removedLines || null,
               hostKey: plan.hostKey ? plan.hostKey.key : null,
-              archivedExpected: mode === "true",
               effectNote: "本次执行后，将于下次重启时" + (mode === "true" ? "停止使用（删除立即完成）" : "停用") + "；重启前仍按当前状态运行。",
               createdAt: plan.createdAt,
               expiresAt: plan.expiresAt,
