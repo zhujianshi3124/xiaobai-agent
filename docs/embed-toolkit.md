@@ -105,6 +105,12 @@ ctx 上，`toolkit/*` 与 `tk2/*` 两组服务名各自可查、互不撞名（c
    bundle 由宿主的客户端加载器按**固定模块 id** 装载，服务端没有注入点。⇒ 非缺省 `servicePrefix` 的
    实例，其 React 标签页仍指向缺省基址；该实例的**完整管理面**经 `${apiBase}/ui` 兜底页可达（已实测）。
    同页多实例的标签页隔离需要宿主提供"按实例注入基址/模块 id"的能力，超出零宿主改造范围（Q2 裁决）。
+   **声明面与标签页面的分界（F-21 收边界，2026-09-26）**：`dsh.plugin.json` `panels.httpBase`
+   `"/api/{servicePrefix}-panel"` 里的 `{servicePrefix}` 是**给人读的约定占位符**——本仓产品码零替换点、
+   宿主侧消费者未证（矩阵 N-13 在案）；它描述的是**服务端路由面**（`/api/<prefix>-panel/*` 的
+   snapshot/ui/connector 等路由确实随前缀），**不代表 React 标签页跟随前缀**——标签页 API 基址就是
+   上面那句 bundle 内常量。即：跟随 `servicePrefix` 的＝服务端路由；不跟随的＝React 标签页。
+   要让标签页也跟随，需宿主按实例注入基址，见上句边界。
 3. **`apply-engine.PLAN_STORE` 仍是模块级 Map**（同进程双实例共用待确认 plan 池）。曾改为按实例持有，
    连带 7 项回归红（`uninstall.mjs` 的 plan/execute 函数与验收脚本都以 `putPlan/getPlan/dropPlan` 模块函数为
    契约），已撤回。风险与重做触发条件见 **`docs/debt.md` B-1**（本文原写"#11(a)"，该编号已在四类归档
