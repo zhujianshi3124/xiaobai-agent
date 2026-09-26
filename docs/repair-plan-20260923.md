@@ -823,3 +823,58 @@ F-71 **未动、不自行判其归属**。请协调侧点一处：① 随批 6 �
 批 8 观察窗：等协调侧发放用户侧逐字步骤后按启动包 §八.4 做只读取数验收（R1 真机复验＋批 5-3 两面＋W11
 真机面＋批 6 装载行为＋批 8 confirm 面，一次打包）；窗后照 §3 表序连续推进批 9 → 批 10（含 D-13 邻笔
 events/panels 形状校验、五卡健康列数据半边）→ 批 11 ＋ 改名批。
+
+## 17. 批 8 闭窗补记 + 批 9 落账（2026-09-26 · 纯追加，不回改上面任何一行）
+
+### 17.1 批 8 真机半闭窗补记（C1-006 复核批复三项，全部只读取证）
+
+- **①闭窗行**：真机窗只读复核五项全 PASS——批 6 装载行为（5 卡全 mounted、4×patch＋1×preset-script、
+  `patch.path` 指向仓内基准；③级 fail-closed 负向构造不可行 ⇒ 直驱用例＋存量核验为证）；批 5-3 两面
+  （compact-router 分支条件真机命中、rate-throttle 判据真机命中 `values.routing.enabled="true"`＝patch
+  原文实读；**黄色提示定谳＝`configPanel.effectNote` 既有已知面**，归 W2 提示位族不开新账）；W11 真机面
+  （/plan target 守卫 400 `plan-target-unsupported`＋诱饵逐字节未动；/execute 假 token 404；kind 闸以
+  直驱为证）；批 8 confirm 面（两发必拒 400 `confirm-missing`、闸先于 FS 触碰、零写入）；新错误码真机
+  在场＝宿主已载新代码判定法（同 H5）。R1 真机复验：`fixable=0` ⇒ 无自然样本，**以直驱用例为证、
+  不造样本**，记档闭合。必拒四发零写入；`~/.dsh` hash、patch sha（`e8051fe9`·3085B）探测前后不变。
+  取证正本 `var/scratch/exe-boot-005-20260926/`（win-*.json / win-probes-*.json）。⇒ **批 8 真机半闭窗
+  ⇒ 批 8 全闭**（代码半 `3744bcc`→`d4b681b`→`362bef2`＋用户半三件＋机器半五项＋R1）。
+- **②C2 销账行**：批 4-③（内置卡经宿主 patch 通道、不经我方 registry 的运行时验证，C1-005 起挂"移批 8"）
+  以三证闭合销账——patch 通道证（`snapshot.patch.path`＋4×patch/1×preset-script）＋registry 空证
+  （`/v2/snapshot` plugins=0 实测）＋5 卡 mounted 证。
+- **③宿主 pid 现场更新行**：序列 26004 → 29208 → **29520**（2026-09-26 13:40:42，用户重启现场），
+  以现场为准照录。
+
+### 17.2 批 9 交付账（实现笔 `toolkit@7ef8d66`）
+
+- 改动面＝`contract/src/naming.ts`（`CONTRACT_EVENT_NAMES` 收编 8 条 `audit:*` 字面量，5→13，as const
+  保持字面量类型）＋`registry/src/registry.ts`（`audit()` 发名收编 `contractEventName(p, \`audit:${event}\`)`
+  ——模板字面量类型使 `AuditEvent` 编译期受枚举约束、零 cast）＋新钉 `test/audit-event-enum.test.mjs`
+  （4 条）＋`docs/contract.md` §3 前向标注兑现。**纯 toolkit 仓、doctor 仓零改动。**
+- 已裁口径兑现（contract.md §3 批 9 落地段）：收编＝**零线格式变更**——对外事件名对 8/8 **逐字节相同**
+  （②格 `BEFORE_WIRE` 硬编码参照钉死，不派生）；同步面三处实测维持：v2-api SSE 名表已派生未动、客户端
+  孪生表仍唯一手抄面（toolkit-root ⑥ 锁）、hello 帧无同步项。
+- 先钉后修＝修前 **3 红 / 1 绿**（①枚举完整性、③静态防回潮、④条数联动；②字节等修前即绿＝"拼法本来
+  正确"的反向钉）→ 修后 **4/4**。
+- 变异＝3 发逐格各红各的：M1 摘枚举条目恰 ①④ 红（②③ 绿）／M2 手工模板回潮恰 ③ 红（② 绿＝零线格式
+  变更的证明面）／M3 基础名漂移（types.ts＋contract dist 重建）恰 ②＋⑥ 孪生红（①④ 绿）。
+  工装 `var/scratch/exe-boot-005-20260926/b9-mutate.mjs`（内存 pristine＋dist 重建与复原）。
+- **工装自曝一处**：首轮 M1/M3 **0 红**——成因不是缺钉，是 Windows 下 `spawnSync('npm')` 解析不到
+  `npm.cmd`、dist 重建静默失败 ⇒ 变异根本没生效。改 node 直调 tsc 复跑后三发各红各的。教训并轨既有
+  "变异 0 红两因判据"：**0 红先查工装有效性（变异是否真生效），再查缺钉/等价**。
+- **施工自曝一处**：静态防回潮钉首版咬住我自己注释里的模板串字面（`}/audit:${` 出现在注释散文）——
+  锚点过宽打中散文即红。改述注释、钉保持广谱。教训：静态源码钉的锚要与真代码形态共振、与注释措辞
+  互斥（或注释主动避开锚序列）。
+- 三道锁＝门禁 **6/6**；`p1-smoke` **314/0** 不减；`node --test` **394→398**（+4 全来自新钉文件）；
+  `p22-cards-ui` **127/127**；doctor 真实仓 dry-run **0/0/0**。**基线口径更新入账：`node --test` 398。**
+- 消费方普查：`CONTRACT_EVENT_NAMES` 扩容 5→13 的全库引用面＝contract/src 定义/类型/导出＋
+  `test/contract.test.mjs:233`（成员断言，扩容后仍绿）；无 `length===5` 断言面（LEN5 命中全为插件数/
+  保留数/FIBER_UNLOADING 等无关面）。v2-api SSE 名表与 audit-sink 保持既有枚举派生不动（contract.md
+  已载"已经派生"，零行为差，不做无收益改写——不为收编而收编）。
+- `cordis.patch.yml` 一字未动（基准 `e8051fe9` 不滚存）；真机面＝否（对外名零变化、无用户可见差异，
+  宿主 pid 29520 现场未触）。
+
+### 17.3 下一笔
+
+照 §3 表序进 **批 10**（provides 数据落地＋events 最小形状校验＋panels 形状守卫；含 D-13 邻笔
+events/panels 形状校验、五卡健康列数据半边）→ 批 11（落笔时回引 R4 实际 hash：doctor仓 `652d17d`）
+＋改名批。契约五挂账 **4/5**（余批 10 邻近）。
