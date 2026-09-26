@@ -5,6 +5,16 @@
   "displayName": "压缩路由",
   "version": "0.1.0",
   "contract": "^1.0",
+  "provides": {
+    "services": ["compaction"],
+    "commands": [
+      "compact-mode",
+      "compact-llm",
+      "compact-instant",
+      "compact-auto",
+      "compact-archive"
+    ]
+  },
   "configSchema": {
     "type": "object",
     "meta": {},
