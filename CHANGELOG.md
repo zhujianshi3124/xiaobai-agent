@@ -6,6 +6,17 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### 批 8 代码半（2026-09-26，★19 · install/confirm 补逐字确认）
+
+- **⚠ 行为收紧（★19 / F-17 契约五挂账第 3 处）**：`POST /api/toolkit-panel/v2/install/confirm`
+  从此要求**知情确认**——`confirm` 必须逐字等于安装源标识（`kind:"local"` ⇒ 向导第一步输入的
+  插件目录绝对路径；`kind:"npm"` ⇒ spec），缺失或不符一律 `400 {ok:false, code:"confirm-missing"}`；
+  与其余四条 v2 写路由（uninstall/enabled/reload/config 逐字 confirm 插件 id）口径对齐，兑现契约
+  "所有写操作都要逐字 confirm"。面板向导"确认安装"按钮随之要求逐字重输该路径才可点
+  （服务端强制面与客户端 UX 同批交付，禁"只改服务端导致按钮点了没反应"）。
+  钉子 `test/install-confirm-gate.test.mjs`（6 条：缺/尾随空白/大小写各异 ⇒ 400 且零装入、
+  逐字一致照常安装、npm 下游拒装语义不受伤、source 形状错仍 value-invalid）。
+
 ### Pack H（2026-09-21，交叉验证轮后的债务清偿 · D-9~D-15）
 
 外部独立审计报告复核并账后，用户裁定"修"。B2 取选项 3+2 混合（入口自带元数据根治 + 双通道守卫）。

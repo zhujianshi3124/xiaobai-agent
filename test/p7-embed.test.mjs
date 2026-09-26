@@ -319,7 +319,7 @@ test('双实例真 HTTP：两个面板同时可达，A 装的插件不出现在 
 
   const pre = await v2post(base, '/api/toolkit-panel/v2/install/precheck', { source: { kind: 'local', path: fixturePlugin } })
   assert.equal(pre.ok, true, JSON.stringify(pre))
-  const conf = await v2post(base, '/api/toolkit-panel/v2/install/confirm', { source: { kind: 'local', path: fixturePlugin } })
+  const conf = await v2post(base, '/api/toolkit-panel/v2/install/confirm', { source: { kind: 'local', path: fixturePlugin }, confirm: fixturePlugin })
   assert.equal(conf.ok, true, JSON.stringify(conf))
 
   const sA = await getJson(base, '/api/toolkit-panel/v2/snapshot')
@@ -367,7 +367,7 @@ test('B 的 SSE 收不到 A 的事件：事件名前缀链路端到端隔离', a
   assert.ok(hello.includes('tk2'), `hello 帧须携带本实例前缀：${hello.slice(0, 200)}`)
 
   await v2post(base, '/api/toolkit-panel/v2/install/precheck', { source: { kind: 'local', path: fixturePlugin } })
-  await v2post(base, '/api/toolkit-panel/v2/install/confirm', { source: { kind: 'local', path: fixturePlugin } })
+  await v2post(base, '/api/toolkit-panel/v2/install/confirm', { source: { kind: 'local', path: fixturePlugin }, confirm: fixturePlugin })
   const after = await collect(700)
   assert.equal(after.includes('plugin-added'), false, `B 收到了 A 的事件：${after}`)
   controller.abort()

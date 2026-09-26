@@ -64,10 +64,10 @@ function sendJson(response, status, payload) {
   response.end(JSON.stringify(payload))
 }
 
-function requireConfirm(body, id) {
+function requireConfirm(body, id, noun = '插件 id ') {
   const confirm = String(body.confirm ?? '')
   if (!id || confirm !== id) {
-    const e = new Error('知情确认未完成：confirm 必须逐字输入插件 id ' + id)
+    const e = new Error('知情确认未完成：confirm 必须逐字输入' + noun + id)
     e.code = 'confirm-missing'
     throw e
   }
@@ -348,6 +348,12 @@ export function createV2Api(deps) {
       if (!source || typeof source !== 'object' || !source.kind) {
         throw Object.assign(new Error('缺少 source（{ kind, path|spec }）'), { code: 'value-invalid' })
       }
+      // ★19（批 8）：写闸补齐——契约"所有写操作都要逐字 confirm"在本路由的违例格（recon A-32）。
+      // 逐字对象＝安装源自身标识：local ⇒ 用户向导第一步亲手输入的绝对路径；npm ⇒ spec
+      // （装前无插件 id 可用，PrecheckReport 不带独立 id 字段；该值双方请求前都已知情）。
+      // 闸在形状校验之后、registry.install 之前：源形状错仍报 value-invalid，不被告吞掉。
+      const target = source.kind === 'npm' ? String(source.spec ?? '') : String(source.path ?? '')
+      requireConfirm(body, target, source.kind === 'npm' ? 'npm 包 spec ' : '插件目录绝对路径 ')
       const result = await registry.install(source, { force: body.force === true })
       if (result.ok) {
         sendJson(response, 200, { ok: true, entry: entryView(result.entry, stateOk()) })

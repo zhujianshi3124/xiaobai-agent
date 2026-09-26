@@ -295,7 +295,7 @@ test('失败反馈：未知插件 → error.code=plugin-unknown；安装阻断 �
   assert.equal(unknown.json.code, 'plugin-unknown')
   assert.match(unknown.json.error, /不存在/)
 
-  const npm = await post(base, '/api/toolkit-panel/v2/install/confirm', { source: { kind: 'npm', spec: 'x' } })
+  const npm = await post(base, '/api/toolkit-panel/v2/install/confirm', { source: { kind: 'npm', spec: 'x' }, confirm: 'x' })
   assert.equal(npm.status, 200)
   assert.equal(npm.json.ok, false)
   assert.ok(npm.json.precheck.blocking.some((b) => /npm 来源在 P2 尚未实现/.test(b.message)))
