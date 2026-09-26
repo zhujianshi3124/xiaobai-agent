@@ -6,6 +6,28 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### 批 10（2026-09-26，provides 数据落地 + events/panels 形状守卫）
+
+- **provides 数据落地（F-3 数据半边 / F-7 / C-1 第 4 项）**：compact-router
+  （`services=["compaction"]` + commands 5 条）、search-router（`providers=["auto-search"]`）、
+  web-search-local（`providers=["local-multi","local-fetch"]`）三份清单按实供 1:1 补
+  `provides`，桶根补 `provides.services=["registry","doctor"]`（纠正"依赖被当提供"的
+  倒置、`webServer` 依赖声明原样保留）；rate-throttle / agent-memory 实供为空，
+  如实不补。三份 lib 的 provides 与 legacy `requirements.registers` 同槽同值 ⇒
+  面板输出面零变化（输出面改名随改名批）。
+- **⚠ 行为收紧（D-13 ①）**：manifest 的 `requirements.registers.events` 自此受契约
+  最小形状校验——须为字符串数组且成员非空（非数组、空串/纯空白/非字符串成员
+  一律 error，成员带下标定位）；甲案位置不动，独立 doctor CLI 对该面仍零校验
+  （两仓分权），"声明 vs 宿主发出面"深度对账挂 v1.2。
+- **⚠ 行为收紧（panels 守卫，批 3 验收令遗留项）**：模块导出的 `panels` 在装载
+  绑定处补最小形状守卫——"数组 + 每项非空 id"自此对落盘清单与模块导出两路都
+  成立；违例 fail-closed（`plugin-shape-invalid`，与 manifest 校验失败同码），
+  不再静默绑定/静默忽略；"非空"两路同判（纯空白 id 也拒）。
+
+钉子：`test/provides-data.test.mjs`（8）、`contract.test.mjs` D-13 两条、
+`test/panels-module-guard.test.mjs`（4）＋夹具 4 枚；变异 7 发逐格各红各的；
+逐笔三道锁与分笔结构见 `docs/repair-plan-20260923.md` §18、`docs/debt.md` #37。
+
 ### 批 8 代码半（2026-09-26，★19 · install/confirm 补逐字确认）
 
 - **⚠ 行为收紧（★19 / F-17 契约五挂账第 3 处）**：`POST /api/toolkit-panel/v2/install/confirm`

@@ -40,6 +40,7 @@ dsh 功能全量清单 · 呈审稿（未入库）
 ★H2 两份"合法字段/必填"清单各自维护且互不相容，已实测：契约 validateManifest 的根字段合集 17 键、必填 id/displayName/version/contract；独立 doctor CLI 白名单 14 键、必填 manifestVersion/name/requirements。同一份纯契约形态的 manifest：契约 ok=true 零错，CLI 判 schema.required-missing（1 error，实测读数）。差的 3 键里 registers/exports 写在根级时契约只产 info 放行、CLI 判 error；healthCheck 两边都不过（契约要求函数、CLI 说根字段非法），只是文案不同。内置 5 子插件同时带两套字段所以现实里两层都绿——门槛在第三方契约插件身上。状态：有出入（这正是"真门槛是 doctor 必填集"的成因；v1.1 草案的"撤 A 必填集"未落地）
 
 ★H3 全仓（排除 test/ 与 dist/）零模块导出 healthCheck/panels/provides；5 份子插件 manifest 只有 id/contract/configSchema 三件套，无 requires、无 provides、无 panels。状态：有出入 ⇒ 批 3 接通的 healthCheck 读链对内置插件恒空转；内置子插件的环境预检与撞名比对无声明可读；桶根 v1.1 的 provides 数据半边留批 10
+【2026-09-26 批 10 更新：provides 数据半边已落地】四份清单补 provides（compact-router／search-router／web-search-local 三份实供 1:1＋桶根 services=[registry, doctor] 倒置纠正），rate-throttle／agent-memory 空即如实不补；"零模块导出 provides"对**模块导出**面仍成立（provides 只能落盘声明，无模块导出槽）⇒ 本条其余读数（healthCheck/panels 零模块导出）不变。钉子 `test/provides-data.test.mjs` 8 条。
 
 ---
 
@@ -54,10 +55,12 @@ dsh 功能全量清单 · 呈审稿（未入库）
 ★panels 描述符（slot/order/httpBase/fallbackUi/realtime/managedBy）—— 写给宿主看的挂载声明，本仓无读方，真往 settings.plugins.tab 塞标签页的是面板客户端硬编码。状态：有出入：纯自述数据不驱动布局（宿主侧读不读未查，只可证本仓无读方）
 
 ★requirements.registers.services 写空数组 —— 代码实际向容器提供 ${prefix}/registry 与 ${prefix}/doctor 两个服务，撞名比对因此看不见它们。状态：有出入：声明与实供不一致
+【2026-09-26 批 10 更新：数据半边已落地】桶根 provides.services=[registry, doctor]（去前缀逻辑名，循 legacy registers 惯例）⇒ 声明与实供一致；依赖面 `requires.services=[webServer]` 与 `registers.inject=[webServer]` 原样保留（是真实依赖，非倒置残差）。**边界**：撞名比对"看得见"仍只指 B 层（toolkit doctor.ts 读 provides，批 2 起）；独立 doctor CLI 的撞名循环仍只读 `requirements.registers`（F-62 余下半边，归属待裁）——本条状态由"有出入"翻正为**已实现（数据半边）**，比对半边以 F-62 行为准。钉子 `test/provides-data.test.mjs`。
 
 ★桶根 configSchema 那 18 个键 —— 只被声明、从未被校验：根入口不导出 configSchema/Config，实际挂载走 cordis.patch.yml 的 toolkit-manager→panel/index.js，那条路径既无 manifest 也无 schema，桶根自己写错键名/类型没有任何东西拦。状态：有出入（validateConfigAgainstSchema 只服务子插件 setConfig 与安装预检）
 
 ★validateModuleExports —— 契约对外导出的模块导出形态校验器，生产链零调用，只有单测自证。状态：有出入
+【2026-09-26 批 10 更新：panels 面已接线生产链】bindRuntimeStatics 对模块导出的 panels 复用本判据（fail-closed，`plugin-shape-invalid`），本状态注只翻 panels 半边；configSchema 形状仍靠 precheck 使用时校验（批 4 口径），healthCheck 函数性由绑定处 typeof 判——**本条的"生产链零调用"自此改为"panels 路生产链在调"**。钉子 `test/panels-module-guard.test.mjs` 4 条＋`contract.test.mjs` 空白 id 格。
 
 ★docs/embed-toolkit.md 关于 requires.services 被借用的告警 —— 代码已改成只读提供面（批 2），文档那句已过期。状态：有出入：照文档读会误判风险
 
@@ -78,6 +81,7 @@ dsh 功能全量清单 · 呈审稿（未入库）
 【2026-09-25 批 6（★10）更新：五处里**批 6 那一处也已落地**】第③级纳入"显式声明不回退"红线 —— `package.json` 的 `exports['.']`（裸字符串 / 映射里的字符串 / `{".":{default|node}}`）与 `main`，声明了却指向不存在的文件 ⇒ `entry-not-found` 给绝对路径，不再静默落到第④级目录惯例；"本级没声明"的三种口径（表里无 `.` 键、对象形态只有 `types`、`main` 空串）原样继续走惯例。收紧前 recon §10.2 只核了 exports，`main` 形态由本批补核（两仓 15 个③级有声明的目录，缺失 0 个）。⇒ **本行余下 批 8 / 批 9 / 批 10 邻近三处仍挂"未实现"**；批 5/批 6 两处各自只翻对应半边、不整条翻正。钉子：`test/t0-loader-entry.test.mjs` 的 ★10 系列 7 条（三形态红线 + 三条反向 + 一条来源面正向）。契约正本 `contract.md` 顺位表 ③④ 两行与红线段、`add-sub-plugin.md` §2 要点 1 同步为实况 —— 那是"【批 6 落地，当前只覆盖①②】"前向标注的兑现，不属"已提交记录不回改"的范围。
 【2026-09-26 批 8（★19）更新：五处里**批 8 那一处也已落地**】`POST /v2/install/confirm` 补逐字 confirm——confirm 逐字等于**安装源标识**（local ⇒ 向导第一步输入的目录绝对路径；npm ⇒ spec；装前无插件 id 可用），缺失/不符一律 `400 confirm-missing`，闸在 source 形状校验之后、`registry.install` 之前；客户端"确认安装"须逐字重输该路径才可点（服务端与客户端同批）。钉子 `test/install-confirm-gate.test.mjs` 6 条；修前红 3 → 修后 node --test 394/0；变异 5 发逐格各红各的。⇒ **本行余下 批 9 / 批 10 邻近两处仍挂"未实现"**；批 5/6/8 三处各自只翻对应半边、不整条翻正。
 【2026-09-26 批 9 更新：五处里**批 9 那一处也已落地**】`audit:*` 八条入 `CONTRACT_EVENT_NAMES`（5→13 条）＋registry `audit()` 发名收编 `contractEventName`——零线格式变更（对外名对 8/8 逐字节相同，`BEFORE_WIRE` 硬编码参照钉死）。钉子 `test/audit-event-enum.test.mjs` 4 条（枚举完整性／字节等／静态防回潮／条数联动）；修前红 3 → 修后 node --test 398/0；变异 3 发逐格各红各的（含基础名漂移连咬客户端孪生表 ⑥——同命题）。⇒ **本行余下 批 10 邻近一处仍挂"未实现"**；批 5/6/8/9 四处各自只翻对应半边、不整条翻正。
+【2026-09-26 批 10 更新：五处里最后**批 10 邻近一处也已落地** ⇒ 五处全闭（5/5）】本处承诺面＝"provides 数据半边＋events 最小形状校验"，两件同批兑现：① provides 数据落地（三份 lib 实供 1:1＋桶根倒置纠正；空即如实不补；panel/ 不动记档）；② `requirements.registers.events` 最小形状校验进契约（字符串数组且成员非空，契约单层、甲案位置不动、doctor 仓零改动——D-13 ① 兑现；深度对账仍挂 C-2/v1.2）。同批还落了批 3 验收令遗留的 panels 模块绑定最小形状守卫（"数组＋每项非空 id"双路成立）。钉子 `test/provides-data.test.mjs` 8 条＋`contract.test.mjs` D-13 两条＋`test/panels-module-guard.test.mjs` 4 条；变异 7 发逐格各红各的；三道锁与分笔结构见计划 §18、`debt.md` #37。**F-17 五处至此全部兑现，本行不再有"未实现"挂尾。**
 
 在案区（均状态：一致，除非句内另有标注）
 
@@ -242,6 +246,7 @@ panel/dsh.plugin.json 不声明面板、无 configSchema、无 id/version（全�
 ★hostVersion 有硬编码缺省 —— DSH_DOCTOR_HOST_VERSION 未设时取字面量 0.1.2-rc.1 参与 runtime.dsh 比对（当前宿主实为 0.1.5-rc.1），升版即整仓误判，无对账机制。状态：一致（读数已实测，但值本身来自 09-15 快照）
 
 ★provides 在 A 里没有解读方 —— A 的撞名检查只读 requirements.registers 三类，不读 provides ⇒ v1.1 验收项"provides 声明的撞名被阻断"A 侧未落地。状态：未实现（仅 v1.1 草案在案）
+【2026-09-26 批 10 边界注：数据面已落地、读方仍未动】批 10 只落 provides 数据（四份清单＋两道闸合法域放行），A 侧撞名循环仍只读 `requirements.registers`——本条"未实现"维持；余下半边在 §4 覆盖账无批次归属（W9 行不含 F-62），已报协调侧裁（建议随 W9 规则面对账，届时动 doctor 仓 `engine.mjs`）。B 层读 provides 的行为半边批 2 已落（`test/doctor.test.mjs` 批 2-①/②）。
 
 在案区
 

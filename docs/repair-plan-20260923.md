@@ -878,3 +878,92 @@ events/panels 形状校验、五卡健康列数据半边）→ 批 11 ＋ 改名
 照 §3 表序进 **批 10**（provides 数据落地＋events 最小形状校验＋panels 形状守卫；含 D-13 邻笔
 events/panels 形状校验、五卡健康列数据半边）→ 批 11（落笔时回引 R4 实际 hash：doctor仓 `652d17d`）
 ＋改名批。契约五挂账 **4/5**（余批 10 邻近）。
+
+## 18. 批 10 落账（2026-09-26 · 纯追加，不回改上面任何一行）
+
+### 18.1 分笔结构（本批特批"按子件分笔落"，笔间不请裁、批末合并申报）
+
+- 实现笔三（`toolkit` 仓，doctor 仓全程零改动）＋账面笔一（本笔）：
+  1. **笔 A `e43babe`**：provides 数据落地（C-1 第 4 项）——compact-router／search-router／
+     web-search-local 三份 lib 清单实供声明＋**桶根倒置纠正**（provides.services=[registry, doctor]，
+     F-7 的数据半边）；rate-throttle／agent-memory 三槽全空 ⇒ 空即如实**不补**；panel/ 仍无
+     contract 字段，v1.1 不动并记档（D-15 边界）。钉子 `test/provides-data.test.mjs` 8 条。
+  2. **笔 B `fa1806f`**：events 最小形状校验（D-13 ①）——`requirements.registers.events` 须为
+     字符串数组且成员非空，契约单层（甲案"位置不动"；独立 doctor 对该面零校验是已裁分权，
+     两仓边界不变）。钉子 `contract.test.mjs` 两条。
+  3. **笔 C `3fa8f9f`**：panels 模块绑定最小形状守卫（批 3 验收令遗留项②）——
+     bindRuntimeStatics 对**将被绑定的值**复用 validateModuleExports 同一判据，违例
+     fail-closed（同码 `plugin-shape-invalid`），契约分支与 legacy 合成分支同批覆盖；同笔把
+     validateModuleExports 的"非空"判据与落盘清单对齐（纯空白 id 也拒）。钉子
+     `test/panels-module-guard.test.mjs` 4 条＋夹具 4 枚＋contract.test.mjs 空白 id 一格。
+  4. **笔 D（本笔）**：纯文档账面——计划本节＋`debt.md` A 区 #37＋清单五处状态注＋
+     `contract.md` 前向标注兑现＋CHANGELOG 批 10 节。
+
+### 18.2 验证读数（逐笔三道锁）
+
+- **先钉后修**：笔 A 修前红 5/绿 3（三份数据钉＋桶根钉＋同槽同值钉红；依赖面保留／空即如实
+  反向／六份过 validateManifest 三格修前即绿）→ 修后 8/8；笔 B 修前红 1/绿 1 → 20/20；
+  笔 C 修前红 4/绿 20（三格守卫钉＋空白 id 格此前全部静默通过）→ 24/24。
+- **变异 7 发逐格各红各的**（工装 `var/scratch/exe-boot-006-20260926/b10{a,b,c}-mutate.mjs`，
+  内存 pristine＋写回＋dist 重建复原；b10a 首轮 M3 锚未命中即"不充数"并修锚重跑——Windows
+  CRLF，锚含 `\n` 打不中 `\r\n`）：M1 桶根摘 doctor 恰桶根钉红／M2 rate-throttle 补空 provides
+  恰反向钉红／M3 compact-router 命令漂移恰 1:1＋同槽同值两红（同命题双钉）／M4 摘 events
+  校验支恰"修前红"钉红／M5 过宽收紧（events 缺席也报）恰"正向与边界"钉红／M6 摘守卫
+  fail-closed 分支恰 3 条守卫钉红／M7 摘 trim 同判恰空白 id 钉红。还原复核全绿。
+- **三道锁（每笔全跑）**：门禁 **6/6**（笔 A 55.2s／笔 B 53.7s／笔 C 58.9s；doctor 真实仓
+  dry-run **0/0/0**、provides 接缝与三根必填分权对账绿）；doctor 四套件 **26/8/7/21**＋
+  stage3 **a–g 全 PASS**；`~/.dsh` 扫描面 hash 每笔跑前跑后同为
+  `c585738c646855d4e6745c9e64434899dd75693526f809313002060ebfce0bd9`（5 files）；
+  `node --test` **398→406→408→416**；`p1-smoke` **314/0** 不减；`p22-cards-ui` **127/127**。
+- **node --test 416 的构成口径（查清后入账，防误读）**：逐文件求和＝**真用例 375**；差额 41
+  ＝node 测试发现机制把 `test/` 目录下非测试 .js 也各计 1 格（38 个既有＝37 夹具 js＋1 harness；
+  本批新增 4 夹具 js ⇒ 41）。398 基线同源构成（361＋37）。本笔真用例净增 **+14**（8＋2＋4），
+  夹具工件 +4。**基线口径更新入账：`node --test` 416。**
+
+### 18.3 面板可见面与真机窗
+
+- 面板可见面**零变化**：三份 lib 的 provides 与 legacy `requirements.registers` 同槽同值
+  ⇒ extractRegisters 归一结果不变；`snapshot.mjs` 输出面未动（改名批才动，届时带换源变异）。
+  证据＝p1-smoke 314 不减＋p22 127/127。⇒ §3 批 10 格的"条件真机（面板可见面变化时）"
+  **本轮未触发**，无观察窗需求。
+- `cordis.patch.yml` 一字未动（基准 `e8051fe9` 不滚存）；`~/.dsh` 零触碰（hash 逐笔前后同）；
+  宿主 pid 29520 现场未触。五卡"健康"列数据半边＝**本笔 provides 声明数据**（§16 断点修复批
+  "数据半边等批 10"与 §9.6 "待 W9/批 10 提供声明数据"两处的兑现），与 W2 提示位半边
+  **互引不双计**；健康列的呈现修复本身仍归 W2/W7（内置依旧零模块导出 healthCheck，
+  `/v2/health` 要 registry 条目——两条边界不变）。
+
+### 18.4 边界、自曝与挂账处置
+
+- **F-62 边界**：本笔只落数据面（provides 进四份清单、两道闸合法域放行已在位）；
+  **A 侧（独立 doctor CLI）撞名检查仍只读 `requirements.registers`、不读 provides**——
+  这半边在 §4 覆盖账里无批次归属（W9 行只列 F-2/F-63/F-64/F-65/F-67），**报协调侧裁归属**
+  （建议随 W9 规则面对账一并落，届时须 doctor 仓动 `engine.mjs` 撞名循环，非本批授权范围）。
+- **F-64 邻近**：本笔与 F-64（B 层不读 doctor-signals.json）同属"声明数据面"但未动其本体，
+  F-64 维持 W9 挂账原口径。
+- **q2-layer-scan 只扫 `lib/*`（桶根不在其计数内）——依 §3 批 10 格要求写明**：本笔桶根
+  `dsh.plugin.json` 改动不经该脚本计数；桶根的契约合法性由本笔钉子第 8 条（六份过
+  validateManifest）＋门禁 doctor dry-run 0/0/0 两面覆盖。
+- **自曝一（工装）**：b10a 变异首轮 M3 锚未命中（CRLF），工装按"不充数"口径拒绝出读数，
+  修锚后重跑——"变异 0 红先查锚是否命中"并入变异有效性三因族。
+- **自曝二（读数差点错报）**：笔 C 全量 `node --test` 416 ≠ 预期 412（+4 无着落），查成因＝
+  发现机制对新增夹具 .js 的计数（见 18.2 构成口径），**非测试丢失也非重复计数**——若按
+  "+N 全来自新钉"照抄上批口径即成错账。
+- **自曝三（文档陈旧面，不夹带修）**：`add-sub-plugin.md` §2 取数口径段仍按批 2 之前的
+  状态写（"services 优先取 requires.services"／"它现在会被拿去比对"两句已被批 2 翻面），
+  行内虽有"批 2 引入 provides 后即被取代"括注，正文未改——归 W10 文档追赶面，本笔不动只报。
+- **D-21 附提议（随批交付，启动包 §八.6 指定）**：`#isUsableSchema` ③判据格两补法——
+  (a) 注入替身把 ③ 分支单独成口再钉（`config-schema-degradation.test.mjs` 加一格：构造
+  `{type}` 纯定义、构建不抛错但返回不可执行校验的替身，断言降级路径 ③ 与 ④ 不共用命中）；
+  (b) 随 W1（声明面与旋钮）动到那片时一并补。**建议 (a)**：与 W7/W1 排期解耦、增量小
+  （注入替身在 `probes` 同族有先例），且该格被摘时现有 10 格确实全绿（已按 debt 行复核）。
+  待裁。
+- **D-2/D-3 归属点出**：启动包主线史把 D-2/D-3 记在"批 10 邻笔"，但 §3 批 10 格与 recon
+  批 10 格均未含两项 ⇒ 本批**未夹带**，维持挂账；请协调侧确认其排期（D-3 若并入
+  regression-all 本体，门禁步数口径须同步记录）。
+
+### 18.5 下一笔
+
+照 §3 表序进 **批 11**（`PLUGIN_CONTRACT_VERSION` → 1.1.0；`doctor/src/doctor.ts` 的
+'1.0.0' 字面量改引用常量；两处计划漏项 `validate.ts` 提示串与 `contract.test.mjs` 常量钉
+在该批收；`^1.1` 勿提前写的对偶已备）＋改名批（`snapshot.mjs` 输出面按文档语义改名＋
+p1-smoke 三处断言更新＋换源变异证据）。契约五挂账 **5/5 全闭**（本批批 10 邻近处兑现）。
