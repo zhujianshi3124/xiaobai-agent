@@ -5,6 +5,9 @@
   "displayName": "搜索路由（按会话模型选后端）",
   "version": "0.1.0",
   "contract": "^1.0",
+  "provides": {
+    "providers": ["auto-search"]
+  },
   "configSchema": {
     "type": "object",
     "meta": {},

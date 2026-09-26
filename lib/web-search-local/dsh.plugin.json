@@ -5,6 +5,9 @@
   "displayName": "本地网页搜索与抓取",
   "version": "0.1.0",
   "contract": "^1.0",
+  "provides": {
+    "providers": ["local-multi", "local-fetch"]
+  },
   "configSchema": {
     "type": "object",
     "meta": {},
