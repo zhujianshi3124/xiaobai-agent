@@ -257,6 +257,11 @@ test('绑定校验：configSchema/panels/healthCheck 的函数型导出形态', 
   assert.ok(bad.some((e) => e.path === 'configSchema'));
   assert.ok(bad.some((e) => e.path === 'panels'));
 
+  // 批 10：模块路径与落盘清单对"非空 id"同判（纯空白也拒）——守卫接线前此格形同虚设
+  const withSpaceId = validateModuleExports({ panels: [{ id: '   ' }] });
+  assert.equal(withSpaceId.length, 1);
+  assert.ok(withSpaceId.some((e) => e.path === 'panels[0]'));
+
   const schemaFn = () => {};
   schemaFn.toJSON = () => ({ type: 'object' });
   const good = validateModuleExports({

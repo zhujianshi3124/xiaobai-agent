@@ -1,0 +1,6 @@
+{
+  "id": "fixture/panels-module-ok",
+  "displayName": "panels 模块绑定守卫·正向夹具",
+  "version": "1.0.0",
+  "contract": "^1.0"
+}

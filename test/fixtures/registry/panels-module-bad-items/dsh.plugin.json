@@ -1,0 +1,6 @@
+{
+  "id": "fixture/panels-module-bad-items",
+  "displayName": "panels 模块绑定守卫·成员缺 id 夹具",
+  "version": "1.0.0",
+  "contract": "^1.0"
+}

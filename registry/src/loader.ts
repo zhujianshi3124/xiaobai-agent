@@ -34,7 +34,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { validateManifest } from '@local/dsh-toolkit/contract'
+import { validateManifest, validateModuleExports } from '@local/dsh-toolkit/contract'
 import type { DshSubPluginManifest, ManifestIssue, PluginSource } from '@local/dsh-toolkit/contract'
 import type { EntrySource, PluginRegisters, ResolvedPlugin } from './types.js'
 
@@ -96,7 +96,21 @@ function bindRuntimeStatics(manifest: DshSubPluginManifest, pluginLike: unknown,
     }
   }
   const runtimePanels = read('panels')
-  if (Array.isArray(runtimePanels)) {
+  if (runtimePanels !== undefined) {
+    // ★panels 最小形状守卫（契约 v1.1 批 10；批 3 验收令遗留项）：模块绑定路径此前绕过
+    // validateManifest，"数组 + 每项非空 id"承诺只在落盘清单一路成立——成员缺 id 被带病
+    // 绑定、非数组被静默忽略（fail-open）。这里对**将被绑定的那个值**复用
+    // validateModuleExports 的同一判据（"非空"与落盘清单同判：纯空白也拒），违例
+    // fail-closed，与 manifest 校验失败同码 plugin-shape-invalid。
+    const panelIssues = validateModuleExports({ panels: runtimePanels })
+    if (panelIssues.length > 0) {
+      const first = panelIssues[0]!
+      throw new SourceError(
+        'plugin-shape-invalid',
+        `模块导出的 panels 未过最小形状守卫（数组 + 每项非空 id）：${first.path} ${first.message}`,
+        panelIssues,
+      )
+    }
     manifest.panels = runtimePanels as NonNullable<DshSubPluginManifest['panels']>
   }
 }
