@@ -2,7 +2,8 @@
 
 > 建立：2026-09-20（P8 收尾，债务 #6/#7 清偿）。事实来源＝代码，逐条给 `文件:行号`；
 > 与《toolkit 泛化规格》的偏差在 §7 逐条列明（含用户正式裁决的豁免），不藏。
-> 契约版本常量：`contract/src/types.ts` `PLUGIN_CONTRACT_VERSION = '1.0.0'`。
+> 契约版本常量：`contract/src/types.ts` `PLUGIN_CONTRACT_VERSION = '1.1.0'`（2026-09-26 批 11 升次版本；
+> 1.0.0 → 1.1.0，provides／events／panels 均为非破坏增量，`^1.0` 旧清单零迁移）。
 >
 > **2026-09-22 条文审定轮（用户逐条过目 ★1–★20，批复"全部按建议"）的修订已落在本文，逐条结论见
 > `docs/debt.md`「用户审定记录」。本文定位规则的修正**：行号会漂，**按函数/常量名定位**（同
@@ -22,7 +23,7 @@
 | `id` | ✅ | 命名空间式 `<scope>/<name>`，正则 `^[a-z0-9][a-z0-9-]{0,63}/[a-z0-9][a-z0-9-]{0,63}$`；全局唯一，不是路径 |
 | `displayName` | ✅ | 非空字符串（面板标题用它） |
 | `version` | ✅ | 合法 semver |
-| `contract` | ✅ | 合法 semver **范围**，且必须放行当前契约版本 1.0.0（如 `^1.0`） |
+| `contract` | ✅ | 合法 semver **范围**，且必须放行当前契约版本 1.1.0（2026-09-26 批 11 起；如 `^1.0`、`^1.1` 均放行） |
 | `requires` | ⬜ | 对象；子域见 §2.1。整体可缺席（零需求的插件不必写空对象——**对规格的一处放宽**） |
 | `configSchema` | ⬜ | Schema 对象或构造函数；JSON 落盘时是 schemastery 纯定义（§5） |
 | `panels` | ⬜ | 数组，每项必须有非空 `id`（`PanelDescriptor`，其余键开放）。**当前无任何消费者**：面板只把 `entry.manifest.panels` 原样透传（`panel/manager/v2-api.mjs` 的 `panels:` 一行），宿主也不认它（§7 D-8 与 `docs/embed-toolkit.md` §5 第 1 条）；它是"呈现面声明"，不是"提供面"。**【2026-09-26 批 10：形状承诺双路成立】**"数组＋每项非空 id"自此同时约束落盘清单（validateManifest）与模块导出绑定路（bindRuntimeStatics 复用 validateModuleExports 判据，违例 fail-closed 报 `plugin-shape-invalid`；"非空"两路同判，纯空白也拒）——批 3 验收令遗留的"模块绑定绕过 validateManifest"缺口就此关闭 |
@@ -273,5 +274,8 @@ legacy 适配器（无 manifest 插件）合成的 id 落 `legacy/<name>`，避�
 升版本的实测判据（v1.1 排期用）：`^1.0` 放行 `1.1.0` ⇒ 旧 manifest 在次版本提升后继续可用；
 但 `^1.1` 在实现仍为 `1.0.0` 时判**不通过** ⇒ **任何 manifest 不得先于实现写 `^1.1`**，
 版本常量的提升必须是 v1.1 的最后一笔（`docs/debt.md` C-1 第 6 项 / 批 11）。
-另记一处会让升版本漏改的点：`doctor/src/doctor.ts` 的 `validate()` 目前硬编码 `'1.0.0'` 字面量而
-未引用 `PLUGIN_CONTRACT_VERSION`。
+**【2026-09-26 批 11 兑现】**常量已升 `1.1.0`（`toolkit@e8880c8`）——上句 `^1.1` 红线的前提
+（"实现仍为 1.0.0"）已消失，`^1.1` 自此**可写**；对偶（`1.0.0` 仍被 `^1.1` 拒）钉在
+`test/contract.test.mjs` 的"批11·对偶"。
+【2026-09-26 批 11 兑现】下句漏改点已关死：`doctor/src/doctor.ts` 的 `validate()` 改引用
+`PLUGIN_CONTRACT_VERSION`（`test/doctor.test.mjs` 批 11 validate 钉：硬编码回潮即红）。

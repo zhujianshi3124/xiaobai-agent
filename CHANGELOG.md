@@ -6,6 +6,21 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### 批 11（2026-09-26，契约版本 1.0.0 → 1.1.0）
+
+- **契约版本升次版本（C-1 第 6 项 / F-68）**：`PLUGIN_CONTRACT_VERSION = '1.1.0'`。
+  v1.1 全部增量（provides 提供面、events/panels 形状收紧）均为非破坏变更；
+  存量 manifest 的 `"contract": "^1.0"` 继续放行（零迁移，对偶已钉）。
+- **`^1.1` 红线解除**："任何 manifest 不得先于实现写 `^1.1`" 的前提（实现仍为
+  1.0.0）随本批消失——`^1.1` 自此可写；`1.0.0` 仍被 `^1.1` 拒（对偶保持）。
+  破坏性变更才升主版本的红线未触碰。
+- **升版漏改点关死**：`ToolkitDoctor.validate()` 的硬编码 `'1.0.0'` 改引用常量
+  （回潮即红）；`contract` 值错误的 fix 提示串改插值常量。
+
+钉子：`test/contract.test.mjs`（常量钉翻 1.1.0、对偶、提示串一致性、消息文本钉
+改引用常量）＋`test/doctor.test.mjs` 批 11 validate 钉；变异 3 发逐格各红各的；
+三道锁读数见 `docs/repair-plan-20260923.md` §19、`docs/debt.md` #38。
+
 ### 批 10（2026-09-26，provides 数据落地 + events/panels 形状守卫）
 
 - **provides 数据落地（F-3 数据半边 / F-7 / C-1 第 4 项）**：compact-router
