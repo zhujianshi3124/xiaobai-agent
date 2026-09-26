@@ -154,6 +154,31 @@ export function validateManifest(input: unknown): ManifestValidation {
     }
   }
 
+  // events 订阅面最小形状（契约 v1.1 · D-13 ①，批 10 邻近笔落地）：甲案"位置不动"——
+  // events 仍写在 legacy `requirements.registers.events`，这里只校验"字符串数组且成员非空"
+  // （与 provides 三槽同族收紧）。边界（D-13 已裁，不越）：registers 本体形状、"声明事件名
+  // 与宿主发出面对账"的深度校验都归 C-2/v1.2；独立 doctor 对该面零校验，两仓分权不动。
+  const legacyRequirements = input['requirements']
+  if (isObject(legacyRequirements)) {
+    const legacyRegisters = legacyRequirements['registers']
+    if (isObject(legacyRegisters) && legacyRegisters['events'] !== undefined) {
+      const events = legacyRegisters['events']
+      if (!Array.isArray(events)) {
+        errors.push(
+          issue('requirements.registers.events', 'type', 'error', 'requirements.registers.events 必须是字符串数组', 'string[]', events),
+        )
+      } else {
+        events.forEach((name: unknown, i: number) => {
+          if (typeof name !== 'string' || name.trim() === '') {
+            errors.push(
+              issue(`requirements.registers.events[${i}]`, 'type', 'error', `requirements.registers.events[${i}] 必须是非空字符串`, 'string', name),
+            )
+          }
+        })
+      }
+    }
+  }
+
   // provides：提供面（契约 v1.1 · C-1 第 1 项）。三槽皆可选的非空字符串数组；
   // 未知子键与顶层未知字段同口径拒绝——拼错槽位名会静默失效（不设"容忍多余键"的口子）。
   const provides = input['provides']
