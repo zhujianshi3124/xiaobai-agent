@@ -1222,3 +1222,69 @@ registers.inject 数据源；`requires.services` 与 inject 声明不一致是 H
   零未提交改动；余件七件（描述落差族 :198/:221／F-73／F-77／F-78／F-87／F-21／F-23）照
   §21.3 顺序与"逐件先复算后修"移交继任；改名批批准到达前零动工；`cordis.patch.yml` 基准
   `e8051fe9` 未动；宿主 pid 29520 未触；`~/.dsh` 零触碰（hash 逐笔同）。
+
+## 23. W2 余件续批七笔＋F-87 呈裁（2026-09-26 · 纯追加，不回改上面任何一行）
+
+### 23.1 续批缘起与本节七笔（C1-006 批复：四笔验收入账、F-93 立项、用户确认上下文充足本会话续推八件）
+
+停靠申报后协调侧批复续用本会话，余件清单更新为八件（F-93 新增）。实际处置七笔＋一呈裁：
+
+1. **F-93 `dd1bdeb`**（批复立项、先复现后修）：挂起态二次点击折叠后，`/v2/health` 决议回调
+   无条件重开＝推翻用户折叠意图。修＝决议写入改函数式 setState（`prev===""` 保持折叠）；
+   复现钉修前红正中"决议后保持折叠"格；F-72 既有格保持绿＝两钉逐格隔离；变异 1 发
+   （决议写入回退无条件形态）恰 F-93 钉红。catch 分支不动记边界（错误降级提示行非详情重开）。
+2. **描述落差族 `9117299`**：compact-router 描述补三模式、rate-throttle 补齐两半，双通道
+   （client/index.js＋panel.html）同笔同文；钉 `test/card-description-parity.test.mjs` 4 条
+   （两通道逐字一致＋两能力格双通道各探＋未动三卡快照反向钉）；变异 2 发逐格（单通道回潮两个方向）。
+3. **F-77 `56dd57d`**：复算校正原判（"bool" 两端一致那半不成立；真漂移＝backoffFactor 与
+   routing.downgradeContextMargin 两处 `"num"`），两通道各 2 处对齐 `"number"`，客户端字段集合
+   与服务端白名单双向相等（18=18）、type 仅驱动控件分支 ⇒ 零行为变化；钉
+   `test/config-fields-type-parity.test.mjs` 4 条常设化；变异 2 发逐格。
+4. **F-73 `905715f`**：复算复现（custody 双重死参数，双通道同族）⇒ 诚实收死参（React
+   restoreCopyOf 签名/调用/props 三处＋HTML restoreDialogHtml 签名/三处调用），输出面零变化；
+   钉 `test/f73-custody-dead-param.test.mjs` 3 条静态源码钉；变异 1 发。**连带**：p24-ui-matrix
+   工装三处旧 4 参调用在新签名下 conflict 落 choices 位 ⇒ 冲突三态恰 2 格红，工装调用对齐后
+   复绿（命题未变、调用形态连带翻面）；"弹窗展示卸载收据信息"记档为产品级选项呈协调侧。
+5. **F-78 `53096f6`（纯测试笔）**：复算**推翻原判**——扁平 path 键 draft 与嵌套 draft 分属互斥
+   渲染面（rate-throttle patch 域 ConfigEditor vs v2 RegistryPluginCard）、独立 state、无共享
+   写入点，"同屏"前提不成立 ⇒ 照 F-71 先例不修码；防翻面钉 `test/f78-v2-draft-shape.test.mjs`
+   （嵌套 schema 编辑叶子 → 保存载荷纯嵌套零扁平点键且编辑值生效）＋变异 1 发（保存载荷回退
+   T0 前形态）证可伪。
+6. **F-21 `b2c1ac9`（纯文档笔）**：批复授权二选一走文档收边界——embed-toolkit §5.2 增
+   "声明面与标签页面分界"：`httpBase` 的 `{servicePrefix}` 为给人读的约定占位符（矩阵 N-13
+   在案），服务端路由面随前缀、React 标签页（bundle 常量）不随；代码路径需宿主按实例注入
+   基址＝Q2 裁决零宿主改造边界之外。
+7. **F-23 `39b99f5`**：复算升级原判＝**双向反义**（mode="true" 返 true 而销毁式 v2 零副本；
+   mode="soft" 返 false 而本体保留）——v2 前旧思维残留字段；全仓零消费 ⇒ 整字段移除；
+   钉 `test/f23-archived-expected.test.mjs` 2 条（主钉＋零消费反向钉）；变异 1 发（字段回潮）。
+
+### 23.2 F-87 复算呈裁（本批未修，按升级规则不自裁）
+
+原判"契约无表达"复算成立：`tools.register({name:'web_search_engine',…})` 现锚
+`lib/web-search-local/index.js:1384`＋systemPrompt section（:1377-1383）；manifest
+registers={inject:[web],events:[],services:[],commands:[],providers:[…]} 无 tools 槽、provides
+三槽（services/commands/providers）不含 tools。补声明＝契约扩槽（provides 第四槽/registers.tools）
+＝契约语义变更：越 W2"面板可见面与文案诚实化"授权、触碰契约协调边界（与改名批
+registers/provides 命名面同期，不得相撞）⇒ **报协调侧裁归属（建议随契约 v1.2/W9）**。W2 内
+无码可修、无钉；清单 :452-454 已附复算确认注。
+
+### 23.3 读数、基线口径与批末申报
+
+- 逐笔三道锁全绿：门禁 **6/6**（54.0→52.3→52.8s 等，真实仓 dry-run 0/0/0）＋doctor 四套件
+  **21/8/7/26**＋stage3 **a–g 全 PASS**＋`~/.dsh` hash 逐笔前后 `c585738c…0bd9`/5 files 逐字节
+  相同；`node --test` **433→448**（+1=+4=+4=+3=+1=+0=+2 全来自新钉，F-21 文档笔零增）；
+  `p1-smoke` **314/0**；`p22-cards-ui` **153/153**；p24-ui-matrix **718/718**（F-73 连带复绿后）。
+  **基线口径更新入账：`node --test` 448。**
+- 自曝四条：变异锚行尾/缩进两度未命中修锚重跑（CRLF/LF 混合行尾——批 10 同族三发）；
+  能力格/逐字段格首版只探 React 侧改双通道各探（断言必须可观测）；desc-mutate 首轮方向反了
+  （修后 pristine 锚应在 newText 上查）；F-73 门禁首跑翻出 p24 连带 2 红＝工装调用形态连带
+  非回归。**"两振即查"常设规则自本批复生效，本批各格均首振即清、无第二次。**
+- **真机需求分类呈报（W2 批末，既裁口径）**：正常路径可见面＝四卡"改完要重启"提示位、
+  F-72/F-93 健康详情折叠行为、描述落差族新文案（建议用户目检项）；异常路径＝W2-1 真卸载
+  兜底文案、W2-3 体检回滚警示条（以直驱用例为证，不造样本）。请协调侧排窗时定夺。
+- **产品级两项随批呈用户（预立场不变）**：F-37＝改诚实文案＋维持移交制；doctor 引擎＝挂
+  v1.2、规则面先行 W9。另随批记档两项产品级选项：F-73 弹窗展示卸载收据信息、F-87 契约
+  扩槽（tools 声明面）——均待用户/协调侧裁。
+- **批末状态**：W2 余件八件全数处置完毕（七笔落地＋F-87 呈裁）；两仓净（toolkit=账面笔、
+  doctor=`652d17d` 全程未动）、门禁绿、零未提交改动；`cordis.patch.yml` 基准 `e8051fe9`
+  未动；宿主 pid 29520 未触；`~/.dsh` 零触碰（hash 逐笔同）；改名批批准到达前零动工。
