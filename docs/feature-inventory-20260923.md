@@ -345,6 +345,7 @@ safe/destructive 两个 fix.class 是否曾被 A 的任一历史版本产出过�
 【2026-09-26 W2-2 复算更正：本条判**读数错账、不复现**】git -S 全量考古：`parsed.hasHealthCheck` 在 panel/client/index.js **任何历史版本零命中**，健康徽标自 44545c0（P5）诞生即读 `p.hasHealthCheck`（数据源＝v2 snapshot entryView 下发的 `hasHealthCheck`，v2-api.mjs 实测在案）⇒ "读错字段／下发缺字段"两前提均不成立，徽标链路成立（:399 "代理实读、我方未逐字复看"的未抽验族被本复算推翻第一条）。锚点漂移另证：原文 `:1867` 现值已漂至 `:1937`。防翻面钉 `test/w2-health-badge.test.mjs` 2 条；**本条不修代码、不改徽标行为**。
 ★F-72 "健康详情"第二次点击不折叠且恒重发请求 —— `:1845` 判 `open === "health"`，但同一 handler 紧接
 `:1850` 把 `open` 写成 `"health:"+json` ⇒ `"health"` 字面值永不被读到。状态：有出入（代理实读）
+【2026-09-26 W2 余笔已修】快核现 HEAD 复现成立（守卫现锚 `:1928`、写入现锚 `:1933`，原 `:1845/:1850` 漂移与 §21.3 记载一致）⇒ 守卫补 `indexOf("health:")===0` 前缀判据与渲染分支同判；钉 `test/w2-health-fold.test.mjs`（真实 bundle 行为三步：首点恰 1 请求／二次点击折叠且 0 新请求／三次点击重开重新拉取），修前红正中折叠格→修后绿；变异 1 发守卫回退恰此钉红。实现笔 `toolkit@6a3f5cd`；边界：载入挂起态二次点击的先折叠后重开竞态不在判据内未修、记账呈裁。
 ★F-73 恢复弹窗的 `custody` 恒 undefined —— 三处 `setDlg({kind:"restore", …})` 均未写 `custody`，
 而 `:1258` 传 `dlg.custody`；且 `restoreCopyOf(plugin, mode, custody)`（`:883`）**函数体完全不引用第三形参**
 ⇒ 双重死参数（传得错、就算传对也没人读）。状态：有出入（代理实读）

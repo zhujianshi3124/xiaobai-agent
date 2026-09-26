@@ -1174,3 +1174,51 @@ registers.inject 数据源；`requires.services` 与 inject 声明不一致是 H
 - **F-78** draft 扁平键 vs 嵌套回传同屏（清单原判"未核实"⇒ 先复算再定）；
 - **F-87**、**F-21**（tab 基址随 servicePrefix 或文档如实收边界）、**F-23**（archivedExpected
   反义字段）——照 §3/§9.6 W2 格续。
+
+## 22. D-21 独立纯测试笔＋W2 余件第一、二件（2026-09-26 · 纯追加，不回改上面任何一行）
+
+### 22.1 本节三笔（EXE-BOOT-007；开工令第一交付 D-21＋第二交付 W2 余件前两件；余量临界停靠，余七件移交继任）
+
+1. **D-21 `1283b0e`（纯测试笔，C1-006 裁方案 (a)）**：注入替身把 `isUsableSchema` ③判据格
+   单独成口——`config-schema-degradation.test.mjs` 79 行纯追加（既有十格零触碰）：
+   resolve 钩子（`node:module` `registerHooks`，线程内同步、globalThis 门控）把
+   `@deepseek-ai/schemastery` 动态导入短接到 data:URL 替身模块；③格主钉（替身返回不可执行
+   值 ⇒ 降级且③专属文案点名，守卫被摘落第⑤通杀格即翻红）＋③④不共用命中格＋门控关反向钉
+   （钩子在、放行走真库、正常路径零污染）。变异 M-③ 恰 1 红／M-④ 恰 4 红（④替身钉＋④真实
+   行为钉＋setConfig 拒写钉＋precheck 阻断钉同命门；工装预期 2 系预期偏窄、按首轮实测修正）、
+   两集互斥、还原复核两轮全绿。**与呈文字面的差异如实记**：呈文写"加一格"于同文件，实际钩子
+   区块＋三格同文件追加（进程级注入无法只在单格生效——loader 线程隔离与 env 快照两路不可行，
+   见探针 `var/scratch/exe-boot-007-20260926/d21-probe.mjs`）；`registerHooks` 须 Node≥23.5
+   （本机门禁 24.19）。D-21 债条（debt :465）至此闭账、原行照录不改。
+2. **W2-余1 `3fcd3f9`（断点修复批②的 W2 半边）**：四卡"改完要重启"提示位——服务端
+   `RESTART_EFFECT_NOTE` 严格映射逐卡下发 effectNote（agent-memory／web-search-local／
+   search-router 三行 config 块与 compact-router 预设托管 2026-09-26 复算在案；search-router
+   文案两半＝热 JSON 即生效＋patch 重启生效且被盖住；未知目录不发明文案）；React
+   `EffectNoteRow`＋兜底页 `effectNoteHtml` 双通道同源渲染、editable 卡不双渲染；
+   `buildConfigPanel` 导出循 parseConfigScalars 先例。钉＝`test/w2-restart-hint.test.mjs` 4 条
+   （服务端逐卡文案＋两半＋rate-throttle 反向钉＋严格映射反向钉）＋p22 +26（两渲染器逐卡
+   呈现＋逐字对服务端＋不双渲染）。变异 4 发逐格各红各的（M1a 摘三卡映射⇒nt1+p22 18／
+   M1b 摘 search-router⇒nt2+p22 6——主钉对四卡任一失守敏感、预期按实测修正／M2 摘 react
+   支⇒p22 12／M3 摘 html 支⇒p22 12；w21-mutate.mjs）。
+3. **W2-余2＝F-72 `6a3f5cd`**：快核现 HEAD 复现成立（守卫现锚 :1928／写入现锚 :1933，与
+   §21.3 :1914-1915 漂移记载一致）后修——守卫补 `indexOf("health:")===0` 前缀判据与渲染分支
+   同判；钉 `test/w2-health-fold.test.mjs`（共享工装真实 bundle 行为三步）；修前红正中折叠格
+   →修后绿；变异 1 发守卫回退恰此钉红（f72-mutate.mjs）。**邻接发现**：载入挂起态二次点击
+   先折叠后被 then 回调重开的竞态不在判据内未修，记账呈协调侧裁。
+
+### 22.2 读数、基线口径与边界
+
+- 逐笔三道锁全绿：门禁 **6/6**（53.5s／61.6s／58.0s，真实仓 dry-run 0/0/0）＋doctor 四套件
+  **21/8/7/26**（run-tests/stage4a/stage4b/d1，集合与 §21 口径一致）＋stage3 **a–g 全 PASS**
+  ＋`~/.dsh` hash 逐笔前后 `c585738c…0bd9`/5 files 逐字节相同；`node --test`
+  **425→428→432→433**（+3=+4=+1 全来自新钉）；`p1-smoke` **314/0**；`p22-cards-ui`
+  **127→153**。**基线口径更新入账：`node --test` 433、`p22-cards-ui` 153。**
+- 自曝四条：M1b 变异锚 CRLF 未命中修锚重跑（批 10 同族二发）；W2-余1 变异还原复核曾单发
+  1 红、复跑未复现＝瞬时抖动如实记录；变异工装曾把 cmd/PS 引号绞出的杂散文件当格计
+  （读数以独立落盘日志为准）；F-72 竞态邻接面（见上）。
+- 真机可见面累计（继任批末按裁决口径分类呈报）：W2-1 兜底文案／W2-3 警示条配色（异常
+  路径）＋本节四卡提示位／F-72 折叠行为（正常路径可见面）。
+- **停靠申报**：本节三笔后两仓净（toolkit=`6a3f5cd`、doctor=`652d17d` 全程未动）、门禁绿、
+  零未提交改动；余件七件（描述落差族 :198/:221／F-73／F-77／F-78／F-87／F-21／F-23）照
+  §21.3 顺序与"逐件先复算后修"移交继任；改名批批准到达前零动工；`cordis.patch.yml` 基准
+  `e8051fe9` 未动；宿主 pid 29520 未触；`~/.dsh` 零触碰（hash 逐笔同）。
