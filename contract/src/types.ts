@@ -10,8 +10,10 @@
  * 本模块零依赖（不 import node 内建），可在任何 ≥ES2022 运行时使用。
  */
 
-/** 契约版本，semver 管理；破坏性变更必须升主版本并提供适配层（规格 §8）。 */
-export const PLUGIN_CONTRACT_VERSION = '1.0.0'
+/** 契约版本，semver 管理；破坏性变更必须升主版本并提供适配层（规格 §8）。
+ *  1.0.0 → 1.1.0（批 11，2026-09-26）：新增 `provides` 提供面与 events/panels 形状收紧，
+ *  均为非破坏增量；旧 manifest 的 `^1.0` 范围继续放行（versionSatisfies 对偶已钉）。 */
+export const PLUGIN_CONTRACT_VERSION = '1.1.0'
 
 // ── manifest ──────────────────────────────────────────────────────────────
 

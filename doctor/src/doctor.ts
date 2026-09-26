@@ -18,6 +18,7 @@
 import {
   contractEventName,
   contractServiceName,
+  PLUGIN_CONTRACT_VERSION,
   validateConfigAgainstSchema,
   validateManifest,
   versionSatisfies,
@@ -476,6 +477,7 @@ export class DoctorService implements ToolkitDoctor {
 
   /** manifest 校验入口（P5 迁移用；P3 已在 precheck 内经 loader 完成）。 */
   validate(manifest: unknown): boolean {
-    return validateManifest(manifest).ok && versionSatisfies('1.0.0', (manifest as { contract: string }).contract)
+    // 批 11（F-68）：改引用契约常量——升版只动 types.ts 一处，这里不再可能漏改
+    return validateManifest(manifest).ok && versionSatisfies(PLUGIN_CONTRACT_VERSION, (manifest as { contract: string }).contract)
   }
 }
