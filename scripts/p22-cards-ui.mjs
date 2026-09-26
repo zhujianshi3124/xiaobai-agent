@@ -154,7 +154,7 @@ function loadHtmlClient() {
   const fakeDoc = { getElementById: (id) => node(id), createElement: (t) => node(t) };
   const fn = new Function(
     "document", "fetch",
-    m[1] + "\nreturn { toggleHtml, stateOf, renderConfirm, setPatch: (t) => { PATCH_TEXT = t; }, dualSwitchNotice };",
+    m[1] + "\nreturn { toggleHtml, stateOf, renderConfirm, setPatch: (t) => { PATCH_TEXT = t; }, dualSwitchNotice, effectNoteHtml };",
   );
   return fn(fakeDoc, () => new Promise(() => {}));
 }
@@ -513,6 +513,38 @@ htmlR.setPatch(PATCH_TEXT);
     htmlLabelOf(crOff) === "已软卸载 · 本体保留 · 可一键恢复", htmlLabelOf(crOff));
   check("E3 react: 软卸载态被 status 拦截（不是运行中）",
     reactLabelOf(crOff) === "已软卸载 · 本体保留 · 可一键恢复", String(reactLabelOf(crOff)));
+}
+
+// ---- W2 余件 · 断点修复批②：四卡"改完要重启"提示位（两渲染器 + rate-throttle 不双渲染）----
+{
+  const FOUR = ["agent-memory", "compact-router", "web-search-local", "search-router"];
+  for (const dir of ["agent-memory", "compact-router", "rate-throttle", "search-router", "web-search-local"]) {
+    const isFour = FOUR.includes(dir);
+    const p = snap.plugins.find((x) => x.dir === dir);
+    const serverCopy = p && p.configPanel ? p.configPanel.effectNote : undefined;
+
+    // react：EffectNoteRow 是函数组件，同样要手动调用才取得到文本（headless createElement 陷阱）
+    const cardEl = cards.find((c) => c.props.plugin.dir === dir);
+    const cardTree = cardEl ? cardEl.type(cardEl.props) : null;
+    const noteEl = cardTree
+      ? findAll(cardTree, (n) => typeof n.type === "function" && n.type.name === "EffectNoteRow")[0]
+      : null;
+    const rendered = noteEl ? noteEl.type(noteEl.props) : null;
+    const rtxt = rendered ? textOf(rendered).join(" ") : "";
+    check("[" + dir + "] react: restart hint " + (isFour ? "present" : "absent（在 ConfigEditor 内，不双渲染）"), (rtxt.length > 0) === isFour, rtxt.slice(0, 30));
+    if (isFour) {
+      check("[" + dir + "] react: hint == server effectNote 逐字", rtxt === serverCopy, String(serverCopy).slice(0, 30));
+      check("[" + dir + "] react: hint 点出重启边界", rtxt.includes("重启 DSH 才生效"));
+    }
+
+    // html：兜底页 effectNoteHtml
+    const hhtml = htmlR.effectNoteHtml(p);
+    check("[" + dir + "] html: restart hint " + (isFour ? "present" : "absent"), (hhtml.length > 0) === isFour);
+    if (isFour) {
+      check("[" + dir + "] html: hint == server effectNote 逐字", hhtml === '<div class="effectNote">' + serverCopy + "</div>", String(serverCopy).slice(0, 30));
+      check("[" + dir + "] html: hint 点出重启边界", hhtml.includes("重启 DSH 才生效"));
+    }
+  }
 }
 
 console.log("\n" + passed + "/" + (passed + failed) + " PASS");

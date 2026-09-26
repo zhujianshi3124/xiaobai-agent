@@ -91,6 +91,8 @@ window.__ModuleLoader__.load({
 			desc: { fontSize: 13, lineHeight: 1.55, margin: "0 0 10px", color: "#d7dae0" },
 			// 状态行：三态里"正在生效"最醒目
 			stateRow: { display: "flex", alignItems: "center", gap: 6, margin: "0 0 8px", fontSize: 13, fontWeight: 600 },
+			// W2 余件：四卡"改完要重启"提示位（服务端 configPanel.effectNote 下发，此处只渲染）
+			effectNote: { fontSize: 12, color: "#8fa89e", lineHeight: 1.7, margin: "0 0 8px" },
 			dotOn: { width: 9, height: 9, borderRadius: "50%", background: "#4ade80", boxShadow: "0 0 0 3px rgba(74,222,128,0.18)", flex: "0 0 9px" },
 			dotWarn: { width: 9, height: 9, borderRadius: "50%", background: "#fbbf24", boxShadow: "0 0 0 3px rgba(251,191,36,0.18)", flex: "0 0 9px" },
 			dotOff: { width: 9, height: 9, borderRadius: "50%", background: "#8b9099", flex: "0 0 9px" },
@@ -414,6 +416,7 @@ window.__ModuleLoader__.load({
 				cn ? react.createElement("div", { style: styles.subtitle }, cn) : null,
 				react.createElement("div", { style: styles.desc }, desc),
 				react.createElement(StateRow, { state: state }),
+				react.createElement(EffectNoteRow, { plugin: plugin }),
 				react.createElement(AbsenceBanner, { plugin: plugin }),
 				react.createElement(DualSwitchNotice, { plugin: plugin, patchText: patchText }),
 				react.createElement(ToggleControls, {
@@ -792,6 +795,16 @@ window.__ModuleLoader__.load({
 				),
 				react.createElement("div", { style: styles.modeLine }, panel.note || "")
 			);
+		}
+
+		// ---- W2 余件：四卡"改完要重启"提示位（断点修复批②）----
+		// 服务端 configPanel.effectNote 逐卡下发（snapshot.mjs RESTART_EFFECT_NOTE）；
+		// rate-throttle（editable）的 effectNote 已在 ConfigEditor 内渲染，本行只补
+		// 其余四卡，避免同卡双渲染。
+		function EffectNoteRow(props) {
+			var panel = props.plugin && props.plugin.configPanel;
+			if (!panel || panel.editable === true || !panel.effectNote) return null;
+			return react.createElement("div", { style: styles.effectNote }, panel.effectNote);
 		}
 
 		// ============================================================
