@@ -1933,11 +1933,17 @@ window.__ModuleLoader__.load({
 				v2Api("/health?id=" + encodeURIComponent(p.id)).then(function (data) {
 					var items = (data.report && data.report.items) || [];
 					setConfirm(null);
-					setOpen("health:" + JSON.stringify({
-						status: (data.report && data.report.status) || "未知",
-						items: items,
-						history: (data.history || []).map(function (h) { return h.status; })
-					}));
+					// F-93：决议写入改函数式——用户在挂起中折叠（prev===""）时保持折叠，
+					// 折叠意图优先于回调重开。挂起中出错（catch）仍显示降级提示行：
+					// 那是"暂不可用"告知不是详情重开，信息价值明确，不在本判据内。
+					setOpen(function (prev) {
+						if (prev === "") return "";
+						return "health:" + JSON.stringify({
+							status: (data.report && data.report.status) || "未知",
+							items: items,
+							history: (data.history || []).map(function (h) { return h.status; })
+						});
+					});
 				}).catch(function () { setOpen("health-error"); });
 			};
 			var healthDetail = null;
