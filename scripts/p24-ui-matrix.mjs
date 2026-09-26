@@ -602,14 +602,14 @@ section("§2.9 / §2.9b 恢复确认页 + 冲突三态 + 完成后横幅");
   const CONFIRM_LINE = "点「确认恢复」，或点「取消」。";
   const BANNER_LINE = "恢复完成，重启后生效";
 
-  // html：软卸载恢复（2.9b）
-  const hSoft = htmlR.restoreDialogHtml(rt, "soft", null, null);
+  // html：软卸载恢复（2.9b）——F-73 收口后签名 (p, kind, conflict, choices)，custody 位已摘
+  const hSoft = htmlR.restoreDialogHtml(rt, "soft", null);
   check("§2.9b html 标题逐字", hSoft.includes(R29B_TITLE_RT));
   check("§2.9b html 正文逐字", hSoft.includes(R29B_BODY_RT), R29B_BODY_RT);
   check("§2.9b html 含重启句 + 按钮", hSoft.includes(RESTART_LINE) && hSoft.includes(">确认恢复<"));
 
   // html：挂载确认页（**重装后**；销毁式 v2 §5 —— 真卸载唯一恢复途径）
-  const hMount = htmlR.restoreDialogHtml(sr, "mount", null, null);
+  const hMount = htmlR.restoreDialogHtml(sr, "mount", null);
   check("§2.9' html 挂载标题逐字", hMount.includes(MOUNT_TITLE_SR), MOUNT_TITLE_SR);
   check("§2.9' html 挂载正文逐字", hMount.includes(MOUNT_BODY_SR), MOUNT_BODY_SR);
   check("§2.9' html 挂载含重启句 + 按钮", hMount.includes(">确认恢复<") && hMount.includes(">取消<"));
@@ -621,7 +621,7 @@ section("§2.9 / §2.9b 恢复确认页 + 冲突三态 + 完成后横幅");
     { id: "B", label: "恢复成卸载前的值", hostKeyChoice: "restore-backup" },
     { id: "C", label: "取消本次恢复" },
   ];
-  const hCf = htmlR.restoreDialogHtml(sr, "soft", null, conflict, choices);
+  const hCf = htmlR.restoreDialogHtml(sr, "soft", conflict, choices);
   check("§2.9 冲突三态 html 逐字（含 cur/backup 代入）",
     hCf.includes("若恢复时发现某项系统设置已被其他程序改掉（当前值是 official-only，卸载前是 searchProvider: auto-search），弹窗三选一：A. 保留当前值（不覆盖）；B. 恢复成卸载前的值；C. 取消本次恢复。面板不会自动覆盖。"));
   check("§2.9 冲突三态 html 三按钮 = 服务端 choices 标签",

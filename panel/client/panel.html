@@ -807,7 +807,7 @@ function uninstallDialogHtml(p, mode) {
 }
 
 // 软卸载恢复确认页（§2.9b，无文件回写）／挂载确认页（重装后，销毁式 v2 §5）
-function restoreDialogHtml(p, kind, custody, conflict, choices) {
+function restoreDialogHtml(p, kind, conflict, choices) {
   var name = p24Name(p);
   var c;
   if (kind === "mount") {
@@ -949,13 +949,13 @@ function wireP24Dialog(host, p) {
 // 恢复（**软卸载专有**，§2.9b 文案）
 async function openRestoreDialog(p, host, msg) {
   p._restoreKind = "soft";
-  host.innerHTML = restoreDialogHtml(p, "soft", null, null);
+  host.innerHTML = restoreDialogHtml(p, "soft", null);
   wireRestoreDialog(host, p, msg);
 }
 // 挂载（**重装后**，销毁式 v2 §5）：行块事实取自真卸载收据
 async function openMountDialog(p, host, msg) {
   p._restoreKind = "mount";
-  host.innerHTML = restoreDialogHtml(p, "mount", null, null);
+  host.innerHTML = restoreDialogHtml(p, "mount", null);
   wireRestoreDialog(host, p, msg);
 }
 function wireRestoreDialog(host, p, msg, conflict) {
@@ -970,7 +970,7 @@ function wireRestoreDialog(host, p, msg, conflict) {
     if (choice) payload.hostKeyChoice = choice;
     var planned = await p24Post(planUrl, payload);
     if (planned.body.ok === false && planned.body.code === "host-key-conflict") {
-      host.innerHTML = restoreDialogHtml(p, p._restoreKind, null, planned.body.conflict, planned.body.choices);
+      host.innerHTML = restoreDialogHtml(p, p._restoreKind, planned.body.conflict, planned.body.choices);
       wireRestoreDialog(host, p, msg, planned.body.conflict);
       return;
     }
