@@ -98,6 +98,7 @@ exports.$from 继承语义 —— 根 manifest 的 requirements.exports={"$from"
 ★兜底页 panel.html 无 registry 管理面 —— 页内 /v2 出现 0 次，只能操作 patch 域+体检。状态：文档未记：embed 文档称该前缀"可达可用"未披露缺 v2 半边
 
 ★React 标签页基址是硬编码常量 /api/toolkit-panel —— 非缺省 servicePrefix 的第二实例下 tab 全打缺省实例。状态：有出入（embed-toolkit §5.2 已自陈边界，但面板声明里 httpBase 是模板、tab 不跟随）
+【2026-09-26 W2 余笔收边界（批复授权"文档如实收边界"路径）】代码路径需宿主按实例注入基址＝Q2 裁决的零宿主改造边界之外，故按文档收：embed-toolkit §5.2 增"声明面与标签页面分界"——`httpBase` 的 `{servicePrefix}` 为给人读的约定占位符（矩阵 N-13 在案：产品码零替换点），描述的服务端路由面确实随前缀、React 标签页（bundle 常量）不随。清单本条以该分界注为止；宿主配合注入的能力出现时再议代码路径。
 
 ★真卸载兜底文案过时 —— ABSENCE_COPY_FALLBACK["true-uninstalled"] 仍写"本体已移入保管区·可一键恢复"，与销毁式 v2（零副本、不可恢复）相反；服务端 statusCopy 正常遮蔽它，兜底方向误导。状态：有出入
 
