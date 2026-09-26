@@ -785,3 +785,41 @@ F-71 **未动、不自行判其归属**。请协调侧点一处：① 随批 6 �
 - 批 8 代码半（★19 install/confirm 逐字确认 ＋ F-17 批 8 处）随后按启动包 §八.3 推进，另行申报。
 
 **三道锁读数（文档笔）**：门禁 `ci-local --with-scan` 6/6（含本笔文档改动）；两仓工作树跑前跑后净；`~/.dsh`、`cordis.patch.yml`、宿主（pid 29208）零触碰。
+
+## 16. 批 8 代码半落账（2026-09-26 · 纯追加，不回改上面任何一行）
+
+### 16.1 批 8 代码半交付账（实现笔 `toolkit@d4b681b`）
+
+- 改动面＝`panel/manager/v2-api.mjs`（`installConfirm` 补闸：confirm 逐字等于**安装源标识**；`requireConfirm`
+  加 noun 参数、既有四路由调用零变化）＋`panel/client/index.js`（向导确认输入框：逐字重输源路径前
+  "确认安装"禁用、请求携带 confirm、新预检清空输入）＋新钉 `test/install-confirm-gate.test.mjs`（6 条）
+  ＋三处既有用例随新协议更新（panel-unified 向导 E2E 补逐字 UX 钉、panel-v2 npm 格与 p7-embed 两格补
+  confirm 参数——协议随动非放宽，npm 拒装与双实例隔离语义原样）＋`docs/add-sub-plugin.md` 前向标注兑现
+  ＋`CHANGELOG.md` 行为收紧条。**纯 toolkit 仓、doctor 仓零改动。**
+- 定谳口径：逐字对象＝**安装源标识**（local ⇒ 向导第一步输入的目录绝对路径；npm ⇒ spec）。成因＝装前
+  无插件 id 可用（`PrecheckReport` 不带独立 id 字段），源标识是双方请求前都已知的同一事实 ⇒ 服务端零成本
+  核验、零契约形状变更。闸序＝source 形状校验之后、`registry.install` 之前（形状错仍 value-invalid，
+  不被告吞掉——闸⑤钉住）。
+- 先钉后修＝修前 **3 红 / 34 绿**（闸①缺 confirm 实际 200 应 400、闸②逐字不符实际 200 应 400、向导 E2E
+  `disabled` 断言；反向钉③逐字一致④npm 下游语义⑤value-invalid 闸序修前即绿）→ 修后同组 **37/37**。
+  读数 `var/scratch/exe-boot-005-20260926/b8-prered.log` / `b8-postgreen2.log`。
+- 变异＝5 发逐格各红各的：M1 摘闸（＝修前行为重放）恰 3 红（①②a②b）／M2 trim 弱化恰 ②a／M3 大小写
+  弱化恰 ②b／M4 摘客户端 disabled 判据恰 E2E／M5 客户端摘 confirm 恰 E2E；还原＝**内存 pristine 写回**
+  （对含未提交改动文件禁 git 还原的既有纪律）。工装 `var/scratch/exe-boot-005-20260926/b8-mutate.mjs`。
+- 三道锁＝门禁 **6/6**；`p1-smoke` **314/0** 不减；`node --test` **388→394**（+6 全来自新钉文件：
+  ①②a②b③④⑤）；`p22-cards-ui` **127/127**；doctor 真实仓 dry-run **0/0/0**。
+  **基线口径更新入账：`node --test` 394。**
+- 施工自曝一处：客户端 wizardBox 替换首版少一个闭括号（`SyntaxError: missing )`），panel-unified 十格以
+  "整个 client bundle 编译失败"的形态翻红——**非行为读数**，`node --check` 定位补齐后全绿。教训立为口径：
+  **改 client bundle 后先 `node --check` 再跑 harness**（harness 的 `new Function` 把语法错报成整文件红，
+  极易误读成大面积行为回归）。
+- 边界与未做（不得被读成"批 8 全闭"）：本笔＝批 8 **代码半**；§3 批 8 格的"演练插件"与"批 4-③ 的运行时
+  验证"未动（启动包 §八.3 点名范围＝★19 + F-17 批 8 处，余面待协调侧窗内安排或另批）；真机面（浏览器里
+  实际操作逐字确认 UX）挂**批 8 观察窗**，本笔未起宿主、未碰 3080、未读写 `~/.dsh`。
+- `cordis.patch.yml` 一字未动（基准 `e8051fe9` 不滚存）。
+
+### 16.2 下一笔
+
+批 8 观察窗：等协调侧发放用户侧逐字步骤后按启动包 §八.4 做只读取数验收（R1 真机复验＋批 5-3 两面＋W11
+真机面＋批 6 装载行为＋批 8 confirm 面，一次打包）；窗后照 §3 表序连续推进批 9 → 批 10（含 D-13 邻笔
+events/panels 形状校验、五卡健康列数据半边）→ 批 11 ＋ 改名批。
