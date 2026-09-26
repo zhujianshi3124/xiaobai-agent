@@ -445,7 +445,8 @@ export function validateModuleExports(exportsObj: unknown): ManifestIssue[] {
     } else {
       panels.forEach((p: unknown, i: number) => {
         const desc = p as PanelDescriptor
-        if (!isObject(desc) || typeof desc['id'] !== 'string' || desc['id'] === '') {
+        // "非空"与 validateManifest 的落盘清单同判（批 10 接线）：纯空白 id 也拒
+        if (!isObject(desc) || typeof desc['id'] !== 'string' || desc['id'].trim() === '') {
           issues.push(issue(`panels[${i}]`, 'type', 'error', '每个 panel 描述符必须是有非空 id 的对象', '{ id: string }', p))
         }
       })
