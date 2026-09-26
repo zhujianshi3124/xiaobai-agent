@@ -2041,6 +2041,10 @@ window.__ModuleLoader__.load({
 			var wizardSt = react.useState(null);
 			var wizardState = wizardSt[0];
 			var setWizard = wizardSt[1];
+			// ★19（批 8）：安装逐字确认的输入态——必须逐字重输源路径，"确认安装"才可用。
+			var confirmSt = react.useState("");
+			var confirmText = confirmSt[0];
+			var setConfirmText = confirmSt[1];
 			var msgSt = react.useState(null);
 			var msg = msgSt[0];
 			var setMsg = msgSt[1];
@@ -2101,15 +2105,22 @@ window.__ModuleLoader__.load({
 					pc.changes.map(function (c, idx) {
 						return react.createElement("div", { key: "c" + idx, style: { fontSize: "12px", color: "#777" } }, "需改动【", c.target, "】", c.summary, "：", c.detail);
 					}),
-					react.createElement("button", {
-						disabled: !pc.pass,
-						onClick: function () {
-							v2Api("/install/confirm", { source: { kind: "local", path: wizardState.path } }).then(function (result) {
-								if (result.ok) { setMsg({ ok: true, code: "installed", error: result.entry.id }); setWizard(null); reload(); }
-								else { setWizard({ path: wizardState.path, precheck: result.precheck }); setMsg({ ok: false, code: "install-blocked", error: "预检未通过，报告已刷新" }); }
-							}).catch(function (error) { setMsg({ ok: false, code: error.code || "error", error: error.error || String(error) }); });
-						}
-					}, "确认安装"));
+					react.createElement("div", { style: { margin: "6px 0" } },
+						// ★19（批 8）：写闸补齐的客户端半边——"确认安装"须逐字重输源路径才可点
+						// （服务端强制面：缺/不符 ⇒ 400 confirm-missing，钉在 test/install-confirm-gate.test.mjs）。
+						react.createElement("div", { style: { fontSize: "12px", color: "#555", margin: "2px 0" } },
+							"知情确认：安装会写入 registry 并即时装载——在下面逐字输入要安装的目录绝对路径（",
+							react.createElement("b", null, wizardState.path), "）后才能点确认。"),
+						react.createElement("input", { type: "text", value: confirmText, onChange: function (e) { setConfirmText(e.target.value); }, placeholder: "逐字输入要安装的插件目录绝对路径", style: { width: "60%", padding: "3px 6px", borderRadius: "4px", border: "1px solid #8888", marginRight: "6px" } }),
+						react.createElement("button", {
+							disabled: !pc.pass || confirmText !== wizardState.path,
+							onClick: function () {
+								v2Api("/install/confirm", { source: { kind: "local", path: wizardState.path }, confirm: confirmText }).then(function (result) {
+									if (result.ok) { setMsg({ ok: true, code: "installed", error: result.entry.id }); setWizard(null); reload(); }
+									else { setWizard({ path: wizardState.path, precheck: result.precheck }); setMsg({ ok: false, code: "install-blocked", error: "预检未通过，报告已刷新" }); }
+								}).catch(function (error) { setMsg({ ok: false, code: error.code || "error", error: error.error || String(error) }); });
+							}
+						}, "确认安装")));
 			}
 			var banner = msg && msg.code ? react.createElement("div", {
 				style: { border: "1px solid " + (msg.ok ? "#1a7f3788" : "#cf222e88"), background: msg.ok ? "#1a7f3714" : "#cf222e14", color: msg.ok ? "#1a7f37" : "#cf222e", padding: "4px 10px", borderRadius: "6px", margin: "6px 0", fontSize: "13px" }
@@ -2138,7 +2149,7 @@ window.__ModuleLoader__.load({
 								return;
 							}
 							v2Api("/install/precheck", { source: { kind: "local", path: raw } }).then(function (result) {
-								if (result.ok) setWizard({ path: raw, precheck: result.precheck });
+								if (result.ok) { setConfirmText(""); setWizard({ path: raw, precheck: result.precheck }); }
 								else setMsg({ ok: false, code: "precheck-failed", error: result.error || "预检失败" });
 							}).catch(function (error) { setMsg({ ok: false, code: error.code || "error", error: error.error || String(error) }); });
 					} }, "① 预检")),

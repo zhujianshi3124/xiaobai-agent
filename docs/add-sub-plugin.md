@@ -145,8 +145,10 @@ registry 的 legacy 适配器会合成 manifest（id 落 `legacy/<包名>`，无
 
 面板「插件管理（registry · 自适应）」区：卡片自动出现（SSE `registry:plugin-added`，**不用刷新**），
 带状态徽标、契约版本、legacy 标注，五个操作齐备：停用 / 重载 / 卸载 / 健康详情 / 配置。
-**除安装确认外**所有写路由都要**逐字 confirm 插件 id**（`confirm-missing` 一律 400），启停/卸载另有
-知情确认勾选。【批 8 落地，当前 `install/confirm` 不要求 confirm —— 以预检通过为闸，已裁定补上】
+**所有写路由都要逐字 confirm**（`confirm-missing` 一律 400）：uninstall/enabled/reload/config 逐字
+confirm **插件 id**，启停/卸载另有知情确认勾选；**安装（`install/confirm`）自批 8（★19）起逐字 confirm
+安装源**——local 逐字等于向导第一步输入的目录绝对路径、npm 逐字等于 spec（装前无插件 id 可用，
+以双方请求前都已知的源标识为逐字对象），缺失/不符一律 400；面板"确认安装"按钮须逐字重输该路径后才可点。
 状态徽标的语义（★11 · **批 5-2 起是"实况"而不是"装入那一次的结论"**）：registry 内有一条
 fiber 实况对齐器（`registry/src/registry.ts#alignOnce`，缺省每 5s 一轮）读 `entry.fiber.state`
 并把 `status` 回写成当前实况 ⇒ 依赖中途离场时卡片不再停在 `active`，而是随 cordis 撤下 fiber

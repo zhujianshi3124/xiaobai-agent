@@ -200,8 +200,20 @@ test('安装向导 E2E：预检报告 → 确认安装 → 真实 registry 装�
     assert.ok(text(panel.tree).includes('预检结论：'), '预检报告区出现')
     assert.ok(text(panel.tree).includes('通过，可以安装'), '预检通过')
 
+    // ★19（批 8）：逐字确认 UX —— 未逐字输入源路径前按钮禁用；不符（多一个字符）仍禁用；
+    // 逐字一致才可用。服务端的强制面（缺/不符 ⇒ 400）钉在 install-confirm-gate.test.mjs。
+    const confirmBtn0 = buttonOf(panel.tree, '确认安装')
+    assert.ok(confirmBtn0, '确认安装按钮')
+    assert.equal(confirmBtn0.props.disabled, true, '逐字确认未输入前按钮禁用')
+    const confirmInput = findAll(panel.tree, (n) => n.type === 'input' && String((n.props && n.props.placeholder) || '').startsWith('逐字输入'))[0]
+    assert.ok(confirmInput, '逐字确认输入框')
+    confirmInput.props.onChange({ target: { value: contractPlugin + 'x' } })
+    await panel.done()
+    assert.equal(buttonOf(panel.tree, '确认安装').props.disabled, true, '逐字不符仍禁用')
+    confirmInput.props.onChange({ target: { value: contractPlugin } })
+    await panel.done()
     const confirmBtn = buttonOf(panel.tree, '确认安装')
-    assert.ok(confirmBtn, '确认安装按钮')
+    assert.equal(confirmBtn.props.disabled, false, '逐字一致后按钮可用')
     confirmBtn.props.onClick()
     await panel.done(16)
 
