@@ -499,8 +499,10 @@ export class ToolkitRegistryCore implements ToolkitRegistry {
 
   private audit(event: AuditEvent, pluginId: string, durationMs: number, errorCode?: string): void {
     this.log.info(`audit ${event}`, { pluginId, event, durationMs, ...(errorCode ? { errorCode } : {}) })
-    // 审计事件（REQ-10）：契约事件名之外的前缀化扩展事件，面板订阅展示（P4）。
-    this.notify(`${this.opts.servicePrefix}/audit:${event}`, { event, pluginId, durationMs, ...(errorCode ? { errorCode } : {}) }, pluginId)
+    // 审计事件（REQ-10）：批 9 收编——`audit:*` 已入 CONTRACT_EVENT_NAMES，发名走 contractEventName
+    // （对外名 = servicePrefix 加 '/audit:' 加事件名，与旧手工拼法逐字节相同，零线格式变更；
+    // 静态防回潮钉 test/audit-event-enum.test.mjs ③）。contractEventName 运行时不校验名字，约束在编译期。
+    this.notify(contractEventName(this.opts.servicePrefix, `audit:${event}`), { event, pluginId, durationMs, ...(errorCode ? { errorCode } : {}) }, pluginId)
   }
 
   /**
