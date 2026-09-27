@@ -651,6 +651,35 @@ section("§2.9 / §2.9b 恢复确认页 + 冲突三态 + 完成后横幅");
   check("§2.9 react 页面横幅组件在树上", !!bannerEl);
   const bannerTxt = bannerEl ? textOf(render1({ type: bannerEl.type, props: { show: true }, children: [] })).join(" ") : "";
   check("§2.9 react 横幅文案逐字", bannerTxt === BANNER_LINE, bannerTxt);
+
+  // F-73 产品级（C1-007 开工令 2）：软卸载收据块——服务端组稿（buildSoftReceipt 导出循 buildConfigPanel
+  // 先例）＋恢复弹窗双通道只渲染不加字。两条断言：①react 收据行内容在场（服务端 lines 逐字）＋挂载弹窗
+  // 零收据块（收据卡反向）；②html 同（覆盖双通道）。
+  const receiptRec = {
+    recordedAt: "2026-09-27T00:00:00.000Z",
+    hostKey: { key: "searchProvider", raw: "searchProvider: auto-search" },
+    backupDir: "D:/tmp/backup-demo",
+    userReason: "演示收据",
+  };
+  const receipt = snapMod.buildSoftReceipt(receiptRec, "rate-throttle", "rate-throttle");
+  const rtSoftCard = Object.assign({}, rt, { status: "soft-unmounted", restoreAvailable: true, softReceipt: receipt });
+  const rtSoftSnap = Object.assign({}, realSnap, { plugins: realSnap.plugins.map((x) => (x.dir === "rate-throttle" ? rtSoftCard : x)) });
+  const rtSoftP24 = reactR.p24Of(reactR.cardByDir(reactR.render(rtSoftSnap, rtSoftSnap.patch.text), "rate-throttle"));
+  const dlgRc = namedOf(reactR.direct(rtSoftP24, [{ kind: "restore", mode: "soft" }]), "RestoreDialog")[0];
+  const txtRc = dlgRc ? textOf(render1(dlgRc)).join(" ") : "";
+  const dlgMountRc = namedOf(reactR.direct(rtSoftP24, [{ kind: "restore", mode: "mount" }]), "RestoreDialog")[0];
+  const txtMountRc = dlgMountRc ? textOf(render1(dlgMountRc)).join(" ") : "";
+  check("F-73 react 收据行内容在场（服务端 lines 逐字）＋挂载弹窗零收据块",
+    txtRc.includes("卸载收据（只读）")
+    && Array.isArray(receipt.lines) && receipt.lines.length >= 4 && receipt.lines.every((ln) => txtRc.includes(ln))
+    && !txtMountRc.includes("卸载收据（只读）"),
+    "lines=" + (receipt.lines || []).length);
+  const hSoftRc = htmlR.restoreDialogHtml(rtSoftCard, "soft", null);
+  const hMountRc = htmlR.restoreDialogHtml(Object.assign({}, rtSoftCard), "mount", null);
+  check("F-73 html 收据行内容在场（同文逐字）＋挂载弹窗零收据块（双通道覆盖）",
+    hSoftRc.includes("卸载收据（只读）")
+    && receipt.lines.every((ln) => hSoftRc.includes(ln))
+    && !hMountRc.includes("卸载收据（只读）"));
 }
 
 // ---- 缺席态六态渲染（本地合成六态快照，逐态断言两渲染器）----

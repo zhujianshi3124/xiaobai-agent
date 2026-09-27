@@ -308,6 +308,32 @@ export function buildConfigPanel(dir, rowId, patchText, { hotRouterPath, envMode
   return { editable: false, noInternalSwitch: true, effectNote: RESTART_EFFECT_NOTE[dir] };
 }
 
+/**
+ * F-73 产品级（C1-007 开工令 2）：软卸载**收据**（只读）——四问四答（什么时候卸的／卸了什么／
+ * 本体存哪／怎么恢复），数据全部来自 custody 软台账现成记录（uninstall.mjs 两写入形状：
+ * patch 行 ／ preset --undo），**服务端组好逐行文案**（循 RESTART_EFFECT_NOTE 先例：服务端权威、
+ * 恢复弹窗双通道只渲染不加字）；不加接口、不动引擎。导出循 buildConfigPanel 先例（工装取数）。
+ */
+export function buildSoftReceipt(record, dir, ledgerKey) {
+  if (!record) return null;
+  const lines = [];
+  lines.push("卸载时间：" + (record.recordedAt || "（台账未记）"));
+  if (record.presetUndo) {
+    lines.push("卸载内容：预设托管入口已按 --undo 退出（双层留痕在案）。");
+  } else {
+    let content = "卸载内容：配置行「" + ledgerKey + "」已从 cordis.patch.yml 摘除（行块原文与插回位置已留档）";
+    if (record.hostKey && record.hostKey.key) content += "；系统设置项「" + record.hostKey.key + "」的卸载前值已备份";
+    lines.push(content + "。");
+  }
+  let place = "本体位置：lib/" + dir + "（源代码文件未动）";
+  const backup = record.backupDir || record.evidenceBackupDir;
+  if (backup) place += "；改动前备份：" + backup;
+  lines.push(place + "。");
+  lines.push("恢复方式：确认后按台账插回原位，卸载时改动的系统设置项一并恢复；完成后需重启生效。");
+  if (record.userReason) lines.push("卸载原因：" + record.userReason);
+  return { recordedAt: record.recordedAt || null, lines };
+}
+
 export async function buildSnapshot({ toolkitRoot, hotRouterPath = join(homedir(), ".dsh", "dsh-search-router.json"), envMode = process.env.DSH_WEB_SEARCH_ROUTER_MODE } = {}) {
   const pkg = loadJson(join(toolkitRoot, "package.json")) || {};
   const suiteManifest = loadJson(join(toolkitRoot, "dsh.plugin.json")) || {};
@@ -402,6 +428,8 @@ export async function buildSnapshot({ toolkitRoot, hotRouterPath = join(homedir(
       // 收据在案（销毁式 v2）：真卸载对账账本，亦为「重装后挂载」的行块事实来源
       receiptOnFile: raw.receiptOnFile,
       softRecorded: !!raw.softRecord,
+      // F-73：软卸载收据（只读；null＝无台账记录，弹窗侧 fail-soft 不渲染）
+      softReceipt: buildSoftReceipt(raw.softRecord, dir, meta.rowId || dir),
       dependency,
       defaultUninstallMode: meta.defaultMode,
       // 恢复（**软卸载专有**）：本体在、行不在、面板台账在案 ⇒ 一键恢复
