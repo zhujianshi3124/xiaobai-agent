@@ -383,7 +383,7 @@ window.__ModuleLoader__.load({
 
 		function TechDetails(props) {
 			var plugin = props.plugin;
-			var regs = plugin.registers || {};
+				var provides = plugin.provides || {};
 			var list = function (arr) {
 				var a = arr || [];
 				return a.length > 0 ? a.join(", ") : "（无）";
@@ -395,10 +395,10 @@ window.__ModuleLoader__.load({
 				react.createElement(TechRow, { label: "managedBy（由谁挂载）", value: String(plugin.managedBy) }),
 				react.createElement(TechRow, { label: "enabled（配置文件开关）", value: String(plugin.enabled) }),
 				react.createElement(TechRow, { label: "inject（依赖的服务）", value: list(plugin.inject) }),
-				react.createElement(TechRow, { label: "services（对外提供的服务）", value: list(regs.services) }),
-				react.createElement(TechRow, { label: "commands（注册的命令）", value: list(regs.commands) }),
-				react.createElement(TechRow, { label: "providers（提供的实现）", value: list(regs.providers) }),
-				react.createElement(TechRow, { label: "events（监听的事件）", value: list(regs.events) })
+				react.createElement(TechRow, { label: "services（对外提供的服务）", value: list(provides.services) }),
+				react.createElement(TechRow, { label: "commands（注册的命令）", value: list(provides.commands) }),
+				react.createElement(TechRow, { label: "providers（提供的实现）", value: list(provides.providers) }),
+				react.createElement(TechRow, { label: "events（监听的事件）", value: list(plugin.events) })
 			);
 		}
 

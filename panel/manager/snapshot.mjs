@@ -4,6 +4,9 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import { PLUGINS, DEPENDENCIES } from "./plugin-registry.mjs";
 import { listCustody, getSoftRecord, custodyRoot } from "./custody.mjs";
+// 提供面单源化（改名批）：不自建第二份优先级逻辑，直接复用装载面 extractRegisters
+// （provides 三槽优先、缺席回落 legacy registers，同 loader 口径；返回 undefined 时置空对象）。
+import { extractRegisters } from "../../registry/dist/loader.js";
 
 function createHashSha256(text) {
   return createHash("sha256").update(text).digest("hex");
@@ -386,12 +389,9 @@ export async function buildSnapshot({ toolkitRoot, hotRouterPath = join(homedir(
       note: (ORIGINS[dir] || {}).note || null,
       entry: manifest && manifest.requirements && manifest.requirements.exports,
       inject: manifest && Array.isArray((manifest.requirements || {}).inject) ? manifest.requirements.inject : [],
-      registers: {
-        events: (manifest && (manifest.requirements || {}).registers || {}).events || [],
-        services: (manifest && (manifest.requirements || {}).registers || {}).services || [],
-        commands: (manifest && (manifest.requirements || {}).registers || {}).commands || [],
-        providers: (manifest && (manifest.requirements || {}).registers || {}).providers || [],
-      },
+      // 提供面挂提供面键（改名批，§20.2 对照表）；events 甲案顶层平铺（数据源不动）；inject 不改名不换源。
+      provides: extractRegisters(manifest) || {},
+      events: (manifest && (manifest.requirements || {}).registers || {}).events || [],
       managedBy: raw.patchRow ? "patch" : meta.managedBy === "preset" ? "preset-script" : "none",
       enabled: raw.patchRow ? raw.patchRow.enabled : meta.managedBy === "preset" ? presetState.patched : false,
       patchRow: raw.patchRow,

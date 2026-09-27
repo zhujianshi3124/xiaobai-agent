@@ -225,14 +225,14 @@ function patchSnapshotPayload() {
         {
           dir: 'rate-throttle', name: '@local/dsh-toolkit/rate-throttle', origin: 'local',
           status: 'mounted', statusCopy: null, restoreAvailable: false, canMount: false,
-          registers: {}, inject: [], managedBy: 'bundle', enabled: true, note: null, bodyStats: null,
+          provides: {}, events: [], inject: [], managedBy: 'bundle', enabled: true, note: null, bodyStats: null,
           patchRow: { id: 'rate-throttle', enabled: true, disabledExpr: null, config: { enabled: 'false' } },
           configPanel: { editable: true, rowId: 'rate-throttle', values: { enabled: 'false' }, effectNote: '重启后生效' },
         },
         {
           dir: 'search-router', name: '@local/dsh-toolkit/search-router', origin: 'local',
           status: 'mounted', statusCopy: null, restoreAvailable: false, canMount: false,
-          registers: {}, inject: [], managedBy: 'bundle', enabled: true, note: null, bodyStats: null,
+          provides: {}, events: [], inject: [], managedBy: 'bundle', enabled: true, note: null, bodyStats: null,
           patchRow: { id: 'web-search-router', enabled: true, disabledExpr: null, config: {} },
           configPanel: { editable: false, rowId: 'web-search-router', values: {}, mode: { value: 'auto', source: 'patch' }, note: '' },
         },
