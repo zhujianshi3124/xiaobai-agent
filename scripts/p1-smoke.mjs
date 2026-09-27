@@ -598,9 +598,9 @@ check("client keeps defensive fallback", clientSrc.includes("rowAnchorFromPatch"
     htmlSrc2.includes("请手工编辑"));
 
   // ---- P2.2b 全卡覆盖：4 张可 toggle 卡的锚点行号与真实文件对账 ----
-  // （agent-memory 的 74 行是用户实际点击时看到的行号，必须逐字对上）
+  // （agent-memory 的 77 行是用户实际点击时看到的行号，必须逐字对上；D-19 滚存后 58→59/64→66/74→77）
   const patchLines = readFileSync(join(root, "cordis.patch.yml"), "utf8").split(/\r?\n/);
-  const CARD_LINES = [["rate-throttle", 14], ["web-search-local", 58], ["web-search-router", 64], ["agent-memory-runtime", 74]];
+  const CARD_LINES = [["rate-throttle", 14], ["web-search-local", 59], ["web-search-router", 66], ["agent-memory-runtime", 77]];
   for (const [id, line] of CARD_LINES) {
     const found = patchLines.findIndex((l) => new RegExp("^\\s*- id:\\s*" + id + "\\s*$").test(l));
     check("P2.2b anchor line reconciled for " + id, found + 1 === line, "line " + (found + 1) + " (expected " + line + ")");

@@ -22,10 +22,10 @@ import { createHash } from "node:crypto";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const patchPath = join(root, "cordis.patch.yml");
-// 基准滚存：ce0b0b81… →（H5 加引号修 360）→ bb7af96f… →（Pack I 删除 360/搜狗，引擎 8→6）→ e8051fe9…。
-// 与 scripts/p24-verify.mjs 同步；两次都是**数据**变更，守卫机制未放宽。成因全文与该文件内注释、
-// panel/docs/evidence/H-REAL-HOST-REVERIFY.md、docs/debt.md A#24 / A#25。
-const BASE_SHA_EXPECT = "e8051fe9cb04e61889a9a2f3f171efd3ab70c516156768337c0f5e1e85a8453d";
+// 基准滚存：ce0b0b81… →（H5 加引号修 360）→ bb7af96f… →（Pack I 删除 360/搜狗，引擎 8→6）→ e8051fe9… →（D-19 行级原生 inject:×3 落行块末尾，C1-007 用户拍板案一）→ a663f61b…。
+// 与 scripts/p24-verify.mjs 同步；三次都是**数据**变更，守卫机制未放宽。成因全文与该文件内注释、
+// panel/docs/evidence/H-REAL-HOST-REVERIFY.md、docs/debt.md A#24 / A#25 / 计划 §29。
+const BASE_SHA_EXPECT = "a663f61b57b09c30aeb7bfbfeedc0eb3430ea60848d985a6a1c9d1a9d4d68c31";
 const BASE_SHA = createHash("sha256").update(readFileSync(patchPath, "utf8")).digest("hex");
 if (BASE_SHA !== BASE_SHA_EXPECT) {
   console.error("ABORT: 真实 cordis.patch.yml 基线漂移（" + BASE_SHA.slice(0, 12) + "）——拒绝在非基准态跑矩阵");
@@ -1292,7 +1292,7 @@ section("批2 操作台/双回滚（D 段）");
 // 6. 收尾：真实仓零写入自证
 // ════════════════════════════════════════════════════════════
 section("收尾");
-check("真实 cordis.patch.yml 全程零写入（基准 e8051fe9… 不变）", sha(readFileSync(patchPath, "utf8")) === BASE_SHA, sha(readFileSync(patchPath, "utf8")).slice(0, 12));
+check("真实 cordis.patch.yml 全程零写入（基准 a663f61b… 不变）", sha(readFileSync(patchPath, "utf8")) === BASE_SHA, sha(readFileSync(patchPath, "utf8")).slice(0, 12));
 // 守卫口径（Q1' 修正，L-059）：放行「面板运行期合法的长期落痕」，只拦本矩阵**新增**产物。
 //   soft-uninstalls.json —— 软卸载台账（面板发起）
 //   row-adjacency.json    —— 行块邻接留痕（D-UI-05 长期证据，与清账解耦、只增不减）

@@ -20,7 +20,8 @@ const BASE_SHA = createHash("sha256").update(readFileSync(patchPath, "utf8")).di
 // panel/docs/evidence/H-REAL-HOST-REVERIFY.md、账见 docs/debt.md A#24 / D-16。
 // 基准滚存（第 2 次，2026-09-21 Pack I，用户指令"删除 360 和搜狗"）：bb7af96f… → e8051fe9…。
 // 起因同样是数据（engines 从 8 项减到 6 项），机制未放宽；引擎池现状见 docs/debt.md A#25。
-const BASELINE_SHA_EXPECTED = "e8051fe9cb04e61889a9a2f3f171efd3ab70c516156768337c0f5e1e85a8453d";
+// 基准滚存（第 3 次，2026-09-27 W9 第二段 D-19，用户拍板案一：相关 patch 行加原生 inject:）：e8051fe9… → a663f61b…。
+const BASELINE_SHA_EXPECTED = "a663f61b57b09c30aeb7bfbfeedc0eb3430ea60848d985a6a1c9d1a9d4d68c31";
 if (BASE_SHA !== BASELINE_SHA_EXPECTED) {
   console.error("ABORT: 真实 cordis.patch.yml 基线漂移（" + BASE_SHA.slice(0, 12) + "）——拒绝在非基准态跑验证");
   process.exit(1);
@@ -405,7 +406,7 @@ async function snapshotOf(dir) {
 // ---------- 收尾：真实仓零写入自证 ----------
 {
   const nowSha = sha(readFileSync(patchPath, "utf8"));
-  check("真实 cordis.patch.yml 全程零写入（基准 e8051fe9… 不变）", nowSha === BASE_SHA && BASE_SHA === BASELINE_SHA_EXPECTED);
+  check("真实 cordis.patch.yml 全程零写入（基准 a663f61b… 不变）", nowSha === BASE_SHA && BASE_SHA === BASELINE_SHA_EXPECTED);
   rmSync(work, { recursive: true, force: true });
 }
 
