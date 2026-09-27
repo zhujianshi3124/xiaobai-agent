@@ -1638,3 +1638,64 @@ W2 批末真机窗已闭（C1-007 批复入账）：用户目检半全对——�
   老会话上下文耗尽期状态行笔误；本会话开工自核实数 toolkit HEAD＝`7d0fd4667b6c…`（git log
   逐字核实），且 008 末段链 `775aa0c→3b05eef→7d0fd46` 血缘完整可追（3b05eef 为链中节点、
   非链尾）⇒ **以实数核销、按实数续链**；错账成因＝耗尽期笔误（非链尾漂移、非历史改写）。
+
+## 31. inject 修法笔落账（2026-09-27 · C1-007 开工令 2 · 纯追加，不回改上面任何一行）
+
+- **修法（单笔可 revert，`toolkit@a2789d0`）**：snapshot.mjs 取数点由 `requirements.inject`
+  顶层（从来空＝B 型缺口，归因 §30.b）改读
+  `(manifest && (manifest.requirements || {}).registers || {}).inject || []`——events 槽同款
+  守卫形、doctor engine.mjs 同位读法；单点一行，客户端两读点（`index.js:397`／`panel.html:288`）
+  零改动（断链单点＝snapshot 取数，渲染侧无虞——§30.b ④）。
+- **先钉后修（p22 新增 A-inject 节 12 格，工装盲区闭合）**：snapshot 真值格两发（manifest
+  registers.inject 实况硬编码：compact-router `[llm,tokenMeter,sessions,commands]`／
+  rate-throttle `[llm,tokenMeter]`／search-router `[web]`／web-search-local `[web]` 四卡有值；
+  agent-memory 无声明＝空数组——各自断言）＋双通道逐卡 parity 十发（react TechRow／html
+  techRow 的 inject 行 == snapshot 真值格式化；html 通道 return 补导出 techDetails）。
+- **修前红正中一格**：164/165，唯一红＝四卡真值格（现值空、预期有值；`p22-prered.log`）；
+  **修后 165/165**（四卡现真值、记忆卡"（无）"；`p22-post.log`）。
+- **变异一格**：读法回潮 `requirements.inject` 顶层 ⇒ 恰四卡真值格红、其余 164 格全绿（命题
+  可分离）；内存 pristine 写回 sha256 逐字节还原（`inject-mutate.mjs`/`.log`）。
+- **读数（HEAD `a2789d0`，`*-fix.log`）**：门禁 6/6（52.9s，dry-run 0/0/0）＋nt 448/0＋p1
+  314/0＋p22v 110/110＋p22 165/165＋p24v 63/0＋p24m 720/720＋regression-all 14 项全绿＋pcc
+  真文件 0 问题＋doctor 四套件 {21,11,7,26}＋stage3 a–g 全 PASS＋`~/.dsh` hash
+  `c585738c…0bd9`/5 files 逐字节同。**基线口径更新入账：p22-cards-ui 153→165（+12 恰新钉）；
+  node --test 本笔不变（448，无 node --test 新钉）。**
+- **真机面（报协调侧并入下一真机窗）**：修后五卡技术详情 inject 行现真值＝正常路径可见面
+  变化；用户第 6 次重启后核对：四卡有值、记忆卡仍"（无）"（素材组一更正版口径，§30.b 附）。
+- CHANGELOG 已记（对外可见面）。
+
+## 32. agent-memory 生命周期整轮钉落账（2026-09-27 · C1-007 开工令 3 · 纯追加，不回改上面任何一行）
+
+- **落点（纯测试笔，`toolkit@5a85c1b`＋改名更正小笔 `4a3f0a1`，lib 零触碰、各自独立可
+  revert）**：新增 `test/agent-memory.lifecycle.test.mjs` 两格（素材建议①）——以公开 API
+  （createSession／addEntry／setEntryStatus／appendMilestone／updateStatus(已移交)／
+  runtime.onSessionDisposed）在临时数据根驱动整轮生命周期，断言 registry/ledger/progress
+  三面文件与会话状态机（流转／新鲜度／锁清理）的**集成不变式**。
+- **LC1 写入半环**：create（registry 条目／三会话文件／头部 status＋heartbeatTurn 固化）→
+  addEntry×2（编号顺延＋heartbeatTurn 随写推进＋lastActiveAt 心跳 UTC iso）→ setEntryStatus
+  三态流转（待办→进行中→已完成，他条不受累）→ appendMilestone（进度四要素入文；**台账
+  heartbeatTurn 不被里程碑推进**＝新鲜度数据源语义）→ 新鲜度门链上检查点（3 回限内放行／
+  超限 FRESHNESS_STALE fail-closed／写一次台账刷新后复放行）；每段后锁零残留断言。
+- **LC2 流转收尾半环**：已移交（handedOverTo 必填）→ registry/台账头部双面同步 → 旧拒
+  WRITE_FORBIDDEN／继任可写编号自起 → 移交方历史文件零变化 → dispose 活跃→已完成（双面同步、
+  销毁后写拒）→ 终态三面对账（registry×ledger×progress 互证＋移交链指向继任）＋锁零残留。
+- **衔接不重不漏**（文件头注逐族记档）：结构/编号/折叠/溢出/历史不可改归 A/D 族；移交与
+  工作区矩阵归 B/W 族；新鲜度矩阵归 G1-G5/HF1-HF4（本钉只取链上检查点）；锁行为归 L1-L5
+  （本钉只断言每段锁零残留）。
+- **隔离**：显式临时 root（mkdtemp）＋生产根护栏 fail-closed，`~/.dsh` 真数据根零触碰。
+- **验证**：家族同跑 86/86（既有两文件＋本文件，零跨文件干涉；改名后复证）＋单跑 2/2；
+  **变异一发**：摘 updateStatus 的 patchLedgerCore 台账同步格 ⇒ 恰 LC2 红（移交/销毁两同步
+  断言）、LC1 不受累＝命题可分离；内存 pristine 写回 sha256 逐字节还原
+  （`lc-mutate.mjs`/`.log`）。
+- **读数（HEAD `4a3f0a1`，`*-final.log`）**：门禁 6/6（56.9s，dry-run 0/0/0）＋nt 450/0＋p1
+  314/0＋p22v 110/110＋p22 165/165＋p24v 63/0＋p24m 720/720＋regression-all 14 项全绿＋pcc
+  真文件 0 问题＋doctor 四套件 {21,11,7,26}＋stage3 a–g 全 PASS＋`~/.dsh` hash
+  `c585738c…0bd9`/5 files 逐字节同。**基线口径更新入账：node --test 448→450（+2 恰新钉）。**
+  无行为码改、无真机面（纯测试钉）。
+- **自曝两条（如实记）**：①LC 笔（5a85c1b）提交前只跑家族读数未跑门禁全链，门禁第 1 步
+  pluggable-lint 翻红——selfPluginOfTestFile 按文件名首个点段推断插件归属，"agent-memory-
+  lifecycle"非插件名 ⇒ 被判跨插件静态 import（`*-final1.log` 留档红读数）；处置＝git mv 改名
+  循 "<插件名>.<主题>.test.mjs" 既有惯例（同族 compact-router.integration 先例），内容零变化
+  （`4a3f0a1`）；**教训＝施工笔读数必须含门禁全链，家族/专项读数不代门禁**。②新钉首跑两格
+  红＝预期值错账（条目编号按 "L-1" 写、实为三位零垫 "L-000/L-001"），修预期不改库（首跑读数
+  `lc-first.log` 前身留档）。
