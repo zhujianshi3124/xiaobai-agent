@@ -6,6 +6,19 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### inject 卡面真值修复（2026-09-27，技术详情 inject 行）
+
+- **技术详情"inject（依赖的服务）"行现显示真值**：snapshot 取数源由 manifest
+  `requirements.inject` 顶层（历史实现即读此处，恒为空）更正为 `requirements.registers.inject`
+  （真声明所在）——compact-router（`llm, tokenMeter, sessions, commands`）、rate-throttle
+  （`llm, tokenMeter`）、search-router（`web`）、web-search-local（`web`）四卡自此显示所依赖的
+  服务名单；agent-memory 无声明仍显示"（无）"。React 卡与兜底页两通道同源（客户端零改动，
+  服务端单点修复）。
+- 防回归钉：`p22-cards-ui` 新增 A-inject 节 12 格（snapshot 真值对 manifest 实况＋双通道逐卡
+  parity，153→165）；修前红恰一格、变异一格实证（读法回潮即红）。
+- 真机可见面随下一真机窗核对；独立回退＝施工笔 `git revert`。归因与读数见
+  `docs/repair-plan-20260923.md` §30–§31、`docs/debt.md` #46–#47。
+
 ### D-19 原生依赖门控声明（2026-09-27，patch 行行级 `inject:`）
 
 - **相关 patch 行加宿主原生 `inject:` 键（用户拍板案一）**：rate-throttle
