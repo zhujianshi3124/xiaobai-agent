@@ -20,7 +20,7 @@ const withScan = process.argv.includes('--with-scan')
 
 const steps = [
   ['npm test（build×3 + lint + 零子插件引用守卫 + typecheck×3 + node --test）', 'npm', ['test', '--prefix', ROOT]],
-  ['回归全跑（13 专项脚本 + node --test）', process.execPath, [resolve(ROOT, 'scripts/regression-all.mjs')]],
+  ['回归全跑（14 专项脚本 + node --test）', process.execPath, [resolve(ROOT, 'scripts/regression-all.mjs')]],
   ['doctor 真实仓 dry-run 必须 0/0/0', process.execPath, [DOCTOR_CLI, '--scope', ROOT]],
   // 题 2 裁定的分权边界守卫（契约 v1.1 批 2）：本仓契约与独立 doctor 是两套校验器，
   // "契约管解析行为、doctor 管必填性"最怕静默打脸。裁定条件 a 明写"手动脚本不算守卫"
@@ -31,7 +31,10 @@ const steps = [
   // 而仓内 293/293 全绿。脚本自带 --selfcheck（解析器语义 20 条断言），见该文件头注。
   ['patch 行配置校验（宿主通道语义，含真 YAML 标量解析）', process.execPath, [resolve(ROOT, 'scripts/patch-config-check.mjs')]],
 ]
-if (withScan) steps.push(['p23-verify（regression-all 未含）', process.execPath, [resolve(ROOT, 'scripts/p23-verify.mjs')]])
+// D-3 修法后 p23-verify 已入 regression-all 本体（第 2 步）；本步保留为双跑冗余守卫——
+// 若有人日后从 regression-all 摘除 p23-verify，本步仍能拦住。摘除/重整随收口批"门禁 6→7"定，
+// 本批不动门禁结构（C1-007 裁：门禁步数不变）。
+if (withScan) steps.push(['p23-verify 复跑（regression-all 已含，双跑冗余守卫）', process.execPath, [resolve(ROOT, 'scripts/p23-verify.mjs')]])
 
 let bad = 0
 const started = Date.now()
