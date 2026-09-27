@@ -414,8 +414,10 @@ export async function buildSnapshot({ toolkitRoot, hotRouterPath = join(homedir(
       license: (ORIGINS[dir] || {}).license || null,
       note: (ORIGINS[dir] || {}).note || null,
       entry: manifest && manifest.requirements && manifest.requirements.exports,
-      inject: manifest && Array.isArray((manifest.requirements || {}).inject) ? manifest.requirements.inject : [],
-      // 提供面挂提供面键（改名批，§20.2 对照表）；events 甲案顶层平铺（数据源不动）；inject 不改名不换源。
+      inject: (manifest && (manifest.requirements || {}).registers || {}).inject || [],
+      // 提供面挂提供面键（改名批，§20.2 对照表）；events 甲案顶层平铺（数据源不动）；inject 键名不改、
+      // 取数源改 registers.inject（inject 修法笔：requirements 顶层从未有声明＝B 型缺口，归因见计划 §30.b；
+      // 守卫形同 events 槽与 doctor engine.mjs 同位读法）。
       provides: extractRegisters(manifest) || {},
       events: (manifest && (manifest.requirements || {}).registers || {}).events || [],
       managedBy: raw.patchRow ? "patch" : meta.managedBy === "preset" ? "preset-script" : "none",
