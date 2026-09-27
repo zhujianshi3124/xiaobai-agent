@@ -12,7 +12,10 @@
  *   （rate-throttle 热配置，源码锚点 rate-throttle/index.js:77,183,403-433）——该文件**不在授权段字面范围**，
  *   属越界读取；结论与申报见 design 文档与 ledger L-041，并列入 U13 追认/纳入申请。
  *
- * 输出：panel/docs/evidence/P23-SHADOW-SCAN.txt；退出码 0 = 全部结论落档。
+ * 输出：panel/docs/evidence/P23-SHADOW-SCAN-<UTC时间戳>.txt；退出码 0 = 全部结论落档。
+ * （D-2 修法，C1-007 W9 第一段：证据只增不改——每次运行写带时间戳的**新**文件，
+ *   不覆写任何既有文件；历史正本 P23-SHADOW-SCAN.txt（09-18 注册版）原样保留。
+ *   新证据文件入库前须按 evidence/README 惯例登记。）
  */
 import { readFileSync, existsSync, statSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -21,7 +24,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const outPath = join(root, "panel", "docs", "evidence", "P23-SHADOW-SCAN.txt");
+// D-2 修法：outPath 带运行时刻时间戳——每次运行落**新**文件，旧正本与任何既有文件零覆写。
+const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+const outPath = join(root, "panel", "docs", "evidence", "P23-SHADOW-SCAN-" + stamp + ".txt");
 const DSH = join(homedir(), ".dsh");
 
 function probe(path) {
