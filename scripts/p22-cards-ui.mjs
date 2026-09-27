@@ -154,7 +154,7 @@ function loadHtmlClient() {
   const fakeDoc = { getElementById: (id) => node(id), createElement: (t) => node(t) };
   const fn = new Function(
     "document", "fetch",
-    m[1] + "\nreturn { toggleHtml, stateOf, renderConfirm, setPatch: (t) => { PATCH_TEXT = t; }, dualSwitchNotice, effectNoteHtml };",
+    m[1] + "\nreturn { toggleHtml, stateOf, renderConfirm, setPatch: (t) => { PATCH_TEXT = t; }, dualSwitchNotice, effectNoteHtml, techDetails };",
   );
   return fn(fakeDoc, () => new Promise(() => {}));
 }
@@ -211,6 +211,53 @@ for (const exp of EXPECT) {
 // 不得有任何一个渲染器把两层合并成一个值
 check("react renderer: never emits a merged layer value",
   !cards.some((c) => { const t = reactR.toggleOf(c); return t && /layer\s*[:=]\s*["']merged/.test(textOf(t.type(t.props)).join(" ")); }));
+
+// ============================================================
+// A-inject. 技术详情 inject 行端到端钉（inject 修法笔，EXE-BOOT-009 开工令 2）
+//   归因（计划 §30.b）：snapshot 曾读 requirements.inject 顶层＝从来空（B 型缺口，
+//   起源 f95b751 挪错层级），真声明在 requirements.registers.inject。
+//   本节三面钉死，堵"无钉断言过 inject 行端到端值"的工装盲区：
+//   ① snapshot 真值格（manifest registers.inject 实况硬编码：四卡有值＋agent-memory
+//     无声明＝空，各自断言）——修前红正中四卡这一格（现值空、预期有值）；
+//   ②③ react TechRow / html techRow 逐卡＝snapshot 真值格式化（双通道 parity，
+//     随 snapshot 同步，恒绿）。
+// ============================================================
+const INJECT_EXPECT = {
+  "compact-router": ["llm", "tokenMeter", "sessions", "commands"],
+  "rate-throttle": ["llm", "tokenMeter"],
+  "search-router": ["web"],
+  "web-search-local": ["web"],
+  "agent-memory": [],
+};
+const fmtInject = (a) => (a && a.length > 0) ? a.join(", ") : "（无）";
+
+// ① snapshot 真值（与 manifest registers.inject 实况逐字对表）
+check("inject: snapshot 四卡真值＝manifest registers.inject 实况（compact-router/rate-throttle/search-router/web-search-local）",
+  ["compact-router", "rate-throttle", "search-router", "web-search-local"].every((d) =>
+    JSON.stringify((snap.plugins.find((x) => x.dir === d) || {}).inject) === JSON.stringify(INJECT_EXPECT[d])));
+check("inject: snapshot agent-memory 无声明＝空数组",
+  JSON.stringify((snap.plugins.find((x) => x.dir === "agent-memory") || {}).inject) === "[]");
+
+// ②③ 双通道逐卡 parity（对 snapshot 真值，格式化逐字）
+for (const exp of EXPECT) {
+  const p = snap.plugins.find((x) => x.dir === exp.dir);
+  const want = fmtInject(p && p.inject);
+
+  // react：TechDetails 元素须调用一次才有子树（headless createElement 陷阱同族）
+  const injCard = cards.find((c) => c.props.plugin.dir === exp.dir);
+  const injCardTree = injCard ? injCard.type(injCard.props) : null;
+  const tdEl = injCardTree ? findAll(injCardTree, (n) => typeof n.type === "function" && n.type.name === "TechDetails")[0] : null;
+  const tdTree = tdEl ? tdEl.type(tdEl.props) : null;
+  const row = tdTree ? findAll(tdTree, (n) => typeof n.type === "function" && n.type.name === "TechRow" && n.props.label === "inject（依赖的服务）")[0] : null;
+  check("[" + exp.dir + "] react: inject 行 == snapshot 真值格式化",
+    !!row && row.props.value === want, row ? String(row.props.value) : "(TechRow 缺席)");
+
+  // html：兜底页 techDetails 直连（同卡同值同格式）
+  const hrow = htmlR.techDetails(p);
+  check("[" + exp.dir + "] html: inject 行 == snapshot 真值格式化",
+    typeof hrow === "string" && hrow.includes('<span class="techKey">inject（依赖的服务） : </span>' + want),
+    typeof hrow === "string" ? hrow.slice(0, 0) || undefined : "(techDetails 非字符串)");
+}
 
 // ============================================================
 // A2. 黄警告「恢复指引」文案（第 11 轮 ⑤ 文案优化）
