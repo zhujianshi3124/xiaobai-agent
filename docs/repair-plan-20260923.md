@@ -1377,6 +1377,115 @@ W2 批末真机窗已闭（C1-007 批复入账）：用户目检半全对——�
   改动；`cordis.patch.yml` 基准 `e8051fe9` 未动；宿主未触（pid 以现场为准）；`~/.dsh` 零
   触碰（hash 逐笔同）；改名批整批闭合，候波 2 收官判定与波 3 排程（归协调侧）。
 
+## 26. F-73 产品级小笔落账（2026-09-27 · C1-007 开工令 2 · 纯追加，不回改上面任何一行）
+
+- **批复与素材**：F-73"弹窗展示卸载收据信息"用户已批（"按建议"＝做，C1-007 二.4）；实施
+  素材＝EXE-BOOT-008 批末申报第四节（大白话一段＋推荐"做"）。
+- **复算前置（动工前，结论＝支撑）**：①custody 软台账两写入形状字段齐备——patch 行形
+  （`uninstall.mjs:805`：recordedAt/rowId（=台账键）/block/insertAt/hostKey{key}/backupDir/
+  userReason）与 preset 形（`:894`：presetUndo/evidenceBackupDir/userReason）；②snapshot
+  `:328` 本就在调 `getSoftRecord`（此前只出 `softRecorded` 布尔）⇒ 数据现成；③恢复弹窗两
+  构造点（React `setDlg({kind:"restore"})` ／ HTML `restoreDialogHtml(p,…)`）卡对象均在作用
+  域内 ⇒ 可观测；④p24 工装已有双通道弹窗管道（`reactR.direct`＋`namedOf`＋
+  `restoreDialogHtml`）。复算不支撑即停报条款未触发。
+- **施工笔 `f8b4e3b`（单笔四文件 +73/−0 纯增量，独立可 revert）**：服务端 `buildSoftReceipt`
+  组稿（循 RESTART_EFFECT_NOTE 服务端权威先例＋buildConfigPanel 导出先例）——四问四答逐行
+  文案（卸载时间／卸载内容〔patch 行＝配置行「键」已摘＋宿主键备份在案；preset 形＝--undo
+  退出〕／本体位置〔lib/<dir> 未动＋改动前备份〕／恢复方式〔按台账插回原位＋宿主键一并恢复
+  ＋重启生效〕＋有因记因），数据全部来自台账现成记录，不加接口、不动引擎；snapshot 卡新增
+  additive 字段 `softReceipt`（无记录＝null）；恢复弹窗双通道只渲染不加字（React
+  RestoreDialog＋panel.html restoreDialogHtml 同款守卫：mode/kind!=='mount' 且 lines 非空，
+  fail-soft；挂载弹窗不属软卸载收据面不渲染）；bundle `node --check` 过。
+- **工装两断言（p24 §2.9 区，718→720；断言必须可观测）**：①react 收据行内容在场（服务端
+  lines 逐字；合成收据卡挂载弹窗零收据块反向）；②html 同文逐字（双通道覆盖）。变异两发隔离
+  各红各的（M1a react 整行锚〔§25 三件套：`[^\S\r\n]*`＋`\r?\n` 通配〕／M1b html 行尾无关子
+  串锚；内存 pristine 写回 sha256 逐字节还原，工装 `f73-receipt-mutate.mjs`）。
+- **读数**：门禁 6/6（52.7s，真实仓 dry-run 0/0/0）＋doctor 四套件 {21,8,7,26}＋stage3 a–g
+  全 PASS＋`~/.dsh` hash `c585738c…0bd9`/5 files 逐字节同；`node --test` 448/0（零新增钉，
+  口径不变）；`p1-smoke` 314/0；`p22-cards-ui` 153/153；**`p24-ui-matrix` 720/720（+2 恰新
+  断言）**。**基线口径更新入账：`p24-ui-matrix` 718→720**（nt/p22 不变，以实报为准）。
+- **真机面**：恢复弹窗新增只读信息块＝正常路径可见面——随批末呈报、并入下一真机窗
+  （C1-007 二.2 同窗），执行侧不自裁。自曝一条：M1b 首跑工装预期算错（守卫单行四处
+  `p.softReceipt` 引用、误期 2 处，写盘前即抛、仓库无恙），修正预期后两发全过。
+
+## 27. W9 前置考古呈文（2026-09-27 · C1-007 开工令 3 · 纯读呈裁；W9 不动工，候协调侧裁）
+
+> 口径：以库内记载为准；库内无据处如实标"无据"；需外部证据的留协调侧补查。引用行号漂移
+> 同 D-20 族（按符号定位为准）。
+
+### 27.1 D-2 · p23-shadow-scan 覆写历史证据（本次复核：原判成立、未修）
+
+- **是什么**：`scripts/p23-shadow-scan.mjs` 每次运行覆写
+  `panel/docs/evidence/P23-SHADOW-SCAN.txt`（生成时刻＋`~/.dsh/settings.yaml` 指纹），违反
+  证据目录"只增不改"硬约定；P2.3 的 09-18 快照曾被覆写、`git checkout` 还原（原文 debt D
+  区 :449）。**同族第二处**（terminal-acceptance-report.mjs）已于 Pack I 冻结＋`exit(2)` 硬
+  闸；本条原始诉求至今未修。本次复核成立：脚本头注自陈"结论以本脚本落 evidence（可重放）"，
+  `outPath` 固定指向该文件、`writeFileSync` 在案（现 HEAD :15/:17/:24）。
+- **选项**：①改为写带时间戳新文件（只增不改，旧文件归档不动）；②整体退役（P2.3 设计前置
+  的一次性补扫，使命已完成）；③同 terminal-acceptance-report 先例加执行硬闸。
+- **影响面**：单脚本＋evidence 目录条目，无宿主面、无引擎面。
+- **建议**：①（写带时间戳新文件）＋头注记档；**不入门禁链**——它是取证工装非回归面。
+  **步数口径**：不占门禁第 7 步，第 7 步留给收口批既定新步（C-1 门禁 6→7）。
+
+### 27.2 D-3 · regression-all 清单补漏（本次复核：原判成立）
+
+- **是什么**：`regression-all.mjs` 清单 13 项不含 `p23-verify`／`p23-shadow-scan`；改面板
+  文案时 p23 源码断言曾静默漏过一次（人工补跑发现）；`ci-local --with-scan` 第 6 步已临时
+  覆盖 p23-verify。本次复核成立（13 项清单在案、零 p23）。
+- **选项**：①p23-verify 并入 regression-all 本体（13→14）；②连 p23-shadow-scan（D-2 修复
+  后）一起并入；③维持现状。
+- **影响面**：`regression-all.mjs` 清单一行＋步数标签，无码改、无宿主面。
+- **建议**：①——p23-verify 是回归面（源码断言），入本体防"忘带 --with-scan"漏跑；
+  p23-shadow-scan 属一次性取证工装，修后不并（27.1）。**步数口径**：并入后 ci-local 第 2 步
+  标签"回归全跑（14 专项脚本＋node --test）"，门禁总步数不变（--with-scan 6 步），第 7 步
+  留收口批。
+
+### 27.3 D-18/D-19 立项必答 · 与 cordis 上游 REQ-6 对齐还是自创（两案对比＋建议）
+
+- **判据原文（符号定位）**：REQ-6 错误隔离＝`p0-recon.md` 表行"REQ-6"：每子插件独立派生
+  ctx／加载运行错误捕获→status=error/quarantined＋lastError／**指数退避重试（默认 3）**／
+  dispose 级联清理（S5 句柄验收）——**不含依赖门控、不含自动唤醒**。同族记载：
+  `embed-toolkit.md:45`（retryLimit/retryBackoffMs/loadTimeoutMs＝"错误隔离与退避（REQ-6）"，
+  引用行号 :35 已漂移）、`contract.md:57`（"文档正典口径是重试退避"）、
+  `contract-v1.1-recon.md:269`（"文档未承诺自动唤醒 ⇒ 真相收口＋补测试钉住即收口"）、
+  `add-sub-plugin.md:171`（"REQ-6 隔离后不自动重试原样成立"）。三条实测后果
+  （`test/cordis-inject-lifecycle.test.mjs:52/86/134`）：manifest-only 依赖缺席照常 ACTIVE／
+  依赖离开 cordis 撤 fiber 而 registry 报态已批 3 真相收口／install 全局互斥 ⇒ provider 安装
+  不能唤醒等待中的 consumer。
+- **案一（D-19 · 与 cordis 原生对齐）**：patch 行写宿主原生 `inject:`（`EntryOptions.inject`
+  经 `Inject.resolve` 合进 fiber，D-12 追加逐字对照在案）——门控归宿主、**零代码**、语义与
+  cordis 原生一致。**成本/风险**：①判据基准第 3 次滚存（现 `e8051fe9`/3085 B）＋p24 两处硬
+  闸同步；②`patch-config-check` 须认新键——本次源码读证：解析层为通用 YAML 子集（任意行键
+  可解析）、校验层只取 `row.id`/`row.config`（现 HEAD :364-365），行级 `inject:` **不会抛**；
+  运行时实证（合成行喂脚本）留 W9 动工第一步；③**必须真机重启复验**（H5 级爆炸半径在同一
+  文件）；④D-16 静态通道掀整机不对称仍在（门控越真越须前置闸兜住）。**维护面**：声明迁
+  YAML 后与 manifest `requires.services` 双轨并存，两处对账须钉（H2/迁移期同族）。
+- **案二（D-18 · 自创合成桥接）**：loader 把 manifest `requires.services` 合成为插件对象
+  `inject` 使 cordis 设门（registry 通道）。**成本/风险**：①装载时序改变（原 ACTIVE 者停
+  loading→超时 fiber-load-timeout 计隔离，A2/FIBER 错误码面全部重测）；②
+  `mergeNamespaceStatics` 就地改写插件对象（loader.ts 自陈），合成值会串进宿主通道对同一
+  模块实例的读取；③**内置插件无效**（宿主 patch 通道不经 `resolveLocalSource`）＝门控只
+  覆盖面板安装的第三方、五卡内置面照旧；④四份文档未承诺自动唤醒 ⇒ 须扩文档承诺面。
+  **维护面**：loader 复杂度＋双通道语义分叉长期共存。
+- **建议**：**采案一（D-19）、D-18 裁不采用并记档关闭**——对齐原生是"语义更正"而非"发明
+  机制"，零代码、门控归位宿主；案二三条代价（时序／串值／覆盖面残缺）均非小钱，且"内置
+  插件无效"使案二永远不完整。执行顺序（若裁案一）：探针实证 → 基准滚存＋p24 硬闸同步 →
+  YAML 改写 → 真机窗复验，四步各独立可回退。**本呈文不含动工；裁后按令。**
+
+### 27.4 F-62 复算（结论：原判成立，不翻正）
+
+- **原判**：provides 在独立 doctor CLI 的 A 侧撞名检查没有解读方——撞名循环只读
+  `requirements.registers`，v1.1 验收项"provides 声明的撞名被阻断"未落地（清单 :250-251，
+  批 10 边界注：数据面已落、读方未动、余下半边无批次归属）。
+- **本次复算（doctor 仓现 HEAD `652d17d`）**：`engine.mjs` 撞名两循环（:1262/:1289）读式
+  `rec.parsed.requirements.registers || {}`——零 provides；provides 仅在根字段白名单做零值
+  校验（:47-48，批 1 `2f12f53` 落的"零值校验"即类型校验非撞名读法）；:1456 providers 同读
+  legacy。**原判成立**；这是"未实现"账而非"判据错误"账 ⇒ 无防翻面钉需求（F-71/F-78 先例
+  属后者）。随 W9 规则面对账落地时的改动面：doctor 仓 `engine.mjs` 撞名读法补 provides
+  ＋run-tests 钉，两仓同批、互引 hash 纪律照旧。
+- **无据标注**：本仓文档对"provides 撞名阻断"的承诺出处＝v1.1 验收项（C-1 矩阵）；cordis
+  上游对撞名语义的原生定义，库内**无据**，留协调侧补查。
+
 ## 25. 波 2 收官入账注（2026-09-27 · C1-007 批复 · 纯追加，不回改上面任何一行）
 
 - **收官判定成立（协调侧裁）**：批 5–11＋W2 全部＋改名批全闭。完成清单＝debt A 区
