@@ -1565,6 +1565,28 @@ W2 批末真机窗已闭（C1-007 批复入账）：用户目检半全对——�
   四插件（rate-throttle/web-search-local/search-router/agent-memory）挂载正常、面板可通、
   各卡功能面如常＝行级声明与模块声明幂等零破坏；异常即报即撤（本笔 revert＋基准回滚）。
 
+### 29.1 协调侧查询回报注（2026-09-27 · 纯读查实＋口径入账；纯追加）
+
+- **查询**：§20.2 记载 compact-router `registers.inject` 四项，本段施工笔未落其行级
+  `inject:`；素材包组一无其 inject 行、组三又称"四插件"——三处记录对表出入，查实回报。
+- **查实 1（双时点实数）**：现 HEAD＝`f9a903a` 时点＝`["llm","tokenMeter","sessions","commands"]`
+  四项，两时点逐字相同 ⇒ §20.2 记载当时属实、至今未变（`--follow` 变更史在案：该 manifest
+  近三笔为 2a53d76/44545c0/e43babe，inject 四项未动）。
+- **查实 2（判定＝另有口径，非漏项）**：compact-router 的**宿主挂载行根本不在
+  cordis.patch.yml**——该文件 :3 注释自陈"compact-router 不在此：由
+  scripts/apply-preset-patch.mjs 改写预设 compaction 行名"；其挂载行在
+  `~/.dsh/.agent-presets/*/agent.cordis.yml`（预设文件，用户域；`apply-preset-patch.mjs`
+  头注自陈写路径与备份/标记安全轨），`ROW_IDS.compact-router = null` 与之互证。故
+  **不存在可附加行级 `inject:` 的行**：补落＝要么在 cordis.patch.yml 新增 insert 行
+  （⇒ 与预设行双重挂载，行为变更越 D-19 授权），要么改写 ~/.dsh 预设行（⇒ 触用户域
+  只读红线）。四项声明今日仍由**模块路**承载（与行级声明幂等——§29 源码读证），门控
+  语义零缺口；行级声明随预设行机制议题归后续（#45 记档维持），届时须单独授权。
+- **查实 3（组三计数口径更正）**：原素材"四插件"＝cordis.patch.yml 有行的四个插件
+  （D-19 触及面）；重启复验正确口径＝**五卡全查**——compact-router（第五卡）走预设行
+  机制、其行名改写恰是重启后挂载的关键路径，必须入核对清单。**素材包更正随回报发
+  出**：组一补 compact-router 的 inject 行预期（`llm, tokenMeter, sessions, commands`）；
+  组三改"五卡挂载正常"。零码改；真机窗排程前提（本回报）已备。
+
 ## 25. 波 2 收官入账注（2026-09-27 · C1-007 批复 · 纯追加，不回改上面任何一行）
 
 - **收官判定成立（协调侧裁）**：批 5–11＋W2 全部＋改名批全闭。完成清单＝debt A 区
