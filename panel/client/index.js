@@ -1085,6 +1085,15 @@ window.__ModuleLoader__.load({
 				react.createElement("div", { key: "t", style: styles.dlgTitle }, c.title),
 				react.createElement(DialogLine, { key: "b", text: c.body })
 			];
+			// F-73 产品级：软卸载收据块（只读）——行文案由服务端 softReceipt.lines 权威下发（effectNote 同款），
+			// 双通道只渲染不加字；挂载弹窗（重装后）不属软卸载收据面，不渲染。
+			var receipt = mode !== "mount" && plugin.softReceipt && Array.isArray(plugin.softReceipt.lines) ? plugin.softReceipt.lines : null;
+			if (receipt) {
+				kids.push(react.createElement("div", { key: "rck", style: styles.dlgKey }, "卸载收据（只读）"));
+				receipt.forEach(function (ln, i) {
+					kids.push(react.createElement(DialogLine, { key: "rc" + i, text: ln }));
+				});
+			}
 			if (props.conflict) {
 				var cur = props.conflict.currentValue === undefined || props.conflict.currentValue === null ? "" : String(props.conflict.currentValue);
 				var bak = props.conflict.backupValue === undefined || props.conflict.backupValue === null ? "" : String(props.conflict.backupValue);

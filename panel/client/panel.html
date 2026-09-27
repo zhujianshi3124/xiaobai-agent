@@ -824,6 +824,13 @@ function restoreDialogHtml(p, kind, conflict, choices) {
   var html = '<div class="dlgBox" data-restore-for="' + esc(p.dir) + '" data-restore-kind="' + kind + '">'
     + '<div class="dlgTitle">' + esc(c.title) + "</div>"
     + '<div class="dlgLine">' + esc(c.body) + "</div>";
+  // F-73 产品级：软卸载收据块（只读）——行文案由服务端 softReceipt.lines 权威下发，与 React 通道同文；
+  // 挂载弹窗（重装后）不属软卸载收据面，不渲染。
+  var receipt = kind !== "mount" && p.softReceipt && p.softReceipt.lines && p.softReceipt.lines.length ? p.softReceipt.lines : null;
+  if (receipt) {
+    html += '<div class="dlgKey">卸载收据（只读）</div>';
+    for (var ri = 0; ri < receipt.length; ri++) html += '<div class="dlgLine">' + esc(receipt[ri]) + "</div>";
+  }
   if (conflict) {
     var cur = conflict.currentValue === undefined || conflict.currentValue === null ? "" : String(conflict.currentValue);
     var bak = conflict.backupValue === undefined || conflict.backupValue === null ? "" : String(conflict.backupValue);
