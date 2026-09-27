@@ -53,12 +53,14 @@
                 - { provider: nvidia, model: deepseek-ai/deepseek-v4-flash-0731 }
                 - { provider: modelscope-gateway, model: deepseek-ai/DeepSeek-V4-Flash-0731 }
                 - { provider: modelscope-gateway-2, model: deepseek-ai/DeepSeek-V4-Flash-0731 }
+      inject: [llm, tokenMeter]
 
 - insert:
     - id: web-search-local
       name: '@local/dsh-toolkit/web-search-local'
       config:
         engines: [searxng, google, duckduckgo, mojeek, bing, baidu]
+      inject: [web]
 
 - insert:
     - id: web-search-router
@@ -69,6 +71,7 @@
         officialProviderPatterns: []
         officialModelPatterns: []
         defaultWhenUnknown: local
+      inject: [web]
 
 - insert:
     - id: agent-memory-runtime

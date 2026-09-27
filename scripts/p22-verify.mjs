@@ -270,9 +270,9 @@ const CARDS = [
   { dir: "rate-throttle", rowId: "rate-throttle", line: 14, pkg: "@local/dsh-toolkit/rate-throttle", xref: { patch: 0, declared: 0, any: [] } },
   // H2（债务 D-14）：两张搜索卡被停用时要报出"以 provider id 写的引用"（patch 命中）；
   // web-search-local 另有一条**声明式依赖**（search-router 依赖它，文本里看不见）。
-  { dir: "web-search-local", rowId: "web-search-local", line: 58, pkg: "@local/dsh-toolkit/web-search-local", xref: { patch: 1, declared: 1, any: [/fetchProvider:\s*local-fetch/] } },
-  { dir: "search-router", rowId: "web-search-router", line: 64, pkg: "@local/dsh-toolkit/search-router", xref: { patch: 1, declared: 0, any: [/searchProvider:\s*auto-search/] } },
-  { dir: "agent-memory", rowId: "agent-memory-runtime", line: 74, pkg: "@local/dsh-toolkit/agent-memory", xref: { patch: 0, declared: 0, any: [] } },
+  { dir: "web-search-local", rowId: "web-search-local", line: 59, pkg: "@local/dsh-toolkit/web-search-local", xref: { patch: 1, declared: 1, any: [/fetchProvider:\s*local-fetch/] } },
+  { dir: "search-router", rowId: "web-search-router", line: 66, pkg: "@local/dsh-toolkit/search-router", xref: { patch: 1, declared: 0, any: [/searchProvider:\s*auto-search/] } },
+  { dir: "agent-memory", rowId: "agent-memory-runtime", line: 77, pkg: "@local/dsh-toolkit/agent-memory", xref: { patch: 0, declared: 0, any: [] } },
 ];
 {
   for (const card of CARDS) {

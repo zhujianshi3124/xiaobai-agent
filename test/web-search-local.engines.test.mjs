@@ -16,7 +16,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import pluginDefault, { runSearch, defaultConfig } from '../lib/web-search-local/index.js'
 
-// 与 cordis.patch.yml 的 web-search-local.config.engines 同值（判据基准 e8051fe9，本文件不读它、
+// 与 cordis.patch.yml 的 web-search-local.config.engines 同值（判据基准 a663f61b，本文件不读它、
 // 只在 §"部署面"里复述；改 patch 时这条要跟着改，属 R3 的显式耦合点）
 const DEPLOYED = ['searxng', 'google', 'duckduckgo', 'mojeek', 'bing', 'baidu']
 
