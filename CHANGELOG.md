@@ -6,6 +6,22 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### W9 第一段（2026-09-27，D-2/D-3 工装修正＋F-62 撞名规则读 provides）
+
+- **doctor CLI 撞名规则改读 provides 正典（F-62，与独立 doctor 仓同批）**：
+  `reg.name-collision` 对 `services/commands/providers` 三槽的跨清单重名检查，改按
+  **provides 优先、缺席回落 legacy `requirements.registers`** 的正典口径读取（与 loader
+  `extractRegisters` 一致，含"provides 空数组＝声明为空、遮蔽 legacy"）——manifest 以
+  `provides` 声明的提供面重名自此同样被判 error。既有 legacy 声明行为不变；真实仓 dry-run
+  保持 0/0/0（批 10 provides 与 legacy 同槽同值）。
+- **p23-shadow-scan 证据文件改带时间戳（D-2）**：每次运行写
+  `P23-SHADOW-SCAN-<UTC 时间戳>.txt` 新文件，不再覆写既有证据正本（证据目录"只增不改"）。
+- **p23-verify 并入回归全跑清单（D-3）**：`regression-all` 专项脚本 13→14。
+
+钉子：doctor 仓 stage4a +3 格（provides 撞名复现钉／混声明回落格／空数组口径格，8→11），
+修前红恰三新格红、变异两发隔离各红各的；读数见 `docs/repair-plan-20260923.md` §28、
+`docs/debt.md` #44（doctor 仓笔 `343ca9f` 互引）。
+
 ### F-73 软卸载收据（2026-09-27，恢复确认弹窗只读收据块）
 
 - **恢复确认弹窗新增"卸载收据（只读）"信息块**：软卸载过的插件在点"恢复"时，弹窗内显示
