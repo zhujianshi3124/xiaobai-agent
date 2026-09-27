@@ -1527,6 +1527,44 @@ W2 批末真机窗已闭（C1-007 批复入账）：用户目检半全对——�
   （inject 非 provides 槽），修法落在撞名收集格单点，呈文锚已如实修正并记入 doctor 提交；
   命题本体（撞名读 provides）不受影响。
 
+## 29. W9 第二段落账：D-19 采纳落地（2026-09-27 · C1-007 批复＋动工令第二段 · 纯追加，不回改上面任何一行）
+
+- **终裁（用户拍板）**：D-18/D-19 采案一＝依赖门控走 cordis 原生 `inject:` 键、门控归宿主
+  本体；D-18 裁不采用并记档关闭（debt D-18/D-19 行内闭合注＋A 区 #45）。
+- **双路语义复算（改 YAML 前，源码读证）**：宿主 loader 1.0.3 的 `EntryOptions.inject` 经
+  `Inject.resolve(fiber.entry.options.inject, fiber.inject)` 合入 fiber（loader lib:709），
+  数组形逐名 `result[name] = null`＝**Map 去重**（cordis lib:1490-1498）⇒ 行级 `inject:` 与
+  模块自带 inject **同名双声明幂等无害**；`inject` 属 Entry 一等选项（loader :446——options
+  diff 含 inject 即整载重载）。判据与 D-12 追加逐字对照一致。
+- **步 a 探针 PASS（运行时实证，`d19-probe.log`）**：仓内临时 byte-copy（唯一差异＝
+  PATCH_FILE 参数化，用毕即删）×两夹具——①real 副本：净输出与原脚本×真文件逐行相同
+  （既有行零行为变化）；②inject 夹具（与步 b 落盘同形）：exit 0、行数/已校验/跳过/问题
+  计数全同（行级 `inject:` 不抛）。自曝：探针首跑夹具锚未命中——cordis.patch.yml 为 CRLF
+  （台账 :1264 在案），needle 按实测 EOL 重构后过。
+- **步 b 施工笔 `775aa0c`（单笔六文件，独立可 revert；回退通道＝本笔 revert＋基准回滚）**：
+  - `cordis.patch.yml` **+3 行零删**：rate-throttle `[llm, tokenMeter]`／web-search-local
+    `[web]`／web-search-router `[web]`（值取各 manifest registers.inject 动工实况）；置于
+    **行块末尾**（config 之后）。`e8051fe9…/3085 B → a663f61b…/3160 B`（CRLF 保持，
+    85/0 loneLF）。
+  - 滚存同步五处：p24-ui-matrix `BASE_SHA_EXPECT`＋p24-verify `BASELINE_SHA_EXPECTED`
+    （两硬闸常量与标签）＋p1 `CARD_LINES`（58→59／64→66／74→77；rate-throttle 14 不变）
+    ＋p22-verify `CARDS` 同族＋engines 测试注释。
+  - **布局自曝（如实记）**：inject 首版落 name 与 config 之间 ⇒ p21 行结构钉"config 紧跟
+    name"翻红 1 格；定性后改落行块末尾——行结构钉零触碰、锚值 59/66/77 数学不变、YAML
+    语义等价（映射键序无关）、p24 两常量随重排 hash 再滚一次。q2-layer-scan ④"工作区==
+    HEAD"守卫在未提交态照例红、提交后自愈（D-17 先例，非钉更新）。
+  - **防扩面记档三项**：compact-router 无静态行（预设托管）⇒ 四项声明仍走模块路，行级
+    声明随预设行机制议题归后续；agent-memory 声明为空不落键；toolkit-manager（panel
+    manifest 声明 [webServer]）不在令面枚举、记档。
+- **步 c 读数（HEAD `775aa0c`）**：门禁 **6/6（50.3s，dry-run 0/0/0 于带 inject 判据文件上
+  实测）**＋regression-all 14 项全绿（q2 自愈）＋`node --test` 448/0＋p1 314/0＋p22v 110/110
+  ＋p22 153/153＋p24v 63/0＋p24m 720/0＋p21 53/53＋pcc 真文件 RESULT 0 问题＋`~/.dsh`
+  hash `c585738c…0bd9`/5 files 逐字节同。**基线口径更新入账：cordis.patch.yml 判据基准
+  `a663f61b…`/3160 B（第 3 次滚存）；后续申报以新 hash 为准。**
+- **步 d 真机复验项（不开窗，素材随批末呈报、协调侧排窗）**：用户第 5 次重启后核对——
+  四插件（rate-throttle/web-search-local/search-router/agent-memory）挂载正常、面板可通、
+  各卡功能面如常＝行级声明与模块声明幂等零破坏；异常即报即撤（本笔 revert＋基准回滚）。
+
 ## 25. 波 2 收官入账注（2026-09-27 · C1-007 批复 · 纯追加，不回改上面任何一行）
 
 - **收官判定成立（协调侧裁）**：批 5–11＋W2 全部＋改名批全闭。完成清单＝debt A 区

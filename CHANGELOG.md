@@ -6,6 +6,19 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### D-19 原生依赖门控声明（2026-09-27，patch 行行级 `inject:`）
+
+- **相关 patch 行加宿主原生 `inject:` 键（用户拍板案一）**：rate-throttle
+  （`[llm, tokenMeter]`）、web-search-local（`[web]`）、web-search-router（`[web]`）三行落
+  行级依赖声明，门控归宿主（cordis）本体；值取各 manifest 既有声明，与模块自带声明同名
+  合并幂等（`Inject.resolve` Map 去重）⇒ **现行行为零变化**。
+- **判据基准第 3 次滚存**：`cordis.patch.yml` `e8051fe9…`/3085 B → `a663f61b…`/3160 B
+  （p24 两处硬闸常量与 p1/p22-verify 锚行号同步，守卫机制未放宽）。运行时探针实证：
+  patch-config-check 对行级新键不抛、既有行零行为变化；真机复验（用户重启）随窗排期。
+- 独立回退：施工笔 `git revert` ＋基准回滚。
+
+读数与双路语义源码读证见 `docs/repair-plan-20260923.md` §29、`docs/debt.md` #45。
+
 ### W9 第一段（2026-09-27，D-2/D-3 工装修正＋F-62 撞名规则读 provides）
 
 - **doctor CLI 撞名规则改读 provides 正典（F-62，与独立 doctor 仓同批）**：
