@@ -1699,3 +1699,78 @@ W2 批末真机窗已闭（C1-007 批复入账）：用户目检半全对——�
   （`4a3f0a1`）；**教训＝施工笔读数必须含门禁全链，家族/专项读数不代门禁**。②新钉首跑两格
   红＝预期值错账（条目编号按 "L-1" 写、实为三位零垫 "L-000/L-001"），修预期不改库（首跑读数
   `lc-first.log` 前身留档）。
+
+## 33. EXE-BOOT-010 账面笔（一）：记忆停写案两轮取证结论入账＋inject 修法闭账注（2026-09-28 · C1-007 开工令 3 · 纯追加，不回改上面任何一行）
+
+- **记忆停写案定性（A 型细化，009 会话两轮取证定谳，随本笔落账）**：断点在**「按启动实例的
+  插件处理器在位性」**——时段②–⑤（9/21 晚–9/26）插件处理器未在位、时段⑥⑦（9/27 两次启动）
+  在位；间歇、宿主侧、自愈。根因候活体判别窗（用户配合：重启＋发指令消息＋长对话触压缩）定因。
+- **结构性缺口三件（随案立账）**：①**采集选择性**——claimed 仅收指令类文本（runtime
+  INSTRUCTION_RE 启发式）、日常对话不入账＝卡面承诺与现实落差；②**注入半边**——记忆回灌模型
+  上下文未见实现，仅压缩场景注入节选；③**诊断不可达**——五插件仅 rate-throttle 有文件日志。
+  **③的 agent-memory 半边随本批开工令 1 闭合**（§34 互引；五插件面其余四件不动）；①②属产品
+  方向题（修文案 vs 扩功能），候用户拍板，执行侧不自裁。
+- **事实底座（照录）**：宿主 0.1.5-rc.1（安装面 9/14、无更新）；宿主无应用日志面（插件告警仅
+  stdout、用户不可达）；agent-memory 无自日志（009 三线考古证无；010 开工验证复查再证：五插件
+  appendFileSync 分布＝rate-throttle 日志面＋agent-memory 的 archive/evidence 数据面，无 logs/ 诊断面）；
+  会话身份跨启动稳定（9/25–27 测试消息均运行于已注册的 6c77 会话、turn 3→4→5 连续）；9/27 16:07
+  心跳＝pre-step 活体实证；9/22 档案 /doctor/states:[] 获新含义（照录不重裁）。
+- **inject 修法闭账注（真机双证到达，§31 真机面项自此闭合）**：①**用户亲验**——第 6 次真机窗
+  五卡技术详情 inject 行现真值：四卡有值（compact-router `[llm, tokenMeter, sessions, commands]`／
+  rate-throttle `[llm, tokenMeter]`／search-router `[web]`／web-search-local `[web]`）、agent-memory
+  无声明仍"（无）"（§30.b 附更正版素材组一口径逐项对上）；②**p22 A-inject 12 格双证在库**
+  （§31：修前红恰一格、修后 165/165、变异回潮即红）。⇒ debt #47 随注闭账（原行照录不改），
+  inject 修法整件（归因 §30.b＋施工 §31＋真机本注）三层全闭。
+- 取证留档：`var/scratch/exe-boot-009-20260927/`（am-family.log／am-family2.log 两轮取证底稿）。
+
+## 34. EXE-BOOT-010 第 1、2 件落账：agent-memory 自日志笔＋.tmp 孤儿回收笔（2026-09-28 · C1-007 开工令 1、2 · 纯追加，不回改上面任何一行）
+
+- **开工验证（质疑机制首次应用，记档）**：①事实核全项命中——两仓链尾 toolkit=`e67b904`、
+  doctor=`343ca9f`、零未提交、近链 `7d0fd46→688b146→a2789d0→5a85c1b→4a3f0a1→e67b904`；§五基线
+  全项对表相符（门禁 6/6＋doctor {21,11,7,26}＋stage3 a–g＋p1 314/0＋nt 450＋p22 165/165＋p24m
+  720/720＋regression 14 项＋pcc 0＋`~/.dsh` hash `c585738c…0bd9`/5 files）；宿主 pid 25644 活体；
+  patch 基准 a663f61b/3160B 实测一致；生产根 .tmp 残件恰一枚（`.tmp-17764-a3694ca6e70a`/12417B/
+  9-14 22:59:45）与包载相符。②治病性核成立——第 1 件治结构缺口③（A 型断点自此有文件面可判别）、
+  第 2 件治 .tmp 孤儿堆积（9/14 残件活体证据）。③**设计裁量点两处（随批申报，单笔可 revert）**：
+  **甲**＝开工令"原子写复用 atomic.js"与"JSONL 形态对齐 rate-throttle"并读时，逐行 atomicWrite
+  ＝整文件 tmp+rename 重写（O(n²)，且 backupFileBeforeWrite 逐行 COW 快照＝生产根备份膨胀）恰与
+  "节流防膨胀"相抵，而 rate-throttle 惯例本身是 appendFileSync ⇒ **事件行逐行追加循仓内三先例**
+  （rate-throttle 日志／evidence.js CAP2／audit-sink），atomic.js 不用于逐行重写；**乙**＝第 2 件
+  两案（失败路径清理或启动清扫）双管齐下。无疑虑，径行动工。
+- **第 1 件·selflog 笔（`toolkit@76df6e6`，单笔可 revert）**：新增
+  `lib/agent-memory/lib/selflog.js`＋plugin.js 接线＋`test/agent-memory.selflog.test.mjs` 11 格。
+  行面＝register（每启动实例在位自证，成败各落一行）＋created/claimed/pre-step/disposed（sid 解析
+  成败＋原因码 no-host-id/unresolved/resolve-error；outcome 记 created/deduped/skipped:*/collected/
+  heartbeated/disposed/error/error-suppressed）。膨胀双闸＝pre-step 节流（CAP2 同款进程级 Map：
+  翻变必写、同结论 <60s 抑制、抑制数随行带回；心跳本体每步照跑＝新鲜度数据源语义不变）＋单档
+  2 MiB 轮转（audit-sink 同款 .1 单代）；emitWarning 保留为开发通道（appendSelflog 永不抛错）；
+  帧字段 ts/pid/event 后置展开不可被 fields 覆盖。先钉后修＝修前红 9/11（插件驱动面全红＝接线
+  未接无行；单元面 2 绿，`selflog-prered.log`）；变异一发（摘 appendFileSync ⇒ 恰 10 红全咬行
+  在场断言、FAIL 兜底格不受累，pristine 逐字节还原，`selflog-mutate.mjs/.log`）。读数（`76df6e6`）：
+  门禁 6/6＋nt 461/0＋p1 314/0＋p22v 110/110＋p22 165/165＋p24v 63/0＋p24m 720/720＋regression
+  14 项＋pcc 0＋doctor {21,11,7,26}＋stage3 a–g＋hash 逐字节同。**基线口径更新入账：node --test
+  450→461（+11 恰新钉）**。边界：纯观测面，ledger/progress/registry 写路径语义零触碰；client
+  bundle 零改动。
+- **第 2 件·tmp 回收笔（`toolkit@26d08aa`，单笔可 revert）**：atomic.js 失败路径 try/catch
+  unlink（原错误照传）＋新增 `sweepTmpOrphans(root)`（手写递归走层；只认 `.tmp-<pid>-<hex>` 形状、
+  目录不碰；60s 年龄闸防误扫在飞 tmp；单文件失败记 errors 继续；now/maxAgeMs 可注入）＋
+  plugin.js register 挂载期调用（尽力而为绝不阻断挂载）＋index.js 转出口。开工令两案双管：
+  失败路径治进程内可复位失败、启动清扫治崩溃残留（9/14 残件即此形态）；真实生产根残件由插件
+  下一次真实挂载回收，执行侧与测试不代删（生产根只读红线不越）。先钉后修＝修前红恰 2 红
+  （SWEEP-1 接线未接＝孤儿仍在；SWEEP-3 失败路径实留 `.tmp-32544-…` 孤儿），单元面 3 格绿
+  （`sweep-prered.log`）；变异两发隔离各红各的（M-a 摘 register 清扫调用⇒恰 SWEEP-1 红／M-b 摘
+  atomic unlink⇒恰 SWEEP-3 红，pristine 逐字节还原，`sweep-mutate.mjs/.log`）。读数（`26d08aa`）：
+  门禁 6/6＋nt 466/0＋p1 314/0＋p22v 110/110＋p22 165/165＋p24v 63/0＋p24m 720/720＋regression
+  14 项＋pcc 0＋doctor {21,11,7,26}＋stage3 a–g＋hash 逐字节同。**基线口径更新入账：node --test
+  461→466**。
+- **自曝两条（如实记）**：①变异工装首版在「写盘→测试→还原」链中间崩溃（工装自身漏 import
+  path），write 与 restore 之间断链把 plugin.js 留在变异态约一轮——彼时的 sweep postgreen 读数
+  作废重取，工装改 **try/finally 强制还原**后再验 sha（教训＝变异工装还原必须 finally 兜底，
+  与「内存 pristine 写回」纪律同源加固；本节第 2 件读数均为加固后工装所出）；②计划文件行数
+  读数错账一次（PowerShell Get-Content 计 945 行 vs findstr/node 实数 1702 行，以 node 实数核销
+  ——「读数错了」永列标准假说再应用）。
+- **批末状态**：toolkit 链 `e67b904→76df6e6（selflog）→26d08aa（tmp 回收）→本笔（账面）`；
+  doctor 零改动（343ca9f 维持）；`~/.dsh` 零触碰；宿主未触（pid 25644）；两仓零未提交。真机面：
+  自日志落盘与启动清扫均在**下一次宿主重启后生效**（正常路径行为面、无卡面变化；9/14 残件届时
+  自动回收——已向用户预告）；记忆案活体判别窗排程归协调侧（窗步骤含用户重启＋发指令＋长对话
+  触压缩；届时自日志面即为判别数据源）。取证 `var/scratch/exe-boot-010-20260927/`。

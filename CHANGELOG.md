@@ -6,6 +6,11 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### agent-memory 自日志与 .tmp 孤儿自回收（2026-09-28，EXE-BOOT-010）
+
+- **新增插件自日志 `<数据根>/logs/agent-memory.jsonl`**：register（每启动实例在位自证，成败各落一行）＋created/claimed/pre-step/disposed 五事件行（sid 解析成败＋原因码）。pre-step 节流（结论翻变必写、同结论 60s 内抑制、抑制数随行带回）＋单档 2 MiB 轮转（`.1` 单代）；落盘失败降级为 emitWarning 开发通道、宿主零感知。诊断"记忆停写"类问题自此有文件面可读（JSONL 形态对齐 rate-throttle 的 `logs/llm-requests.jsonl` 惯例）。
+- **.tmp 孤儿自回收**：原子写（tmp+rename）失败路径即时清理残留 tmp；每次插件挂载时启动清扫超龄（>60s）孤儿（只认 `.tmp-<pid>-<hex>` 文件形状、目录一律不碰、绝不阻断挂载）。9/14 残留的生产根残件将随下一次宿主重启自动回收。
+- 边界：纯观测面＋回收面——台账/进度/注册表既有写路径语义零变化；面板客户端零改动。归因与读数见 `docs/repair-plan-20260923.md` §33–§34、`docs/debt.md` #49–#50；独立回退＝对应施工笔 `git revert`（76df6e6 / 26d08aa）。
 ### inject 卡面真值修复（2026-09-27，技术详情 inject 行）
 
 - **技术详情"inject（依赖的服务）"行现显示真值**：snapshot 取数源由 manifest
