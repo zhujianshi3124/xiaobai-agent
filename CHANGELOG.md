@@ -6,6 +6,23 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### 改名批（2026-09-27，snapshot 输出面键名正典化）
+
+- **⚠ 对外可见（输出面键名变更）**：`/api/toolkit-panel/snapshot` 每卡输出对象——
+  `registers.services/commands/providers` 三键更名为 `provides.services/commands/providers`
+  （数据源换为契约 `provides` 正典，走 loader `extractRegisters` 单源化：provides 优先、
+  缺席回落 legacy `requirements.registers`，同装载面口径）；`registers.events` 按批准甲案
+  更名为顶层 `events`（数据源不动）；`registers` 键自此不存在；`inject` 键名与数据源
+  **不变**；其余卡字段一律不动。**无双写过渡**——已知消费方仅本仓面板客户端两读点
+  （React 技术详情＋兜底页，已同笔同步）；宿主侧是否解析该 JSON 体未证（观察需求随
+  批末呈报，见 `docs/repair-plan-20260923.md` §24.3）。
+- **技术详情可见面零变化**：TechRow 中文标签与数据值均不变，仅内部取数字段名变。
+- **独立回退**：单笔提交，`git revert` 即整链还原；无 manifest 改动、无数据迁移、无宿主耦合。
+
+钉子：零新增钉（既有 p22-cards-ui 153、p1-smoke 314/0 全绿，p1 三断言预计零翻兑现）；
+换源变异证据（provides 正典改写 ⇒ 输出随之变化＋p1 仍绿＋pristine 逐字节还原）与三道锁
+读数见 `docs/repair-plan-20260923.md` §24、`docs/debt.md` #42。
+
 ### 批 11（2026-09-26，契约版本 1.0.0 → 1.1.0）
 
 - **契约版本升次版本（C-1 第 6 项 / F-68）**：`PLUGIN_CONTRACT_VERSION = '1.1.0'`。
