@@ -278,7 +278,7 @@ function techRow(label, value) {
   return '<div class="techRow"><span class="techKey">' + esc(label) + " : </span>" + esc(value) + "</div>";
 }
 function techDetails(p) {
-  var regs = p.registers || {};
+  var provides = p.provides || {};
   var list = function (a) { return (a && a.length > 0) ? a.join(", ") : "（无）"; };
   return "<details><summary>技术详情</summary>"
     + techRow("插件目录（dir）", p.dir)
@@ -286,10 +286,10 @@ function techDetails(p) {
     + techRow("managedBy（由谁挂载）", String(p.managedBy))
     + techRow("enabled（配置文件开关）", String(p.enabled))
     + techRow("inject（依赖的服务）", list(p.inject))
-    + techRow("services（对外提供的服务）", list(regs.services))
-    + techRow("commands（注册的命令）", list(regs.commands))
-    + techRow("providers（提供的实现）", list(regs.providers))
-    + techRow("events（监听的事件）", list(regs.events))
+    + techRow("services（对外提供的服务）", list(provides.services))
+    + techRow("commands（注册的命令）", list(provides.commands))
+    + techRow("providers（提供的实现）", list(provides.providers))
+    + techRow("events（监听的事件）", list(p.events))
     + "</details>";
 }
 function renderCards() {

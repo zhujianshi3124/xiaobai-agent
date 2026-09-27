@@ -44,7 +44,7 @@ import type { EntrySource, PluginRegisters, ResolvedPlugin } from './types.js'
  * `requires.services` 是**纯依赖面**，不再被借用为提供面 —— 借用会让"共同依赖同一服务"的第二个插件
  * 被 `reg.name-collision` 误阻断（契约 v1.1 的 P0-2 假阳性，实证见 docs/contract-v1.1-recon.md §7）。
  */
-function extractRegisters(m: Record<string, unknown> | undefined): PluginRegisters | undefined {
+export function extractRegisters(m: Record<string, unknown> | undefined): PluginRegisters | undefined {
   if (!m) return undefined
   const provides = m['provides'] as Record<string, unknown> | undefined
   const legacyRequirements = m['requirements'] as Record<string, unknown> | undefined

@@ -261,7 +261,7 @@ const combo = (rowEnabled, cfgEnabled, expr) => {
     dir: "rate-throttle",
     name: base.name,
     origin: base.origin,
-    registers: base.registers,
+    provides: base.provides, events: base.events,
     managedBy: base.managedBy,
     enabled: rowEnabled,
     patchRow: Object.assign({}, base.patchRow, { enabled: rowEnabled, disabledExpr: expr || null, config: cfg }),
