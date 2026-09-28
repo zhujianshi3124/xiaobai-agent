@@ -6,6 +6,11 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### 六个 README 文档补齐（2026-09-28，用户基本要求令）
+
+- **每个子插件与插件桶自此各有 README**：新增仓库根 `README.md`（桶总览：五子插件清单＋桶本体 registry/doctor/面板＋目录地图＋挂载部署实况＋改动红线指针）与 `lib/{agent-memory,compact-router,rate-throttle,search-router,web-search-local}/README.md` 五份。
+- **agent-memory README 落用户设计要求六条原文**（R1 全输入记录／R2 进度专司／R3 分栏记录／R4 接手先读记忆／R5 插件要有文档／R6 新会话先读记忆），并附"现状 vs 要求"差距如实注（R2/R3 已兑现；R1 只收指令性文本＝结构缺口①；R4/R6 自动回灌未实现＝结构缺口②；均候用户产品拍板）与"待补充要求"预留节。
+- 内容纪律：全部以仓内实况为据（manifest／cordis.patch.yml／卡面文案／源码），不发明功能；纯文档笔，独立回退＝本笔 `git revert`。
 ### agent-memory 自日志与 .tmp 孤儿自回收（2026-09-28，EXE-BOOT-010）
 
 - **新增插件自日志 `<数据根>/logs/agent-memory.jsonl`**：register（每启动实例在位自证，成败各落一行）＋created/claimed/pre-step/disposed 五事件行（sid 解析成败＋原因码）。pre-step 节流（结论翻变必写、同结论 60s 内抑制、抑制数随行带回）＋单档 2 MiB 轮转（`.1` 单代）；落盘失败降级为 emitWarning 开发通道、宿主零感知。诊断"记忆停写"类问题自此有文件面可读（JSONL 形态对齐 rate-throttle 的 `logs/llm-requests.jsonl` 惯例）。
