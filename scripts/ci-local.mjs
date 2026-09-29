@@ -35,6 +35,10 @@ const steps = [
 // 若有人日后从 regression-all 摘除 p23-verify，本步仍能拦住。摘除/重整随收口批"门禁 6→7"定，
 // 本批不动门禁结构（C1-007 裁：门禁步数不变）。
 if (withScan) steps.push(['p23-verify 复跑（regression-all 已含，双跑冗余守卫）', process.execPath, [resolve(ROOT, 'scripts/p23-verify.mjs')]])
+// 收口批 C-1（D-20）：文档引用守卫——docs/*.md 与 panel/docs/evidence/*.md 的 path[:#]anchor
+// 引用存在性＋#符号可 grep＋行号形态判红（活文档）。守卫上岗首日抓存量失效＝本职，红集即
+// D-20 存量清理清单（§9.6：步数 6→7 并被显式记录）。
+if (withScan) steps.push(['文档引用守卫（D-20/C-1：引用存在性＋行号形态判红）', process.execPath, [resolve(ROOT, 'scripts/doc-ref-guard.mjs')]])
 
 let bad = 0
 const started = Date.now()
