@@ -7,13 +7,20 @@
 
 - **会话注册**：`session/created` → 新会话入册 `registry.json`（宿主 UUID 经归一化派生 sid，
   `YYYYMMDD-<12 位 hex>`；重复事件幂等）。
-- **指令台账（ledger.md）**：`agent/inbox/claimed` → 指令性消息追加台账待办区（编号 `L-000`
-  起三位零垫；条目状态 待办/进行中/已完成/已搁置 流转；32 KB 上限、超限移最早已完成入
-  archive；历史只追加不改写，勘误走结构化 erratum）。
+- **指令台账（ledger.md）**：`agent/inbox/claimed` → 用户输入逐消息全量入账（R1，EXE-BOOT-011
+  施工笔2）：指令性消息追加待办、非指令消息入「一般输入」栏（编号 `L-000` 起三位零垫、
+  全栏共享连续；条目状态 待办/进行中/已完成/已搁置 流转，「已记录」只追加；32 KB 上限、
+  超限先移最早已完成、再移最旧一般输入入 archive；历史只追加不改写，勘误走结构化 erratum）。
+  自日志 claimed 行带 kind（instruction|general）。
 - **进度文件（progress.md）**：里程碑追加（完成步骤/当前状态/下一步/关键决定/文件，自动带
   workspaceRoot）；32 KB 上限、关键三区块保留。
-- **移交与工作区**：跨工作区续写禁止（WORKSPACE_MISMATCH）；交接须 `handedOverTo`（旧会话
-  即拒写，继任可写编号自起）。
+- **移交与工作区**：跨工作区续写禁止（WORKSPACE_MISMATCH；win32 大小写归一比较）；调用方
+  工作区自宿主会话 `session.header.cwd` 取数（逐环回落、命中环随自日志 `wsRing` 落行——
+  EXE-BOOT-011 施工笔1）；交接须 `handedOverTo`（旧会话即拒写，继任可写编号自起）。
+- **记忆注入（R4/R6 接线，EXE-BOOT-011 施工笔3）**：`agentMemory` 系统提示词变量——每次
+  装配注入恢复要点节选 `buildRecoveryBrief`（任务摘要/未完成指令 ≤8 条/永久指令/新鲜度，
+  ≤1200 字符；未注册会话空串零负担；面不在位不注册、回调异常降级空串，挂载与请求零破坏）。
+  预设模板 `{{agentMemory}}` 行为部署步骤（候用户批准后写入，见下文触点节）。
 - **新鲜度门禁**：`agent/pre-step` 心跳刷 `lastActiveAt` 与台账 heartbeatTurn；接手前 3 模型
   回合内视为新鲜，超限 `FRESHNESS_STALE`（提示刷新，不硬阻断步进；硬拦截语义由
   `assertFreshForHandover`＋调用方决定）。
@@ -40,19 +47,49 @@
 
 ## 现状 vs 要求（差距如实注，不粉饰）
 
-- **R2/R3 已兑现**：progress 专司任务进度；ledger 分栏（待办/进行中/已完成/已搁置）＋折叠
-  ＋归档。
-- **R1 有落差**：台账只收**指令性**消息（`runtime.isInstructionText` 启发式），日常对话不入
-  账——"记录全部输入"未达成（结构性缺口①在案：`docs/repair-plan-20260923.md` §33；候用户
-  产品方向拍板：修文案 vs 扩功能）。
-- **R4/R6 有落差**：记忆**自动回灌模型上下文**未见实现——现有最接近面是 `buildRecoveryReport`
-  （库导出，供调用方主动拉取，无自动接线）与压缩场景的 [永久] 行注入节选（compact-router
-  checkpoint 路径）；新会话自动注入提示词未实现（结构性缺口②在案：计划 §33，候拍板）。
+- **R1/R2/R3 已兑现**：progress 专司任务进度；**R1 全量采集**（EXE-BOOT-011 施工笔2，用户
+  批甲案）——全部用户输入入账，指令性→待办、非指令→「一般输入」栏分栏记录。
+- **R4/R6 接线在位（EXE-BOOT-011 施工笔3）**：`agentMemory` 系统提示词变量每次装配注入
+  恢复要点节选；**收尾一步＝预设模板写入 `{{agentMemory}}` 行（部署步骤，候用户批准）**，
+  写入生效前"自动回灌"尚未端到端点亮（现状如实注）。
+- **R5 已兑现**：本 README。
 - 其余用户设计时要求：待用户补充后在此记账并实现（见下节）。
 
 ## 待补充要求
 
 （预留节——用户后续补充的设计时要求逐条落此，随录随实现、差距如实注。）
+
+## 升级与宿主触点（DSH 升级时照单核查；EXE-BOOT-011 施工令二.1 随批落）
+
+本设计贴宿主内部面的全部触点逐项列出。**宿主升级若变了下表任一项，对应功能会坏；坏了经
+"经何观测"列的通道显性暴露（自日志行/变量空值/真机窗），不静默潜伏。**
+
+| # | 触点 | 依赖什么 | 宿主升级若变会怎么坏 | 坏了经何观测 |
+|---|---|---|---|---|
+| 1 | `session.header.cwd`（工作区取数，plugin.js wsInfoOf 第一环） | 安装版宿主 Session 实例把 cwd 放 header（`dsh-system-prompt`/agent-loop 自用取法同源） | 取不到 → 逐环回落 session.cwd→agent.workspace→defaultWorkspace→process.cwd()；命中环降级为 fallback:*，老病复发（闸拦跨启动续写） | 自日志 created/claimed 行 `wsRing` 非 header 即亮红灯；真机窗＝跨启动发指令看 collected |
+| 2 | `ctx.systemPrompt.variable` 注册接口（agentMemory 变量，案 C） | patch 行 `inject: [systemPrompt]` 解析到宿主 systemPrompt 服务面 | 面不在位 → 变量不注册：若预设模板已有 `{{agentMemory}}` 行 ⇒ 宿主严格插值对未知变量**抛错**（每请求崩）；面改名同效 | 挂载期 emitWarning（"ctx.systemPrompt 面不在位"）；真机窗＝首请求即崩＝立查此行 |
+| 3 | 预设模板 `{{agentMemory}}` 行（部署步骤，候批） | persona 前缀文本引用变量；**与触点 2 强耦合、同进同退**（卸载插件前必须先回退模板行，否则请求全崩） | 插件缺席/变量未注册 ⇒ 未知变量抛错 | 首请求报 malformed/unknown prompt variable 错误 |
+| 4 | `agent/inbox/claimed` 载荷形状 `{message, turn}`＋dispatcher 注入 agent（采集链输入） | 宿主 agent-loop 发射点（fused 注入 agent） | 载荷字段变 → sid/正文/turn 取不到 → claimed 行 code=no-host-id/no-message 或 skipped | 自日志 claimed 行原因码 + 零 collected；真机窗台账零增长 |
+| 5 | compact-router guidance/正典装载位（案 D：readLedgerItems 三栏采集） | compact-router 压缩出口懒加载 agent-memory lib（可选依赖，缺席降级） | 装载失败 → 压缩产物退回启发式区段（不崩、但记忆要点缺席） | 压缩产物无「正典副本」节；console info "optional peer unavailable" |
+| 6 | doctor `src/host-faces.json` 面清单（systemPrompt 已补录） | doctor inject-face-unknown 规则以清单为准 | 宿主新版本增删面 ⇒ 清单过时 → doctor 误报/漏报 | doctor dry-run issues 非 0/0/0 即照单核查清单 |
+
+## 备而未用清单（升级有路可循、不丢线索；施工令二.3 随批落）
+
+- **存量 currentWorkspace 批修脚本（呈报案 E b）**：按宿主会话桶名逆推真值校正 registry 历史记录——
+  **用户批 Ea（存量不动、老会话走现成 handoverToWorkspace 一致性检查＋用户确认）**，本脚本备而不做；
+  将来做时桶名↔cwd 逆推规则须先以宿主源码核实。
+- **llm-face 中间件注入（呈报备选案 3）**：agent-memory 声明 `registers.inject:[llm]` 首请求注入——
+  与案 1 覆盖重叠、功能更重，呈报不推荐，未做。
+- **子代理会话支持**：子代理宿主 id 未入册 → claimed 行 skipped:no-sid（现状如实）；R1 口径
+  ＝全部**主会话**输入。候用户产品方向再议。
+- 「待补充要求」节：现空，用户后续条目随录随实现。
+
+## 数据迁移纪律（施工令二.4 随批落，先例口径）
+
+将来 registry/台账结构变更一律**备份＋可逆**：变更前对目标文件整档快照（根外备份，先例
+`backupTreeBeforeRemove`/面板 custody 路径）；写入走原子写；失败路径即时清理 tmp；提供
+逐字节回退（E b 先例纪律）。schemaVersion 字段已备（ledger/progress 头部），格式变更先升
+版本号再迁移（迁移三步顺序 migrate→verify→cleanup 钉在 M1-M2）。
 
 ## 配置与挂载
 
