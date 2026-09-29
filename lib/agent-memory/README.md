@@ -59,7 +59,9 @@
 - `configSchema`：`dataRoot`（数据根，缺省 `~/.agent-memory`，环境变量 `AGENT_MEMORY_ROOT`
   可覆盖）、`defaultWorkspace`。
 - 部署行（`cordis.patch.yml` id `agent-memory-runtime`）：`dataRoot: C:\Users\LENOVO\.agent-memory`、
-  `defaultWorkspace: null`（工作区由事件载荷携带）。
+  `defaultWorkspace: null`（工作区取数：宿主会话 `session.header.cwd` 优先、逐环回落，
+  命中环随自日志 `wsRing` 落行——EXE-BOOT-011 施工笔 A 更正本句旧表述"工作区由事件载荷携带"
+  ＝与安装版宿主实况不符；定因与触点详见下文「升级与宿主触点」节）。
 - 订阅事件（7）：`session/created`、`agent/inbox/claimed`、`agent/pre-step`、`session/event`、
   `agent/request-error`、`agent/request`、`session/disposed`。
 

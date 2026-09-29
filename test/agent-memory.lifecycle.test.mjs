@@ -19,6 +19,7 @@ import os from 'node:os';
 import path from 'node:path';
 import * as m from '../lib/agent-memory/lib/index.js';
 import * as runtime from '../lib/agent-memory/lib/runtime.js';
+import { register as registerPlugin } from '../lib/agent-memory/plugin.js';
 import { assertUtcIso } from '../lib/agent-memory/lib/time.js';
 import { PRODUCTION_ROOT } from '../lib/agent-memory/lib/script-guard.js';
 
@@ -195,4 +196,57 @@ test('LC2: 整轮生命周期·流转收尾半环 —— 移交（旧拒新可�
   assert.ok(ledgerRaw(root, a.sid).includes('[待办]'), '移交方条目历史仍在（不因状态终态被改写）');
   assert.ok(ledgerRaw(root, b.sid).includes('继任方接续落账'), '继任方台账正文仍在');
   assertNoLockResidue(root, '整轮结束后');
+});
+
+/* ================= LC3（EXE-BOOT-011 施工笔 A）：跨实例 resume =================
+ * 真实病灶（var/scratch/exe-boot-011-20260929/findings-011.md §2d）：会话注册于启动
+ * 目录 X 的宿主进程；重启后宿主自目录 Y 启动 resume 同一会话 —— 旧取数链两侧都回落
+ * process.cwd()（X≠Y）⇒ 闸全拦、零入账（9/28–29 自日志 3× WORKSPACE_MISMATCH 实证）。
+ * 修后取数链读 session.header.cwd（同会话同源）⇒ 跨实例 claimed 仍入账；真跨工作区仍拦。
+ */
+test('LC3: 跨实例 resume —— 两启＋启动目录变更，同会话 claimed 仍入账（真跨区仍拦）', async () => {
+  runtime.__resetRuntimeCursor();
+  const root = tmpRoot();
+  const wsReal = wsOf(root, 'ws-lc3');
+  const decoy = wsOf(root, 'ws-lc3-decoy');
+  const HOST = hostFor(3);
+  const mockCtx = () => {
+    const handlers = new Map();
+    return {
+      on(name, fn) { handlers.set(name, fn); return () => handlers.delete(name); },
+      emit(name, payload) {
+        const fn = handlers.get(name);
+        if (!fn) return Promise.resolve(undefined);
+        return Promise.resolve(fn(payload, async () => ({ kind: 'allowed' })));
+      },
+    };
+  };
+  // 启动 1：created（真实形状：Session 仅 header.cwd；defaultWorkspace 是凑数诱饵）→ 注册
+  const ctx1 = mockCtx();
+  registerPlugin(ctx1, { dataRoot: root, defaultWorkspace: decoy });
+  await ctx1.emit('session/created', { id: HOST, header: { cwd: wsReal }, taskSummary: 'LC3' });
+  const sid = registryOf(root).sessions[0].sid;
+  assert.equal(m.getSession(root, sid).homeWorkspace, wsReal, '启动1 记录 header.cwd');
+  // 启动 2：游标清空＋新挂载实例（不同宿主进程模拟）→ 同会话 claimed 仅 header.cwd
+  runtime.__resetRuntimeCursor();
+  const ctx2 = mockCtx();
+  registerPlugin(ctx2, { dataRoot: root, defaultWorkspace: decoy });
+  await ctx2.emit('agent/inbox/claimed', {
+    agent: { session: { id: HOST, header: { cwd: wsReal } } },
+    message: { id: 'lc3-1', content: '请记住跨实例续写' },
+  });
+  assert.ok(
+    m.readLedger(root, sid).sections['待办'].some((e) => e.desc.includes('跨实例续写')),
+    '跨实例 claimed 入账（collected）——启动目录变更不再拦同会话',
+  );
+  // 反向：真跨工作区（header.cwd 换他区）→ 闸照拦（归一不放宽）
+  await ctx2.emit('agent/inbox/claimed', {
+    agent: { session: { id: HOST, header: { cwd: wsOf(root, 'ws-other') } } },
+    message: { id: 'lc3-2', content: '请记住他区消息' },
+  });
+  assert.ok(
+    !m.readLedger(root, sid).sections['待办'].some((e) => e.desc.includes('他区消息')),
+    '真跨工作区 claimed 仍被拦',
+  );
+  assertNoLockResidue(root, 'LC3 结束后');
 });
