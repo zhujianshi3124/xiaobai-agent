@@ -7,7 +7,17 @@
 //   A 存量 7 份 manifest：契约判 ok ⇒ doctor 不得对同一文件报 schema 级 error（不得互相打脸）
 //   B 纯契约 manifest（无 legacy 三必填）：契约必须放行、doctor 必须判 required-missing（分权边界在位）
 //   C provides：doctor 放行键名（批 1）且对拼错名仍判非法；契约对三槽形状与未知子键收紧（批 2）
+//   D 重叠面**逐规则**对账（契约 v1.2 题一终批＝案二"维持两引擎＋对账网扩面"，EXE-BOOT-016 笔 2）：
+//     两套校验器都管的每一条字段规则，逐条钉住"各侧判什么"——同向红／契约严 doctor 宽／方向相反
+//     三类各按实况登记，不许混成一句"大致一致"。夹具与判据先经实测（probe-overlap-faces.mjs）。
+//   E 根字段**键集**对账＝清单正典 H4 的活体钉：契约接受集 17 键 vs doctor 白名单 14 键，
+//     差集恰 {registers, exports}、反向差集必空。任一侧改键表 ⇒ 当场翻红（H4 从账面变成可跑断言）。
 // 手动脚本不算守卫（裁定 21 条件 a）⇒ 本文件由 scripts/ci-local.mjs 作为独立一步调用。
+//
+// 【新规则两仓同批落】口径（W9 先例；随契约 v1.2 入册）：凡新增/改动**两仓重叠面**上的判据，
+// 必须在同一批次内同时落 toolkit（契约/面板/registry）与 doctor 仓，并互引 commit hash——
+// 只落一侧即视为"把另一侧的静默分叉合法化"。本步（A–E）就是这条口径的执行面：分两次提交会让
+// 中间态在门禁里可见（差集格或同向格先红），因此顺序不可调换（先扩网、后动行为码）。
 //
 // DOCTOR_CLI 与门禁第 3 步同一枚 env 与同一缺省值；取不到 CLI 即 fail（不 skip ⇒ 不静默放宽）。
 import { spawnSync } from 'node:child_process'
@@ -149,6 +159,111 @@ for (const rel of builtinManifests) {
   check('C7 provides.events 被拒且点名 requirements.registers.events（裁定采甲）',
     vEv.ok === false && (vEv.errors || []).some((e) => e.path === 'provides.events' && /registers\.events/.test(String(e.expected) + String(e.message))),
     JSON.stringify((vEv.errors || []).map((e) => e.code + '@' + e.path + '#' + (e.expected || ''))))
+}
+
+// ── D 重叠面逐规则对账（契约 v1.2 题一终批＝案二：维持两引擎＋对账网扩面）────────────
+// 三类结论各按实况登记，不混成"大致一致"：
+//   同向红   ＝两侧都拒（判据同名或异名都在断言里写明）
+//   契约严   ＝契约拒、doctor 放行（值语义归契约，doctor 只看"是不是已知根字段"）
+//   方向相反 ＝契约按迁移期容忍、doctor 判非法根字段＝清单正典 H4 的在册分叉（本批不判谁对，只钉住现状）
+// doctor 侧只按**本条规则的消息形态**取样：其余套件级规则（aliases 表、exports macro 等）不入断言，
+// 否则这一步会替 doctor 的整张规则表背书（与 B 段同一条纪律）。
+{
+  const M = (extra) => ({ ...CONTRACT_BASE, ...LEGACY_TRIAD, ...extra })
+  const contractDigest = (m) => {
+    const v = validateManifest(m)
+    return v.ok === true
+      ? { ok: true, errors: [], info: (v.info || []).map((i) => i.path) }
+      : { ok: false, errors: (v.errors || []).map((e) => e.code + '@' + e.path), info: (v.info || []).map((i) => i.path) }
+  }
+  const RULES = [
+    // n=格名，m=夹具，c=契约侧期望（red 时给 code@path 形态），d=doctor 侧期望（给消息形态）
+    { n: 'D01 id 非命名空间式', m: M({ id: 'Bad Id' }), c: ['red', /format@id/], d: ['red', /id 必须为命名空间式/] },
+    { n: 'D02 displayName 空串', m: M({ displayName: '' }), c: ['red', /type@displayName/], d: ['red', /displayName 必须为非空字符串/] },
+    { n: 'D03 version 空串', m: M({ version: '' }), c: ['red', /format@version/], d: ['red', /version 必须为非空字符串/] },
+    { n: 'D04 version 非 semver（"1"）＝契约严', m: M({ version: '1' }), c: ['red', /format@version/], d: ['green', /version 必须/] },
+    { n: 'D05 contract 非法范围（"garbage"）＝契约严', m: M({ contract: 'garbage' }), c: ['red', /format@contract/], d: ['green', /contract 必须/] },
+    { n: 'D06 contract 值不放行当前契约版本（"1.0.0"）＝契约严', m: M({ contract: '1.0.0' }), c: ['red', /value@contract/], d: ['green', /contract 必须/] },
+    { n: 'D07 configSchema 非对象', m: M({ configSchema: 'nope' }), c: ['red', /type@configSchema/], d: ['red', /configSchema 必须为 Schema 定义对象/] },
+    { n: 'D08 panels 项缺 id＝契约严（doctor 零校验 panels 值）', m: M({ panels: [{ title: 'x' }] }), c: ['red', /@panels\[0\]\.id/], d: ['green', /panels/] },
+    { n: 'D09 requires.services 非数组＝契约严', m: M({ requires: { services: 'llm' } }), c: ['red', /type@requires\.services/], d: ['green', /requires/] },
+    { n: 'D10 provides 未知子键＝契约严', m: M({ provides: { prividers: ['a'] } }), c: ['red', /unknown-field@provides\.prividers/], d: ['green', /provides/] },
+    { n: 'D11 provides.services 非数组＝契约严', m: M({ provides: { services: 'a' } }), c: ['red', /type@provides\.services/], d: ['green', /provides/] },
+    { n: 'D12 顶层 registers＝方向相反（H4 在册）', m: M({ registers: { services: ['a'] } }), c: ['ok', 'registers'], d: ['red', /清单根字段非法: registers/] },
+    { n: 'D13 顶层 exports＝方向相反（H4 在册）', m: M({ exports: { '.': './index.js' } }), c: ['ok', 'exports'], d: ['red', /清单根字段非法: exports/] },
+    { n: 'D14 顶层 healthCheck＝同向红、成因不同名', m: M({ healthCheck: 'x' }), c: ['red', /type@healthCheck/], d: ['red', /清单根字段非法: healthCheck/] },
+    { n: 'D15 未知根字段 zzNote＝同向红', m: M({ zzNote: 1 }), c: ['red', /unknown-field@zzNote/], d: ['red', /清单根字段非法: zzNote/] },
+    { n: 'D16 纯契约 manifest（无 legacy 三必填）＝分权边界', m: { ...CONTRACT_BASE }, c: ['ok', null], d: ['red', /缺少必填字段/] },
+    { n: 'D17 正向齐载＝两侧都放行重叠规则', m: M({}), c: ['ok', null], d: ['green', /清单根字段非法|缺少必填字段|id 必须|displayName 必须|version 必须|configSchema 必须|contract 必须/] },
+  ]
+  for (const rule of RULES) {
+    const cRes = contractDigest(rule.m)
+    const dMsgs = (runDoctorJson(tmpScope('overlap-' + rule.n.slice(0, 3), rule.m)).issues || [])
+      .filter((i) => i.id && String(i.id).startsWith('schema.'))
+      .map((i) => String(i.message))
+    const [cMode, cMatch] = rule.c
+    const [dMode, dMatch] = rule.d
+    let cOk
+    if (cMode === 'red') cOk = cRes.errors.some((s) => cMatch.test(s))
+    else if (cMatch) cOk = cRes.ok === true && cRes.info.includes(cMatch)
+    else cOk = cRes.ok === true
+    const dHit = dMsgs.some((s) => dMatch.test(s))
+    const dOk = dMode === 'red' ? dHit : !dHit
+    check(rule.n + '（契约 ' + cMode + '／doctor ' + dMode + '）', cOk && dOk,
+      'contract.ok=' + cRes.ok + ' errors=' + JSON.stringify(cRes.errors) + ' info=' + JSON.stringify(cRes.info)
+      + ' doctor=' + JSON.stringify(dMsgs))
+  }
+}
+
+// ── E 根字段键集对账＝清单正典 H4 的活体钉（差集恰三名，多一名少一名都红）───────────
+{
+  // 取值一律给"该键自己的合法形态"，确保测的是**键名在册与否**、不是值语义（值面归 D 段）。
+  const KEY_VALUES = {
+    // 契约侧 9 键
+    id: 'parity/unit', displayName: '键集对账', version: '1.0.0', contract: '^1.0',
+    requires: { services: ['llm'] }, configSchema: { type: 'object', properties: {} },
+    panels: [{ id: 'main' }],
+    // healthCheck 给**非函数**值：JSON 落盘丢函数（第一版探针就栽在这里，function 被 stringify 成
+    // 键都不剩 ⇒ doctor 侧"放行 healthCheck"是夹具假象）。契约侧对它报 type 而非 unknown-field，
+    // 本节判据是"键名在册与否"，故字符串值正是想要的形态（值语义在 D14 格里钉）。
+    healthCheck: 'x',
+    provides: { services: ['parity.svc'] },
+    // legacy 侧 8 键
+    manifestVersion: 1, name: '@local/dsh-toolkit/parity-keyset',
+    requirements: { runtime: {}, binaries: [], packages: {}, registers: {}, exports: { '.': './index.js' } },
+    registers: { services: ['parity-legacy'] }, exports: { '.': './index.js' },
+    aliases: { 'old-parity': 'parity/unit' }, optionalDeps: ['@local/optional'], requiredAliases: { 'old-parity': 'parity/unit' },
+  }
+  const allKeys = Object.keys(KEY_VALUES)
+  // 契约侧"在册"判据＝不因该键报 unknown-field（healthCheck 落盘被 type 拒是另一条在册规则）
+  const contractUnknown = new Set()
+  for (const k of allKeys) {
+    const v = validateManifest({ ...CONTRACT_BASE, ...LEGACY_TRIAD, [k]: KEY_VALUES[k] })
+    const errs = (v.errors || []).filter((e) => e.code === 'unknown-field')
+    if (errs.some((e) => e.path === k)) contractUnknown.add(k)
+  }
+  const contractListed = allKeys.filter((k) => !contractUnknown.has(k))
+  // doctor 侧"在册"判据＝不报"清单根字段非法: k"（一次合并探针取全部键名，省 31 次子进程）
+  const merged = { ...CONTRACT_BASE }
+  for (const k of allKeys) merged[k] = KEY_VALUES[k]
+  const mergedScope = tmpScope('keyset-merged', merged)
+  const illegal = (runDoctorJson(mergedScope).issues || [])
+    .map((i) => String(i.message))
+    .filter((s) => /清单根字段非法: /.test(s))
+    .map((s) => (s.match(/清单根字段非法: ([A-Za-z]+)/) || [])[1])
+  const doctorListed = allKeys.filter((k) => !illegal.includes(k))
+  const onlyContract = contractListed.filter((k) => !doctorListed.includes(k)).sort()
+  const onlyDoctor = doctorListed.filter((k) => !contractListed.includes(k)).sort()
+  check('E1 契约在册根字段 = 17 键（9 契约 + 8 legacy，H4 复算口径）', contractListed.length === 17,
+    '实得 ' + contractListed.length + '：' + contractListed.sort().join(','))
+  check('E2 doctor 白名单 = 14 键（契约在册集的真子集）', doctorListed.length === 14,
+    '实得 ' + doctorListed.length + '：' + doctorListed.join(','))
+  check('E3 差集恰 {exports, healthCheck, registers}（H4 三条点名，多一名少一名即红）',
+    JSON.stringify(onlyContract) === JSON.stringify(['exports', 'healthCheck', 'registers']), '实得 ' + JSON.stringify(onlyContract))
+  check('E4 反向差集必空（doctor 不得认契约不认的根字段）', onlyDoctor.length === 0, '实得 ' + JSON.stringify(onlyDoctor))
+  check('E5 合并探针里 doctor 恰好只报这三名（探针自身无越界命中）',
+    illegal.filter((k) => allKeys.includes(k)).sort().join(',') === onlyContract.join(','),
+    'doctor 非法名=' + JSON.stringify([...new Set(illegal)].sort()))
 }
 
 console.log('')
