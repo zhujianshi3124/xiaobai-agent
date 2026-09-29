@@ -79,6 +79,7 @@
       config:
         dataRoot: C:\Users\LENOVO\.agent-memory
         defaultWorkspace: null
+      inject: [systemPrompt]
 
 - insert:
     - id: toolkit-manager
