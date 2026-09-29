@@ -79,6 +79,7 @@
       config:
         dataRoot: <USER_HOME>\.agent-memory
         defaultWorkspace: null
+      inject: [systemPrompt]
 
 - insert:
     - id: toolkit-manager

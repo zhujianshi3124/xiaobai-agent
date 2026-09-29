@@ -227,7 +227,7 @@ const INJECT_EXPECT = {
   "rate-throttle": ["llm", "tokenMeter"],
   "search-router": ["web"],
   "web-search-local": ["web"],
-  "agent-memory": [],
+  "agent-memory": ["systemPrompt"], // EXE-BOOT-011 施工笔3（案 C）：agentMemory 系统提示词变量接线
 };
 const fmtInject = (a) => (a && a.length > 0) ? a.join(", ") : "（无）";
 
@@ -235,8 +235,8 @@ const fmtInject = (a) => (a && a.length > 0) ? a.join(", ") : "（无）";
 check("inject: snapshot 四卡真值＝manifest registers.inject 实况（compact-router/rate-throttle/search-router/web-search-local）",
   ["compact-router", "rate-throttle", "search-router", "web-search-local"].every((d) =>
     JSON.stringify((snap.plugins.find((x) => x.dir === d) || {}).inject) === JSON.stringify(INJECT_EXPECT[d])));
-check("inject: snapshot agent-memory 无声明＝空数组",
-  JSON.stringify((snap.plugins.find((x) => x.dir === "agent-memory") || {}).inject) === "[]");
+check("inject: snapshot agent-memory 真值＝[systemPrompt]（EXE-BOOT-011 施工笔3：agentMemory 变量接线）",
+  JSON.stringify((snap.plugins.find((x) => x.dir === "agent-memory") || {}).inject) === JSON.stringify(["systemPrompt"]));
 
 // ②③ 双通道逐卡 parity（对 snapshot 真值，格式化逐字）
 for (const exp of EXPECT) {

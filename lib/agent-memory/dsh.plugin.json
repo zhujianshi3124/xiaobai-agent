@@ -23,7 +23,7 @@
     ],
     "packages": {},
     "registers": {
-      "inject": [],
+      "inject": ["systemPrompt"],
       "events": [
         "session/created",
         "agent/inbox/claimed",

@@ -2258,3 +2258,81 @@ test('D13: 一般输入只追加守卫 —— 状态流转/删除/新增为该�
     '一般输入条目不可删（非已完成状态走 D4 守卫）',
   );
 });
+
+/* ================= F5/F6＋WIRE6/WIRE7：恢复要点节选与 agentMemory 变量接线（EXE-BOOT-011 施工笔3；C+F 案） =================
+ * 内容源＝buildRecoveryReport 现成导出（findings-011 附录：仓内普查证无消费者——R4/R6
+ * "接手先读"无自动接线）；接线位＝宿主 systemPrompt 变量机制（安装版 dsh-system-prompt
+ * lib:57-58 {{var}} 严格插值＋注册接口；未知变量抛错 ⇒ 变量必须恒返回字符串，空串节渲染后
+ * 自动丢弃＝未注册会话零负担）。预设模板 {{agentMemory}} 行＝部署步骤，本批只备不写。
+ */
+
+test('F5: buildRecoveryReport lenient —— 未注册/无台账返回空串不抛错；非 lenient 语义不变', () => {
+  const root = tmpRoot();
+  const ws = wsOf(root, 'ws-a');
+  assert.equal(m.buildRecoveryReport(root, '20260910-00000077', { lenient: true }), '', '未注册 → 空串');
+  const s = m.createSession(root, { sid: '20260910-00000077', taskSummary: 'L', workspace: ws });
+  fs.rmSync(ledgerFile(root, s.sid));
+  assert.equal(m.buildRecoveryReport(root, s.sid, { lenient: true }), '', '无台账 → 空串');
+  assert.throws(
+    () => m.buildRecoveryReport(root, '20260910-00000099'),
+    (e) => e.code === 'SESSION_NOT_FOUND',
+    '非 lenient 抛错语义不变（F4 既有口径）',
+  );
+});
+
+test('F6: buildRecoveryBrief —— 恢复要点四要素（任务摘要/未完成指令/永久指令/新鲜度），限长，未注册空串', () => {
+  const root = tmpRoot();
+  const ws = wsOf(root, 'ws-a');
+  assert.equal(m.buildRecoveryBrief(root, '20260910-00000078'), '', '未注册 → 空串（lenient 内建）');
+  const s = m.createSession(root, { sid: '20260910-00000078', taskSummary: 'BRIEF 目标会话', workspace: ws });
+  m.addEntry(root, s.sid, { desc: '设计 brief 格式', modelTurn: 5, workspace: ws });
+  const brief = m.buildRecoveryBrief(root, s.sid, { modelTurn: 6 });
+  assert.match(brief, /BRIEF 目标会话/, '任务摘要在案');
+  assert.match(brief, /L-000 \[待办\] 设计 brief 格式/, '未完成指令在案');
+  assert.match(brief, /始终用中文回复/, '永久第一行在案');
+  assert.match(brief, /指令先落账/, '永久第二行在案');
+  assert.match(brief, /FRESH/, '新鲜度在案');
+  assert.ok(brief.length <= 1200, '默认限长 ≤1200 字符');
+  assert.ok(m.buildRecoveryBrief(root, s.sid, { modelTurn: 6, maxChars: 40 }).length <= 40, 'maxChars 生效');
+  fs.rmSync(ledgerFile(root, s.sid));
+  assert.equal(m.buildRecoveryBrief(root, s.sid, { modelTurn: 6 }), '', '无台账 → 空串');
+});
+
+test('WIRE6: agentMemory 变量接线 —— 注册、未注册会话空串、已注册返回要点、回调 fail-soft 永不抛错', async () => {
+  runtime.__resetRuntimeCursor();
+  const root = tmpRoot();
+  const ws = wsOf(root, 'ws-a');
+  const variables = new Map();
+  const handlers = new Map();
+  const ctx = {
+    systemPrompt: { variable(name, fn) { variables.set(name, fn); } },
+    on(name, fn) { handlers.set(name, fn); return () => handlers.delete(name); },
+    emit(name, payload) {
+      const fn = handlers.get(name);
+      if (!fn) return Promise.resolve(undefined);
+      return Promise.resolve(fn(payload, async () => ({ kind: 'allowed' })));
+    },
+  };
+  registerPlugin(ctx, { dataRoot: root, defaultWorkspace: ws });
+  assert.ok(variables.has('agentMemory'), 'agentMemory 变量已注册');
+  const fn = variables.get('agentMemory');
+  assert.equal(fn({ agent: { session: { id: hostFor(701) } } }), '', '未注册宿主 → 空串（渲染层可整节丢弃）');
+  const HOST = hostFor(702);
+  await ctx.emit('session/created', { id: HOST, cwd: ws, taskSummary: 'WIRE6 目标' });
+  const out = fn({ agent: { session: { id: HOST, cwd: ws } } });
+  assert.match(out, /WIRE6 目标/, '已注册会话返回恢复要点');
+  assert.equal(typeof out, 'string', '恒返回字符串（宿主严格插值对 undefined 抛错）');
+  assert.equal(fn(null), '', '载荷缺失 → 空串');
+  assert.equal(fn({ agent: null }), '', 'agent 缺失 → 空串');
+});
+
+test('WIRE7: systemPrompt 面不在位 —— 挂载零破坏（register 行照常在位）', () => {
+  runtime.__resetRuntimeCursor();
+  const root = tmpRoot();
+  const ctx = mockWsCtx(); // 无 systemPrompt 面
+  registerPlugin(ctx, { dataRoot: root, defaultWorkspace: wsOf(root, 'ws-a') });
+  const rows = fs.readFileSync(path.join(root, 'logs', 'agent-memory.jsonl'), 'utf8')
+    .split('\n').filter(Boolean).map((l) => JSON.parse(l)).filter((r) => r.event === 'register');
+  assert.equal(rows.length, 1, 'register 行照常落盘（面缺失不阻断挂载）');
+  assert.equal(rows[0].ok, true);
+});
