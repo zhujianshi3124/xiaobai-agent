@@ -733,3 +733,28 @@ import / eager re-export。**未改 `pluggable-lint.mjs` 代码**（它的覆盖
 `debt.md:333-335` 已记"该前置按字面永远满足不了、须升级用户裁决、不许悄悄消失"；批 7 的形式就是把
 "不许悄悄"做成**守卫里的显式豁免登记**（四条、逐条写依据、死条目判红、且豁免从免不掉 `lib/` import）。
 是否要把豁免从文件级收到行级，留协调侧定（`debt.md#33b ①`）。
+
+---
+
+## 引用勘误（守卫登记 · EXE-BOOT-014 追加）
+
+> **本节是追加件：上文一行未改。** 依 EXE-BOOT-014 裁② 口径，文档引用守卫（`toolkit:scripts/doc-ref-guard.mjs`）
+> 自本批起把存档件的存在性 / #符号 / 跨仓缺前缀失败与活文档同价判红；存档件是历史证词，改写即篡改证词，
+> 故清偿走这里——逐条登记「原文里的引用形态 ⇒ 为什么判红、真位在哪、属哪一类」。行号形态按裁① 继续容忍，不在本表内。
+> 条目里的 token 用 ASCII 双引号写出＝守卫规则 ⑤「声明原文不是文档引用」的既裁语境，本表自身不产生新引用。
+
+- "src/engine.mjs" —（原引 24 行，共 1 处）跨仓引用未带仓前缀（裁③ 后属红）。真位＝独立 doctor 仓，正典写法 `doctor仓:src/engine.mjs`；本文写于 §10.3 立规之前，历史行不改，此前缀面勘误在此登记。
+- "lib/index.js" —（原引 82 行，共 1 处）cordis 包内构建产物路径（仓外视角）；本仓无 "lib/index.js"，同句语境是 cordis 4.0.2 的实现面 ⇒ 非仓内可核（同包 vendored 件在 `node_modules/@deepseek-ai/cordis/lib/index.js`）。
+- "package.json#main" —（原引 91/167/216 行，共 3 处）JSON 字段名而非符号锚：守卫按字面 grep，本仓 package.json 无 main 键 ⇒ 翻红。此处语义是「package.json 的 main 字段这一顺位」，属取值面记法，不是文件指针。
+- "manager/uninstall.mjs" —（原引 134 行，共 1 处）书写漏了 panel/ 段。真位＝`panel/manager/uninstall.mjs`（本仓在场）；取证当时的读法是按面板目录相对写的。
+- "x.js" —（原引 214 行，共 1 处）举例名（doctor 放过未加 ./ 前头的条目时用 "x.js" 代指任意声明），论述对象不是指针。
+- "test/run-tests.mjs" —（原引 313/406 行，共 2 处）跨仓引用未带仓前缀（裁③ 后属红）。真位＝`doctor仓:test/run-tests.mjs`。
+- "test/run-tests-stage4a.mjs" —（原引 314 行，共 1 处）跨仓引用未带仓前缀（裁③ 后属红）。真位＝`doctor仓:test/run-tests-stage4a.mjs`。
+- "test/run-tests-stage4b.mjs" —（原引 315 行，共 1 处）跨仓引用未带仓前缀（裁③ 后属红）。真位＝`doctor仓:test/run-tests-stage4b.mjs`。
+- "test/run-tests-d1.mjs" —（原引 316 行，共 1 处）跨仓引用未带仓前缀（裁③ 后属红）。真位＝`doctor仓:test/run-tests-d1.mjs`。
+- "test/xxx.mjs" —（原引 318 行，共 1 处）举例名（表示 test 目录下任一直跑脚本），论述对象不是指针。
+- "test/acceptance-stage3.mjs" —（原引 319/331/417 行，共 3 处）跨仓引用未带仓前缀（裁③ 后属红）。真位＝`doctor仓:test/acceptance-stage3.mjs`。
+- "profiles/web/package.json" —（原引 560 行，共 1 处）宿主 profile 面路径缺 ~/.dsh 根。真位＝`~/.dsh/profiles/web/package.json`（运行时面，非仓内可核）。
+- "liangshen/agent.cordis.yml" —（原引 562 行，共 1 处）宿主 profile 面路径缺 ~/.dsh 根。真位＝宿主 profile 目录下的预设文件（写作 "~/.dsh/…/agent.cordis.yml"，运行时面、非仓内可核）。
+
+> 计数自证：本文件登记 13 个 distinct 引用形态，覆盖守卫本批红集中属于本文件的 18 条。

@@ -157,3 +157,19 @@ migration.md 里**没被引用但读者会去找的**：R1/R2/R5 三处裁决标
 2. **§6 末句"两仓共用同一事实面"与本仓 `debt.md:189-194` 正式登记的"两仓对 `requirements` 口径分叉（可互相判 error）"直接矛盾**，且把 DC 独占的 `doctor-signals.json` 说成共用（TK 源码零引用）。这是 contract v1.1 必答设计题第 2 条的本体，v1.1 的 done 判据必须把它从"文档表述"降为"已裁并统一的一份定义"。
 3. **§2 的"面板如实显示生效值/来源"只对 search-router `mode` 成立**，web-search-local 的 settings 遮蔽在产品面**完全不可见**（唯一实现在不进门禁的手工脚本 `p23-shadow-scan.mjs`）；同时"遮蔽面"实际是热 JSON **全键** + env 第三层，文档只写了 `mode`。
 4. **三处可执行性口径**：`120s` 应为 180s、`degraded` 只覆盖 `/doctor/states`、`18/18 已钉死` 只在 `--with-scan` 下才跑（`p23-verify` 不在 `regression-all`，debt D-3 已挂账未修）。
+
+---
+
+## 引用勘误（守卫登记 · EXE-BOOT-014 追加）
+
+> **本节是追加件：上文一行未改。** 依 EXE-BOOT-014 裁② 口径，文档引用守卫（`toolkit:scripts/doc-ref-guard.mjs`）
+> 自本批起把存档件的存在性 / #符号 / 跨仓缺前缀失败与活文档同价判红；存档件是历史证词，改写即篡改证词，
+> 故清偿走这里——逐条登记「原文里的引用形态 ⇒ 为什么判红、真位在哪、属哪一类」。行号形态按裁① 继续容忍，不在本表内。
+> 条目里的 token 用 ASCII 双引号写出＝守卫规则 ⑤「声明原文不是文档引用」的既裁语境，本表自身不产生新引用。
+
+- "registry.dataDir/state.json" —（原引 56 行，共 1 处）变量式路径（registry.dataDir 是配置键名，不是目录），运行时面、非仓内可核。
+- "manager/uninstall.mjs" —（原引 67/67 行，共 2 处）书写漏了 panel/ 段。真位＝`panel/manager/uninstall.mjs`（本仓在场）；取证当时的读法是按面板目录相对写的。
+- "doctor-patch-state.json" —（原引 99 行，共 1 处）运行时产物：doctor apply/rollback 写侧在 configRoot 下的状态件（读写在 `doctor仓:src/executor.mjs`），非仓内文件。
+- "@deepseek-ai/dsh/package.json" —（原引 100 行，共 1 处）npm 包名式路径（全局 CLI 的 package.json），非仓内可核；本机实装位置＝AppData/Roaming/npm 下该包。
+
+> 计数自证：本文件登记 4 个 distinct 引用形态，覆盖守卫本批红集中属于本文件的 5 条。

@@ -286,3 +286,16 @@ PASS  枚举顺序不变式：[0,1,2,3,4,5] 互不相同、排序恰为 0..5
   `panel/docs/evidence/D4-WEB-SEARCH-HOST-EVIDENCE.md`；脚本与原始输出留档
   `.panel-backups/g-real-host-smoke-20260921/d4-websearch-final.mjs` 与 `d4-websearch-report.txt`。
 - D-4 已在 `docs/debt.md` 关闭（2026-09-21）。
+
+---
+
+## 引用勘误（守卫登记 · EXE-BOOT-014 追加）
+
+> **本节是追加件：上文一行未改。** 依 EXE-BOOT-014 裁② 口径，文档引用守卫（`toolkit:scripts/doc-ref-guard.mjs`）
+> 自本批起把存档件的存在性 / #符号 / 跨仓缺前缀失败与活文档同价判红；存档件是历史证词，改写即篡改证词，
+> 故清偿走这里——逐条登记「原文里的引用形态 ⇒ 为什么判红、真位在哪、属哪一类」。行号形态按裁① 继续容忍，不在本表内。
+> 条目里的 token 用 ASCII 双引号写出＝守卫规则 ⑤「声明原文不是文档引用」的既裁语境，本表自身不产生新引用。
+
+- "D:\dsh-plugins\.registry\state.json" —（原引 226 行，共 1 处）宿主/部署面绝对路径：取证当时由宿主进程在 toolkitRoot 上级写出的 .registry 状态件，随后随该目录清除（本文第 228 行已自陈是重启副作用）。运行时面、非仓内可核。
+
+> 计数自证：本文件登记 1 个 distinct 引用形态，覆盖守卫本批红集中属于本文件的 1 条。

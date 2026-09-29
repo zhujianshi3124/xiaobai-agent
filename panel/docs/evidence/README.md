@@ -230,3 +230,22 @@ node scripts/p22b-retention-scope.mjs > panel/docs/evidence/RETENTION-SCOPE.txt 
 
 > **本目录的两条硬约定**：① **只增不改** —— 已入库的归档文件**永不覆盖**；与脚本产生时序差时，**加注记、以脚本重放为准**。
 > ② **每份证据必须可重放** —— 上表所有「由 `scripts/*.mjs` 生成」者，重放命令即其生成命令。
+
+---
+
+## 引用勘误（守卫登记 · EXE-BOOT-014 追加）
+
+> **本节是追加件：上文一行未改。** 依 EXE-BOOT-014 裁② 口径，文档引用守卫（`toolkit:scripts/doc-ref-guard.mjs`）
+> 自本批起把存档件的存在性 / #符号 / 跨仓缺前缀失败与活文档同价判红；存档件是历史证词，改写即篡改证词，
+> 故清偿走这里——逐条登记「原文里的引用形态 ⇒ 为什么判红、真位在哪、属哪一类」。行号形态按裁① 继续容忍，不在本表内。
+> 条目里的 token 用 ASCII 双引号写出＝守卫规则 ⑤「声明原文不是文档引用」的既裁语境，本表自身不产生新引用。
+
+- "EVIDENCE.txt" —（原引 132 行，共 1 处）备份区内的原始文件名（列在本文的「源文件」一列，形如 "…/EVIDENCE.txt"）；.panel-backups 不入仓 ⇒ 非仓内可核。
+- "}/dsh.plugin.json" —（原引 156 行，共 1 处）解析残片：该处原文是 JSON 片段收尾花括号后紧跟的 dsh.plugin.json 记法（markdown 把行内代码切断），实指 `dsh.plugin.json` 本体，非独立路径。
+- "row-adjacency.json" —（原引 216/217 行，共 2 处）运行时产物：行块邻接留痕台账（同上，构造在 `panel/manager/custody.mjs`），非仓内可核。
+- "src/cli.mjs" —（原引 221 行，共 1 处）跨仓引用未带仓前缀（裁③ 后属红）。真位＝`doctor仓:src/cli.mjs`。
+- "src/engine.mjs" —（原引 221 行，共 1 处）跨仓引用未带仓前缀（裁③ 后属红）。真位＝独立 doctor 仓，正典写法 `doctor仓:src/engine.mjs`；本文写于 §10.3 立规之前，历史行不改，此前缀面勘误在此登记。
+- "src/executor.mjs" —（原引 221 行，共 1 处）跨仓引用未带仓前缀（裁③ 后属红）。真位＝`doctor仓:src/executor.mjs`。
+- "doctor-patch-state.json" —（原引 221 行，共 1 处）运行时产物：doctor apply/rollback 写侧在 configRoot 下的状态件（读写在 `doctor仓:src/executor.mjs`），非仓内文件。
+
+> 计数自证：本文件登记 7 个 distinct 引用形态，覆盖守卫本批红集中属于本文件的 8 条。
