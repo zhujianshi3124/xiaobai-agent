@@ -2298,7 +2298,7 @@ test('F6: buildRecoveryBrief —— 恢复要点四要素（任务摘要/未完�
   assert.equal(m.buildRecoveryBrief(root, s.sid, { modelTurn: 6 }), '', '无台账 → 空串');
 });
 
-test('WIRE6: agentMemory 变量接线 —— 注册、未注册会话空串、已注册返回要点、回调 fail-soft 永不抛错', async () => {
+test('WIRE6: agent_memory 变量接线 —— 注册、未注册会话空串、已注册返回要点、回调 fail-soft 永不抛错（事故 2026-09-29 改名合规）', async () => {
   runtime.__resetRuntimeCursor();
   const root = tmpRoot();
   const ws = wsOf(root, 'ws-a');
@@ -2314,8 +2314,8 @@ test('WIRE6: agentMemory 变量接线 —— 注册、未注册会话空串、�
     },
   };
   registerPlugin(ctx, { dataRoot: root, defaultWorkspace: ws });
-  assert.ok(variables.has('agentMemory'), 'agentMemory 变量已注册');
-  const fn = variables.get('agentMemory');
+  assert.ok(variables.has('agent_memory'), 'agent_memory 变量已注册（宿主 VARIABLE_NAME 合规名）');
+  const fn = variables.get('agent_memory');
   assert.equal(fn({ agent: { session: { id: hostFor(701) } } }), '', '未注册宿主 → 空串（渲染层可整节丢弃）');
   const HOST = hostFor(702);
   await ctx.emit('session/created', { id: HOST, cwd: ws, taskSummary: 'WIRE6 目标' });
@@ -2324,6 +2324,32 @@ test('WIRE6: agentMemory 变量接线 —— 注册、未注册会话空串、�
   assert.equal(typeof out, 'string', '恒返回字符串（宿主严格插值对 undefined 抛错）');
   assert.equal(fn(null), '', '载荷缺失 → 空串');
   assert.equal(fn({ agent: null }), '', 'agent 缺失 → 空串');
+});
+
+test('WIRE8: 变量名宿主合规 —— 注册名须过宿主 VARIABLE_NAME 正则（事故 2026-09-29 的直接防复发钉）', async () => {
+  // 正则逐字引安装版宿主 dsh-system-prompt/lib/index.js:57（插值侧）与 :296（注册侧同正则校验、
+  // 非法即抛 invalid prompt variable name）：camelCase 的 agentMemory 双侧违规——模板行在渲染侧
+  // 爆 malformed prompt variable reference（每请求崩，用户实测 2026-09-29）。
+  const HOST_VARIABLE_NAME = /^[a-z][a-z0-9_]*$/;
+  runtime.__resetRuntimeCursor();
+  const root = tmpRoot();
+  const variables = new Map();
+  const handlers = new Map();
+  const ctx = {
+    systemPrompt: { variable(name, fn) { variables.set(name, fn); } },
+    on(name, fn) { handlers.set(name, fn); return () => handlers.delete(name); },
+    emit(name, payload) {
+      const fn = handlers.get(name);
+      if (!fn) return Promise.resolve(undefined);
+      return Promise.resolve(fn(payload, async () => ({ kind: 'allowed' })));
+    },
+  };
+  registerPlugin(ctx, { dataRoot: root, defaultWorkspace: wsOf(root, 'ws-a') });
+  const names = [...variables.keys()];
+  assert.deepEqual(names, ['agent_memory'], '插件恰注册一个变量，名＝agent_memory');
+  for (const name of names) {
+    assert.ok(HOST_VARIABLE_NAME.test(name), `注册名 "${name}" 过宿主 VARIABLE_NAME 正则`);
+  }
 });
 
 test('WIRE7: systemPrompt 面不在位 —— 挂载零破坏（register 行照常在位）', () => {

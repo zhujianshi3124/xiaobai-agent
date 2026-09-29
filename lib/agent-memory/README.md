@@ -17,10 +17,10 @@
 - **移交与工作区**：跨工作区续写禁止（WORKSPACE_MISMATCH；win32 大小写归一比较）；调用方
   工作区自宿主会话 `session.header.cwd` 取数（逐环回落、命中环随自日志 `wsRing` 落行——
   EXE-BOOT-011 施工笔1）；交接须 `handedOverTo`（旧会话即拒写，继任可写编号自起）。
-- **记忆注入（R4/R6 接线，EXE-BOOT-011 施工笔3）**：`agentMemory` 系统提示词变量——每次
+- **记忆注入（R4/R6 接线，EXE-BOOT-011 施工笔3）**：`agent_memory` 系统提示词变量——每次
   装配注入恢复要点节选 `buildRecoveryBrief`（任务摘要/未完成指令 ≤8 条/永久指令/新鲜度，
   ≤1200 字符；未注册会话空串零负担；面不在位不注册、回调异常降级空串，挂载与请求零破坏）。
-  预设模板 `{{agentMemory}}` 行为部署步骤（候用户批准后写入，见下文触点节）。
+  预设模板 `{{agent_memory}}` 行＝部署步骤（2026-09-29 用户令批：例行部署写入径行、批末申报）。
 - **新鲜度门禁**：`agent/pre-step` 心跳刷 `lastActiveAt` 与台账 heartbeatTurn；接手前 3 模型
   回合内视为新鲜，超限 `FRESHNESS_STALE`（提示刷新，不硬阻断步进；硬拦截语义由
   `assertFreshForHandover`＋调用方决定）。
@@ -67,8 +67,8 @@
 | # | 触点 | 依赖什么 | 宿主升级若变会怎么坏 | 坏了经何观测 |
 |---|---|---|---|---|
 | 1 | `session.header.cwd`（工作区取数，plugin.js wsInfoOf 第一环） | 安装版宿主 Session 实例把 cwd 放 header（`dsh-system-prompt`/agent-loop 自用取法同源） | 取不到 → 逐环回落 session.cwd→agent.workspace→defaultWorkspace→process.cwd()；命中环降级为 fallback:*，老病复发（闸拦跨启动续写） | 自日志 created/claimed 行 `wsRing` 非 header 即亮红灯；真机窗＝跨启动发指令看 collected |
-| 2 | `ctx.systemPrompt.variable` 注册接口（agentMemory 变量，案 C） | patch 行 `inject: [systemPrompt]` 解析到宿主 systemPrompt 服务面 | 面不在位 → 变量不注册：若预设模板已有 `{{agentMemory}}` 行 ⇒ 宿主严格插值对未知变量**抛错**（每请求崩）；面改名同效 | 挂载期 emitWarning（"ctx.systemPrompt 面不在位"）；真机窗＝首请求即崩＝立查此行 |
-| 3 | 预设模板 `{{agentMemory}}` 行（部署步骤，候批） | persona 前缀文本引用变量；**与触点 2 强耦合、同进同退**（卸载插件前必须先回退模板行，否则请求全崩） | 插件缺席/变量未注册 ⇒ 未知变量抛错 | 首请求报 malformed/unknown prompt variable 错误 |
+| 2 | `ctx.systemPrompt.variable` 注册接口（agent_memory 变量，案 C） | patch 行 `inject: [systemPrompt]` 解析到宿主 systemPrompt 服务面；**变量名须过宿主 `VARIABLE_NAME` 正则 `/^[a-z][a-z0-9_]*$/`（全小写 snake_case，dsh-system-prompt lib:57 插值侧＋lib:296 注册侧同正则校验、非法即抛）**——禁止 camelCase | 面不在位 → 变量不注册：若预设模板已有引用 ⇒ 渲染侧 unknown/malformed 变量**抛错**（每请求崩）；注册名违规 ⇒ 注册侧抛错（插件 fail-soft 吞成告警）而模板行在渲染侧爆（2026-09-29 事故实况） | 挂载期 emitWarning（"面不在位"/"变量注册失败"）；真机窗＝首请求即崩＝立查本行 |
+| 3 | 预设模板 `{{agent_memory}}` 行（部署写入，2026-09-29 已落） | persona 前缀文本引用变量；**命名正则＝`/^[a-z][a-z0-9_]*$/`（写前必验：正则＋与在册变量撞名排查——provider/model/cwd/workspace_instructions 均不撞）**；与触点 2 强耦合、同进同退（卸载插件前必须先回退模板行，否则请求全崩） | 引用名违规/插件缺席 ⇒ 渲染侧抛错 | 首请求报 malformed/unknown prompt variable 错误 |
 | 4 | `agent/inbox/claimed` 载荷形状 `{message, turn}`＋dispatcher 注入 agent（采集链输入） | 宿主 agent-loop 发射点（fused 注入 agent） | 载荷字段变 → sid/正文/turn 取不到 → claimed 行 code=no-host-id/no-message 或 skipped | 自日志 claimed 行原因码 + 零 collected；真机窗台账零增长 |
 | 5 | compact-router guidance/正典装载位（案 D：readLedgerItems 三栏采集） | compact-router 压缩出口懒加载 agent-memory lib（可选依赖，缺席降级） | 装载失败 → 压缩产物退回启发式区段（不崩、但记忆要点缺席） | 压缩产物无「正典副本」节；console info "optional peer unavailable" |
 | 6 | doctor `src/host-faces.json` 面清单（systemPrompt 已补录） | doctor inject-face-unknown 规则以清单为准 | 宿主新版本增删面 ⇒ 清单过时 → doctor 误报/漏报 | doctor dry-run issues 非 0/0/0 即照单核查清单 |
