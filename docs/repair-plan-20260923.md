@@ -2146,3 +2146,145 @@ M-02 往清单《正典化》第二节注入一个不存在的引用 ⇒ exit 1�
    2 处走新增节更正。要机器判"过期"需要新立判据（例如给基准符/步数立对账钉），属发明判据，本批未做、
    候选升级路已在此留名。
 5. 正典化批收官后，收口批仅剩 v1.2 批（C-2，唯一动代码批）；其后＝收口批收官→五环终验→开源阶段。
+
+## 40. EXE-BOOT-016 契约 v1.2 批（前半收官）账：前置④ 全清单守卫＋题一案二扩面＋前置① 撤必填集落码（2026-09-29 · C1-007 EXE-BOOT-016 启动包 · 纯追加，不回改上面任何一行）
+
+### 40.1 笔序与读数（本节笔数与合计数以批末申报为准）
+
+| 笔 | hash | 仓 | 内容 | 树间 diff（`git show --numstat` 实值） |
+|---|---|---|---|---|
+| 1 | `0569473` | toolkit | 前置④：`test/contract.test.mjs` 里 KNOWN_LEGACY_FIELDS 的 1/8 单名钉换成 **deepEqual 全清单（八名）＋逐名 info＋第 9 名必 error＋影响面实测复用** 四格 | **90 增／1 删** |
+| 2 | `7e33280` | toolkit | 题一终批（案二）落地：`scripts/doctor-cli-contract-parity.mjs` 从 3 接缝扩到 **D 段重叠面逐规则 18 格＋E 段根字段键集 5 格**；头注入册【新规则两仓同批落】口径；门禁第 4 步标签随扩面更名（**步数仍 6**） | parity **115／0**；ci-local 1／1 |
+| 3-doctor | `ce31f83` | doctor | 前置①：`doctor仓:src/engine.mjs#validateManifest` 撤三根字段必填集、`requirements` 改"在场才管"、连带修一处**既存**潜在崩溃（套件根 `requirements.exports` 缺席时 `Object.keys(undefined)`）；新钉 run-tests +1（四套件 21→22） | **76 增／15 删**（engine 24/15＋run-tests 52/0） |
+| 3-toolkit | `748dc9f` | toolkit | 随批对账面：parity B 段按改述重写（旧 B2/B3 口径作废）、D16 翻面、新增 B5/B6/D18；第 4 步标签随新分权更名 | parity **30／14**；ci-local 1／1 |
+
+**两仓本批合计数（以树间 diff 为准）**：toolkit `52c5ed7..HEAD` ＝ 3 文件 **235 增／15 删**；
+doctor `7ba8251..HEAD` ＝ 2 文件 **76 增／15 删**。逐笔 numstat 与合计的差额来自笔 2/笔 3 都改到
+`scripts/doctor-cli-contract-parity.mjs` 同一区（笔 3 重写了笔 2 的 B 段与标签行），口径沿用 §39.4。
+
+### 40.2 三题终批落账（用户 2026-09-29"按建议"终批，随 EXE-BOOT-016 启动包第二节下发）
+
+- **题一（引擎统一）＝案二**：维持两套引擎并存＋把对账网扩面，不做单引擎合并。本会话落地的就是这条
+  （笔 2）。REQ-4"CLI 保留为薄壳（调同一 engine）"的后半句自此**正式不兑现**，改为"两套引擎的行为由
+  对账网逐规则按住"——这条改口的账面正典就是本节与 §40.3 的 D/E 段格名。
+- **题二（F-87 tools 槽）＝查实后随实、不预支**；**题三（D-13② events 深度校验）＝查实后随实、默认维持现状**。
+  两题的"查实"侧已做完，见 §40.3；实施动作一律候裁。
+
+### 40.3 考古两题的实据（本会话新增取证；只呈事实，不夹带修法）
+
+**F-87（`tools.register` 提供面在契约无表达）——"真实使用面"查实结论：有真用（证据面三段，各记边界）**
+
+1. 写方在位且非死码：`lib/web-search-local/index.js` 的 `registerEngineSearchTool()` 由插件 apply 路径
+   直接调用（同文件 `registerEngineSearchTool(ctx, currentCfg)` 一处调用点），并同时写 `systemPrompt`
+   的 `tool:web_search_engine` 段；仓内既有钉＝`test/web-search-local.engines.test.mjs`
+   断言 `web_search_engine` 被注册（R3 批所加）。
+2. 消费方正典已实读到：宿主全局包（`@deepseek-ai/dsh` 0.1.5-rc.1）依赖树内的 `@deepseek-ai/dsh-tools`
+   暴露 `register(definition: ToolDefinition): () => void`，并对 `output { schema, render, presentationMeta? }`
+   齐备性**当场 throw TypeError**；同棵树里 `@deepseek-ai/dsh-tool-web` 以同样形状注册 `web_search`/`web_fetch`。
+   本仓注册体已带 `output.schema/render/presentationMeta`、`execute`、`timeoutMs` ⇒ 与宿主 `register()` 的
+   硬要求逐字对得上（取证：`var/scratch/exe-boot-016-20260929/` 内记明的读取路径与行位）。
+3. 边界（不得超出证据面下结论）：宿主**运行时**是否真的把该 tool 装配进模型可见面，本会话**未证**——
+   证据止于"消费方的注册契约在位＋写方形状合规＋调用点非死码"。另：toolkit 仓自身 node_modules 的
+   依赖面里**没有** `tools` 服务的类型声明（0 命中），⇒ 该面只存在于宿主 bundle，属仓外。
+
+**D-13②（events 深度校验"真门槛不在本仓"）——实况核验结论：与在案前提不符，已按令面停报**
+
+1. 宿主事件面**已经正典化且机器可读**：`interface Events` 声明块在本仓 node_modules 内即有 **9 个文件／33 个
+   事件名**（cordis 的 `internal/*` 9 条＋dsh-agent 13 条＋dsh-session 4 条＋dsh-llm 2 条＋dsh-commands／
+   dsh-settings／dsh-system-prompt 各 1–2 条）；本仓 11 条 `registers.events` 声明**逐条命中（11/11，0 miss）**，
+   工装与转储＝`var/scratch/exe-boot-016-20260929/probe-host-event-face.mjs` 与其 `-baseline.txt`（33 行，
+   sha `2b08236b…`）。
+2. 这**不等于**深度校验没有门槛，两条真实门槛换成了别的：① **版本对齐未证**——命中所用面是本仓 devDep
+   副本，运行宿主 `@deepseek-ai/dsh` 0.1.5-rc.1 的合面更大（含本仓未安装的 dsh-tools 等包，其事件面未并入
+   本探针）；② **扫描面定义要新立**——把"副本面"当"宿主面"缺一枚对账钉（哪个版本、哪些包、是否含 `declare module`
+   扩面），发明这枚钉属新增判据、须裁。
+3. 处置：按启动包第八节 3c"发现超出预期形态即停报，不预支"，本会话**未动任何深度校验代码**，结论入本账，
+   状态维持 D-13② "挂账"（`docs/contract.md` §7 D-13 行原文不回改，本节即对其前提的追加更正陈述）。
+
+### 40.4 升级点题面（两案对比＋建议；报协调侧转用户裁，本批未自裁）
+
+问句：**契约 1.1.0→1.2.0 的"legacy 字段收紧为 error"这一步，本批为什么没落，落成什么形态要你裁。**
+
+实测影响面（三处，都是本会话取到的数，不是推演）：
+- 内置清单**当场全红**：`test/contract.test.mjs` 笔 1 的"影响面实测复用"格钉出——7 份 manifest 顶层 legacy
+  实得**六名**（`manifestVersion`/`name`/`optionalDeps`/`requiredAliases`/`requirements`，加 panel 那一份），
+  `registers`/`exports` 只作为 `requirements` 子键出现。名单转 error ⇒ 7/7 全违例，真实仓 doctor
+  `0/0/0` 与 parity A 段同时破。
+- **既有钉会连带翻红**：变异 M-b（把 legacy 分支的 info 改判 error）实测红集
+  ＝{正向 fixture, 逐名 info, D-13① 合法 events 正向格}——第三格是既有钉，说明"收紧"不是新测试的事，
+  是既有承诺面的事（实档 `mutate-016-pin1-v2.log`）。
+- **两条 legacy 面无契约替代表达**：入口解析正典位仍是 `requirements.exports['.']`
+  （`registry/src/loader.ts` 头注①与 `resolveEntry` 面），`inject` 面仍走 `requirements.registers.inject`／
+  模块导出（`provides` 只有 services/commands/providers 三槽）⇒ 想让 7 份清单"迁移到纯契约形态"，
+  必须先给这两面**加契约表达**，而加表达＝语义变更（与题二同类），执行侧不自裁。
+
+三条路（只呈事实与建议，取舍归用户）：
+- **甲｜先加表达、后收紧**：v1.2 内先落 `provides` 扩槽（entry／inject／tools 三面，题二同族一并裁），
+  再迁 7 份清单、最后转 error。语义变更面最大，但"legacy 清零"一步到位，migration.md 前置 3 的
+  "不可移除"就此解除。**代价**：触碰装载与入口面 ⇒ 需真机复验窗。
+- **乙｜收紧范围限定为"已有替代表达的名字"**：`manifestVersion`/`name`/`aliases`/`optionalDeps`/
+  `requiredAliases` 转 error，`requirements`（承载 entry 与 inject）留 info 并逐名挂账。
+  **代价**：`requirements` 是内置清单**全部 7 份**都带的键，只撤它之外五名的红＝把"正典 manifest 判死"
+  的问题留着，H4 只解一半；且"选择性收紧"是新的承诺面口径，也要裁。
+- **丙｜v1.2 定位为"撤销必填集＋对账网扩面"这一档**（本批已落的两件即是全部），legacy 转 error 连同
+  entry/inject/tools 表达一起排 **v1.3**。**代价**：debt C-2 的账要跨两个版本，migration.md 那句
+  "三条全满足才动"继续挂着。
+- **建议＝丙**（前置②与替代表达两条都没闭，甲/乙都要先裁语义变更；本批已落的两件恰好是甲/乙共同的
+  前置，先把对账网与全清单钉立住，下一次裁完就能一步落）。
+- **另需同裁一条（migration.md 前置 2 的字面冲突，令面第八节 3e 点名）**：原文要求"面板不再读旧字段"，
+  而同段写明 `panel/manager/plugin-registry.mjs` 的 5 插件表与 `snapshot.mjs` 的 `ORIGINS/ROW_IDS` 是
+  P2.4 深度生命周期资产、面板纪律要求原样保留 ⇒ 按字面永远满足不了。两案：**子案一**＝前置改述为
+  "改读来源（provides 优先、legacy 回落），不改这张表存在"（与 W9/F-62 已落口径同源，零面板纪律解除）；
+  **子案二**＝解除面板纪律、允许该表退役。**建议＝子案一**（本批 F-62 已把撞名面切到 provides 正典，
+  子案一只是把既成事实写进前置文案，不再新造行为）。
+
+### 40.5 终态读数（对表口径，全部实档 `var/scratch/exe-boot-016-20260929/`）
+
+| 面 | 开工基线（015 终态） | 本批终态（`*-pin3.log`） | 判定 |
+|---|---|---|---|
+| 门禁 `--with-scan` | 6 步全绿（100.8s） | **6 步全绿（85.3s）**，第 4 步标签随扩面更名 | ✓ 步数未变 |
+| 守卫 | exit 0、红 0、自证 51/51（32 组）、扫描 32 份、token 3090、行号容忍 910、覆盖 82／冗余 0、沙箱根 181 | 逐项相同（本会话账面笔落笔前） | ✓ 零漂移 |
+| nt | 480/0 | **484/0**（＋4：笔 1 前置④ 四格） | ✓ |
+| parity（门禁第 4 步） | 21/21 | **46/46**（D 段 18 格＋E 段 5 格＋B 段改述） | ✓ 扩面即题一终批 |
+| p1／p22／p24／regression／pcc | 314/0·165/165·720/720·14 项·0 问题 | **逐项相同** | ✓ |
+| doctor 四套件 | {21,26,11,7} | **{22,26,11,7}**（main 21→22＝前置① 新钉） | ✓ |
+| stage3 | a–f 全 PASS | **a–f 全 PASS**＋ALL STAGE-3 ACCEPTANCE PASS | ✓ |
+| `~/.dsh` 扫描面 | `c585738c…0bd9`／5 files | **逐字节相同**（全程只读） | ✓ |
+| `cordis.patch.yml` | 基准 `b0f304c9` | **一字未动**（3190 B，实读 sha256 前缀 `b0f304c94818bf9a`） | ✓ |
+| 宿主 | pid 以现场为准 | **未触**（本批零宿主动作；真机面需求见 §40.6 第 5 条） | ✓ |
+| 两仓工作树 | 净 | **净**（四笔提交后 `git status` 各 0 行；toolkit 链尾 `748dc9f`／doctor 链尾 `ce31f83`） | ✓ |
+
+### 40.6 本批查出的账与自查（成因先于修法；不回改已提交行）
+
+1. **E 段首跑"doctor 放行 healthCheck"是夹具假象，不是 H4 错账**。成因＝探针把 `healthCheck` 写成函数值，
+   `JSON.stringify` 丢键 ⇒ doctor 根本没看到这个字段。按"读数错了永列标准假说"先查校验式，改字符串值后
+   实测与 H4 账面（17/14/差集恰三名）逐字吻合。已在 `scripts/doctor-cli-contract-parity.mjs` 的 E 段就地
+   写成注释防重踩；H4 条目**无需更正**。
+2. **变异工装首版红集解析写坏**（spec reporter 输出未剥 ANSI ⇒ 三发全报"无红格"）。处置＝以 v2 实档
+   （`mutate-016-pin1-v2.log`）为准，两档同目录留档不抹平；自纠的成因是工装自身而非判据。
+3. **对账网的一处真实边界**（如实申报，不宣称网无洞）：变异 M-c（doctor 对缺席字段仍校值）
+   **只有 doctor 仓新钉抓得到、parity 网 46 格全绿**。⇒ "重叠面"的覆盖按"两侧都有规则"取样，
+   单侧新增的过度严格不在网的天然射程内；本次靠笔 3 新增"零 schema issue"断言补上。
+4. **既存潜在崩溃被暴露（非本批引入）**：`doctor仓:src/engine.mjs#validateManifest` 在"套件根
+   requirements 在场、`exports` 缺席"形态下 `Object.keys(undefined)` 当场 TypeError。成因＝该行早于本批存在，
+   此前零用例覆盖该形态；笔 3 的"在场缺键"夹具第一次打到。定性＝**既存缺陷被暴露**，修法只加存在性闸，
+   判据语义不变（缺名仍由键集循环报），并加 ④ 格钉住。
+5. **真机面需求（排窗归协调侧）**：本批动了 doctor 的 schema 判定面（撤必填集），宿主对契约与独立 doctor
+   **零消费**（`docs/contract-v1.1-recon.md` §3 实测：宿主全局包对 `dsh.plugin.json`／
+   `PLUGIN_CONTRACT_VERSION`／`KNOWN_LEGACY_FIELDS` 零命中）⇒ 按令面第八节 3h，**契约与 doctor 侧改动本身
+   不需要重启宿主**；面板预检/registry 通道未触碰。需求一条：若后续落 §40.4 甲案（改入口/inject 表达），
+   届时须开真机窗复验装载面——本批不需要。
+6. **debt C-2 前置① 引用的行号已漂移**（原文自注"当时"，按规矩不回改）：`doctor仓:src/engine.mjs` 的三根必填
+   块原记"第 330-337 行"、键集校验原记"第 387-391 行"，本批撤销后两处已不存在原文形态。现行定位口径
+   按符号名：`#validateManifest`＋段内注释【契约 v1.2 前置① · 根字段必填集撤销】。
+
+### 40.7 本批未做与停靠状态（候 017 或本会话续号令）
+
+- **未做（一律因需裁，非漏做）**：契约版本 1.1.0→1.2.0 常量与提示串、legacy→error 判据本体、
+  7 份内置清单的字段迁移、面板旧字段读源改写、题二 `provides` 扩槽实施、D-13② 深度校验钉——
+  分别挂在 §40.4 的甲/乙/丙与子案一/二上。
+- **已做**：前置④ 全清单守卫（笔 1）、题一案二对账网扩面＋口径入册（笔 2）、前置① 撤必填集＋
+  空转可见化＋既存崩溃连带修（笔 3，两仓同批互引 `ce31f83`↔`748dc9f`）、考古两题实据、两个题面备齐。
+- **停靠**：四笔全落、两仓净、门禁 6 步全绿、守卫红 0。会话余量已由本会话自评偏低（四笔＋三发×三组
+  变异＋两次全链＋两轮单项读数），建议下一档（v1.2 后半：收紧本体与版本位）由**新会话续号 017**
+  在 §40.4 裁决到达后接手；如令本会话续做，请明示。

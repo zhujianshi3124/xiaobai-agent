@@ -5,6 +5,25 @@
 P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`）。
 
 ## [Unreleased]
+### 契约 v1.2 批前半收官：独立 doctor 撤根字段必填集＋CLI↔契约对账网扩面（2026-09-29，EXE-BOOT-016；两仓同批）
+
+- **独立 doctor CLI 的判定面放宽（对外可见）**：`manifestVersion`/`name`/`requirements` 不再必填。
+  一份"纯契约形态"的 `dsh.plugin.json`（只带 `id`/`displayName`/`version`/`contract`/`requires`/`provides`）
+  自此在 doctor 侧零 schema issue。`requirements` **在场时**其五键键集与目标存在性仍由 doctor 逐名校验，
+  缺席时整段跳过——这一"跳过"现在是被断言钉住的行为，不是静默空洞。
+- **契约版本仍为 1.1.0**：本批**未**把迁移期容忍的 legacy 字段（顶层 `requirements` 等）收紧为 error，
+  也**未**升版；收紧所需的两个前置（面板纪律冲突点、入口与 inject 两面缺契约替代表达）已备好题面候用户裁，
+  执行侧未自裁。
+- **门禁第 4 步覆盖面 21→46 格**：新增"重叠面逐规则对账"（两套校验器同管的每条规则逐一钉住同向红／
+  契约严·doctor 放行／方向相反三类）与"根字段键集对账"（契约在册 17 键 vs doctor 白名单 14 键，差集恰
+  `{exports, healthCheck, registers}`）。**门禁步数仍 6**（`--with-scan`），默认链仍 5。
+- 连带修一处既存缺陷：doctor 校验套件根清单时，若 `requirements` 在场而 `exports` 缺席会当场崩溃
+  （`Object.keys(undefined)`）；现按"缺名"报，语义不变。
+- `KNOWN_LEGACY_FIELDS` 的测试面从"只钉一个名字"换成全清单钉（八名 deepEqual＋逐名 info＋名单外第 9 名
+  必 error＋内置清单实际用到的 legacy 键枚举）。
+- 本批不动装载行为、不动面板路由、不动配置；`cordis.patch.yml` 一字未动；宿主未触（宿主对契约与独立
+  doctor 零消费，实测依据见 `docs/contract-v1.1-recon.md` §3）。
+
 ### 功能全量清单转正为正典＋面板门禁分级口径首次成文（2026-09-29，EXE-BOOT-015 正典化批；纯文档，运行时行为零变化）
 
 - **功能全量清单自此是正典**：F/H 编号空间冻结（新号须经协调侧裁定，执行侧自造编号的路关闭）；报数口径唯一＝
