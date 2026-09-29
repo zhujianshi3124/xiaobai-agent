@@ -36,9 +36,14 @@ optionalDeps / requiredAliases`（`contract/src/validate.ts` 的该常量），�
 **两处必须连带知道的限定**（本清单只描述**本仓契约**的容忍度，不代表另一仓也容忍）：
 ① 顶层 `exports` 在本仓是 info，但在独立 doctor 的清单根字段白名单里**不存在** ⇒ 写上去当场
 `清单根字段非法: exports` **error**（入口声明的正典位置见 §4）；
-② `manifestVersion` / `name` / `requirements` 三项在独立 doctor 侧是**必填**（缺则 `schema.required-missing`
-error）⇒ "本仓容忍"与"另一仓必填"并存，正是 `docs/debt.md` C-2（v1.2 收紧）的门槛所在。
-**收紧时机**：见 `docs/migration.md` §4 与 `docs/debt.md` C-2（P8 时点尚未收紧；2026-09-22 裁定移出 v1.1）。
+② `manifestVersion` / `name` / `requirements` 三项在独立 doctor 侧曾是**必填**（缺则
+`schema.required-missing` error）——**该必填集已于 2026-09-29 撤销**（`doctor仓@ce31f83`，契约 v1.2 前置①，
+修法正典＝`docs/contract-v1.1-recon.md` §8.3）：纯契约 manifest（只带契约九键）自此在 doctor 侧零 schema issue；
+但 **`requirements` 一旦写了，它的五键必填与 `./` 目标存在性仍由 doctor 逐条判**（"在场才管"）。
+⇒ 本句原写的"本仓容忍与另一仓必填并存"自此收窄为"字段名单仍并存、必填面已部分合流"，
+`docs/debt.md` C-2 前置① 因此关账、前置②与收紧本体仍挂账。
+**收紧时机**：见 `docs/migration.md` §4 与 `docs/debt.md` C-2（P8 时点尚未收紧；2026-09-22 裁定移出 v1.1；
+2026-09-29 v1.2 批只落前置①④，legacy→error 仍未落，题面见计划 §40.4）。
 
 ### 2.1 `requires` 子域（预检与巡检的事实来源）
 
@@ -121,10 +126,14 @@ registry 发名静态防回潮／条数联动）。
 （设计约束，无机制保证；将来实现 npm 来源时，第③级会从"兜底"变成"主路径"，
 `requirements.exports` 正典与包主导出须再裁一次 —— 已在 `docs/debt.md` C-1 现状注记标记关联。）
 
-**两仓分权（2026-09-22 裁定，★12 落地口径）**：本契约管**解析行为**（下面的四级顺位、正典位置、
-`$from` 继承、显式声明不回退红线、可观测面）；**必填性校验归独立 doctor**（它把 `requirements` 的
-`runtime/binaries/packages/registers/exports` 五键定为必填、逐条断言 `./` 目标存在、规定 `$from`
-只能套件根用）。本节因此**只描述行为、不声明"哪些键必须存在"**；两处不再互相打脸的前提是
+**两仓分权（2026-09-22 裁定，★12 落地口径；2026-09-29 契约 v1.2 前置① 后按"在场才管"改述，
+`doctor仓@ce31f83`）**：本契约管**解析行为**（下面的四级顺位、正典位置、
+`$from` 继承、显式声明不回退红线、可观测面）；**必填性校验归独立 doctor**——其管辖面现为
+`requirements` **在场时**的 `runtime/binaries/packages/registers/exports` 五键必填、逐条断言 `./` 目标存在、
+`$from` 只能套件根用；`requirements` **缺席时整段不适用**（这一"跳过"由
+`scripts/doctor-cli-contract-parity.mjs` 的 B5/D16 格钉成可见断言，不是静默空洞）。
+**根字段 `manifestVersion`/`name`/`requirements` 的必填已于同日撤销**，故本段不再覆盖"根字段必填"。
+本节因此**只描述行为、不声明"哪些键必须存在"**；两处不再互相打脸的前提是
 `docs/add-sub-plugin.md` §2 与本文口径一致（曾不一致的成因见 `docs/contract-v1.1-recon.md` §5.2）。
 
 入口解析顺序（`registry/src/loader.ts` 的 `resolveEntry`；正本叙述在 `docs/add-sub-plugin.md` §2 要点 1）：
