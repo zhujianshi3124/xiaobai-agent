@@ -238,9 +238,9 @@ eager re-export**，不碰面板（旧文本把面板纪律记到它头上属张
 npm test                                   # build×3 + pluggable-lint + no-subplugin-import-check + typecheck×3 + node --test
 node scripts/regression-all.mjs            # 回归全跑 14 项
 node /d/dsh-test-sandbox/projects/doctor/src/cli.mjs --scope D:/dsh-plugins/dsh-toolkit   # 真实仓 dry-run 必须 0/0/0
-node scripts/ci-local.mjs --with-scan      # 单命令全链（6 步：上面三步 + DOCTOR_CLI↔契约对账 + patch 行配置校验 + p23-verify）
+node scripts/ci-local.mjs --with-scan      # 单命令全链（--with-scan 共 6 步：npm test＋回归 14 项＋真实仓 dry-run＋DOCTOR_CLI↔契约对账＋patch 行配置校验＋文档引用守卫；默认链 5 步＝去掉守卫步）
 ```
-**单命令全链其实是最后那条**（`regression-all` 不含 `p23-verify`、不含 `patch-config-check`；
+**单命令全链其实是最后那条**（`regression-all` 自 D-3 修法起**已含** `p23-verify`，但**不含** `patch-config-check`；
 `p23-shadow-scan` 根本不在这条链上，且它会覆写历史证据正本，别随手跑）。
 独立 doctor 的扫描面**整体排除 `test/` 目录**（防测试夹具污染真实仓闸），`lib/` 直下名为 `test` 的
 目录是例外（那是在案本体位）——你在自己仓里放无效 manifest 夹具会撞红，这条豁免只在仓根一层生效。

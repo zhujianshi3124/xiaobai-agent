@@ -37,7 +37,7 @@ toolkit 自身也在 P7 走了同一条路：根 `dsh.plugin.json` 加上 `id=ds
 | **热配置** | `~/.dsh/dsh-search-router.json`（每次调用重读）、`~/.dsh/dsh-rate-throttle.json` + `-learned.json`；**其上是环境变量层 `DSH_WEB_SEARCH_ROUTER_MODE`（优先级最高，只收合法枚举）**；再往上是 web-search-local 的 settings 节 | 插件自读自管 | 即时。**注意遮蔽**：search-router 的 `mode` 与 web-search-local 的 settings section 会盖住 patch 值——面板如实显示"生效值/来源"，不提供会被关闭通道覆盖的编辑（判定侧第 15 轮方案 1）。**rate-throttle 的热 JSON 是"并集/放宽"而非覆盖**（`excludeProviders` 等按并集生效），可用 `routing.hotConfigPath:'none'` 整体关断；`-learned.json` 由插件自己写 |
 | **registry 运行态** | `<toolkitRoot>/.registry/state.json`（安装记录 / enabled / config / 隔离原因 / lastError） | registry（面板 v2 写路由） | 即时（运行时装入/卸出/热配置），重启后按 `autoload` 恢复 |
 
-**门禁的可见面边界（如实）**：本机 CI 第 4 步 `scripts/patch-config-check.mjs` 按宿主通道语义校验的是
+**门禁的可见面边界（如实）**：本机 CI 第 5 步 `scripts/patch-config-check.mjs` 按宿主通道语义校验的是
 **仓内那份 `cordis.patch.yml`**；profile/home 层、settings 节、环境变量层它都看不到。
 `docs/debt.md`《settings 层核查（补充轮）》记过一次只读核查（结论：当时无覆盖层），
 其判据是 `~/.dsh/settings.yaml` 是否出现 `web-search-local` 节。

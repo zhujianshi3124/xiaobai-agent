@@ -31,10 +31,13 @@ const steps = [
   // 而仓内 293/293 全绿。脚本自带 --selfcheck（解析器语义 20 条断言），见该文件头注。
   ['patch 行配置校验（宿主通道语义，含真 YAML 标量解析）', process.execPath, [resolve(ROOT, 'scripts/patch-config-check.mjs')]],
 ]
-// D-3 修法后 p23-verify 已入 regression-all 本体（第 2 步）；本步保留为双跑冗余守卫——
-// 若有人日后从 regression-all 摘除 p23-verify，本步仍能拦住。摘除/重整随收口批"门禁 6→7"定，
-// 本批不动门禁结构（C1-007 裁：门禁步数不变）。
-if (withScan) steps.push(['p23-verify 复跑（regression-all 已含，双跑冗余守卫）', process.execPath, [resolve(ROOT, 'scripts/p23-verify.mjs')]])
+// D-3 修法后 p23-verify 已入 regression-all 本体（第 2 步，见 scripts/regression-all.mjs 清单第 8 项）；
+// 本步原是"防有人从 regression-all 摘掉 p23-verify"的双跑冗余守卫，脚本头注早写明"摘除/重整随收口批
+// 门禁 6→7 定"。收口批（EXE-BOOT-014）按 012 施工图 §六 摘除：**--with-scan 步数 7→6**（默认链 5 步不变），
+// 显式记录两次步数变化（dc00a34 建 C-1 守卫步＝6→7；本笔摘双跑＝7→6）。覆盖面不减的两条依据：
+// ① p23-verify 的调用位在 regression-all 清单里，该清单另有"清单 vs 脚本文件"的守卫（D-3 笔已落），
+//    日后从清单摘除会当场翻红，不需要再靠双跑兜；② 摘除笔自身的门禁全链读数须证明 p23 仍被跑到（本批判末实档）。
+// 文档引用守卫（D-20/C-1）自此是 --with-scan 链的第 6 步（末位）。
 // 收口批 C-1（D-20）：文档引用守卫——docs/*.md 与 panel/docs/evidence/*.md 的 path[:#]anchor
 // 引用存在性＋#符号可 grep＋行号形态判红（活文档）。守卫上岗首日抓存量失效＝本职，红集即
 // D-20 存量清理清单（§9.6：步数 6→7 并被显式记录）。

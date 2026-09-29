@@ -203,7 +203,7 @@ schemastery 重建后校验；④ `{uid,refs}` toJSON 形态 → 重建后校验
 `contract/src/validate.ts` 的 `validateModuleExports` 头注也写着本文这句（污染源头见 recon §5.2）。
 可观测后果：`web-search-local` 当前生效的是 manifest 里 1 个键的 schema，而不是模块 `Config` 的 14 个键。
 连带影响：宿主通道（cordis 读 `plugin.Config`）**一直**用的就是模块那份 ⇒ 批 4 之后两侧口径一致，
-真实 patch 行配置须能过模块 `Config` —— 该前提已由门禁第 4 步 `scripts/patch-config-check.mjs`
+真实 patch 行配置须能过模块 `Config` —— 该前提已由门禁第 5 步 `scripts/patch-config-check.mjs`
 按宿主语义实测通过，故本批改动的存量风险已被预先校验过一遍；仍标**真机复验**。
 
 ## 6. 预检 / 健康 / 巡检的形状
