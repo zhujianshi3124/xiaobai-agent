@@ -53,3 +53,17 @@
 - node --test 175/0（基线 165 + T0 loader 7 + panel-v2 解引用 1 + panel-unified config 保存 E2E 1 +
   多字段累积 1）；build×3 + pluggable-lint + no-subplugin-import-check + typecheck×3 全绿（三次全量复跑）。
 - 单标签页断言（registrations==1）原样通过，P6 面板纪律未被破坏。
+
+---
+
+## 引用勘误（守卫登记 · EXE-BOOT-014 追加）
+
+> **本节是追加件：上文一行未改。** 依 EXE-BOOT-014 裁② 口径，文档引用守卫（`toolkit:scripts/doc-ref-guard.mjs`）
+> 自本批起把存档件的存在性 / #符号 / 跨仓缺前缀失败与活文档同价判红；存档件是历史证词，改写即篡改证词，
+> 故清偿走这里——逐条登记「原文里的引用形态 ⇒ 为什么判红、真位在哪、属哪一类」。行号形态按裁① 继续容忍，不在本表内。
+> 条目里的 token 用 ASCII 双引号写出＝守卫规则 ⑤「声明原文不是文档引用」的既裁语境，本表自身不产生新引用。
+
+- "API/connector.js" —（原引 8 行，共 1 处）把「API 面的 "connector.js"」写成了一段路径；实指引擎 HTTP 面下发件（见本文同段的 /v2/connector.js 说明），非仓内文件指针。
+- "main/exports/index.js" —（原引 15 行，共 1 处）把「main / exports 两个入口顺位」写成了路径；属顺位枚举记法，不是文件指针。
+
+> 计数自证：本文件登记 2 个 distinct 引用形态，覆盖守卫本批红集中属于本文件的 2 条。

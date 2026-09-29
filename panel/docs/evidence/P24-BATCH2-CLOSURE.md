@@ -65,3 +65,19 @@
 ## 8. 下一阶段
 
 **P2.4 收官**（待判定侧验收本关账包后确认；收官总结＝项目全景＋下一步选项，由判定侧随后出）→ 泛化线后续按用户排期。
+
+---
+
+## 引用勘误（守卫登记 · EXE-BOOT-014 追加）
+
+> **本节是追加件：上文一行未改。** 依 EXE-BOOT-014 裁② 口径，文档引用守卫（`toolkit:scripts/doc-ref-guard.mjs`）
+> 自本批起把存档件的存在性 / #符号 / 跨仓缺前缀失败与活文档同价判红；存档件是历史证词，改写即篡改证词，
+> 故清偿走这里——逐条登记「原文里的引用形态 ⇒ 为什么判红、真位在哪、属哪一类」。行号形态按裁① 继续容忍，不在本表内。
+> 条目里的 token 用 ASCII 双引号写出＝守卫规则 ⑤「声明原文不是文档引用」的既裁语境，本表自身不产生新引用。
+
+- "evidence/P24-BATCH2-RELOAD-CHECKLIST.md" —（原引 20 行，共 1 处）仓外视角前缀。真位＝`panel/docs/evidence/P24-BATCH2-RELOAD-CHECKLIST.md`（在场）。
+- "evidence/P24-BATCH2-CLOSURE-REGRESSION.txt" —（原引 22 行，共 1 处）仓外视角前缀。真位＝`panel/docs/evidence/P24-BATCH2-CLOSURE-REGRESSION.txt`（在场）。
+- "soft-uninstalls.json" —（原引 49 行，共 1 处）运行时产物：面板保管区台账（路径构造在 `panel/manager/custody.mjs`），落点在部署侧 .panel-custody 目录，非仓内可核。
+- "row-adjacency.json" —（原引 49 行，共 1 处）运行时产物：行块邻接留痕台账（同上，构造在 `panel/manager/custody.mjs`），非仓内可核。
+
+> 计数自证：本文件登记 4 个 distinct 引用形态，覆盖守卫本批红集中属于本文件的 4 条。

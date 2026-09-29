@@ -144,3 +144,21 @@
 - **必改文档（纯文档，成本 1-2 行）**：#50（`debt.md` #11(a) ⇒ B-1）、#53（`migration.md` §3 ⇒ §2）、#32（注册次序写反）、#37（事件名前缀自相矛盾）、#55（"首帧"）、#24（devicesFile 真名）、#17（补 `auditLog`/`auditFile` 两键）。
 - **必改实现或必降级承诺**：#16（前缀 fail-closed 未告知）、#21（`saveDebounceMs` 装配链断线）、#43（`Host: localhost` ⇒ 403，且 `add-sub-plugin.md:128` 正在教读者踩）、#47（"完整管理面"被 patch 域 5 插件专属击穿）、#51（degraded 只覆盖 `/doctor/states`）、#34（同 `statePath` 双实例 = 覆盖丢记录，非"共用"）、#49（跨实例可执行对方 plan；且 debt/本文的"10 个函数 / 6 个脚本"两个数都过期）。
 - **承诺了但没有钉的门禁类**：#14（"反向锁死"实为人工清单）、#8（manifest 坏 ⇒ 抛，无例）、#29（"与 p1-smoke 逐条一致"跨文件无断言）、#36（面板"未落盘"渲染半格无例）、#39（三种 `durability.audit.ok=false` 只钉一种）、#56（"不新增端口"只有手工取证，可升级为源码级门禁）。
+
+---
+
+## 引用勘误（守卫登记 · EXE-BOOT-014 追加）
+
+> **本节是追加件：上文一行未改。** 依 EXE-BOOT-014 裁② 口径，文档引用守卫（`toolkit:scripts/doc-ref-guard.mjs`）
+> 自本批起把存档件的存在性 / #符号 / 跨仓缺前缀失败与活文档同价判红；存档件是历史证词，改写即篡改证词，
+> 故清偿走这里——逐条登记「原文里的引用形态 ⇒ 为什么判红、真位在哪、属哪一类」。行号形态按裁① 继续容忍，不在本表内。
+> 条目里的 token 用 ASCII 双引号写出＝守卫规则 ⑤「声明原文不是文档引用」的既裁语境，本表自身不产生新引用。
+
+- "package.json#exports['.']" —（原引 15 行，共 1 处）JSON 路径式锚（带方括号取键），不是可 grep 的字面串。此处语义是「package.json 的 exports 里 . 这个键」，属字段面记法。
+- "index.mjs" —（原引 15/114 行，共 2 处）目录惯例名（第④顺位 "index.js/index.mjs" 之一），是顺位记法不是具体文件指针 ⇒ 非仓内可核。
+- "dataDir/state.json" —（原引 43 行，共 1 处）以变量代指插件数据根的记法（dataDir 非目录名），registry 状态件落运行时目录，非仓内可核。
+- "toolkitRoot/.registry/state.json" —（原引 43 行，共 1 处）以变量代指 toolkitRoot 的记法，非仓内目录 ⇒ 运行时面路径。
+- "test/fixtures/panel-routes.mjs" —（原引 53 行，共 1 处）该夹具当时设想过、未落地（仓内无此路径，路由夹具后来走 test/helpers/ 下的装配）。属"计划中的路径"被写成指针形，本文历史行不改，此处登记。
+- "ui,snapshot,custody,doctor/states,v2/snapshot,v2/events,v2/connector.js" —（原引 80 行，共 1 处）路由清单的逗号并列被解析成单个路径（这一段是「面板 HTTP 面清单」的枚举记法），不是文件指针。真面＝面板路由表，见 `panel/manager/v2-api.mjs` 与 `panel/index.js`。
+
+> 计数自证：本文件登记 6 个 distinct 引用形态，覆盖守卫本批红集中属于本文件的 7 条。

@@ -144,3 +144,19 @@
 
 ---
 （本件按项目约定**入库、只增不改**。内容变更层面无任何变更 —— 仅**索引 + 台账 + 授权语义**三项新记录。）
+
+---
+
+## 引用勘误（守卫登记 · EXE-BOOT-014 追加）
+
+> **本节是追加件：上文一行未改。** 依 EXE-BOOT-014 裁② 口径，文档引用守卫（`toolkit:scripts/doc-ref-guard.mjs`）
+> 自本批起把存档件的存在性 / #符号 / 跨仓缺前缀失败与活文档同价判红；存档件是历史证词，改写即篡改证词，
+> 故清偿走这里——逐条登记「原文里的引用形态 ⇒ 为什么判红、真位在哪、属哪一类」。行号形态按裁① 继续容忍，不在本表内。
+> 条目里的 token 用 ASCII 双引号写出＝守卫规则 ⑤「声明原文不是文档引用」的既裁语境，本表自身不产生新引用。
+
+- "evidence/Q2-SHIPPED-PRESET-SCAN.txt" —（原引 57 行，共 1 处）仓外视角前缀。真位＝`panel/docs/evidence/Q2-SHIPPED-PRESET-SCAN.txt`（在场）。
+- "DSH_HOME/cordis.patch.yml" —（原引 74/115 行，共 2 处）以变量代指宿主根的记法（DSH_HOME 非目录名），真面＝`~/.dsh/profiles/web/cordis.patch.yml`（运行时面）。
+- "evidence/MASTER-MERGE-NORMALIZATION.txt" —（原引 84 行，共 1 处）仓外视角前缀。真位＝`panel/docs/evidence/MASTER-MERGE-NORMALIZATION.txt`（在场）。
+- "devices.json" —（原引 128/130 行，共 2 处）宿主面文件：~/.dsh 下的配对设备账件（本会话实测该路径当前不在盘），非仓内可核。
+
+> 计数自证：本文件登记 4 个 distinct 引用形态，覆盖守卫本批红集中属于本文件的 6 条。

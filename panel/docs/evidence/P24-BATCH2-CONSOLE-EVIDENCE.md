@@ -159,3 +159,18 @@
 
 - 本轮仅新增本文档与台账/交接卡/README 文档行；**未运行** `--apply`/`--rollback`；未触碰 doctor 状态三件套（实测仍不存在）；真实 `cordis.patch.yml` `ce0b0b81…` 未变；doctor 真实仓 0/0/0（08:49 复核）。
 - 后续施工前置（判定流程原文）：证据批验收 → 设计稿 → **用户批准** → 施工；届时全部落盘测试仍走 `os.tmpdir` 副本。
+
+---
+
+## 引用勘误（守卫登记 · EXE-BOOT-014 追加）
+
+> **本节是追加件：上文一行未改。** 依 EXE-BOOT-014 裁② 口径，文档引用守卫（`toolkit:scripts/doc-ref-guard.mjs`）
+> 自本批起把存档件的存在性 / #符号 / 跨仓缺前缀失败与活文档同价判红；存档件是历史证词，改写即篡改证词，
+> 故清偿走这里——逐条登记「原文里的引用形态 ⇒ 为什么判红、真位在哪、属哪一类」。行号形态按裁① 继续容忍，不在本表内。
+> 条目里的 token 用 ASCII 双引号写出＝守卫规则 ⑤「声明原文不是文档引用」的既裁语境，本表自身不产生新引用。
+
+- "doctor-patch-state.json" —（原引 19/44/84/114 行，共 4 处）运行时产物：doctor apply/rollback 写侧在 configRoot 下的状态件（读写在 `doctor仓:src/executor.mjs`），非仓内文件。
+- "configRoot/doctor-patch-state.json" —（原引 92 行，共 1 处）运行时面记法：configRoot 是 doctor 的部署根变量，不是仓内目录。真位由 `doctor仓:src/executor.mjs` 拼出，非仓内可核。
+- "soft-uninstalls.json" —（原引 117 行，共 1 处）运行时产物：面板保管区台账（路径构造在 `panel/manager/custody.mjs`），落点在部署侧 .panel-custody 目录，非仓内可核。
+
+> 计数自证：本文件登记 3 个 distinct 引用形态，覆盖守卫本批红集中属于本文件的 6 条。
