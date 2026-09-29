@@ -49,7 +49,9 @@ test/           测试（node --test）
   ＋node --test＋回归 14 项（D-3 起含 p23-verify）＋doctor 真实仓 dry-run 0/0/0＋CLI↔契约对账＋patch 行配置校验
   ＋文档引用守卫 D-20/C-1；默认链 5 步＝去掉守卫步。步数账：dc00a34 建守卫步 6→7，收口批摘 p23-verify 双跑 7→6）。
 - 账面：`docs/repair-plan-20260923.md`（施工计划）、`docs/debt.md`（债务）、
-  `docs/feature-inventory-20260923.md`（功能全量清单）、[`CHANGELOG.md`](CHANGELOG.md)（对外可见变更）。
+  `docs/feature-inventory-20260923.md`（功能全量清单 · **2026-09-29 起定稿为正典**：F/H 编号空间冻结，
+  终数＝重建件 23／覆盖账 68＋23＝91，口径以该文件《正典化》一节为唯一依据）、
+  [`CHANGELOG.md`](CHANGELOG.md)（对外可见变更）。
 
 ---
 *本 README 由 EXE-BOOT-010 续用批按用户基本要求令补齐（2026-09-28）；内容以仓内实况为据
