@@ -209,7 +209,7 @@ F-14 `.github/workflows`（B-2 既有裁定：本地门禁即事实 CI）。
 |---|---|---|---|
 | **P-1 五插件 × 六操作通路** | 配置 / 停用 / 启用 / 重载 / 卸载 / 健康 每项"面板有没有真入口 → 请求打哪 → 服务端哪条路由 → 谁校验 → 落哪" | 静态读码（客户端 handler + 服务端路由 + `PLAN_ERROR_STATUS`）+ **只读 GET 面**（`/snapshot`、`/v2/snapshot`、`/doctor/states`、`/custody`）复算可达性。**不真点任何写操作**（写=行为变更，须逐笔授权；R1 修好后批 8 窗口一次性真验） | 30 格通路表；每格标"可达/断点/需授权才能验" |
 | **P-2 宿主原生设置页对 5 卡的显示状态** | 宿主自己的设置页里 5 张卡显示什么、与 `/api/toolkit-panel/snapshot` 是否同源 | **需用户侧动作**：浏览器开 `127.0.0.1:3080` 要凭据（G 轮与 D-4 都实测 `dsh web authentication required`），本侧不取。我给取数清单（截哪几屏、报哪几个字段），用户在已登录会话里目检回报 | 用户回报单 + 我方对照表 |
-| **P-3 宿主读我仓 patch 的机制与热更新能力** | ①宿主实读的是哪一份（路径）；②改了要不要重启才生效 | ①已定位并可在批内复述：`snapshot.patch.path` = `D:\dsh-plugins\dsh-toolkit\cordis.patch.yml`（sha `e8051fe9`/3085 B），机制是 `profiles/web/package.json` 的 `"@local/dsh-toolkit": "link:D:/dsh-plugins/dsh-toolkit"`；②**只读**判据 = 盘上文件 sha/mtime vs 宿主自述面 sha/mtime vs 宿主进程 `StartTime`。**热更实验（改一行看是否即时生效）属行为变更 ⇒ 单独授权**，建议并入批 8 真机窗口顺带做 | 机制定位结论 + "是否需重启"的可判据（不猜） |
+| **P-3 宿主读我仓 patch 的机制与热更新能力** | ①宿主实读的是哪一份（路径）；②改了要不要重启才生效 | ①已定位并可在批内复述：`snapshot.patch.path` = `D:\dsh-plugins\dsh-toolkit\cordis.patch.yml`（sha `e8051fe9`/3085 B），机制是 `~/.dsh/profiles/web/package.json` 的 `"@local/dsh-toolkit": "link:D:/dsh-plugins/dsh-toolkit"`；②**只读**判据 = 盘上文件 sha/mtime vs 宿主自述面 sha/mtime vs 宿主进程 `StartTime`。**热更实验（改一行看是否即时生效）属行为变更 ⇒ 单独授权**，建议并入批 8 真机窗口顺带做 | 机制定位结论 + "是否需重启"的可判据（不猜） |
 
 普查**排在波 0**（先于所有写操作批次）：它给后续每批提供"当前通路基线"，否则 R1/批 5-3/W2 的"修好了"没有对照面。
 
@@ -1107,7 +1107,7 @@ registers.inject 数据源；`requires.services` 与 inject 声明不一致是 H
 | # | 风险 | 处置 |
 |---|---|---|
 | 1 | 宿主侧是否解析 snapshot JSON 体**未证** | 键名变更对"不读"无影响；若宿主有未知读点，观察窗暴露——列入真机观察需求（见 #3） |
-| 2 | client/panel.html 两处读点漏改 → 卡面技术详情空列 | 普查清单锁定两处＋grep 复核；p22 127/127＋client 渲染断言兜底 |
+| 2 | panel/client/panel.html 两处读点漏改 → 卡面技术详情空列 | 普查清单锁定两处＋grep 复核；p22 127/127＋client 渲染断言兜底 |
 | 3 | 面板可见面：TechRow **标签与数据值零变化**（仅内部取数字段名变） ⇒ 按批 10 同口径**预计不触发条件真机**；但为对齐"输出面键名变更"的字面影响，**观察需求报协调侧排窗裁定**，执行侧不自裁 | 批 8 先例：代码半先行，观察窗一次打包 |
 | 4 | 换源后 provides 缺席的第三方插件（legacy）输出变空 | extractRegisters 回落 legacy registers（迁移期口径与 loader 一致），值不变 |
 | 5 | 测试工装（p22/harness）与生产读点漂移 | 工装同步列入实施清单第 4 条，与生产同笔 |
@@ -1254,7 +1254,7 @@ registers.inject 数据源；`requires.services` 与 inject 声明不一致是 H
    复现钉修前红正中"决议后保持折叠"格；F-72 既有格保持绿＝两钉逐格隔离；变异 1 发
    （决议写入回退无条件形态）恰 F-93 钉红。catch 分支不动记边界（错误降级提示行非详情重开）。
 2. **描述落差族 `9117299`**：compact-router 描述补三模式、rate-throttle 补齐两半，双通道
-   （client/index.js＋panel.html）同笔同文；钉 `test/card-description-parity.test.mjs` 4 条
+   （panel/client/index.js＋panel.html）同笔同文；钉 `test/card-description-parity.test.mjs` 4 条
    （两通道逐字一致＋两能力格双通道各探＋未动三卡快照反向钉）；变异 2 发逐格（单通道回潮两个方向）。
 3. **F-77 `56dd57d`**：复算校正原判（"bool" 两端一致那半不成立；真漂移＝backoffFactor 与
    routing.downgradeContextMargin 两处 `"num"`），两通道各 2 处对齐 `"number"`，客户端字段集合

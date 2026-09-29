@@ -134,7 +134,7 @@ registry 发名静态防回潮／条数联动）。
 | ① | **`requirements.exports['.']` —— 正典位置** | 命中即返回；`{"$from":"package.json#exports"}`（**只允许套件根这么写，且必须只有 `$from` 一个键**）时按继承语义换成 `package.json#exports` 的表，此时若表里没有 `.` 映射会带一条告警 |
 | ② | 顶层 `exports['.']` —— legacy 兼容位 | 命中**必打 warn**（经 registry 的 warn 通道落日志，`event=entry-declaration`）；与正典并存时**正典赢**，warn 点名被忽略的那一份并说明它在 doctor 侧判 error |
 | ③ | `package.json` 的 `exports['.']`（字符串或 `{".":{default\|node}}`）→ `main` | 宿主 Node 约定（T0/G1）。**本级同样是显式声明：声明了却指向不存在的文件 ⇒ `entry-not-found`，不回退第④级（批 6 / ★10）** |
-| ④ | `index.js` / `index.mjs` 目录惯例 | 仅当前三级**都没有声明**时才走到（"声明了但目标缺失"已在当场报错，不再靠惯例兜底） |
+| ④ | `index`（`.js`/`.mjs`）目录惯例 | 仅当前三级**都没有声明**时才走到（"声明了但目标缺失"已在当场报错，不再靠惯例兜底） |
 
 - **`.` 的语义是"包主导出"，不必然是插件入口**（本仓 `lib/agent-memory` 即此形态：`.` 指向数据层、
   插件在 `./plugin`）⇒ 按目录装它会得到 `plugin-shape-invalid`，报错点名同表可改装的文件；
@@ -143,7 +143,7 @@ registry 发名静态防回潮／条数联动）。
   （回退就是拿惯例掩盖 manifest 与实现不同步）。**批 6（★10）已把本级红线扩到第③级**：
   `package.json` 的 `exports['.']`（裸字符串 / 映射里的字符串 / `{".":{default|node}}` 三种形态）或
   `main` 只要是**作者写下的声明**且目标不存在，当场报错并给绝对路径，不再静默落到目录惯例。
-  第④级 `index.js`/`index.mjs` 因此只在**前三级都没声明**时才走到（"声明了但没命中"已不是回退理由）。
+  第④级 `index`（`.js`/`.mjs`） 因此只在**前三级都没声明**时才走到（"声明了但没命中"已不是回退理由）。
   口径细节：`exports` 表里没有 `.` 键、`.` 的对象形态既无 `default` 也无 `node`、`main` 是空串——
   三种都算"本级没声明"（与 `exports['.']===""` 同口径），仍走目录惯例。
   扩前存量核验：`package.json#exports` 12 条目 + 7 份 manifest 的 `requirements.exports` 目标全部存在
