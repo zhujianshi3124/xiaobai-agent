@@ -45,9 +45,9 @@ test/           测试（node --test）
 - [`AGENTS.md`](AGENTS.md)：仓内修改红线（禁止跨插件静态 import／eager re-export；改动后必跑
   本插件全部测试＋受影响方测试＋doctor dry-run 0/0/0；提交 `fix|feat|perf(<插件名>): <主题>`，
   一个主题一个 commit）。
-- 门禁：`node scripts/ci-local.mjs --with-scan`（build×3＋lint＋零子插件引用守卫＋typecheck×3
-  ＋node --test＋回归 14 项＋doctor 真实仓 dry-run 0/0/0＋CLI↔契约对账＋patch 行配置校验＋
-  p23-verify 复跑）。
+- 门禁：`node scripts/ci-local.mjs --with-scan`（**6 步**：build×3＋lint＋零子插件引用守卫＋typecheck×3
+  ＋node --test＋回归 14 项（D-3 起含 p23-verify）＋doctor 真实仓 dry-run 0/0/0＋CLI↔契约对账＋patch 行配置校验
+  ＋文档引用守卫 D-20/C-1；默认链 5 步＝去掉守卫步。步数账：dc00a34 建守卫步 6→7，收口批摘 p23-verify 双跑 7→6）。
 - 账面：`docs/repair-plan-20260923.md`（施工计划）、`docs/debt.md`（债务）、
   `docs/feature-inventory-20260923.md`（功能全量清单）、[`CHANGELOG.md`](CHANGELOG.md)（对外可见变更）。
 
