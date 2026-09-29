@@ -12,6 +12,15 @@
 //      声明原文不是文档引用）；冻结件的存在性/符号失败降级为警示（不阻断）——引用方
 //      冻结不可改写，阻断无解；活文档判据不因豁免放宽。
 //
+// token 切分校准（首轮扫描 500＋条假红逐条归因后的加验型修正；三条都**多验不减免**）：
+//   ⑥ 花括号并列 `b10{a,b,c}-mutate.mjs` ＝ 三个文件，逐个展开逐个验（此前正则在大括号处
+//      断开，只捞到残片 `-mutate.mjs` 并误报"目标不存在"）；
+//   ⑦ 斜杠并列 `rules.ts/doctor.ts/probes.ts` ＝ 多文件并列，判据是"目录段自带扩展名"
+//      （真目录名不会以 `.ts`/`.json` 收尾），拆开后每一段各自验存在性（此前整串当一个路径，
+//      既漏验各段又误报整体不存在）；
+//   ⑧ 扩展名片段（`.test.mjs`、`.d.ts`、`-learned.json`）＝ 命名惯例/后缀记法：无路径分隔符
+//      且以 `.`/`-` 起头者不是文件引用，不抓；真点目录（`.dsh-market/x.json`）带分隔符照验。
+//
 // 冻结文档（行号豁免、存在性与 #锚照验）——豁免依据写死在 FROZEN_CLASSES，防悄悄扩豁免：
 //   - panel/docs/evidence/**：证据正本"只增不改"（D-2 / A#25 硬闸先例），其行号引用
 //     记录取证当时实况，判红也无法改写；
@@ -40,14 +49,40 @@ const EXT = '(?:json|cjs|mjs|yaml|yml|html|md|js|ts|txt|ps1)';
 // 路径体：可选「盘符+分隔符」前缀（D:\ 或 D:/）＋正反斜杠分段；锚：行号（含区间）或 #符号。
 // 扩展名最长优先＋尾部边界（ext 后不得紧跟路径字符）：防 "dsh.plugin.json" 被 "js"
 // 截断成 "dsh.plugin.js" 的假红（首轮扫描实测 500 条同类，已归因此 bug）；
-// 盘符后必须有分隔符 Consumers（D:\seg 形态），否则整体回退成无盘符子路径假红（二轮 10+ 条，已归因）。
+// 盘符后必须有分隔符（D:\seg 形态），否则整体回退成无盘符子路径假红（二轮 10+ 条，已归因）。
+// 路径体：可选「盘符+分隔符」前缀（D:\ 或 D:/）＋正反斜杠分段；锚：行号（含区间）或 #符号。
+// ⑥ 的花括号并列：`{}` 与 `,` 只作为**普通字符**收进单一扁平字符类，展开在后处理里做（逐个验）。
+// 禁写成 `(?:[A-Za-z0-9_.@\-]+|\{[^{}]*\})+` 这类"嵌套量词＋重叠字符类"——实测对长路径段触发
+// 指数级回溯，把整步门禁卡死（本会话改稿第一版踩过，故把教训写在这里防复犯）。
+const WORD = '[A-Za-z0-9_@.\\-,{}]+';
 const TOKEN_RE = new RegExp(
   '(?:toolkit:|doctor\\u4ed3:|TK\\/|DC\\/)?' +
-  '((?:[A-Za-z]:[\\\\/])?(?:[A-Za-z0-9_@.\\-]+[\\\\/]+)*[A-Za-z0-9_@.\\-]+\\.' + EXT + ')' +
+  '((?:[A-Za-z]:[\\\\/])?(?:' + WORD + '[\\\\/]+)*' + WORD + '\\.' + EXT + ')' +
   '(?![A-Za-z0-9_@.\\-])' +
   '(?::(\\d+)(?:\\s*[-\\u2013\\u2014]\\s*(\\d+))?|#([^\\s`),\\u3002\\uFF0C\\uFF1B\\u3001\\uFF08\\uFF09]+))?',
   'g'
 );
+// ⑧ 扩展名片段：以 `.`/`-` 起头且不含分隔符＝后缀记法/惯例名（`.test.mjs`、`-learned.json`），非文件引用。
+const FRAGMENT_RE = /^[.\-][^/\\]*$/;
+// ⑥ 花括号展开（支持多个大括号组，笛卡尔积）。
+function expandBraces(body) {
+  const m = body.match(/\{[^{}]*\}/);
+  if (!m) return [body];
+  const out = [];
+  for (const alt of m[0].slice(1, -1).split(',')) {
+    out.push(...expandBraces(body.slice(0, m.index) + alt + body.slice(m.index + m[0].length)));
+  }
+  return out;
+}
+// ⑦ 斜杠并列识别：任一「目录段」自带扩展名 ⇒ 这是多文件并列而非目录路径，拆成各段分别验。
+function enumerationParts(body) {
+  const segs = body.replace(/\\/g, '/').split('/');
+  if (segs.length < 2) return null;
+  const hasExt = (s) => /\.[A-Za-z0-9]{1,5}$/.test(s);
+  if (!segs.slice(0, -1).some(hasExt)) return null;
+  const parts = segs.filter(hasExt);
+  return parts.length >= 2 ? parts : null;
+}
 // 保留字（非引用）：运行时/产品名形如路径者。Node.js 是运行时名不是文件引用。
 const RESERVED_TOKENS = new Set(['node.js']);
 const FENCE_RE = /^\s*(```|~~~)/;
@@ -127,10 +162,34 @@ function maskAsciiQuotedSpans(text) {
   return text.replace(/"[^"\r\n]*"/g, (s) => ' '.repeat(s.length));
 }
 
+// 单个「路径体＋锚」的判定：行号形态 / 存在性 / #符号可 grep。⑥ 花括号展开与 ⑦ 并列拆分都汇到这里，
+// 因此三条校准一律是"多验几次"——不存在因识别了新形态就少验的情形。
+function checkBody(body, suffix, anchors, ctx) {
+  const { cite, frozen, roots, bareIdx, stat, reds } = ctx;
+  if (anchors.lineA !== undefined) {
+    if (frozen) { stat.exemptLineRefs++; return; }
+    const range = anchors.lineB !== undefined ? `${anchors.lineA}-${anchors.lineB}` : anchors.lineA;
+    reds.push({ cite, token: body + suffix, reason: `行号形态（:${range}）——D-20：改符号名/节名定位` });
+    return;
+  }
+  const resolved = resolveTarget(body, roots, bareIdx);
+  if (!resolved.ok) {
+    const hint = /(^|\/)(engine\.mjs|doctor\.ts)$/.test(body.replace(/\\/g, '/')) || /(^|\/)src\//.test(body.replace(/\\/g, '/'))
+      ? '（若指独立 doctor 仓：按 recon §10.3 加 doctor仓: 前缀）' : '';
+    reds.push({ cite, token: body + suffix, reason: `目标不存在（试过 ${resolved.tried.join(' ; ')}）${hint}` });
+    return;
+  }
+  if (anchors.sym !== undefined && !grepCands(resolved.cands, anchors.sym)) {
+    reds.push({ cite, token: body + suffix, reason: `#符号 "${anchors.sym}" 在目标文件 grep 不到` });
+  }
+}
+
 // ---- 单文件扫描（frozen 由调用方按 isFrozenRel 注入，自证格用合成值） ----
 function scanLines(lines, citePrefix, frozen, roots, bareIdx) {
   const reds = [];
-  let tokens = 0, exemptLineRefs = 0, fences = 0;
+  const stat = { tokens: 0, exemptLineRefs: 0, fragments: 0 };
+  let fences = 0;
+  const ctx = { cite: '', frozen, roots, bareIdx, reds, stat };
   let inFence = false;
   for (let i = 0; i < lines.length; i++) {
     let text = lines[i];
@@ -145,29 +204,22 @@ function scanLines(lines, citePrefix, frozen, roots, bareIdx) {
       // 不是文件引用（完整路径若可作 token 会从段首起匹配）
       if (m.index > 0 && text[m.index - 1] === '/') continue;
       if (RESERVED_TOKENS.has(m[1].toLowerCase())) continue;
-      tokens++;
-      const tokenRaw = m[0];
-      const lineA = m[2], lineB = m[3], sym = m[4];
-      const cite = `${citePrefix}:${i + 1}`;
-      if (lineA !== undefined) {
-        if (frozen) { exemptLineRefs++; continue; }
-        const range = lineB !== undefined ? `${lineA}-${lineB}` : lineA;
-        reds.push({ cite, token: tokenRaw, reason: `行号形态（:${range}）——D-20：改符号名/节名定位` });
+      if (FRAGMENT_RE.test(m[1])) { stat.fragments++; continue; } // ⑧ 惯例名/后缀记法，非引用
+      stat.tokens++;
+      ctx.cite = `${citePrefix}:${i + 1}`;
+      const anchors = { lineA: m[2], lineB: m[3], sym: m[4] };
+      const suffix = anchors.lineA !== undefined
+        ? (anchors.lineB !== undefined ? `:${anchors.lineA}-${anchors.lineB}` : `:${anchors.lineA}`)
+        : (anchors.sym !== undefined ? `#${anchors.sym}` : '');
+      const enumParts = enumerationParts(m[1]);
+      if (enumParts) { // ⑦ 并列：每段各自验（锚随整串无意义，逐段验存在性）
+        for (const part of enumParts) checkBody(part, '', { lineA: undefined, lineB: undefined, sym: undefined }, ctx);
         continue;
       }
-      const resolved = resolveTarget(m[1], roots, bareIdx);
-      if (!resolved.ok) {
-        const hint = /(^|\/)(engine\.mjs|doctor\.ts)$/.test(m[1].replace(/\\/g, '/')) || /(^|\/)src\//.test(m[1].replace(/\\/g, '/'))
-          ? '（若指独立 doctor 仓：按 recon §10.3 加 doctor仓: 前缀）' : '';
-        reds.push({ cite, token: tokenRaw, reason: `目标不存在（试过 ${resolved.tried.join(' ; ')}）${hint}` });
-        continue;
-      }
-      if (sym !== undefined && !grepCands(resolved.cands, sym)) {
-        reds.push({ cite, token: tokenRaw, reason: `#符号 "${sym}" 在目标文件 grep 不到` });
-      }
+      for (const body of expandBraces(m[1])) checkBody(body, suffix, anchors, ctx); // ⑥ 展开逐个验
     }
   }
-  return { reds, tokens, exemptLineRefs, fences };
+  return { reds, fences, ...stat };
 }
 
 function scanFile(absFile, rel, roots, bareIdx) {
@@ -211,11 +263,21 @@ function selfcheckCases() {
     write('docs/ok.md', '见 `src/lib.mjs#myFunc` 与 `src/lib.mjs` 与 `lib.mjs`（裸名）。');
     write('src/lib.mjs', 'export function myFunc() {}\n');
     write('lib.mjs', 'bare hit\n');
+    write('.dsh-market/d.json', '{}\n');
+    write('b10x-mutate.mjs', '// 花括号展开验真用\n');
+    write('b10y-mutate.mjs', '// 花括号展开验真用\n');
     const roots = { aliases: { 'TK/': dir }, relRoots: [dir], home: dir, bareDirs: [dir], bareSkip: new Set() };
-    const bareIdx = () => [path.join(dir, 'lib.mjs'), path.join(dir, 'src', 'lib.mjs')];
+    const bareIdx = () => [
+      path.join(dir, 'lib.mjs'), path.join(dir, 'src', 'lib.mjs'),
+      path.join(dir, 'b10x-mutate.mjs'), path.join(dir, 'b10y-mutate.mjs'),
+    ];
     const scan = (relText, frozen) => scanLines(relText.split(/\r?\n/), 't.md', frozen, roots, bareIdx);
     const cases = [];
-    const eq = (name, got, want) => cases.push({ name, ok: JSON.stringify(got) === JSON.stringify(want), got, want });
+    let atoms = 0;
+    const eq = (name, got, want) => {
+      atoms += Array.isArray(want) ? want.length : 1;
+      cases.push({ name, ok: JSON.stringify(got) === JSON.stringify(want), got, want });
+    };
 
     const ok = scan('见 `src/lib.mjs#myFunc` 与 `src/lib.mjs` 与 `lib.mjs`。', false);
     eq('① 合规引用（#符号/相对路径/裸名）零红', ok.reds.length, 0);
@@ -245,6 +307,21 @@ function selfcheckCases() {
     ], [true, true, true, false]);
     const absSelf = scan('绝对盘符：`' + path.join(dir, 'src', 'lib.mjs') + '#myFunc`。', false);
     eq('⑫ 盘符绝对路径（反斜杠）整体匹配且 #符号过', absSelf.reds.length, 0);
+    // ⑯⑰⑱ token 切分校准（⑥⑦⑧）——三条都是加验型，逐条钉住"识别新形态不多验也不少验"
+    const en = scan('并列：`b10x-mutate.mjs/nope.mjs` 与 `rules.ts/doctor.ts`。', false);
+    eq('⑯ 斜杠并列逐段各自验（在场段绿、缺席段各红；整串当一个路径只会得 2 红）',
+      [en.reds.length, en.tokens], [3, 2]);
+    eq('⑯b 并列翻红时报的是各段名，不是整串', en.reds.map((r) => r.token).sort(), ['doctor.ts', 'nope.mjs', 'rules.ts']);
+    const bzOk = scan('工装 `b10{x,y}-mutate.mjs`。', false);
+    eq('⑰ 花括号展开＝逐个验真（两个都在场 ⇒ 零红）', bzOk.reds.length, 0);
+    const bzBad = scan('工装 `b10{x,z}-mutate.mjs`。', false);
+    eq('⑰b 展开中缺席的那个翻红且报展开后名', [bzBad.reds.length, bzBad.reds[0] && bzBad.reds[0].token], [1, 'b10z-mutate.mjs']);
+    const frag = scan('惯例 `.test.mjs`、后缀 `-learned.json`，真引用 `lib.mjs` 照验。', false);
+    eq('⑱ 片段形（点/连字符起头且无分隔符）不抓，同行真引用不少验',
+      [frag.reds.length, frag.fragments, frag.tokens], [0, 2, 1]);
+    eq('⑱b 点目录（带分隔符）不在片段豁免内：在场则绿、缺席则红',
+      [scan('`<插件名>/<主题>.test.mjs` 与 `.dsh-market/d.json`。', false).reds.length,
+       scan('`.dsh-market/nope.json`。', false).reds.length], [0, 1]);
 
     const bad = cases.filter(c => !c.ok);
     if (bad.length) {
@@ -252,7 +329,7 @@ function selfcheckCases() {
       for (const c of bad) console.error(`      ${c.name}: got=${JSON.stringify(c.got)} want=${JSON.stringify(c.want)}`);
       return false;
     }
-    console.log(`  ✓ 引用守卫自证格 ${cases.length + 1}/${cases.length + 1}（①-⑨ 解析/判据/豁免/排除全链）`);
+    console.log(`  ✓ 引用守卫自证格 ${atoms}/${atoms} 断言通过（${cases.length} 组比对；解析/判据/豁免/排除/切分校准全链）`);
     return true;
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -278,11 +355,12 @@ function main() {
 
   const livingReds = [];
   const frozenWarns = [];
-  let totalTokens = 0, totalExempt = 0, frozenCount = 0;
+  let totalTokens = 0, totalExempt = 0, totalFragments = 0, frozenCount = 0;
   for (const t of targets) {
     const r = scanFile(t.abs, t.rel, roots, bareIdx);
     totalTokens += r.tokens;
     totalExempt += r.exemptLineRefs;
+    totalFragments += r.fragments;
     if (r.frozen) frozenCount++;
     for (const red of r.reds) (r.frozen ? frozenWarns : livingReds).push({ file: t.rel, ...red });
   }
@@ -290,7 +368,7 @@ function main() {
   console.log('════════════════════════════════════════════════════════');
   console.log('文档引用守卫（D-20 / 收口批 C-1）  ' + new Date().toISOString());
   console.log('════════════════════════════════════════════════════════');
-  console.log(`  扫描 ${targets.length} 份（活文档 ${targets.length - frozenCount}＋冻结 ${frozenCount}）；引用 token ${totalTokens}；冻结行号豁免 ${totalExempt}`);
+  console.log(`  扫描 ${targets.length} 份（活文档 ${targets.length - frozenCount}＋冻结 ${frozenCount}）；引用 token ${totalTokens}；冻结行号豁免 ${totalExempt}；片段形（⑧不抓，如 \`index.mjs\` 惯例名）${totalFragments}`);
   if (frozenWarns.length) {
     console.log(`  △ 冻结件警示 ${frozenWarns.length} 条（引用方冻结不可改写，记录不阻断；新增引用不得效仿）：`);
     for (const r of frozenWarns) {
