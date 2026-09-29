@@ -90,16 +90,22 @@
 > **`docs/contract-v1.1-recon.md`（C-1 侦察轮正本：草案六项实测修订、三方核对矩阵净账与落差总账、
 > 三题裁定×核对结论、内置插件完整枚举、修订后分批计划批 0-6 + 边界清单 —— 动 v1.1 相关代码前必读；
 > 两份逐行矩阵见同目录 `contract-v1.1-matrix-{migration,embed-toolkit}.md`）** →
-> **`docs/feature-inventory-20260923.md`（功能全量清单 · 仓内正本，冻结于 toolkit `916b7d1` / doctor 仓 `2f12f53`；
-> 排修任何"缺/坏"项前**必须先读该文件开头的缺口申报**：呈审稿到手即缺"对象①-B React 标签页"与"对象⑥"两节）** →
+> **`docs/feature-inventory-20260923.md`（功能全量清单 · **2026-09-29 正典化批笔 A 起定稿为正典**：F/H 编号空间冻结、
+> 报数口径唯一＝重建件 23／覆盖账 68＋23＝**91**、编号空间现用至 F-93，见该文件《正典化》一节；
+> 其自述的"冻结号 toolkit `916b7d1` / doctor 仓 `2f12f53`"仍是**呈审稿正文**的取证基准号，不因正典化而改。
+> 排修任何"缺/坏"项前**必须先读该文件开头的缺口申报**：呈审稿到手即缺"对象①-B React 标签页"与"对象⑥"两节，
+> 两节后由《续档》重建件补上）** →
 > **`docs/repair-plan-20260923.md`（修复总动员 + C-1 剩余批 + 断点普查 的合流总批计划 · **草案待协调侧过裁**；
 > 含高危四条的代码级取证结论与对清单的两处读数更正 —— 动任何修复代码前必读 §1 通则与 §7 待裁清单）** →
 > `panel/docs/evidence/H-REAL-HOST-REVERIFY.md`（H5 真机复验 + 一次宿主整机启动故障的处置，
 > **最新一棒真机证据**）→ `panel/docs/evidence/G-REAL-HOST-SMOKE.md`（含补验注记）与 `D4-WEB-SEARCH-HOST-EVIDENCE.md` →
-> 门禁一条命令 `node scripts/ci-local.mjs --with-scan`（**现在含 5 步**，第 5 步是 Pack I 新增的
-> `scripts/patch-config-check.mjs`）。**注意判据基准已滚存两次**：`cordis.patch.yml` 现基准
-> **`e8051fe9…`(3085 B)**（Pack I 引擎清理后）；上一枚 `bb7af96f…`(3099 B，H5 加引号) 与
-> P8/P2.4 时代的 `ce0b0b81…`(3097 B) 均为历史值。恢复工具已按 D-17 退役，
+> 门禁一条命令 `node scripts/ci-local.mjs --with-scan`（**现在含 6 步**：默认链 5 步不变，第 5 步是 Pack I 新增的
+> `scripts/patch-config-check.mjs`，第 6 步是守卫批上岗的 `scripts/doc-ref-guard.mjs`；`--with-scan` 的步数账
+> 6→7→6 见计划 §38.7）。**注意判据基准已滚存四次**：`cordis.patch.yml` 现基准 **`b0f304c9…`**
+> （EXE-BOOT-011 施工笔 3 的 systemPrompt 接线＝第 4 次滚存；本批实读＝工作树 3190 B／blob 3104 B，sha256 与
+> `scripts/p24-ui-matrix.mjs` 的 `BASE_SHA_EXPECT` 逐字节相同）。历史来路 `ce0b0b81…` → `bb7af96f…`（H5 加引号）
+> → `e8051fe9…`（Pack I 引擎清理）→ `a663f61b…`（D-19 行级 `inject:`）→ `b0f304c9…`；各枚当时的字节数见 A#25
+> 与计划 §29/§35，本行不重复报数——其中若干枚记的是**字符数而非字节数**，口径注记见 A#52 末。恢复工具已按 D-17 退役，
 > **正确恢复动作 = `git checkout HEAD -- cordis.patch.yml`**（先自行留现场）。
 > Pack I（安全网 + 引擎清理）是纯仓内工作、无宿主复验，故**没有新证据正本**，读数记在 A#25 与提交说明里。
 > **2026-09-22 C-1 侦察轮（契约 v1.1 第一阶段 · 纯侦察 · 代码零改动 · doctor 仓零改动）**：按协调侧两轮指令
