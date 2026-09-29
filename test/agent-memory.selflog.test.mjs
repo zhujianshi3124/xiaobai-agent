@@ -135,7 +135,7 @@ test('SELFLOG-C2: created 行 —— 未知宿主 id 拒绝入册（原因码 un
   assert.equal(rows[0].outcome, 'skipped');
 });
 
-test('SELFLOG-L1: claimed 行 —— 指令采集与非指令跳过各自落行；行内零消息正文（采集选择性缺口①自此可观测）', async () => {
+test('SELFLOG-L1: claimed 行 —— 指令与非指令全量采集各自落行（kind 字段）；行内零消息正文（R1 施工笔 B）', async () => {
   runtime.__resetRuntimeCursor();
   __resetSelflogCursor();
   const root = tmpRoot();
@@ -153,14 +153,16 @@ test('SELFLOG-L1: claimed 行 —— 指令采集与非指令跳过各自落行�
     message: { id: 'msg-2', content: '今天天气不错' },
   });
   const rows = linesOfEvent(root, 'claimed');
-  assert.equal(rows.length, 2, 'claimed 两行（采集/跳过各一）');
+  assert.equal(rows.length, 2, 'claimed 两行（指令/非指令各一，全量采集）');
   const collected = rows.find((r) => r.messageId === 'msg-1');
-  const skipped = rows.find((r) => r.messageId === 'msg-2');
-  assert.ok(collected && skipped, '两行各自带 messageId');
+  const general = rows.find((r) => r.messageId === 'msg-2');
+  assert.ok(collected && general, '两行各自带 messageId');
   assert.equal(collected.outcome, 'collected');
+  assert.equal(collected.kind, 'instruction');
   assert.equal(collected.code, null);
   assert.match(collected.sid, SID_RE);
-  assert.equal(skipped.outcome, 'skipped:not-instruction', '非指令跳过如实落行（结构缺口①可观测）');
+  assert.equal(general.outcome, 'collected', 'R1：非指令亦入账');
+  assert.equal(general.kind, 'general');
   for (const row of rows) assertNoTextLeak(row, '请把结果写入报告');
 });
 
