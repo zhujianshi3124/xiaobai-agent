@@ -2154,13 +2154,18 @@ M-02 往清单《正典化》第二节注入一个不存在的引用 ⇒ exit 1�
 | 笔 | hash | 仓 | 内容 | 树间 diff（`git show --numstat` 实值） |
 |---|---|---|---|---|
 | 1 | `0569473` | toolkit | 前置④：`test/contract.test.mjs` 里 KNOWN_LEGACY_FIELDS 的 1/8 单名钉换成 **deepEqual 全清单（八名）＋逐名 info＋第 9 名必 error＋影响面实测复用** 四格 | **90 增／1 删** |
-| 2 | `7e33280` | toolkit | 题一终批（案二）落地：`scripts/doctor-cli-contract-parity.mjs` 从 3 接缝扩到 **D 段重叠面逐规则 18 格＋E 段根字段键集 5 格**；头注入册【新规则两仓同批落】口径；门禁第 4 步标签随扩面更名（**步数仍 6**） | parity **115／0**；ci-local 1／1 |
+| 2 | `7e33280` | toolkit | 题一终批（案二）落地：`scripts/doctor-cli-contract-parity.mjs` 从 3 接缝扩到 **D 段重叠面逐规则 17 格＋E 段根字段键集 5 格**（parity 21→43；终态 46 由笔 3 加 D18 与 B5/B6）；头注入册【新规则两仓同批落】口径；门禁第 4 步标签随扩面更名（**步数仍 6**） | parity **115／0**；ci-local 1／1 |
 | 3-doctor | `ce31f83` | doctor | 前置①：`doctor仓:src/engine.mjs#validateManifest` 撤三根字段必填集、`requirements` 改"在场才管"、连带修一处**既存**潜在崩溃（套件根 `requirements.exports` 缺席时 `Object.keys(undefined)`）；新钉 run-tests +1（四套件 21→22） | **76 增／15 删**（engine 24/15＋run-tests 52/0） |
 | 3-toolkit | `748dc9f` | toolkit | 随批对账面：parity B 段按改述重写（旧 B2/B3 口径作废）、D16 翻面、新增 B5/B6/D18；第 4 步标签随新分权更名 | parity **30／14**；ci-local 1／1 |
 
-**两仓本批合计数（以树间 diff 为准）**：toolkit `52c5ed7..HEAD` ＝ 3 文件 **235 增／15 删**；
+**两仓本批合计数（以树间 diff 为准）**：toolkit `52c5ed7..HEAD`（笔 1–4 全落后实测）＝ **6 文件 434 增／15 删**；
 doctor `7ba8251..HEAD` ＝ 2 文件 **76 增／15 删**。逐笔 numstat 与合计的差额来自笔 2/笔 3 都改到
 `scripts/doctor-cli-contract-parity.mjs` 同一区（笔 3 重写了笔 2 的 B 段与标签行），口径沿用 §39.4。
+**自指终止条件**（§39.1 同款）：本表数是"笔 1–4 落完"时的实值；笔 5（本自纠笔）与其后任何自纠笔都会再抬高
+文件数与行数——**含末笔的合计以批末申报为唯一依据**，本行不试图自数。
+**笔 5 的成因登记**：本表笔 2 行原写"D 段 18 格"，把笔 3 才加的 D18 记到了笔 2 头上（成因＝写 §40.1 时按
+终态格数回填单笔内容，未按"该笔落笔时的实值"分档）；原写合计"3 文件 235/15"则是**取数时点在笔 4 之前**
+（§40.1 起草于笔 3 后），两者都属"读数时点与叙述对象错配"，非账面伪造。debt A#55 同处同步（见笔 5 提交信息）。
 
 ### 40.2 三题终批落账（用户 2026-09-29"按建议"终批，随 EXE-BOOT-016 启动包第二节下发）
 
