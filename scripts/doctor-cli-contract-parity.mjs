@@ -5,7 +5,8 @@
 // 或某侧悄悄放宽。历史上就打过一次：`provides` 落地前若 doctor 白名单未先行，两闸同时判"未知根字段"
 // （docs/contract-v1.1-recon.md §1 第 1 条顺序约束）。本脚本把三件事钉成可复跑断言：
 //   A 存量 7 份 manifest：契约判 ok ⇒ doctor 不得对同一文件报 schema 级 error（不得互相打脸）
-//   B 纯契约 manifest（无 legacy 三必填）：契约必须放行、doctor 必须判 required-missing（分权边界在位）
+//   B 纯契约 manifest（无 legacy 三必填）：两侧都放行根必填面；requirements **在场才管**、
+//     缺席时的整段跳过由本段钉成可见断言（契约 v1.2 前置①，recon §8.3 连带修正）
 //   C provides：doctor 放行键名（批 1）且对拼错名仍判非法；契约对三槽形状与未知子键收紧（批 2）
 //   D 重叠面**逐规则**对账（契约 v1.2 题一终批＝案二"维持两引擎＋对账网扩面"，EXE-BOOT-016 笔 2）：
 //     两套校验器都管的每一条字段规则，逐条钉住"各侧判什么"——同向红／契约严 doctor 宽／方向相反
@@ -103,7 +104,12 @@ for (const rel of builtinManifests) {
     'contract.ok=' + verdict.ok + ' doctor.schema=' + doctorSays.join('/') + (verdict.ok ? '' : ' errors=' + JSON.stringify(verdict.errors.map((e) => e.code + '@' + e.path))))
 }
 
-// ── B 纯契约 manifest：契约放行、doctor 判必填缺失（分权边界在位）────────────────────────
+// ── B 纯契约 manifest：两侧都放行根必填面（前置① 撤销后的分权新形态，EXE-BOOT-016 笔 3）─────
+// 本段在 2026-09-29 前钉的是"契约放行、doctor 判三个根必填缺失"（题 2 旧口径：必填性归 doctor 独占）。
+// recon §8.3 的连带修正把管辖权改述为「`requirements` **在场时**其键集与 ./ 目标存在性归 doctor；
+// provides/requires 合法性归契约」⇒ 根必填撤销后，本段的命题从"谁判缺"换成"在场管、缺席整段跳过且
+// **跳过本身是断言**"。旧 B2/B3 的字面期望随改述翻面，这是**已裁条文的落码**、不是改测试凑绿；
+// 判据来源逐条写在格名与 debt C-2 前置①（toolkit:docs/debt.md）与启动包第八节 3d。
 {
   const scope = tmpScope('pure-contract', { ...CONTRACT_BASE })
   const verdict = validateManifest(JSON.parse(readFileSync(join(scope, 'dsh.plugin.json'), 'utf8')))
@@ -111,21 +117,30 @@ for (const rel of builtinManifests) {
   // 只断言"三个根必填"这一件事：doctor 另有套件级规则（aliases 表、套件根 exports 须 $from、
   // @local 引用须可解析），那是它的管辖面、与本对账命题无关 ⇒ 不把它们的出现与否写进断言，
   // 否则本步会替 doctor 的规则面背书（那是另一种打脸）。
-  const rootKeysMissing = (issues) => (issues || [])
-    .filter((i) => i.id === 'schema.required-missing')
+  const rootMissing = (issues) => (issues || [])
+    .filter((i) => i.id === 'schema.required-missing' && /^缺少必填字段/.test(String(i.message)))
     .map((i) => String(i.message).replace(/^缺少必填字段: /, '').replace(/。$/, '').split(', '))
     .flat()
-  const missing1 = rootKeysMissing(report.issues)
+  const reqIssues = (issues) => (issues || []).filter((i) => /requirements/.test(String(i.message)))
+  const missing1 = rootMissing(report.issues)
   check('B1 纯契约 manifest 过契约（契约不管必填性）', verdict.ok === true, JSON.stringify(verdict.errors && verdict.errors.map((e) => e.code + '@' + e.path)))
-  check('B2 同一份在 doctor 侧判三个根必填缺失（必填性归 doctor 独占）',
-    ['manifestVersion', 'name', 'requirements'].every((k) => missing1.includes(k)), 'missing=' + missing1.join('/'))
+  check('B2 同一份在 doctor 侧不再产根必填缺失（前置① 撤销在位，旧"三根必填"口径作废）',
+    missing1.length === 0, 'missing=' + missing1.join('/'))
+  check('B5 空转可见断言：requirements 缺席时 doctor 对它零 issue（跳过＝被断言的行为，不是隐患）',
+    reqIssues(report.issues).length === 0, JSON.stringify(reqIssues(report.issues).map((i) => i.message)))
+  // 在场才管：requirements 写了但键集不齐 ⇒ 本 CLI 仍逐名报"requirements 缺少必填字段"（题 2 交给 doctor 的那半保留）
+  const partial = { ...CONTRACT_BASE, requirements: { runtime: {}, binaries: [] } }
+  const scopeP = tmpScope('req-partial', partial)
+  const reportP = runDoctorJson(scopeP)
+  const reqMissing = (reportP.issues || [])
+    .filter((i) => i.id === 'schema.required-missing' && /^requirements 缺少必填字段/.test(String(i.message)))
+    .map((i) => String(i.message).replace(/^requirements 缺少必填字段: /, '').replace(/。$/, ''))
+  check('B3 requirements 在场时键集仍归 doctor（缺 packages/registers/exports 三名逐名报，管辖权未丢）',
+    ['packages', 'registers', 'exports'].every((k) => reqMissing.includes(k)), 'reported=' + reqMissing.join('/'))
+  check('B4 契约对同一份带 requirements 的混合形态仍判 ok（两侧不互相打脸）', validateManifest(partial).ok === true)
   const triad = { ...CONTRACT_BASE, ...JSON.parse(JSON.stringify(LEGACY_TRIAD)) }
-  const scope2 = tmpScope('with-triad', triad)
-  const report2 = runDoctorJson(scope2)
-  const missing2 = rootKeysMissing(report2.issues)
-  check('B3 补齐三个根必填后这三条归零（边界只卡这三项，不多卡）',
-    ['manifestVersion', 'name', 'requirements'].every((k) => !missing2.includes(k)), 'missing=' + missing2.join('/'))
-  check('B4 契约对同一份仍判 ok（两侧不互相打脸）', validateManifest(triad).ok === true)
+  check('B6 齐载 legacy 三根的同一份：两侧都不报根必填缺失（撤销未误伤存量形态）',
+    rootMissing(runDoctorJson(tmpScope('with-triad', triad)).issues).length === 0 && validateManifest(triad).ok === true)
 }
 
 // ── C provides 接缝：doctor 放行键名 / 拼错仍非法；契约收紧三槽形状 ──────────────────────
@@ -193,7 +208,8 @@ for (const rel of builtinManifests) {
     { n: 'D13 顶层 exports＝方向相反（H4 在册）', m: M({ exports: { '.': './index.js' } }), c: ['ok', 'exports'], d: ['red', /清单根字段非法: exports/] },
     { n: 'D14 顶层 healthCheck＝同向红、成因不同名', m: M({ healthCheck: 'x' }), c: ['red', /type@healthCheck/], d: ['red', /清单根字段非法: healthCheck/] },
     { n: 'D15 未知根字段 zzNote＝同向红', m: M({ zzNote: 1 }), c: ['red', /unknown-field@zzNote/], d: ['red', /清单根字段非法: zzNote/] },
-    { n: 'D16 纯契约 manifest（无 legacy 三必填）＝分权边界', m: { ...CONTRACT_BASE }, c: ['ok', null], d: ['red', /缺少必填字段/] },
+    { n: 'D16 纯契约 manifest（无 legacy 三必填）＝根必填已撤', m: { ...CONTRACT_BASE }, c: ['ok', null], d: ['green', /缺少必填字段/] },
+    { n: 'D18 requirements 在场而键集不齐＝契约 ok、doctor 逐名报（在场才管）', m: { ...CONTRACT_BASE, requirements: { runtime: {}, binaries: [] } }, c: ['ok', null], d: ['red', /requirements 缺少必填字段/] },
     { n: 'D17 正向齐载＝两侧都放行重叠规则', m: M({}), c: ['ok', null], d: ['green', /清单根字段非法|缺少必填字段|id 必须|displayName 必须|version 必须|configSchema 必须|contract 必须/] },
   ]
   for (const rule of RULES) {

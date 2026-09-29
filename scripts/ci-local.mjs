@@ -25,7 +25,7 @@ const steps = [
   // 题 2 裁定的分权边界守卫（契约 v1.1 批 2）：本仓契约与独立 doctor 是两套校验器，
   // "契约管解析行为、doctor 管必填性"最怕静默打脸。裁定条件 a 明写"手动脚本不算守卫"
   // ⇒ 作为独立一步每轮复跑（摘掉它 ⇒ 门禁步数可查，这是批 2 变异第三发的抓手）。
-  ['DOCTOR_CLI ↔ 契约行为对账（三个根必填分权 + provides 接缝 + 重叠面逐规则/键集对账）', process.execPath, [resolve(ROOT, 'scripts/doctor-cli-contract-parity.mjs')]],
+  ['DOCTOR_CLI ↔ 契约行为对账（根必填撤销后的在场/缺席分权 + provides 接缝 + 重叠面逐规则/键集对账）', process.execPath, [resolve(ROOT, 'scripts/doctor-cli-contract-parity.mjs')]],
   // I1（债务 D-16）：patch 行的 config 按**宿主通道语义**校验——真 YAML 标量解析 + unwrap + Config。
   // 这一环在 H5 之前是缺的，于是 cordis.patch.yml:61 一个未加引号的 360 让宿主整机起不来，
   // 而仓内 293/293 全绿。脚本自带 --selfcheck（解析器语义 20 条断言），见该文件头注。
