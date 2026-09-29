@@ -262,6 +262,14 @@ if (amAvailable) {
   check("adapter: 从台账生成正典副本", canonFromLedger.includes("P1 防递归"));
   const outCL = instantDigest({ messages }, { agentMemoryCanonical: canonFromLedger });
   check("adapter: digest 含台账正典", aiSection(outCL).includes("（正典：") && aiSection(outCL).includes("[台账]"));
+  // EXE-BOOT-011 施工笔4（批准案 D）：未完成全谱＝进行中/待办/已搁置——已搁置并入正典采集
+  // （与 buildRecoveryReport"未完成指令"清单口径一致；排列在活跃条目之后，8 条上限下让优先级）
+  agentMemoryLib.addEntry(tmp, sess.sid, { desc: "搁置条目：等用户拍板", workspace: wsT, modelTurn: 5 });
+  agentMemoryLib.setEntryStatus(tmp, sess.sid, "L-002", "已搁置", { workspace: wsT, modelTurn: 5 });
+  const rowsS = await readLedgerItems({ agentMemoryLib, root: tmp, sid: sess.sid });
+  check("adapter: 已搁置条目并入正典采集", Array.isArray(rowsS) && rowsS.some((r) => r.desc.includes("等用户拍板")));
+  const canonS = await buildCanonicalFromLedger({ agentMemoryLib, root: tmp, sid: sess.sid });
+  check("adapter: 正典副本含已搁置行", canonS.includes("[台账] L-002 [已搁置] 搁置条目：等用户拍板"));
 } else {
   check("adapter: agent-memory 缺席 → 跳过真实台账段", true);
 }
