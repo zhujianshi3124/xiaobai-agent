@@ -78,7 +78,7 @@
 - **取证**：`toolkit:lib/web-search-local/index.js`
   `requestedEngines(searchReq)` 的合法性判据是 `typeof ENGINES[key] !== 'function'` ⇒ **只对照 `ENGINES` 注册表**；
   `runSearch` 里 `const engines = requestedEngines(searchReq) ?? engineList(cfg)` ⇒ **显式点名整体取代部署链**（注释自陈"override REPLACES the configured chain entirely"）。
-  而 `ENGINES` 现值仍是 8 项、含 `sogou` 与 `'360'`；部署名单 `cordis.patch.yml:61` 是 6 项。
+  而 `ENGINES` 现值仍是 8 项、含 `sogou` 与 `'360'`；部署名单 `cordis.patch.yml`（第 61 行，当时） 是 6 项。
   ⇒ 模型点名 `engine:'360'`/`'sogou'` 照样命中实现并真打外网。**与 debt A#25 ① 的"如实边界"一致**（配置面删除只关掉"自动链会用它们"）。
 - **定性**：`git log` 面看不是回归 —— 覆盖语义从写那天就是注释里的设计意图；落差在"部署名单被当作白名单理解"。
 - **建议修法（单笔 R3）**：点名须在部署名单内（`requestedEngines` 追加 `engineList(cfg)` 交集判定，越界 ⇒ `WebError` 且文案点名"该引擎未部署"）；
@@ -218,7 +218,7 @@ F-14 `.github/workflows`（B-2 既有裁定：本地门禁即事实 CI）。
 ## 6. 三处约束冲突（我不自裁，请协调侧定）
 
 **冲突 A —— 高危④"与批 11 合并" vs "批 11 必须最后做" vs "分仓提交"。**
-`hostVersion` 在 **doctor仓** `src/engine.mjs`；批 11 经 recon §10.3 已更正为**只动 toolkit 仓**。
+`hostVersion` 在 `doctor仓:src/engine.mjs`；批 11 经 recon §10.3 已更正为**只动 toolkit 仓**。
 两者合并 ⇒ 要么批 11 变成跨仓两笔（把版本提升这个"最后做"的笔和一个"最该先做"的高危笔绑在一起，回退面变大），
 要么高危④排队到最后（违背"高危四条最先"）。
 **建议**：拆开 —— R4 独立在波 1 落（doctor 仓单笔，本会话已实测真值下 0/0/0，风险最低），批 11 维持原口径只动 toolkit；
@@ -312,7 +312,7 @@ F-14 `.github/workflows`（B-2 既有裁定：本地门禁即事实 CI）。
 | 收口件 | 落位 | 口径 |
 |---|---|---|
 | D-20 跨仓引用守卫 | **批 C-1** | 扫 `docs/*.md` 与 `panel/docs/evidence/*.md` 里的 `path[:#]symbol` 引用 ⇒ 断言目标存在、符号可 grep；**行号形态一律判红并要求改符号名**；跨仓引用必须带 `toolkit:` / `doctor仓:` 前缀（规矩出自 recon §10.3）。进门禁为独立一步或并入 `regression-all`（手动脚本不算守卫，题 2 条件 a 同口径） |
-| `contract.md` / `add-sub-plugin.md` 逐行矩阵补全 | **批 C-2** | recon §6 两份折入判定按本次实测（含续档 22 条）重算一遍，落差数与"有钉/无钉"面更新；顺带把 recon §5 P0-4 行加**批 4 失效指针**（该行的"实现相反"今天是陈旧读数，`contract.md:174/:241` 已有指针、recon 侧没有 ⇒ 属同源未同步，非新错账） |
+| `contract.md` / `add-sub-plugin.md` 逐行矩阵补全 | **批 C-2** | recon §6 两份折入判定按本次实测（含续档 22 条）重算一遍，落差数与"有钉/无钉"面更新；顺带把 recon §5 P0-4 行加**批 4 失效指针**（该行的"实现相反"今天是陈旧读数，`docs/contract.md`（第 174、241 行，当时） 已有指针、recon 侧没有 ⇒ 属同源未同步，非新错账） |
 | 正典清单对账 | **批 C-3** | 原口径"74/74"依重建件**无法闭合**（§9.6）：当前实测为"到手 68 + 我方重建 22 = 90"。两案待裁：(a) 以重建件为准改判 90/90；(b) 等原稿 ①-B/⑥ 补转做差集定终数 |
 
 ### 9.4 过裁二.3 —— 五空白区钉位逐条确认（含"缺位即补"的一处）
@@ -328,7 +328,7 @@ F-14 `.github/workflows`（B-2 既有裁定：本地门禁即事实 CI）。
 **压缩存档实证**（这是我方本轮对令面的一处事实纠正）：`test/compact-router.test.mjs` 的 archive 块**已有 10 条 `check()`**
 ——写档成功与计数、指针含路径与条数、二次写产生新文件、保留策略只留最近 3 份、清单按最新在前、空消息/缺 sid 返回 null 不抛错、
 空会话返回空数组、digest 含存档指针、无指针时不出现在产物、enrich 三段拼接。**未钉的两格**：
-① `maxBytes` 上限分支（`archive.js:60` 的 `truncated:true` 那条记录；全仓测试里 `maxBytes` **零出现** ⇒ 24MB 截断路径从未被走到）；
+① `maxBytes` 上限分支（`lib/compact-router/archive.js`（第 60 行，当时） 的 `truncated:true` 那条记录；全仓测试里 `maxBytes` **零出现** ⇒ 24MB 截断路径从未被走到）；
 ② `catch { return null }`（`:73` "写失败不阻断"的失败注入）。⇒ **补位为 W4 新增笔 4-3**（两发钉，纯只读 tmpdir 用例，零代码改动）。
 
 **R1 拆两笔**（普查新增同屏缺陷，根因不同故分笔、各自可回退）：
@@ -618,13 +618,13 @@ R1-b 变异＝把取数改回 `p.old` ⇒ 恰该条红；W4-3 两格各带一发
    出现，与 5-2 同族故同批） |`。
 2. 而 §3 批 5 格（`:152`）落位条目＝"F-17(批5半边)、F-45、F-49"，**无 F-71**；覆盖账 `:191` 同；
    §9.4 `:323` 写"两处判定式"；§10.1 `:508` 写"批 5-3 **两面**"。
-3. `docs/debt.md:178`（#30b，最新一笔）写"**F-45/F-49 两处失真仍挂 5-3**"；`docs/add-sub-plugin.md:162`
+3. `docs/debt.md`（第 178 行，当时＝#30b 条）（#30b，最新一笔）写"**F-45/F-49 两处失真仍挂 5-3**"；`docs/add-sub-plugin.md`（第 162 行，当时）
    写"批 5-3 在治其中两处失真"。
 4. §9.6 前言 `:350` 自我限定："通则之外的**补漏**（本轮核对后新增，**不改上文表格、只在此追加**）"
    ⇒ 追加文字从未回写进 §3/§4 表格，两边不构成自动覆盖。
 
 另两条与动工有关：清单 `:396` 明示 F-71 属"**代理实读、我方未逐字复看 ⇒ 动工到该条时先复算再钉**"；
-其锚点 `:1867` 现实测漂到 `panel/client/index.js:1879`（D-20 守卫未建，日后按符号找）。
+其锚点 `:1867` 现实测漂到 `panel/client/index.js`（第 1879 行，当时）（D-20 守卫未建，日后按符号找）。
 
 **本笔处置**＝按 C1-006 对批 5-3 的裁决面交付**两处**（启动包 §八.2 只裁 F-45/F-49，且称"两处显示失真"），
 F-71 **未动、不自行判其归属**。请协调侧点一处：① 随批 6 补做（须先复算代理读数）／② 归 **W2**（面板呈现
@@ -716,8 +716,8 @@ F-71 **未动、不自行判其归属**。请协调侧点一处：① 随批 6 �
 ### 14.2 一处错账：F-17 从来没有"批 7 那一处"（成因＋同步所有引用处）
 
 - **错账**：§3 `:154` 批 7 格的落位条目写作"F-17、连带 P2-10"。
-- **现场**：`feature-inventory-20260923.md:76` 对 F-17 五处的枚举是**批 5 / 批 6 / 批 8 / 批 9 /
-  批 10 邻近**——不含批 7；`debt.md:174`（A#29）与本文 `:681`（§13.3）同口径。批 7 的真实交付面是
+- **现场**：`docs/feature-inventory-20260923.md`（第 76 行，当时） 对 F-17 五处的枚举是**批 5 / 批 6 / 批 8 / 批 9 /
+  批 10 邻近**——不含批 7；`docs/debt.md`（第 174 行，当时＝A#29 条）（A#29）与本文 `:681`（§13.3）同口径。批 7 的真实交付面是
   ★13 + P2-10，与 F-17 无关。
 - **成因**：§4 覆盖账 `:192` 把 F-17 记成一行笼统的"批 6/7/8/9/11"批次并列（`:199` 自己说明它是
   "5 处未落地批次的合计条目，按批拆开兑现"）——**合计条目按批展开时把批次区间当成了逐批占位**，
@@ -736,7 +736,7 @@ F-71 **未动、不自行判其归属**。请协调侧点一处：① 随批 6 �
 
 ### 14.4 本净节点随附的择机小笔排队
 
-1. F-71 归属同步：`docs/repair-plan-20260923.md:361` 与 `:152/:191/:323/:508`、`debt.md:178`（#30b）
+1. F-71 归属同步：`docs/repair-plan-20260923.md`（第 361 行，当时＝§9.6） 与 `:152/:191/:323/:508`、`docs/debt.md`（第 178 行，当时＝#30b）（#30b）
    五处互斥 ⇒ 统一为"归 W2"，成因入 A 区（C1-006 批复 §二已裁）。
 2. C-3 两处错账复算：覆盖账"重建 22 条"实为 23（68→91）；F-19 与清单①"可指任意文件"并项后的真实归属。
 3. 本笔（§14.2）新增的这处 F-17 错账与上面两处同属"错账必查成因"族，可并入同一张纯文档笔。
@@ -750,10 +750,10 @@ F-71 **未动、不自行判其归属**。请协调侧点一处：① 随批 6 �
 ### 15.1 F-71 归 W2 —— 五处互斥引用的消解（C1-006 批复已裁）
 
 - **裁决**：F-71（健康徽标恒不出现）**归 W2**（C1-006 批复 §二；§13.3 `:682` 已入账）。§12.2 的呈裁就此销账，落位＝呈裁三案中的②"归 W2"。
-- **消解口径**：批 5-3 交付面＝**两处**（F-45、F-49），**F-71 不在批 5-3**。六处引用中 `:361`（§9.6 重建落位表）是唯一把 F-71 派给批 5-3 的行，判为错处；其余五处——`:152`（§3 批 5 格）、`:191`（§4 覆盖账）、`:323`（§9.4"两处判定式"）、`:508`（§10.1"批 5-3 两面"）、`debt.md:178`（#30b"两处失真仍挂 5-3"）——与裁决一致，原文照录。
+- **消解口径**：批 5-3 交付面＝**两处**（F-45、F-49），**F-71 不在批 5-3**。六处引用中 `:361`（§9.6 重建落位表）是唯一把 F-71 派给批 5-3 的行，判为错处；其余五处——`:152`（§3 批 5 格）、`:191`（§4 覆盖账）、`:323`（§9.4"两处判定式"）、`:508`（§10.1"批 5-3 两面"）、`docs/debt.md`（第 178 行，当时＝#30b）（#30b"两处失真仍挂 5-3"）——与裁决一致，原文照录。
 - **成因（入 `debt.md` A 区 #34）**：`:361` 追加落位时按句内括注"与 5-2 同族故同批"把 F-71 就近归入批 5-3；而 §3/§4 表格账面自始只记"两处"，§9.6 前言 `:350` 又自限"不改上文表格、只在此追加" ⇒ 两边无自动覆盖机制，矛盾存续到批 5-3 交付时才被 #31b ② 呈裁。
 - **引用纪律**：后续批次凡引 F-71 落位一律写"W2"，`:361` 不再作为依据引用。
-- **W2 动工前置（与 #31b ② 互引不双计）**：F-71 属"代理实读、我方未逐字复看"（清单 `:396/:397`），动工前须先复算其锚点——原 `:1867`，现实测漂到 `panel/client/index.js:1879`（D-20 守卫未建，届时按符号定位）。
+- **W2 动工前置（与 #31b ② 互引不双计）**：F-71 属"代理实读、我方未逐字复看"（清单 `:396/:397`），动工前须先复算其锚点——原 `:1867`，现实测漂到 `panel/client/index.js`（第 1879 行，当时）（D-20 守卫未建，届时按符号定位）。
 
 ### 15.2 C-3 复算① —— 覆盖账"重建 22 条"实为 23（68→91）
 
@@ -867,7 +867,7 @@ events/panels 形状校验、五卡健康列数据半边）→ 批 11 ＋ 改名
 - 三道锁＝门禁 **6/6**；`p1-smoke` **314/0** 不减；`node --test` **394→398**（+4 全来自新钉文件）；
   `p22-cards-ui` **127/127**；doctor 真实仓 dry-run **0/0/0**。**基线口径更新入账：`node --test` 398。**
 - 消费方普查：`CONTRACT_EVENT_NAMES` 扩容 5→13 的全库引用面＝contract/src 定义/类型/导出＋
-  `test/contract.test.mjs:233`（成员断言，扩容后仍绿）；无 `length===5` 断言面（LEN5 命中全为插件数/
+  `test/contract.test.mjs`（第 233 行，当时）（成员断言，扩容后仍绿）；无 `length===5` 断言面（LEN5 命中全为插件数/
   保留数/FIBER_UNLOADING 等无关面）。v2-api SSE 名表与 audit-sink 保持既有枚举派生不动（contract.md
   已载"已经派生"，零行为差，不做无收益改写——不为收编而收编）。
 - `cordis.patch.yml` 一字未动（基准 `e8051fe9` 不滚存）；真机面＝否（对外名零变化、无用户可见差异，
@@ -995,8 +995,8 @@ p1-smoke 三处断言更新＋换源变异证据）。契约五挂账 **5/5 全�
   实测对偶，recon §4-⑤）；fixture 的 `"contract": "^2.0"` 反向夹具照旧拒。
 - **文档字样面（recon §4-⑥ 的"留批 11 收"）**：`contract.md` 三处（头注常量值、§2.1 contract 行、
   §8 升版判据段——"^1.1 红线解除"＋漏改点兑现注）；`feature-inventory` :275（F-68 翻正）；
-  `CHANGELOG` 批 11 节。**历史字样照录不改**：`p0-recon.md:92`（决策台账）、`recon` §1/§4
-  （当时实测）、`CHANGELOG:508`（Pack 时代记录）、`debt.md:300`（C-1 计划原文——兑现以本节
+  `CHANGELOG` 批 11 节。**历史字样照录不改**：`docs/p0-recon.md`（第 92 行，当时＝REQ-1 行）（决策台账）、`recon` §1/§4
+  （当时实测）、`CHANGELOG:508`（Pack 时代记录）、`docs/debt.md`（第 300 行，当时＝C-1 草案第 1 项）（C-1 计划原文——兑现以本节
   与 #38 为准）。
 
 ### 19.2 下一笔
@@ -1015,7 +1015,7 @@ p1-smoke 三处断言更新＋换源变异证据）。契约五挂账 **5/5 全�
 
 ### 20.1 对象与现状（考古实测，2026-09-26 @ f9a903a）
 
-输出面唯一产地＝`panel/manager/snapshot.mjs:373-378`（v1 `/api/toolkit-panel/snapshot` 每卡）：
+输出面唯一产地＝`panel/manager/snapshot.mjs`（第 373-378 行，当时）（v1 `/api/toolkit-panel/snapshot` 每卡）：
 
 ```js
 registers: {
@@ -1033,10 +1033,10 @@ registers: {
 
 | # | 读点 | 用法 |
 |---|---|---|
-| 1 | `panel/client/index.js:381`（TechDetails，react） | `plugin.registers` → :393-396 四行 TechRow（services/commands/providers/events） |
-| 2 | `panel/client/panel.html:279`（兜底页，html） | 同构读 `p.registers` |
-| 3 | `test/p22-cards-ui.mjs:264` | 测试工装构造卡片数据时 `registers: base.registers` 透传 |
-| 4 | `test/helpers/panel-client-harness.mjs:228/235` | 夹具数据 `registers: {}` |
+| 1 | `panel/client/index.js#TechDetails`（TechDetails，react） | `plugin.registers` → :393-396 四行 TechRow（services/commands/providers/events） |
+| 2 | `panel/client/panel.html#techDetails`（兜底页，html） | 同构读 `p.registers` |
+| 3 | `scripts/p22-cards-ui.mjs`（第 264 行，当时） | 测试工装构造卡片数据时 `registers: base.registers` 透传 |
+| 4 | `test/helpers/panel-client-harness.mjs`（第 228、235 行，当时） | 夹具数据 `registers: {}` |
 | 5 | 宿主侧（dsh-web-all） | **未证**：snapshot 输出是面板自有 HTTP 数据面，宿主按 embed 口径只承载路由；仓内无任何宿主读取证据，也无法证宿主不解析该 JSON 体——如实标"未证"，风险列见 20.6 |
 
 ### 20.2 逐条对照表（主案）
@@ -1079,7 +1079,7 @@ registers.inject 数据源；`requires.services` 与 inject 声明不一致是 H
 3. `panel/client/index.js` TechDetails＋`panel/client/panel.html` 兜底页：读点同步
    （TechRow 中文标签**零变化**——标签本来就写对了语义；改的是取数字段）。客户端 bundle
    改后 `node --check`（常设口径⑥）。
-4. 测试工装同步：`p22-cards-ui.mjs:264`、`helpers/panel-client-harness.mjs:228/235`。
+4. 测试工装同步：`scripts/p22-cards-ui.mjs`（第 264 行，当时）、`test/helpers/panel-client-harness.mjs`（第 228、235 行，当时）。
 5. **换源变异证据（五.b）**：临时改某份 manifest 的 provides 源数据 ⇒ snapshot 输出随之
    变化且 p1-smoke 断言仍绿（工装落 var/scratch，内存 pristine 写回）。
 6. p1-smoke 断言面处置（呈文勘察结论，待批）：`:295`（5 卡计数）输出形状不变 ⇒ **不动**；
@@ -1096,7 +1096,7 @@ registers.inject 数据源；`requires.services` 与 inject 声明不一致是 H
 - `registers.events` 的 **manifest 侧**位置（甲案 D-13 已裁，深度对账仍挂 C-2/v1.2）；
 - loader/registry/contract/doctor 内部的 `registers`（`ResolvedPlugin.registers`、
   `registersOf` 等）——那是装载面提供语义（批 2 已修正），与 v1 snapshot 输出键名无关；
-- `panel-crossrefs.test.mjs:114`、`plugin-registry.mjs:13` 等直读 manifest 的点（读的是
+- `test/panel-crossrefs.test.mjs`（第 114 行，当时）、`panel/manager/plugin-registry.mjs`（第 13 行，当时） 等直读 manifest 的点（读的是
   manifest 本体，不是输出面）；
 - `.panel-backups/` 历史档（只增不改纪律）；
 - 旧键名是否兼容双写（`registers` 与 `provides` 并存过渡）——**不做**：消费方全在本仓
@@ -1130,7 +1130,7 @@ registers.inject 数据源；`requires.services` 与 inject 声明不一致是 H
 ### 20.9 §20 形差更正注（2026-09-27 · 纯追加，原文不动；两处）
 
 1. **§20.1 抄录省略 `manifest &&` null 防护**：§20.1 所引产地代码为抄录省略形；实仓自 `f95b751`
-   起即带防护（现锚 `panel/manager/snapshot.mjs:389-394`，各槽读式实为
+   起即带防护（现锚 `panel/manager/snapshot.mjs`（第 389-394 行，当时），各槽读式实为
    `(manifest && (manifest.requirements || {}).registers || {}).<slot> || []`）。抄录省略不影响
    §20 的对象认定与消费点普查结论。
 2. **行号漂移＋16**（§20.1 行号系 @f9a903a 快照时点所致）：产地现 :389（原 :373-378）；react
@@ -1281,7 +1281,7 @@ registers.inject 数据源；`requires.services` 与 inject 声明不一致是 H
 ### 23.2 F-87 复算呈裁（本批未修，按升级规则不自裁）
 
 原判"契约无表达"复算成立：`tools.register({name:'web_search_engine',…})` 现锚
-`lib/web-search-local/index.js:1384`＋systemPrompt section（:1377-1383）；manifest
+`lib/web-search-local/index.js`（第 1384 行，当时）＋systemPrompt section（:1377-1383）；manifest
 registers={inject:[web],events:[],services:[],commands:[],providers:[…]} 无 tools 槽、provides
 三槽（services/commands/providers）不含 tools。补声明＝契约扩槽（provides 第四槽/registers.tools）
 ＝契约语义变更：越 W2"面板可见面与文案诚实化"授权、触碰契约协调边界（与改名批
@@ -1382,7 +1382,7 @@ W2 批末真机窗已闭（C1-007 批复入账）：用户目检半全对——�
 - **批复与素材**：F-73"弹窗展示卸载收据信息"用户已批（"按建议"＝做，C1-007 二.4）；实施
   素材＝EXE-BOOT-008 批末申报第四节（大白话一段＋推荐"做"）。
 - **复算前置（动工前，结论＝支撑）**：①custody 软台账两写入形状字段齐备——patch 行形
-  （`uninstall.mjs:805`：recordedAt/rowId（=台账键）/block/insertAt/hostKey{key}/backupDir/
+  （`panel/manager/uninstall.mjs`（第 805 行，当时）：recordedAt/rowId（=台账键）/block/insertAt/hostKey{key}/backupDir/
   userReason）与 preset 形（`:894`：presetUndo/evidenceBackupDir/userReason）；②snapshot
   `:328` 本就在调 `getSoftRecord`（此前只出 `softRecorded` 布尔）⇒ 数据现成；③恢复弹窗两
   构造点（React `setDlg({kind:"restore"})` ／ HTML `restoreDialogHtml(p,…)`）卡对象均在作用
@@ -1445,11 +1445,11 @@ W2 批末真机窗已闭（C1-007 批复入账）：用户目检半全对——�
 - **判据原文（符号定位）**：REQ-6 错误隔离＝`p0-recon.md` 表行"REQ-6"：每子插件独立派生
   ctx／加载运行错误捕获→status=error/quarantined＋lastError／**指数退避重试（默认 3）**／
   dispose 级联清理（S5 句柄验收）——**不含依赖门控、不含自动唤醒**。同族记载：
-  `embed-toolkit.md:45`（retryLimit/retryBackoffMs/loadTimeoutMs＝"错误隔离与退避（REQ-6）"，
-  引用行号 :35 已漂移）、`contract.md:57`（"文档正典口径是重试退避"）、
-  `contract-v1.1-recon.md:269`（"文档未承诺自动唤醒 ⇒ 真相收口＋补测试钉住即收口"）、
-  `add-sub-plugin.md:171`（"REQ-6 隔离后不自动重试原样成立"）。三条实测后果
-  （`test/cordis-inject-lifecycle.test.mjs:52/86/134`）：manifest-only 依赖缺席照常 ACTIVE／
+  `docs/embed-toolkit.md`（第 45 行，当时）（retryLimit/retryBackoffMs/loadTimeoutMs＝"错误隔离与退避（REQ-6）"，
+  引用行号 :35 已漂移）、`docs/contract.md`（第 57 行，当时）（"文档正典口径是重试退避"）、
+  `docs/contract-v1.1-recon.md`（第 269 行，当时）（"文档未承诺自动唤醒 ⇒ 真相收口＋补测试钉住即收口"）、
+  `docs/add-sub-plugin.md`（第 171 行，当时）（"REQ-6 隔离后不自动重试原样成立"）。三条实测后果
+  （`test/cordis-inject-lifecycle.test.mjs`（第 52、86、134 行，当时））：manifest-only 依赖缺席照常 ACTIVE／
   依赖离开 cordis 撤 fiber 而 registry 报态已批 3 真相收口／install 全局互斥 ⇒ provider 安装
   不能唤醒等待中的 consumer。
 - **案一（D-19 · 与 cordis 原生对齐）**：patch 行写宿主原生 `inject:`（`EntryOptions.inject`
@@ -1644,7 +1644,7 @@ W2 批末真机窗已闭（C1-007 批复入账）：用户目检半全对——�
 - **修法（单笔可 revert，`toolkit@a2789d0`）**：snapshot.mjs 取数点由 `requirements.inject`
   顶层（从来空＝B 型缺口，归因 §30.b）改读
   `(manifest && (manifest.requirements || {}).registers || {}).inject || []`——events 槽同款
-  守卫形、doctor engine.mjs 同位读法；单点一行，客户端两读点（`index.js:397`／`panel.html:288`）
+  守卫形、doctor engine.mjs 同位读法；单点一行，客户端两读点（`panel/client/index.js`／`panel/client/panel.html`（第 397、288 行，当时））
   零改动（断链单点＝snapshot 取数，渲染侧无虞——§30.b ④）。
 - **先钉后修（p22 新增 A-inject 节 12 格，工装盲区闭合）**：snapshot 真值格两发（manifest
   registers.inject 实况硬编码：compact-router `[llm,tokenMeter,sessions,commands]`／
@@ -1778,7 +1778,7 @@ W2 批末真机窗已闭（C1-007 批复入账）：用户目检半全对——�
 
 - **前半·归因定谳（纯读，开工令 2）**：主根因＝**WORKSPACE_MISMATCH 全拒**，机制＝插件
   工作区取数与宿主对象形状错位（插件读 `session.cwd`/`agent.workspace`，安装版宿主 0.1.5-rc.1
-  真值在 `session.header.cwd`——宿主自用取法 `dsh-agent-loop lib/index.js:1536` 实证；claimed
+  真值在 `session.header.cwd`——宿主自用取法 "dsh-agent-loop" 包内 "lib/index.js" 第 1536 行（宿主源码、非仓内可核） 实证；claimed
   载荷 `{message,turn}` 无 cwd、部署 defaultWorkspace:null）⇒ 终端回落 process.cwd()，闸字串
   全等实际比较"上次/本次宿主启动目录"——同启动目录自洽即通（9/14–9/18 入账成功的机制解释，
   与 ledger 结构面 ≥13 会话显著超裸头基线互证）、换目录/跨启动全拦（9/28–29 自日志 3×
