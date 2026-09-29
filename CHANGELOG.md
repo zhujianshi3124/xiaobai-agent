@@ -6,6 +6,19 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### agent_memory 变量名合规修复（2026-09-29，事故处置·用户实测在案）
+
+- **事故**：首版注入接线注册名取 camelCase `agentMemory`，违宿主变量命名正则
+  `/^[a-z][a-z0-9_]*$/`（dsh-system-prompt lib:57 插值侧＋lib:296 注册侧同正则校验）——注册被
+  插件 fail-soft 吞成告警、预设模板行在渲染侧每请求爆 `malformed prompt variable reference`，
+  用户重启后 DSH 全请求失败。
+- **处置**：①模板行当次还原（备份覆盖、sha 逐字节核销）；②变量改名 **`agent_memory`**（双侧
+  合规＋与在册 provider/model/cwd/workspace_instructions 零撞名）；③**写前必验入常设**——
+  写模板行前从宿主源码核插值正则与注册接口两侧命名约束并查撞名（write-template-v2 工装内置
+  预验步）；④README 触点表补"命名正则"字段。
+- **漏检自记**：机制实证（插值在/注册接口在）未含命名约束核验——正则在宿主源码可查而未查；
+  测试钉用插件侧假环境、未过真宿主模板解析器。接线层盲区又一例，触点表补字段防复发。
+
 ### agent-memory 全量采集·工作区闸修复·记忆注入接线（2026-09-29，EXE-BOOT-011 施工批；C1-007 施工令·用户全单批准）
 
 - **工作区闸修复（缺陷修复）**：created/claimed 工作区取数改读宿主会话 `session.header.cwd`
