@@ -147,7 +147,96 @@ test('正向 fixture：全量合法 manifest 通过，存量字段降级为 info
     assert.ok(result.info.some((i) => i.path === 'manifestVersion'));
     assert.ok(result.info.every((i) => i.severity === 'info'));
   }
-  assert.ok(KNOWN_LEGACY_FIELDS.includes('manifestVersion'));
+  // 名单本身的强度由下方「v1.2 前置④」整节守（原此行的 includes('manifestVersion') 是 1/8 钉，
+  // 收紧动作不允许建立在只钉住一个名字的名单上 ⇒ 已换成 deepEqual 全清单 + 逐名 info + 第 9 名 error）。
+});
+
+// ── v1.2 前置④：KNOWN_LEGACY_FIELDS 全清单守卫（EXE-BOOT-016 笔 1）─────────────
+// 为什么现在立它：收紧动作（迁移期 info ⇒ error）一旦在无全清单钉时进行，名单被增删一格
+// 无人发现，"收紧了什么"就成了账面猜。前置④ 要求这是开工第一笔，且数据复用既有枚举面。
+// 名单正典：contract/src/validate.ts 的 KNOWN_LEGACY_FIELDS（八名，顺序即声明序）。
+
+const LEGACY_NAMES_CANON = [
+  'aliases',
+  'exports',
+  'manifestVersion',
+  'name',
+  'optionalDeps',
+  'registers',
+  'requiredAliases',
+  'requirements',
+];
+
+test('v1.2 前置④·全清单钉：KNOWN_LEGACY_FIELDS deepEqual 八名（增/删/改名任一格即红）', () => {
+  assert.deepEqual([...KNOWN_LEGACY_FIELDS].sort(), LEGACY_NAMES_CANON);
+  assert.equal(KNOWN_LEGACY_FIELDS.length, 8, '名单长度另钉一格：deepEqual 靠 sort 抵消声明序，长度格防"并号"');
+});
+
+test('v1.2 前置④·逐名 info：八名各自单独在场都只产一条 info、不产 error', () => {
+  const base = { id: 'dsh/parity-legacy', displayName: '前置④夹具', version: '1.0.0', contract: '^1.0' };
+  // 值取各名字的现实形态，防"值形状碰巧触发别的校验"混进这一格的判据里
+  const values = {
+    aliases: { 'old-name': 'dsh/parity-legacy' },
+    exports: { '.': './index.js' },
+    manifestVersion: 1,
+    name: '@local/dsh-toolkit/parity-legacy',
+    optionalDeps: ['@local/optional'],
+    registers: { services: ['parity'], events: [], commands: [], providers: [] },
+    requiredAliases: { 'old-name': 'dsh/parity-legacy' },
+    requirements: { runtime: { node: '>=22' }, binaries: [], packages: [], registers: {}, exports: {} },
+  };
+  for (const key of LEGACY_NAMES_CANON) {
+    const result = validateManifest({ ...base, [key]: values[key] });
+    const errDigest = JSON.stringify((result.errors || []).map((e) => e.code + '@' + e.path));
+    assert.equal(result.ok, true, `${key} 应被迁移期容忍，实得 errors=${errDigest}`);
+    const hits = result.info.filter((i) => i.path === key);
+    assert.equal(hits.length, 1, `${key} 应恰有一条 info，实得 ${hits.length} 条`);
+    assert.equal(hits[0].severity, 'info');
+    assert.equal(hits[0].code, 'unknown-field');
+  }
+});
+
+test('v1.2 前置④·第 9 名必 error：名单外的拼写不得被当作 legacy 容忍', () => {
+  // 'registrs' 是 registers 的漏字母形式：若名单判定写成前缀/模糊匹配，它会混进 info 而当场翻红。
+  const result = validateManifest({
+    id: 'dsh/parity-legacy',
+    displayName: '前置④夹具',
+    version: '1.0.0',
+    contract: '^1.0',
+    registrs: { services: ['parity'] },
+  });
+  assert.equal(result.ok, false);
+  const unknown = result.errors.find((e) => e.path === 'registrs');
+  assert.ok(unknown, '名单外字段必须产 error，实得 ' + JSON.stringify(result.errors.map((e) => e.code + '@' + e.path)));
+  assert.equal(unknown.code, 'unknown-field');
+  assert.equal(unknown.severity, 'error');
+  assert.equal(result.info.filter((i) => i.path === 'registrs').length, 0, 'error 侧不得同时混入 info（两套口径不许打同一格）');
+});
+
+test('v1.2 前置④·影响面实测复用：七份内置 manifest 的顶层 legacy 键全在册（收紧前必读）', () => {
+  // 数据复用：recon §4 的"7 份 manifest 根字段枚举"在此变成可跑断言，而不是文档里的一段话。
+  const roots = [
+    'lib/agent-memory', 'lib/compact-router', 'lib/rate-throttle',
+    'lib/search-router', 'lib/web-search-local', '.', 'panel',
+  ];
+  const seenTop = new Set();
+  const seenReq = new Set();
+  let count = 0;
+  for (const rel of roots) {
+    const file = join(here, '..', rel, 'dsh.plugin.json');
+    const m = JSON.parse(readFileSync(file, 'utf8'));
+    count++;
+    for (const k of Object.keys(m)) if (LEGACY_NAMES_CANON.includes(k)) seenTop.add(k);
+    if (m.requirements && typeof m.requirements === 'object') {
+      for (const k of Object.keys(m.requirements)) seenReq.add(k);
+    }
+  }
+  assert.equal(count, 7, '枚举面＝有 manifest 的单元 7（5 lib + 桶根 + panel），与 recon §4 的数法一致');
+  // 顶层实况六名（registers/exports 在内置清单里只作为 requirements 的子键出现，不在顶层）
+  assert.deepEqual([...seenTop].sort(), ['aliases', 'manifestVersion', 'name', 'optionalDeps', 'requiredAliases', 'requirements']);
+  assert.deepEqual([...seenReq].sort(), ['binaries', 'exports', 'packages', 'registers', 'runtime']);
+  // 顶层六名必须是名单子集：收紧为 error 时，这六名就是内置清单的当场影响面（防后来人以为只动 exports）
+  for (const k of seenTop) assert.ok(KNOWN_LEGACY_FIELDS.includes(k), `${k} 在册才有"收紧"这一说`);
 });
 
 test('反向 fixture：缺必填字段 / 非法 version，逐条给出精确路径', () => {
