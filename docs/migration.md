@@ -17,8 +17,10 @@
 旧字段（`manifestVersion` / `name` / `requirements` / `registers` / `exports` / `aliases` /
 `optionalDeps` / `requiredAliases`）原样保留，被**本仓契约**当作 **info 级容忍**
 （`contract/src/validate.ts` 的 `KNOWN_LEGACY_FIELDS`）。
-**两处限定（★8 定稿）**：① 这份清单只描述本仓的容忍度——其中 `manifestVersion`/`name`/`requirements`
-在**独立 doctor** 侧是**必填**（缺则 error），入口声明的正典位置是 `requirements.exports`，
+**两处限定（★8 定稿；第 ① 处现状随 2026-09-29 契约 v1.2 前置① 更新，`doctor仓@ce31f83`）**：
+① 这份清单只描述本仓的容忍度——其中 `manifestVersion`/`name`/`requirements` 在**独立 doctor** 侧**曾是必填、
+现已撤销**（纯契约 manifest 自此在 doctor 侧零 schema issue；但 `requirements` 一旦写了，其五键仍必填），
+入口声明的正典位置是 `requirements.exports`，
 **写到顶层 `exports` 在独立 doctor 侧当场产 error**（`清单根字段非法: exports`），别把"info 容忍"
 读成"可以随便写"；② 上面这句话覆盖的单元不止 5 个 lib 插件——带 `dsh.plugin.json` 的实测是 **7 个**
 （5 个 `lib/` + 桶根 + `panel/`），"内置插件"的四种数法见 `docs/contract.md` §7 D-2 与
@@ -105,10 +107,15 @@ compact-router 不在 `cordis.patch.yml` 里，由 `scripts/apply-preset-patch.m
 （无 `degraded` 字段）；`/doctor/apply/plan`、`/doctor/rollback/*`、快照恢复 ⇒ 抛
 `doctor-spawn-failed` 映射到 `500`。三条都"不假装可用"，但只有第一条带 `degraded` 标记。
 
-**两仓事实面的准确表述（★12 定稿，替换原"两仓共用同一事实面"一句）**：两仓读的是**同一批磁盘
+**两仓事实面的准确表述（★12 定稿，替换原"两仓共用同一事实面"一句；2026-09-29 契约 v1.2 前置① 后现状更新，
+`doctor仓@ce31f83`）**：两仓读的是**同一批磁盘
 manifest**，但**校验口径不是一套**——本仓契约要求 `id`/`displayName`/`version`/`contract`（`requires`
-可缺席），独立 doctor 要求 `manifestVersion`/`name`/`requirements` 及其五键 ⇒
-"过契约"与"过 doctor"互不蕴含，同一份 manifest 可以一边绿一边红（本仓 7 份靠**两套字段都写**才同时通过）。
+可缺席）；独立 doctor 原要求 `manifestVersion`/`name`/`requirements` 及其五键，**根三项的必填已撤销**，
+现口径＝**`requirements` 在场时五键必填**（缺席则整段不适用）。⇒ "过契约"与"过 doctor"**仍互不蕴含**
+（doctor 认的顶层 `registers`/`exports` 契约按迁移期容忍、契约管的 `provides`/`requires` 值语义 doctor 不看），
+但"一边绿一边红"的主因已从"两套必填相反"换成"两套**合法字段名单**不同"（17 键 vs 14 键，差集恰
+`{exports, healthCheck, registers}`——该数已由门禁第 4 步的 E 段钉成活体断言）。
+本仓 7 份仍靠**两套字段都写**才同时通过，这一点未变（收紧本体不在本批，见 `docs/debt.md` C-2 追加节）。
 该分叉已裁定为**两仓分权**：解析行为归本契约、必填性归独立 doctor（`docs/contract.md` §4 与 §7 D-7；
 收紧问题转 `docs/debt.md` C-2）。
 另两处更正：`doctor-signals.json` 是**独立 CLI 独占消费**的声明文件（本仓 `panel/` 与 `registry/` 对它

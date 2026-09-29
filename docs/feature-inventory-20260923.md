@@ -738,3 +738,35 @@ F-19 的 W11 两半边自此都有档：**行为面**＝`precheck` 读目录维�
   `var/scratch/exe-boot-015-20260929/gate-route-classes-baseline.txt`：路由 **32** 条＝只读闸 **10**＋写闸 **22**；
   只读闸内带请求体的 POST **恰 1 条**＝`/v2/install/precheck`（F-19 本尊的"唯一例外"由此不再是叙述、是数出来的）。
 - 全套读数（含门禁全链与守卫步）见计划 §39 与本批判末申报。
+
+---
+
+## 《H4 现状更新》（2026-09-29 · 契约 v1.2 批前半 · EXE-BOOT-016 · 纯追加，不回改上面任何一行）
+
+**为什么单开这一节**：H4 行原文（"必填三件 `manifestVersion`/`name`/`requirements`"与"两套必填集相反"）
+在 2026-09-29 之后**只有一半仍然成立**。H4 是正典横切条目、编号空间已冻结 ⇒ 原文照录不回改，现状更新走本节。
+
+**变了的那一半（施工凭据＝`doctor仓@ce31f83`，契约 v1.2 前置①，修法正典＝
+`toolkit:docs/contract-v1.1-recon.md` §8.3）**：独立 doctor CLI **不再把根三件定为必填**。
+一份纯契约形态的 manifest（只带 `id`/`displayName`/`version`/`contract`/`requires`/`provides`）
+在 doctor 侧自此**零 schema issue**；`requirements` 一旦写了，其 `REQUIREMENT_KEYS` 五键仍必填、
+`./` 目标存在性仍逐条断言（"在场才管"）。⇒ "同一份纯契约形态契约 ok、CLI 当场
+`schema.required-missing`"这句**自此不再是实况**，它变成 `toolkit:scripts/doctor-cli-contract-parity.mjs`
+的 B2/B5/D16 三格——即从"落差"转成"被断言的分工"。
+
+**没变的那一半（H4 之所以仍是横切条目的理由依旧成立）**：两套**合法字段名单**仍不相容——
+契约侧 17 键 vs doctor 白名单 14 键，差集恰 `registers`/`exports`/`healthCheck`。这组数不再是账面叙述：
+它是门禁第 4 步 E 段的活体断言（E1/E2/E3/E4/E5 五格，任一侧改键表当场翻红）。
+⇒ 凡后文出现"某字段契约放行／CLI 判 error"字样，归因仍落在 H4＋本节；出现"必填缺失"字样，
+**2026-09-29 之后只可能是 `requirements` 的五键**（根字段必填已撤）。
+
+**对内置面与第三方面的影响（实测）**：内置 7 份清单一个键都没动，仍靠两套字段都写同时通过
+（真实仓 doctor dry-run 全程 `issues=0 (e0/w0/i0)`）；变化落在第三方契约插件——它们本来就被根三件挡住，
+自此可以只写契约字段。**本批没有把 legacy 字段收紧为 error**（前置②与"入口/inject 无契约替代表达"两条
+未闭），故 `KNOWN_LEGACY_FIELDS` 仍是迁移期 info 容忍；契约版本常量仍 `1.1.0`。
+
+**关联账**：`toolkit:docs/debt.md` A#55 与《C-2 追加》节；`toolkit:docs/repair-plan-20260923.md` §40；
+`toolkit:docs/contract.md` §2.1 注②与 §4 分权条、`toolkit:docs/migration.md` §1 限定①与 §6 事实面条
+（四处均随本批在位更新，成因与同步范围见计划 §40.8）。
+**H4 状态维持"有出入（维持）"**——本批撤的是 doctor 的一半必填，收紧本体与名单合流仍未做，
+修复动作仍归 v1.2 后半（题面见计划 §40.4）。
