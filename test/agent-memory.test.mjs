@@ -2186,3 +2186,75 @@ test('WS5: 闸大小写归一（win32）—— 同路径不同大小写不误拦
     '真跨区仍拦；callerWorkspace 保留调用方原值（错误信息不归一）',
   );
 });
+
+/* ================= D11-D13：一般输入分栏（EXE-BOOT-011 施工笔2；R1 全量采集·用户批甲案） =================
+ * R1 原文（README【设计要求】）："自动记录用户的全部输入（ledger 专司）"；R3 分栏语义扩展：
+ * 指令性→待办（现行流转不变），非指令→「一般输入」栏（status=已记录；只追加，不参与未完成
+ * 计数/新鲜度语义；溢出时已完成先移、一般输入次移入 archive，未完成拒绝计数不含一般输入）。
+ */
+
+test('D11: 一般输入分栏 —— addGeneralEntry 共享编号池（L-NNN 不串）、status=已记录、渲染在档、恢复报告概览如实计一般输入', () => {
+  const root = tmpRoot();
+  const ws = wsOf(root, 'ws-a');
+  const s = m.createSession(root, { sid: sidFor(11), taskSummary: 'D11', workspace: ws });
+  const i1 = m.addEntry(root, s.sid, { desc: '指令一：设计台账格式', workspace: ws });
+  const g1 = m.addGeneralEntry(root, s.sid, { desc: '今天天气不错', workspace: ws });
+  const i2 = m.addEntry(root, s.sid, { desc: '指令二：按时长分组输出', workspace: ws });
+  assert.equal([i1.no, g1.no, i2.no].join(','), 'L-000,L-001,L-002', '编号池跨栏共享不串');
+  assert.equal(g1.status, '已记录', '一般输入条目状态=已记录');
+  assert.equal(g1.related.length, 0);
+  const led = m.readLedger(root, s.sid);
+  assert.equal(led.sections['一般输入'].length, 1, '一般输入栏在档');
+  assert.ok(led.sections['一般输入'][0].desc.includes('今天天气不错'), '保原文（entryDesc 同款截断）');
+  const raw = fs.readFileSync(ledgerFile(root, s.sid), 'utf8');
+  assert.ok(raw.includes('## 一般输入'), '分栏标题渲染在档（重读不丢）');
+  assert.ok(raw.includes('- L-001 [已记录] 今天天气不错'), '条目行渲染在档');
+  const report = m.buildRecoveryReport(root, s.sid);
+  assert.match(report, /一般输入 1 条/, '恢复报告台账概览如实计一般输入');
+  assert.ok(!report.split('未完成指令:')[1].includes('一般输入 1'), '一般输入不入未完成指令清单');
+});
+
+test('D12: 溢出迁移次序 —— 已完成先移、一般输入次移入 archive；未完成拒绝计数不含一般输入', () => {
+  const root = tmpRoot();
+  const ws = wsOf(root, 'ws-a');
+  const s = m.createSession(root, { sid: sidFor(12), taskSummary: 'D12', workspace: ws });
+  const cap = 900; // 小预算便于确定性触发（裸头≈450B＋一般输入条≈150B）
+  m.addEntry(root, s.sid, { desc: '唯一未完成指令', workspace: ws, maxBytes: cap });
+  for (let n = 0; n < 4; n++) {
+    m.addGeneralEntry(root, s.sid, { desc: `闲聊${n}：${'字'.repeat(40)}`, workspace: ws, maxBytes: cap });
+  }
+  const led = m.readLedger(root, s.sid);
+  assert.ok(led.sections['一般输入'].length >= 1, '一般输入栏在档（预算内保留）');
+  const arch = fs.readFileSync(path.join(root, 'sessions', s.sid, 'archive.md'), 'utf8');
+  assert.ok(arch.includes('闲聊0'), '超限触发最旧一般输入移入 archive（已完成侧耗尽后次移）');
+  assert.ok(led.sections['待办'].some((e) => e.desc.includes('唯一未完成指令')), '未完成条目不因一般输入膨胀被迁移');
+  // 未完成拒绝计数不含一般输入：maxBytes 压到头部以下 → 一般输入全移后仍超限 → 拒绝且 unfinishedCount 只计待办一条
+  assert.throws(
+    () => m.addGeneralEntry(root, s.sid, { desc: '最后一根稻草', workspace: ws, maxBytes: 100 }),
+    (e) => e.code === 'LEDGER_OVERFLOW_ACTIVE' && e.unfinishedCount === 1,
+    'unfinishedCount 只计真未完成（一般输入不计）',
+  );
+});
+
+test('D13: 一般输入只追加守卫 —— 状态流转/删除/新增为该状态皆拒', () => {
+  const root = tmpRoot();
+  const ws = wsOf(root, 'ws-a');
+  const s = m.createSession(root, { sid: sidFor(13), taskSummary: 'D13', workspace: ws });
+  const i1 = m.addEntry(root, s.sid, { desc: '指令', workspace: ws });
+  const g1 = m.addGeneralEntry(root, s.sid, { desc: '闲聊一句', workspace: ws });
+  assert.throws(
+    () => m.setEntryStatus(root, s.sid, g1.no, '待办', { workspace: ws }),
+    (e) => e.code === 'ENTRY_LOG_IMMUTABLE',
+    '一般输入条目禁止状态流转（只追加）',
+  );
+  assert.throws(
+    () => m.setEntryStatus(root, s.sid, i1.no, '已记录', { workspace: ws }),
+    (e) => e.code === 'INVALID_ENTRY_STATUS',
+    '已记录不在状态枚举：禁止把指令条目改成已记录',
+  );
+  assert.throws(
+    () => m.removeEntry(root, s.sid, g1.no, { workspace: ws }),
+    (e) => e.code === 'ENTRY_UNFINISHED_DELETE',
+    '一般输入条目不可删（非已完成状态走 D4 守卫）',
+  );
+});
