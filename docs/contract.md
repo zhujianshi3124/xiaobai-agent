@@ -16,9 +16,9 @@
 桶（宿主）与子插件使用**同一份**契约（D1）：一个子插件 = 盘上一份 `dsh.plugin.json`（静态事实）
 + 模块导出（函数型成员）。桶不认插件出身，只认契约字段（Q1：不给任何插件特判）。
 
-## 2. manifest 字段（`DshSubPluginManifest`，`contract/src/types.ts:88`）
+## 2. manifest 字段（`DshSubPluginManifest`，`contract/src/types.ts#DshSubPluginManifest`）
 
-| 字段 | 必填 | 约束（由 `validateManifest` 强制，`contract/src/validate.ts:81`） |
+| 字段 | 必填 | 约束（由 `validateManifest` 强制，`contract/src/validate.ts#validateManifest`） |
 |---|---|---|
 | `id` | ✅ | 命名空间式 `<scope>/<name>`，正则 `^[a-z0-9][a-z0-9-]{0,63}/[a-z0-9][a-z0-9-]{0,63}$`；全局唯一，不是路径 |
 | `displayName` | ✅ | 非空字符串（面板标题用它） |
@@ -150,7 +150,7 @@ registry 发名静态防回潮／条数联动）。
   （`docs/contract-v1.1-recon.md` §10.2）；`main` 形态 recon 未核，批 6 落地前补做（两仓 15 个在③级有声明
   的目录，"声明了却不存在"0 个，探针 `var/scratch/exe-boot-003-20260925/b6-stock-main-audit.mjs`）。
 - **可观测面**：`ResolvedPlugin.entrySource`（七值枚举：`manifest.requirements.exports`、
-  `…($from)`、`manifest.exports(legacy)`、`package.json#exports`、`package.json#main`、
+  `…($from)`、`manifest.exports(legacy)`、`package.json#exports`、"package.json#main"、
   `index-convention`、`explicit-file`）与 `entryWarnings`。
   **来源直接给 `.js`/`.mjs` 文件路径时完全不经顺位**（`entrySource='explicit-file'`、`entryWarnings` 恒空），
   即它会绕过 manifest 里相反的 `.` 声明；`.cjs` 与无扩展名路径按目录处理。
@@ -227,7 +227,7 @@ schemastery 重建后校验；④ `{uid,refs}` toJSON 形态 → 重建后校验
   **缺席类按 `required`/`shared` 分级：必需项缺席 = error 且阻断安装**（版本不符、依赖服务缺席、
   必需环境变量缺失、二进制不在 PATH、低于 `minVersion`、非 shared 端口占用、路径不可访问均产 error），
   仅"探测不到版本 / 可选缺席 / shared 端口占用 / 网络瞬断"为 warn。
-  ② **独立 doctor CLI 的仓级审计**（`projects/doctor/src/engine.mjs`）——纪律相反：
+  ② **独立 doctor CLI 的仓级审计**（`doctor仓:src/engine.mjs`）——纪律相反：
   缺席/缺依赖类信号一律 info 或 warning、**绝不产 error**，因为它的验收红线是真实仓 `0/0/0`。
   把①写成"只产 warn/info"或与②混谈，都是 P8 落笔时的张冠李戴（成因见 recon §5.2）。
   `registerRule` 是第三方规则扩展点，与内置规则同构（同列表执行、超时产 `rule-error`）。
@@ -252,9 +252,9 @@ schemastery 重建后校验；④ `{uid,refs}` toJSON 形态 → 重建后校验
 | D-2 | **TypeScript 范围豁免**：仅 `contract` / `registry` / `doctor` 三模块 TS strict（各自 tsconfig），存量 5 插件与 `panel/` 保持 JS + JSDoc | N1 裁决（`docs/p0-recon.md` §6）：这是对规格 §8 的**正式豁免**；配套硬约束=门禁必须跑 `typecheck`×3（`package.json` scripts.test），不是只放文件。**"5 个内置插件"这句话有四种数法，别当同一个数用（★14 定稿：分列）**：① 带 `dsh.plugin.json` 的单元 **7**（5 个 `lib/` + 桶根 + `panel/`，其中 6 份有 `contract`、`panel/` 没有）；② 注册面非空的 **3**（compact-router / search-router / web-search-local）；③ 宿主真实装载的 body **6**（`cordis.patch.yml` 的 5 个 insert 行 + compact-router 走预设改写挂载）；④ 面板卡片数 **5**（`panel/manager/snapshot.mjs` 派生，`p1-smoke` 断言的就是这一个）。完整枚举与实测入口形态见 `docs/contract-v1.1-recon.md` §4 |
 | D-3 | **`requires` 整体可选**（规格写法是必填对象） | `contract/src/types.ts` 的 `requires?` 注释明示；零需求插件不写空对象 |
 | D-4 | **函数型成员不落盘**：`healthCheck` 只能是模块导出；`configSchema`/`panels` 允许 JSON 落盘 | `validate.ts` 的 healthCheck 判据；JSON 装不下函数。**"不落盘"≠"会被消费"**，见 D-9 |
-| D-5 | **R13：装入判定依赖 cordis 内部实现**——`fiber.state` 枚举（2=ACTIVE/3=FAILED/4=DISPOSED/**5=UNLOADING**）、FAILED 时经 fiber 的 rejection 取回启动错误原文、模块命名空间插件的 `apply` 返回 Promise 被视为后台任务（立即 ACTIVE）。这些是 cordis **4.0.2 的实现行为，不是稳定契约**。补充实测：`FiberState` 声明为 `export const enum`，构建产物 `lib/index.js` 中该符号出现 0 次 ⇒ **运行时根本 import 不到**，硬编码数值是当时唯一可选项 | 用户裁决"fiber 状态迁移判定装入"（风险 R13）。缓解：判定收敛在 `registry/src/registry.ts` 单点（导出的 `FIBER_*` 常量 + 轮询循环）；**cordis 升级必须重跑 S1/S4 场景**；该依赖已写入 `registry.ts` 头注。**2026-09-21 复核加固**：`test/cordis-fiber-state.test.mjs` 用真 cordis 实测枚举数值与 `FIBER_*` 逐一对账（显式守卫，编号漂移当场红）；轮询补 UNLOADING 分支并区分错误码（`FIBER_LOAD_ERROR_CODES`）；`peerDependencies` 收紧为 `^4.0.2` 并加范围守卫。本体裁决不变。**措辞订正（本轮）**：原写"五个终态数值"实为 **6 个状态**，其中 5 个断言了字面量、`FIBER_LOADING=1` 只由"六值互不相同且排序为 [0..5]"的顺序不变式隐含；原写"`fiber.await()` 以启动错误 reject"不准，实现读的是 fiber **thenable**（`Promise.resolve(fiber)`） |
+| D-5 | **R13：装入判定依赖 cordis 内部实现**——`fiber.state` 枚举（2=ACTIVE/3=FAILED/4=DISPOSED/**5=UNLOADING**）、FAILED 时经 fiber 的 rejection 取回启动错误原文、模块命名空间插件的 `apply` 返回 Promise 被视为后台任务（立即 ACTIVE）。这些是 cordis **4.0.2 的实现行为，不是稳定契约**。补充实测：`FiberState` 声明为 `export const enum`，构建产物 `node_modules/@deepseek-ai/cordis/lib/index.js` 中该符号出现 0 次 ⇒ **运行时根本 import 不到**，硬编码数值是当时唯一可选项 | 用户裁决"fiber 状态迁移判定装入"（风险 R13）。缓解：判定收敛在 `registry/src/registry.ts` 单点（导出的 `FIBER_*` 常量 + 轮询循环）；**cordis 升级必须重跑 S1/S4 场景**；该依赖已写入 `registry.ts` 头注。**2026-09-21 复核加固**：`test/cordis-fiber-state.test.mjs` 用真 cordis 实测枚举数值与 `FIBER_*` 逐一对账（显式守卫，编号漂移当场红）；轮询补 UNLOADING 分支并区分错误码（`FIBER_LOAD_ERROR_CODES`）；`peerDependencies` 收紧为 `^4.0.2` 并加范围守卫。本体裁决不变。**措辞订正（本轮）**：原写"五个终态数值"实为 **6 个状态**，其中 5 个断言了字面量、`FIBER_LOADING=1` 只由"六值互不相同且排序为 [0..5]"的顺序不变式隐含；原写"`fiber.await()` 以启动错误 reject"不准，实现读的是 fiber **thenable**（`Promise.resolve(fiber)`） |
 | D-6 | 审计事件名手工拼装（见 §3 末） | 债务 #11b。**2026-09-20 裁定"不单独修、并入契约 v1.1 第 2 项"；2026-09-22 审定后列入 v1.1 排期（批 9）**。此前状态栏一直写"未清偿，交用户复核"，与台账不符 |
-| D-7 | **入口声明的必填性归独立 doctor，不归本契约**：本契约不定义"manifest 必须携带入口声明"，只定义解析行为（§4） | 2026-09-22 裁定（C-1 必答设计题第 2 条）：采"契约管解析行为、doctor 管必填性"；`projects/doctor/src/engine.mjs` 的 `REQUIREMENT_KEYS` 与 `buildExportTargetIssues` 是必填性正源。v1.2 若撤根字段必填须连带处理"键集校验静默空转"（`docs/debt.md` C-2 前置 1） |
+| D-7 | **入口声明的必填性归独立 doctor，不归本契约**：本契约不定义"manifest 必须携带入口声明"，只定义解析行为（§4） | 2026-09-22 裁定（C-1 必答设计题第 2 条）：采"契约管解析行为、doctor 管必填性"；`doctor仓:src/engine.mjs` 的 `REQUIREMENT_KEYS` 与 `buildExportTargetIssues` 是必填性正源。v1.2 若撤根字段必填须连带处理"键集校验静默空转"（`docs/debt.md` C-2 前置 1） |
 | D-8 | `panels` 是契约字段但**无装配消费者**：宿主不认（`dsh-web-all` 不读），本仓只把它原样透传给面板数据面 | `docs/embed-toolkit.md` §5 第 1 条 + `panel/manager/v2-api.mjs` 的 `panels` 透传行；桶根 manifest 那份 `toolkit-panel` 描述符因此是**自述性数据**，不驱动布局 |
 | D-9 | **`healthCheck` 读方已在、写方从未存在**：体检与快照读 `manifest.healthCheck`，但装载器不绑定模块导出的它（其静态面白名单只有 `name/inject/Config/configSchema/provide/intercept` 六键）⇒ 作者按 §2/§7 D-4 写了不会跑 | 2026-09-22 审定 ★2 定稿=**改代码**，批 3 落地。落地前的事实：本仓**没有任何模块导出 `healthCheck`**（`index.js`/`lib/*`/`panel/` 全量 grep 零命中）⇒ 绑定接通后内置插件的"突然生效面"为 0，只影响第三方契约插件。**【批 3 已落地】**：写方由 `registry/src/loader.ts` 的 `bindRuntimeStatics` 接上（两条装载分支都绑），真装载链用例 `test/doctor.test.mjs` 的"批 3-①/②"钉住"模块那份能被体检读到"与"函数不落盘、不炸盘"；摘掉绑定调用即翻红。**批 3 复核维持**：全仓（排除 `test/` 与 `dist/`）仍无任何模块导出 `healthCheck`/`panels` ⇒ 内置行为零变化 |
 | D-10 | **契约缺"提供面"字段导致 `requires.services` 被借用**：`extractRegisters` 把依赖面归一进注册面、冲突检查据此比对 ⇒ 共同依赖同服务会被阻断（假阳性已实测） | 2026-09-22 裁定：C-1 第 1 项 `provides` 落地即修（批 2），并须带对偶用例"共同依赖不判撞名"。成因与为何长期潜伏（内置全用 legacy `requirements.registers`、桶根只走宿主通道）见 `docs/contract-v1.1-recon.md` §5.2 P0-2。**【批 2 已清偿行为半边】**：`provides` 三槽进类型与校验、`extractRegisters` 逐槽优先读它、`doctor/src/doctor.ts` 撞名比对的**两处**借用点（本插件侧与对方侧）同日断掉；对偶用例在 `test/doctor.test.mjs` 的"批 2-②"。**数据半边未动**——内置 7 份仍无 `provides`，桶根的倒置留批 10 纠正（实测读数见 recon §10.3 批 2 段）。**【2026-09-26 批 10 已落地数据半边】**四份清单补 provides（三份 lib 实供 1:1＋桶根 services=[registry, doctor]）；rate-throttle／agent-memory 空即如实不补；`webServer` 依赖声明原样保留。详见 `test/provides-data.test.mjs` 与计划 §18。 |

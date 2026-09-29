@@ -11,16 +11,16 @@
 | 项 | 事实 | 证据 |
 |---|---|---|
 | 宿主 CLI | `@deepseek-ai/dsh@0.1.5-rc.1`（全局 npm），描述"boot a DeepSeek Harness profile / plugin management" | `dsh --help`；npm 全局列表 |
-| 运行时 | `@deepseek-ai/cordis@4.0.2`，导出 context/events/fiber/registry/service 标准机制（`ctx.plugin`、`ctx.effect`、Service 基类、事件总线、DI inject） | toolkit `node_modules/@deepseek-ai/cordis/src/index.ts`、`registry.ts:1-80` |
+| 运行时 | `@deepseek-ai/cordis@4.0.2`，导出 context/events/fiber/registry/service 标准机制（`ctx.plugin`、`ctx.effect`、Service 基类、事件总线、DI inject） | toolkit `node_modules/@deepseek-ai/cordis/src/index.ts`、`node_modules/@deepseek-ai/cordis/src/registry.ts`（第 1-80 行，当时） |
 | 宿主 cordis 插件 | dsh CLI 依赖 `cordis-plugin-loader / hmr / include / timer` | 全局 dsh `package.json` dependencies |
-| profile | `~/.dsh/profiles/web`，pnpm workspace；`dsh.profile.bundles` 声明 bundle 装载序 | profile `package.json:11-22` |
-| 装载模型 | patch 层合成：各 bundle 的 `dsh.bundle.patch` → profile `cordis.patch.yml` → `--patch` 覆盖；`- insert` 行 `name:` = 模块说明符，宿主 import 后按 cordis 约定实例化 | profile `cordis.yml:1-4` 注释；toolkit `package.json:26-30` |
-| 子插件导出约定 | ESM 命名导出 `name` / `inject` / `apply(ctx, config)`（或 default 对象）；无统一 Config Schema 导出 | `lib/rate-throttle/index.js:66-67,149`、`lib/search-router/index.js:27-29`、`lib/agent-memory/plugin.js:19,105,276-277` |
-| Schema 体系 | 宿主标准为 schemastery（toolkit 依赖 `@deepseek-ai/schemastery`）；但 web-search-local 实际用 **zod** 导出 `Config` | `lib/web-search-local/index.js:123`；toolkit `package.json:36` |
+| profile | `~/.dsh/profiles/web`，pnpm workspace；`dsh.profile.bundles` 声明 bundle 装载序 | profile `~/.dsh/profiles/web/package.json`（第 11-22 行，当时） |
+| 装载模型 | patch 层合成：各 bundle 的 `dsh.bundle.patch` → profile `cordis.patch.yml` → `--patch` 覆盖；`- insert` 行 `name:` = 模块说明符，宿主 import 后按 cordis 约定实例化 | profile `~/.dsh/profiles/web/cordis.yml`（第 1-4 行，当时） 注释；toolkit `toolkit:package.json`（第 26-30 行，当时） |
+| 子插件导出约定 | ESM 命名导出 `name` / `inject` / `apply(ctx, config)`（或 default 对象）；无统一 Config Schema 导出 | `lib/rate-throttle/index.js`（第 66-67、149 行，当时）、`lib/search-router/index.js`（第 27-29 行，当时）、`lib/agent-memory/plugin.js`（第 19、105、276-277 行，当时） |
+| Schema 体系 | 宿主标准为 schemastery（toolkit 依赖 `@deepseek-ai/schemastery`）；但 web-search-local 实际用 **zod** 导出 `Config` | `lib/web-search-local/index.js#Config`；toolkit `toolkit:package.json`（第 36 行，当时） |
 | 动态装载先例 | toolkit 全仓 **无任何 `ctx.plugin(` 调用**——装载权全在宿主，toolkit 是"被动装载的兄弟集合"，不是运行时意义上的桶 | 全 lib+panel grep 零命中 |
 | 运行版本 | Node v24.19.0（engines >=22 满足）、pnpm 11.22.0、Windows 10 22631 | 实测 |
-| 测试/CI | `npm test` = `pluggable-lint` + `node --test`；**无 .github/CI 配置、无 typecheck**（全仓纯 JS，无 tsconfig） | `package.json:5-7`；`scripts/pluggable-lint.mjs` |
-| 仓库纪律 | git 仓库，台账式提交（Conventional Commits + L-编号判定流），AGENTS.md 六条红线（兄弟零静态 import、零 eager re-export、doctor 声明文件驱动等） | `AGENTS.md:1-12`；git log |
+| 测试/CI | `npm test` = `pluggable-lint` + `node --test`；**无 .github/CI 配置、无 typecheck**（全仓纯 JS，无 tsconfig） | `package.json`（第 5-7 行，当时）；`scripts/pluggable-lint.mjs` |
+| 仓库纪律 | git 仓库，台账式提交（Conventional Commits + L-编号判定流），AGENTS.md 六条红线（兄弟零静态 import、零 eager re-export、doctor 声明文件驱动等） | `AGENTS.md`（第 1-12 行，当时）；git log |
 
 ---
 
@@ -30,17 +30,17 @@
 
 | 成员 | 代码位置 | 导出形态 | 装载路径（boot 时谁插入它） | manifest |
 |---|---|---|---|---|
-| rate-throttle | `lib/rate-throttle/index.js` | `name`/`inject:["llm","tokenMeter"]`/`apply` | toolkit bundle patch `- insert: id: rate-throttle`（`cordis.patch.yml:14`） | 有（`lib/rate-throttle/dsh.plugin.json`） |
-| web-search-local | `lib/web-search-local/index.js` | `Config`(zod)/default | 同上，`id: web-search-local`（`cordis.patch.yml:58`） | 有 |
-| search-router | `lib/search-router/index.js` | `name`/`inject:["web"]`/default | 同上，`id: web-search-router`（`cordis.patch.yml:64`） | 有 |
-| agent-memory | `lib/agent-memory/plugin.js`（运行时入口）+ `lib/index.js`（被兄弟惰性探测的库入口） | `name:'agent-memory-runtime'`/`register`=apply，**双入口** | patch insert `id: agent-memory-runtime, name: '@local/dsh-toolkit/agent-memory/plugin'`（`cordis.patch.yml:74`） | 有 |
+| rate-throttle | `lib/rate-throttle/index.js` | `name`/`inject:["llm","tokenMeter"]`/`apply` | toolkit bundle patch `- insert: id: rate-throttle`（`cordis.patch.yml`（第 14 行，当时）） | 有（`lib/rate-throttle/dsh.plugin.json`） |
+| web-search-local | `lib/web-search-local/index.js` | `Config`(zod)/default | 同上，`id: web-search-local`（`cordis.patch.yml`（第 58 行，当时）） | 有 |
+| search-router | `lib/search-router/index.js` | `name`/`inject:["web"]`/default | 同上，`id: web-search-router`（`cordis.patch.yml`（第 64 行，当时）） | 有 |
+| agent-memory | `lib/agent-memory/plugin.js`（运行时入口）+ `lib/agent-memory/lib/index.js`（被兄弟惰性探测的库入口） | `name:'agent-memory-runtime'`/`register`=apply，**双入口** | patch insert `id: agent-memory-runtime, name: '@local/dsh-toolkit/agent-memory/plugin'`（`cordis.patch.yml`（第 74 行，当时）） | 有 |
 | compact-router | `lib/compact-router/index.js` | `name`/inject/default | **特殊**：不在 cordis.patch.yml；由 `scripts/apply-preset-patch.mjs` 改写 agent 预设 `~/.dsh/.agent-presets/*/agent.cordis.yml`（实测 liangshen 预设 :286），状态记于 `preset-patch-state.json` | 有（含 `optionalDeps: [agent-memory]`） |
-| 面板 toolkit-manager | `panel/index.js` | `name`/`inject:["webServer"]`/`apply` | patch insert `name: file:///D:/dsh-plugins/dsh-toolkit/panel/index.js`——**file:// 绝对路径**（`cordis.patch.yml:82`） | 有 |
+| 面板 toolkit-manager | `panel/index.js` | `name`/`inject:["webServer"]`/`apply` | patch insert `name: file:///D:/dsh-plugins/dsh-toolkit/panel/index.js`——**file:// 绝对路径**（`cordis.patch.yml`（第 82 行，当时）） | 有 |
 
 要点：
 
 1. **"静态/半静态"的本质**：装载 = patch 文本里的 `insert` 行 + 预设文件改写。增删插件 = 改 patch 文本 + **重启 dsh web 生效**。toolkit 对装载过程零参与。
-2. 顶层 `dsh.plugin.json` 的 `aliases` 把五个旧包名映射到 toolkit 子路径导出（`dsh.plugin.json:4-10`），兼容旧引用；doctor 的引用完整性检查消费它。
+2. 顶层 `dsh.plugin.json` 的 `aliases` 把五个旧包名映射到 toolkit 子路径导出（`dsh.plugin.json#aliases`），兼容旧引用；doctor 的引用完整性检查消费它。
 3. 每个 lib 子插件已有自己的 `dsh.plugin.json`（`manifestVersion: 1`），声明 `requirements{runtime{node,dsh}, binaries, packages, registers{inject,events,services,commands,providers}, exports}` 与部分 `optionalDeps`——**已存在一套 manifest 体系 v1**，由 doctor 消费（宿主运行时不读它，grep 宿主 lib 无 `dsh.plugin.json` 命中）。
 
 ### 1.2 Doctor（1 个）
@@ -48,9 +48,9 @@
 | 维度 | 事实 |
 |---|---|
 | 位置 | **独立仓** `@local/dsh-toolkit-doctor` @ `D:\dsh-test-sandbox\projects\doctor`（不在桶内），零 npm 依赖，4 个源文件 |
-| 架构 | `cli.mjs`（参数/确认/退出码，默认 dry-run）→ `engine.mjs runDoctor`（纯只读检查，~1600 行）→ `executor.mjs`（apply/rollback 写侧：文件锁、doctor-backups、doctor-patch-state.json 回滚链） |
+| 架构 | `cli.mjs`（参数/确认/退出码，默认 dry-run）→ `engine.mjs runDoctor`（纯只读检查，~1600 行）→ `executor.mjs`（apply/rollback 写侧：文件锁、doctor-backups、"doctor-patch-state.json" 回滚链（运行时产物、非仓内可核，读写在 `doctor仓:src/executor.mjs`）） |
 | 检查清单（8 类） | ① schema 语法/清单校验（utf8-bom/json/yaml/required/requirements）② 声明自检（alias/exports 目标存在性）③ 引用完整性（热配置与预设/patch 里的 `@local/…` 引用可解析、stale-in-backup）④ 环境预检（node/dsh 版本、PATH 二进制）⑤ 包依赖（manifest packages.$from + createRequire 模拟解析、版本域）⑥ 跨目录链接（pkg.resolution-outside-scope）⑦ 注册冲突（reg.name-collision、inject face 未知，对照 `host-faces.json`）⑧ 挂载/provider 三检查（body-without-row / row-without-body / custody-archived / provider.dangling / missing-provider） |
-| 去硬编码机制 | `doctor-signals.json`（toolkit 根）声明 hostProviderKeys/providerDependencies；engine 零插件名，事实全部来自声明文件 + 磁盘 manifest。**残留硬编码**：默认 scope `D:\dsh-plugins\dsh-toolkit`、yaml 从宿主全局安装路径动态 import（`engine.mjs:8-11` 绝对 URL）、面板侧 doctorCli 硬编码沙箱路径 |
+| 去硬编码机制 | `doctor-signals.json`（toolkit 根）声明 hostProviderKeys/providerDependencies；engine 零插件名，事实全部来自声明文件 + 磁盘 manifest。**残留硬编码**：默认 scope `D:\dsh-plugins\dsh-toolkit`、yaml 从宿主全局安装路径动态 import（`doctor仓:src/engine.mjs#YAML_DEFAULT_URL` 绝对 URL）、面板侧 doctorCli 硬编码沙箱路径 |
 | 输出结构 | `schemaVersion / generatedAt / scope{plugins} / environment / summary{error,warning,info,safe,rewrite,destructive,manual,fixable} / issues[]{id,category,severity,file,line,occurrence,message,old,new,fix{class,plan}}` |
 | 验收纪律 | `0/0/0`（error/warning/info 全零），AGENTS.md 红线 6；缺席/缺依赖类只产 info/warning 绝不 error |
 | 运行时监测 | **没有**。纯一次性静态扫描；无 setInterval/watch/服务；被面板以 `execFile` 子进程按需调起（**缺省 180s、`--states` 用 60s**，见 `panel/manager/doctor-runner.mjs` 的 `spawnDoctor`。本行原写"120s @ `:3-32`"：120s 是 2026-09-18 诞生时的真值，`b3b1575`（09-19）放宽后未回填，且该过期值被 `docs/migration.md` §6 复制过一次 —— 两处已于 2026-09-22 条文审定轮一并更正） |
@@ -59,12 +59,12 @@
 
 | 维度 | 事实 |
 |---|---|
-| 双入口 | ① React client bundle：`window.__ModuleLoader__.load({id, factory})` + `ctx.slots.inject("settings.plugins.tab")`（slot id `toolkit-panel`、order 90 硬编码，`client/index.js:1339-1347`），使用宿主提供的 React；包侧声明 `dsh.client.platform:"web"`（`panel/package.json:12-15`）。② 独立兜底页 `panel.html`：服务端内存直出 `GET /api/toolkit-panel/ui`（`panel/index.js:276-285`），原生 JS 无框架 |
-| 服务端 | `toolkit-manager` 插件（`panel/index.js:40-41`），inject `webServer`，注册 15 条 exact 路由 `/api/toolkit-panel/*`（snapshot / plan / execute / toggle / config / uninstall / restore / mount / custody / doctor dry-run / plan-status） |
-| 安全 guard | 写路由 = loopback socket + (Host loopback OR `remoteWebUiPairing` 服务严格校验，fail-closed) + CSRF（sec-fetch-site/origin）；读路由允许配对设备 hasOwn 兜底（`panel/index.js:229-249`） |
+| 双入口 | ① React client bundle：`window.__ModuleLoader__.load({id, factory})` + `ctx.slots.inject("settings.plugins.tab")`（slot id `toolkit-panel`、order 90 硬编码，`panel/client/index.js`（第 1339-1347 行，当时）），使用宿主提供的 React；包侧声明 `dsh.client.platform:"web"`（`panel/package.json`（第 12-15 行，当时））。② 独立兜底页 `panel.html`：服务端内存直出 `GET /api/toolkit-panel/ui`（`panel/index.js`（第 276-285 行，当时）），原生 JS 无框架 |
+| 服务端 | `toolkit-manager` 插件（`panel/index.js`（第 40-41 行，当时）），inject `webServer`，注册 15 条 exact 路由 `/api/toolkit-panel/*`（snapshot / plan / execute / toggle / config / uninstall / restore / mount / custody / doctor dry-run / plan-status） |
+| 安全 guard | 写路由 = loopback socket + (Host loopback OR `remoteWebUiPairing` 服务严格校验，fail-closed) + CSRF（sec-fetch-site/origin）；读路由允许配对设备 hasOwn 兜底（`panel/index.js`（第 229-249 行，当时）） |
 | 实时通道 | **没有**。无 WS/SSE/EventSource/轮询（全文 grep 零命中）；更新 = 手动点刷新 + 每个写操作成功后重新拉 `/snapshot` |
 | 交互范式 | 全部操作 plan → 确认 → execute 两段式：diff 预览、expectedSha 冲突检测、有效期、写前备份（`.panel-write-backups`）；卸载需知情确认（手动输入插件名，软 1 次/真 2 次）；生效 = 重启 dsh web |
-| 硬编码盘点（D2 违规面） | 服务端：`plugin-registry.mjs` PLUGINS 五项 + DEPENDENCIES（:10-61）；`config-whitelist.mjs` 18 字段且仅 rate-throttle 可编辑（CONFIG_EDITABLE_ROW）；`snapshot.mjs` ORIGINS/ROW_IDS 映射（:17-34）。客户端：`CN_NAMES`/`DESCRIPTIONS`/`P24_CN`/`UNINSTALL_COPY`/`CONFIG_FIELDS` 常量表；逻辑分支：compact-router 不渲染启停且恒报"运行中"（client/index.js:247-250,392）、search-router 只读 mode 行（:360-362） |
+| 硬编码盘点（D2 违规面） | 服务端：`plugin-registry.mjs` PLUGINS 五项 + DEPENDENCIES（:10-61）；`config-whitelist.mjs` 18 字段且仅 rate-throttle 可编辑（CONFIG_EDITABLE_ROW）；`snapshot.mjs` ORIGINS/ROW_IDS 映射（:17-34）。客户端：`CN_NAMES`/`DESCRIPTIONS`/`P24_CN`/`UNINSTALL_COPY`/`CONFIG_FIELDS` 常量表；逻辑分支：compact-router 不渲染启停且恒报"运行中"（`panel/client/index.js`（第 247-250、392 行，当时））、search-router 只读 mode 行（:360-362） |
 | 深度生命周期资产 | 软卸载（台账可恢复）/ 真卸载（销毁式 v2，无副本，出收据）/ 保管区 `.panel-custody` / 恢复冲突三态（hostKey A/B/C）/ 重装后挂载——REQ-5 重做面板时**必须保留语义**（这是最近一个大批次验收成果） |
 
 ### 1.4 配置持久化
@@ -78,7 +78,7 @@
 
 ### 1.5 dsh-web-all 与宿主接入
 
-- `@linxin666/dsh-web-all@0.3.21` **真实存在于当前 profile 且作为 bundle 启用**（profile `package.json:5,17`）。第三方项目（Apache-2.0，repo `github.com/zhu1090093659/dsh-web`），聚合 20+ 子模块：plugin-manager / market / doctor / task-board / remote-web-ui / skin-center / community-plugins 等，每个子路径都是同一 shell 出口。
+- `@linxin666/dsh-web-all@0.3.21` **真实存在于当前 profile 且作为 bundle 启用**（profile `~/.dsh/profiles/web/package.json`（第 5、17 行，当时））。第三方项目（Apache-2.0，repo `github.com/zhu1090093659/dsh-web`），聚合 20+ 子模块：plugin-manager / market / doctor / task-board / remote-web-ui / skin-center / community-plugins 等，每个子路径都是同一 shell 出口。
 - 它自带 **plugin-manager**（`@linxin666/dsh-client-ui-plugin-manager`）：与本面板功能重叠——同样编辑 patch 行（`setRowEnabled` + `writePatchAtomic`）、同样 loopback 自护、路由前缀 `/api/plugin-manager`；client 侧有 connection rpc channel 先例。api-notes.md（`panel/docs/api-notes.md`，前任 P0 产物）已对其做过源码级核实。
 - 安装渠道现状四条：`dsh plugin add <pkg>`（转发 pnpm 装进 profile，`dsh --help`）、dshmarket 市场 bundle、dsh-web-all PM 的行管理、toolkit 面板（仅限 5 插件卸装/恢复/挂载）。
 - toolkit 面板与 dsh-web-all 各 tab 在 `settings.plugins.tab` slot 共存，靠 order 排序，互不感知。
@@ -93,7 +93,7 @@
 | REQ-2 Registry | 无任何运行时 registry；装载权在宿主 patch | 新增 registry 服务：install = 解析来源 → 读 manifest → precheck → 落安装记录 → `ctx.plugin()` 装入派生 ctx → active。legacy 适配器包装无 manifest 插件。状态持久化走新状态文件（见 Q4） |
 | REQ-3 Precheck | doctor engine 已覆盖 1/2/4/7/11 的一半（node/dsh/二进制/包解析/config 引用） | 把 doctor engine 的**只读检查函数**抽为可进程内复用模块；新增 envVars（存在性、禁打印值）/端口/fsPaths/externalApis/configSchema 默认值校验/legacy 可加载性；输出对齐 `PrecheckReport{blocking,warnings,changes,legacyMode}`，issue→fix 映射到 `fix.summary/steps/docsUrl` |
 | REQ-4 Doctor 服务 | 纯静态 CLI，无周期、无事件 | 桶内新建 doctor **服务**（规则引擎）：内置规则 = 现有 engine 检查迁入（行为向后兼容）+ `doctor-signals.json` 机制保留 + `registerRule` 扩展点；manifest.requires 自动合成规则；watchInterval 周期巡检 + failureThreshold 降级 + 环形 historySize。CLI 保留为薄壳（调同一 engine，向后兼容面板 dry-run 与验收脚本） |
-| REQ-5 面板 | 双入口 React/panel.html；卡片数据驱动但文案/字段/分支硬编码；无实时 | 数据源改为 registry/doctor 服务 + 事件流；文案/配置表单由 manifest 驱动（configSchema → 表单自动生成）；保留 plan/execute + guard 安全范式用于危险操作；P2.4 卸装/恢复/挂载语义原样保留为 registry 的操作实现层；实时通道选型见 Q3 |
+| REQ-5 面板 | 双入口（React 页与 `panel/client/panel.html`）；卡片数据驱动但文案/字段/分支硬编码；无实时 | 数据源改为 registry/doctor 服务 + 事件流；文案/配置表单由 manifest 驱动（configSchema → 表单自动生成）；保留 plan/execute + guard 安全范式用于危险操作；P2.4 卸装/恢复/挂载语义原样保留为 registry 的操作实现层；实时通道选型见 Q3 |
 | REQ-6 错误隔离 | 红线体系已保证"静态零耦合"；无动态隔离 | 每子插件独立派生 ctx；加载/运行错误捕获 → status=error/quarantined + lastError；指数退避重试（默认 3）；toolkit dispose 级联清理；新增监听器/定时器计数归零的验收测试（S5） |
 | REQ-7 持久化恢复 | patch 行 = boot 权威；无安装记录 | 安装记录/enabled/config/隔离原因/lastError 落状态文件；autoload 重启恢复；与 patch 行的优先级模型见 R2 |
 | REQ-8 嵌入 | toolkit **无包级入口**（无 `.` 导出）；面板行是 file:// 绝对路径 | 新增包级入口（`exports['.']`）：装配 registry+doctor+panel；导出自身 manifest（id 建议 `dsh/toolkit`，requires 自述）；服务/事件名全部 `${servicePrefix}/…` 可配置；doctor 独立巡检自己的子插件 |
@@ -117,7 +117,7 @@
 | R9 | **无 CI、无 typecheck**：DoD 要求 CI（typecheck/lint/unit/contract/e2e）全绿 | 门禁无载体 | P1 一并补 GitHub Actions（或本地 gate 脚本），TS 范围见 Q 决策 N1 |
 | R10 | **Windows 特有**：junction 链接问题有前科（.doctor-link-backup 现场）、路径大小写、fs.watch 行为 | fsPaths 探测、包解析预检不可靠 | 预检用 realpath 归一（doctor 已有同款处理）；S 场景在 Windows 实机跑 |
 | R11 | **安全红线**：新 registry 路由必须沿用 loopback+配对+CSRF guard（写 fail-closed）；禁止在日志/报告输出 envVar 值 | 安全回退 | guard 抽公共模块复用；precheck 的 envVar 检查只输出"存在/缺失"布尔 |
-| R12 | **面板行 file:// 绝对路径装载**（cordis.patch.yml:82）违反无根假设 | 嵌入失败 | 迁移为包子路径 `@local/dsh-toolkit/panel`（panel 已有 manifest 与 exports，仅改 patch 行 name） |
+| R12 | **面板行 file:// 绝对路径装载**（`cordis.patch.yml`（第 82 行，当时））违反无根假设 | 嵌入失败 | 迁移为包子路径 `@local/dsh-toolkit/panel`（panel 已有 manifest 与 exports，仅改 patch 行 name） |
 | R13 | **registry 装入判定依赖 cordis 内部实现**（P2/R2 结论）：fiber.state 枚举值（2=ACTIVE/3=FAILED/4=DISPOSED）、FAILED 时 `fiber.await()` 以启动错误 reject、模块命名空间插件 apply 返回 Promise 被视为后台任务（立即 ACTIVE）——均为 cordis 4.0.2 的实现行为而非稳定契约 | cordis 升级可能使装入判定失效（误判 active/failed） | 装入判定收敛在 registry/src/registry.ts 单点（FIBER_* 常量 + 轮询循环）；cordis 升级时必跑 S1/S4 场景回归；该依赖已写入 registry.ts 头注 |
 
 ---

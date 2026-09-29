@@ -35,7 +35,7 @@ dsh 功能全量清单 · 呈审稿（未入库）
 
 横切三条（决定下面每一组怎么读）
 
-★H1 五个独立旧仓（D:\dsh-plugins\agent-memory、dsh-compact-router 等）是迁移前基准，不可当现状读。实测差异方向一律是"桶内更新、旧仓落后"：agent-memory 20 个 lib 模块 19 个逐字节相同，唯一差异 workspace-health.js（桶内解除对兄弟插件的静态 import，旧仓仍 import '../../dsh-compact-router/lib/guidance.js'，违反红线 1）；compact-router 的 index.js/agent-memory.js 两份实质分叉；rate-throttle/search-router 逐字节相同。状态：有出入（旧仓 README 全部属"文档未跟上"侧，且 D:\dsh-plugins\node_modules\@local\ 三个桥接 junction 仍指向旧仓、桶根 aliases 仍声明旧包名）
+★H1 五个独立旧仓（D:\dsh-plugins\agent-memory、dsh-compact-router 等）是迁移前基准，不可当现状读。实测差异方向一律是"桶内更新、旧仓落后"：agent-memory 20 个 lib 模块 19 个逐字节相同，唯一差异 workspace-health.js（桶内解除对兄弟插件的静态 import，旧仓仍 import "../../dsh-compact-router/lib/guidance.js"，违反红线 1）；compact-router 的 index.js/agent-memory.js 两份实质分叉；rate-throttle/search-router 逐字节相同。状态：有出入（旧仓 README 全部属"文档未跟上"侧，且 D:\dsh-plugins\node_modules\@local\ 三个桥接 junction 仍指向旧仓、桶根 aliases 仍声明旧包名）
 
 ★H2 两份"合法字段/必填"清单各自维护且互不相容，已实测：契约 validateManifest 的根字段合集 17 键、必填 id/displayName/version/contract；独立 doctor CLI 白名单 14 键、必填 manifestVersion/name/requirements。同一份纯契约形态的 manifest：契约 ok=true 零错，CLI 判 schema.required-missing（1 error，实测读数）。差的 3 键里 registers/exports 写在根级时契约只产 info 放行、CLI 判 error；healthCheck 两边都不过（契约要求函数、CLI 说根字段非法），只是文案不同。内置 5 子插件同时带两套字段所以现实里两层都绿——门槛在第三方契约插件身上。状态：有出入（这正是"真门槛是 doctor 必填集"的成因；v1.1 草案的"撤 A 必填集"未落地）
 
@@ -121,9 +121,9 @@ exports.$from 继承语义 —— 根 manifest 的 requirements.exports={"$from"
 
 面板操作（React，只列真有 handler 的）—— 重新读取/一键体检；registry 卡片区启用·停用·重载·卸载（点一次出"我确认操作该插件"勾选、勾上才能执行，confirm 逐字等于 id）+ 健康详情(报告项+历史链+拉取失败降级) + 配置表单(按 configSchema 递归渲染 object/boolean/number/array/union，多字段合并写回)；安装向导(只收绝对路径、预检三列、被阻断即刷新不写盘)；两层开关卡(第一层 patch-row.disabled 可写、第二层 config.enabled 只读呈现，含"该插件没有内部开关")；参数编辑器 18 字段(与 config-whitelist 逐字段同集合)；卸载两键 + 逐插件文案(UNINSTALL_COPY 覆盖 5 个，缺文案降级不渲染死按钮)；恢复/挂载控件(宿主键冲突出 A/B/C 三按钮并明写不自动覆盖)；删除收据只读清单(顶部固定"收据不能恢复")；未落盘状态横幅(点名 state.json/audit.jsonl 路径)；技术详情卡。
 
-管理器动作 —— apply-engine(两段式、token 存内存重启即空、5 分钟 TTL、execute 前重读比 SHA、锚点复验、写前备份+保留最近 20 份或 30 天绝对上限 40)；行块算子(越界到顶层行尾、非单行块 row-block-multiple 拒、宿主键占用 host-key-occupied)；交叉引用两层(patch 文本整词含 provider id 额外匹配词 + 声明式依赖反查)；uninstall 四 kind 分派(软：摘行+台账+邻接留痕；真：收据先行→摘行→rmSync 删本体→复验；预设向：只调 apply-preset-patch.mjs --undo/无参、双层 sha 留痕、预设备份缺失 fail-closed；插回位用邻接证据优先+原始偏移补偿)；custody(收据 bodyStored:false+逐文件 sha、每插件滚动 5 份、row-adjacency.json 只增不减)；snapshot(六态含 unknown-absent、dependency-broken 只修饰 mounted、searchRouterModeShadow env>热 JSON>patch)；doctor-runner(纯子进程 execFile，缺省 180s、--states 60s、24MB buffer、按大括号配平切多文档)；backup(落盘名净化 :/\//，NTFS ADS 修复)；plugin-registry(5 插件登记表 + assertUninstallable 拒自卸)；registry-host(唯一装配现场，落点建不出来只降级点名)；audit-sink(订阅 8 类事件、白名单取字段、2MiB 轮转)；toolkit-root(禁读 cwd，有专测)；v2-api(entryView+schemaToJSON 递归解引用)；realtime-connector(SSE 在场不轮询、onerror 降轮询)。
+管理器动作 —— apply-engine(两段式、token 存内存重启即空、5 分钟 TTL、execute 前重读比 SHA、锚点复验、写前备份+保留最近 20 份或 30 天绝对上限 40)；行块算子(越界到顶层行尾、非单行块 row-block-multiple 拒、宿主键占用 host-key-occupied)；交叉引用两层(patch 文本整词含 provider id 额外匹配词 + 声明式依赖反查)；uninstall 四 kind 分派(软：摘行+台账+邻接留痕；真：收据先行→摘行→rmSync 删本体→复验；预设向：只调 apply-preset-patch.mjs --undo/无参、双层 sha 留痕、预设备份缺失 fail-closed；插回位用邻接证据优先+原始偏移补偿)；custody(收据 bodyStored:false+逐文件 sha、每插件滚动 5 份、"row-adjacency.json"（运行时产物、非仓内可核） 只增不减)；snapshot(六态含 unknown-absent、dependency-broken 只修饰 mounted、searchRouterModeShadow env>热 JSON>patch)；doctor-runner(纯子进程 execFile，缺省 180s、--states 60s、24MB buffer、按大括号配平切多文档)；backup(落盘名净化 :/\//，NTFS ADS 修复)；plugin-registry(5 插件登记表 + assertUninstallable 拒自卸)；registry-host(唯一装配现场，落点建不出来只降级点名)；audit-sink(订阅 8 类事件、白名单取字段、2MiB 轮转)；toolkit-root(禁读 cwd，有专测)；v2-api(entryView+schemaToJSON 递归解引用)；realtime-connector(SSE 在场不轮询、onerror 降轮询)。
 
-实时与事件 —— /v2/events SSE：先 retry:2000+hello{servicePrefix,at}、13 个事件名、15s ping，客户端事件名与服务端同集合逐字对齐；轮询兜底无独立端点(降 3s 拉 snapshot，即声明里的 poll)；客户端双形态(动态 import connector.js 须显式 start()，失败回退内联实现)，两路都有测试。
+实时与事件 —— /v2/events SSE：先 retry:2000+hello{servicePrefix,at}、13 个事件名、15s ping，客户端事件名与服务端同集合逐字对齐；轮询兜底无独立端点(降 3s 拉 snapshot，即声明里的 poll)；客户端双形态(动态 import "connector.js"（面板运行时下发的连接件、非仓内文件） 须显式 start()，失败回退内联实现)，两路都有测试。
 【2026-09-25 批 5-2（★11）追加】registry 侧另有 **fiber 实况对齐器**：缺省每 5s 一轮读 `entry.fiber.state`，把 `status` 从"装入那一次的结论"回写成当前实况（依赖离场 → `loading`/`reason:'align-gated'`，去抖=连续 2 次；依赖回来 → 一轮内 `active`/`'align-recovered'`），事件仍走本行的 `registry:status-changed` ⇒ 面板与 SSE 零改动。三条边界：①只读不装（不新建 fiber、不 reload、不调度重试 ⇒ 隔离后不自动重试原样成立）；②只说"在不在跑"，成因仍归 doctor 巡检（降级不写 lastError）；③只覆盖经 registry 装载的条目，内置五卡的 patch 域状态另算（`panel/client/index.js#stateOf`，其两处失真是 5-3 的对象）。启停在唯一装配现场（`panel/manager/registry-host.mjs` 的 hasEvents 分支，与 doctor 巡检同规则），`stop()` 无条件清。钉子：`test/registry-status-align.test.mjs`（13 条）+ `test/cordis-inject-lifecycle.test.mjs` 两条翻面（原文钉的是"仍报 active"的假象）+ `test/toolkit-services.test.mjs` 装配面两向。
 
 panel/dsh.plugin.json 不声明面板、无 configSchema、无 id/version（全部声明与 18 配置项只在桶根那份）。状态：一致（与 D-7/D-15 裁定口径相符：面板不可经 registry 通道自举）
@@ -138,9 +138,9 @@ panel/dsh.plugin.json 不声明面板、无 configSchema、无 id/version（全�
 
 ★manifest 少声明一个真在用的配置键 —— 代码读 dataRoot/defaultWorkspace/enforceFreshness 三个，schema 只有前两个；enforceFreshness 默认开、只能显式写 false 关，面板不展示、补丁行也没有。状态：有出入：隐藏开关（且面板据此判它"无内部开关"）
 
-★独立旧仓 20 个运维入口一个都没迁进桶内 —— preflight.mjs(§11 部署门禁 CLI)、health-check.mjs、install-global.mjs、verify-engine.mjs、smoke-final.mjs、9 个 record-.mjs、test/guard-prod-root.mjs 等；现行位置只剩库 + remove-session.mjs/rollback.mjs。状态：有出入：§11"preflight 全绿才许重启"在新位置无可执行入口
+★独立旧仓 20 个运维入口一个都没迁进桶内 —— preflight.mjs(§11 部署门禁 CLI)、health-check.mjs、install-global.mjs、verify-engine.mjs、smoke-final.mjs、9 个 "record-*.mjs"、"test/guard-prod-root.mjs" 等；现行位置只剩库 + remove-session.mjs/rollback.mjs。状态：有出入：§11"preflight 全绿才许重启"在新位置无可执行入口
 
-★三个能力模块在现行位置无任何生产调用者 —— preflight.js(11 项检查)、migration.js(顺序守护)、workspace-health.js(5 项) 只被 test 引用，且都没从 lib/index.js 导出、manifest exports 也不含。状态：有出入：代码在、入口没了、消费者没了（我方 grep 复算：lib/+panel/+index.js 全域零命中）
+★三个能力模块在现行位置无任何生产调用者 —— preflight.js(11 项检查)、migration.js(顺序守护)、workspace-health.js(5 项) 只被 test 引用，且都没从 "lib/index.js" 导出、manifest exports 也不含。状态：有出入：代码在、入口没了、消费者没了（我方 grep 复算：lib/+panel/+index.js 全域零命中）
 
 ★自动归档 30 天没人触发 —— autoArchive 逻辑正确但全插件零 setInterval/定时器/调度，只有测试调用。状态：有出入：§4/§7 的触发点在代码里不存在
 
@@ -160,13 +160,13 @@ panel/dsh.plugin.json 不声明面板、无 configSchema、无 id/version（全�
 
 ★旧仓 EMERGENCY-CARD.md 命令全写死 D:\dsh-plugins\agent-memory\...，其中 3/5 条指向已不存在的工具。状态：有出入：手册与现行位置脱节，照做会去动旧仓副本
 
-★双份挂载面并存 —— 旧仓自留 cordis.patch.yml+package.json#dsh.bundle.patch（挂 @local/agent-memory/plugin），桶根另有一份（挂 @local/dsh-toolkit/agent-memory/plugin）。状态：有出入：旧仓那份一旦被 profile 重新登记即成双挂（是否仍被登记：未确认）
+★双份挂载面并存 —— 旧仓自留 cordis.patch.yml+package.json 的 dsh.bundle.patch 嵌套键（挂 @local/agent-memory/plugin），桶根另有一份（挂 @local/dsh-toolkit/agent-memory/plugin）。状态：有出入：旧仓那份一旦被 profile 重新登记即成双挂（是否仍被登记：未确认）
 
 在案区
 
 事件面 —— 无 tool/无 provider/无 service 注册、零事件发射，纯消费者，7 个监听与 manifest registers 逐条同名（含 inject:[]）：session/created 自动入册(三件套、宿主 UUID 派生 sid、幂等、不回填旧对话)；agent/inbox/claimed 中英指令关键词启发式采集、按 messageId 进程内幂等（状态：有出入——设计要求"失败重试不丢"，实现是 catch 后只告警）；agent/pre-step 心跳+回合备忘+新鲜度告警(waterfall，检查完必 next())；session/event 的 session/title 回填摘要(空标题拒)、model/selection 记模型切换里程碑(首次只播种，附永久双行在场核对)；agent/request+agent/request-error 补原生回退型切换(429/QUOTA 挂起、下次请求比最终 call 指纹、纯观察不改链)；session/disposed 活跃→已完成(未入册返回 skipped)。
 
-台账能力面（20 个 lib 模块按能力归并，均：一致除句内标注）—— 注册表与会话生命周期(状态机合法迁移表、移交必带目标 sid、留存裁 100、候选只列最近 10、单活跃写者门禁 assertWritable)；台账(四分区+永久区、编号自增、承接只允许编号、引用不存在拒、未完成永不删、已完成折叠≤80 字带时间戳、超限移最早已完成入归档、全未完成超限拒写并给建议)；勘误(@勘误 supersedes=，状态：有出入——设计说目标不存在要"告警不静默"，实现是写侧拒、读侧静默忽略)；条目内容改写守卫(恒抛 ENTRY_HISTORY_IMMUTABLE，§12.7 已裁定，非新缺陷)；进度与里程碑(只追加、超限只剥已完成、关键三区块永不归档否则 PROGRESS_OVERFLOW、活区块就地改+历史区块 ERRATA_REQUIRED，其中"字段≤500 字符"这一条：未实现)；归档(追加式无上限)；新鲜度门禁(3 个模型回合写死、三取数形态+一软探针)；事件处理层(幂等游标与回合数都是进程内、重启清零——注释自认导致新鲜度提示暂缺)；宿主 id 归一化(裸 UUID/session- 前缀，确定性派生 12 位 sid，未知格式返回 null)；路径与常量；原子写(tmp+rename、生产根内写前先外部快照、坏 JSON 报 CORRUPT_JSON)；并发锁(mkdir 原子锁+owner.json+pid 死/超龄清理、脏锁绝不误删、会话锁外 registry 锁内、忙等 3 秒——同步阻塞，单次写入连拿两把锁)；外部备份(备份根强制在生产根外、200 份轮转、整树删除前快照)；脚本护栏(默认根写死沙箱=极性反转、生产根未授权即中止、生产根 --clean 永久禁止、演示模式不接受授权旗标——后两条分支在现行位置已无脚本使用)；跨工作区移交(逐项比存在与内容、未确认拒、确认后仍留差异告警)；冷启动恢复报告(状态：有出入——包入口导出了但运行期无人调用，实际引导靠注入那句"请先读文件")；在场证据(专用 JSONL、翻变必写、同结论 24h 一条心跳，由兄弟插件压缩出口调用，现行活跃)；时间规范(入库一律 UTC Z；本地化显示函数零调用者)；桶层 index.js(改台账类函数统一套"写前校验+锁内写+写后心跳"，预检/迁移/健康检查三块刻意没进)。
+台账能力面（20 个 lib 模块按能力归并，均：一致除句内标注）—— 注册表与会话生命周期(状态机合法迁移表、移交必带目标 sid、留存裁 100、候选只列最近 10、单活跃写者门禁 assertWritable)；台账(四分区+永久区、编号自增、承接只允许编号、引用不存在拒、未完成永不删、已完成折叠≤80 字带时间戳、超限移最早已完成入归档、全未完成超限拒写并给建议)；勘误(@勘误 supersedes=，状态：有出入——设计说目标不存在要"告警不静默"，实现是写侧拒、读侧静默忽略)；条目内容改写守卫(恒抛 ENTRY_HISTORY_IMMUTABLE，§12.7 已裁定，非新缺陷)；进度与里程碑(只追加、超限只剥已完成、关键三区块永不归档否则 PROGRESS_OVERFLOW、活区块就地改+历史区块 ERRATA_REQUIRED，其中"字段≤500 字符"这一条：未实现)；归档(追加式无上限)；新鲜度门禁(3 个模型回合写死、三取数形态+一软探针)；事件处理层(幂等游标与回合数都是进程内、重启清零——注释自认导致新鲜度提示暂缺)；宿主 id 归一化(裸 UUID/session- 前缀，确定性派生 12 位 sid，未知格式返回 null)；路径与常量；原子写(tmp+rename、生产根内写前先外部快照、坏 JSON 报 CORRUPT_JSON)；并发锁(mkdir 原子锁+"owner.json"（并发锁运行时产物、非仓内文件）+pid 死/超龄清理、脏锁绝不误删、会话锁外 registry 锁内、忙等 3 秒——同步阻塞，单次写入连拿两把锁)；外部备份(备份根强制在生产根外、200 份轮转、整树删除前快照)；脚本护栏(默认根写死沙箱=极性反转、生产根未授权即中止、生产根 --clean 永久禁止、演示模式不接受授权旗标——后两条分支在现行位置已无脚本使用)；跨工作区移交(逐项比存在与内容、未确认拒、确认后仍留差异告警)；冷启动恢复报告(状态：有出入——包入口导出了但运行期无人调用，实际引导靠注入那句"请先读文件")；在场证据(专用 JSONL、翻变必写、同结论 24h 一条心跳，由兄弟插件压缩出口调用，现行活跃)；时间规范(入库一律 UTC Z；本地化显示函数零调用者)；桶层 index.js(改台账类函数统一套"写前校验+锁内写+写后心跳"，预检/迁移/健康检查三块刻意没进)。
 
 命令与脚本 —— remove-session.mjs(--sid 必填、--root 或 --allow-production/env 二选一、删前整树外部快照+ops 记录+同步摘 registry、一个硬编码受保护 sid 拒删)；rollback.mjs(--list 前 30 条/--restore /--dry-run，越界拒，只能恢复到生产根、无 --root)。
 
@@ -198,7 +198,7 @@ panel/dsh.plugin.json 不声明面板、无 configSchema、无 id/version（全�
 配置项 —— mode/fallbackOnRateLimit(auto 下仅 429/配额错误降级 instant) + 14 个 instant 预算键 + archive/archiveKeep + agentMemoryRoot/instantAgentMemoryGuidance/agentMemoryLib 逐个回代码都在构造函数读，无死键（但全都没进 configSchema，见星标）；预设行实际只写 4 个键。
 补丁脚本作用域 —— 桶内脚本改两个面：随包预设 standard/ptc/cordis（实路径在 npm 全局）+ 用户预设 ~/.dsh/.agent-presets/（排除 .bak，minimal 刻意不碰）。状态：一致（现行文档在案：p0-recon.md、migration.md、矩阵 3.2 都记了，矩阵还判"文档括号只覆盖用户面、写窄了"）；分叉的是旧仓 README 那句"liangshen 不动它，历史红线"——它属迁移前口径，不作落差计
 面板 —— 自身不声明 panel，只在 toolkit-panel 当卡片；卡片副标题"上下文压缩"、弹窗叫"压缩"、描述未提三模式。状态：有出入：文案与真实能力面有落差（面板注释自认不同源）
-兄弟插件静态 import —— 生产代码未破红线 1；唯一静态引用兄弟源码的是旧仓 test-instant-digest.mjs:10，桶内同名测试已改动态。状态：一致
+兄弟插件静态 import —— 生产代码未破红线 1；唯一静态引用兄弟源码的是旧仓 test-instant-digest.mjs（第 10 行，当时），桶内同名测试已改动态。状态：一致
 
 对象④ rate-throttle
 
@@ -217,11 +217,11 @@ panel/dsh.plugin.json 不声明面板、无 configSchema、无 id/version（全�
 零工具、零命令（一致）。事件 4 条与 manifest 逐一同名 —— llm/adapters-updated(清上下文窗缓存+流放+分组缓存)、agent/request(包装主链路)、agent/request-error(记日志+分型冷却，永远 next())、session/event(model/selection 分辨手动切 vs 自己写回；assistant/message 抓 usage)。
 拦截层位置说清 —— 只包 agent/request 这一层，替换 next() 返回的 call 对象(provider/model)，不碰 ctx.llm.stream ⇒ 标题生成、web_search 等直连调用不过路由（README"已知限制"承认，状态：一致）。
 策略 6 种 —— ①主动节流(路由之后按目标 provider 排队+自适应退避，默认 enabled:false 零延迟)；②RPM/配额 429→该 key 冷却 cooldownMs(默认 5 分钟)；③TPM 429→本回合跳过+短流放 tpmCooldownMs(默认 45s，0=退回旧行为)；④重试改道(同 turn+step 重复派发即判上次失败，把上次实际用的 key 本回合排除)；⑤同模型族自动分组路由(宿主目录现查+canonicalModelId 归一+别名表覆盖、上下文档位硬安全线、declared>learned>none 再 TPM/RPM/窗口降序、用户当前选择健康时绝不动)；⑥降档压缩(仅低档装不下时压一次/turn，优先 instantOnceFor()，剩余 token 测不到就绝不降档)。全部：一致。
-前台同步写回(failover 时 session.append("model/selection")，只改会话不改默认模型)、限额学习落盘(429 现场观测写 learned.json，30s 节流)。一致。
+前台同步写回(failover 时 session.append("model/selection")，只改会话不改默认模型)、限额学习落盘(429 现场观测写 "learned.json"（运行时落盘学习账、非仓内文件），30s 节流)。一致。
 日志事件 7 类(+warn) —— README 列 6 类，warn 事件状态：文档未记。
 配置项 —— 顶层 9 键 + routing 16 键全部回代码确认被读、无死键；两个同名 enabled(顶层=节流总开关、routing=路由总开关)，README 配置表把整张表说成"routing: 下"且只出现一个 enabled。状态：有出入：易误配。热配置 ~/.dsh/dsh-rate-throttle.json(实际键 declaredLimits/excludeProviders/aliases，每次路由按 mtime 实时重读)、学习文件 dsh-rate-throttle-learned.json、环境变量只有 DSH_HOME。一致。
 面板 —— 18 字段可写白名单(顶层 6 + routing 12)，唯一可写插件行，标注的 src/use 行号对得上现 1058 行源码，数组/对象/路径类键按设计不开放；面板描述"给模型请求限速，避免发得太快被服务方拒绝"只说了默认关闭的那半。状态：有出入（文案落差）
-逐文件差异 —— 旧仓 lib/index.js 与副本 1058 行逐字节相同(仅 EOL)；旧仓无 dsh.plugin.json；旧补丁与本补丁值全等，仅行名换成包子路径。状态：一致
+逐文件差异 —— 旧仓 "lib/index.js" 与副本 1058 行逐字节相同(仅 EOL)；旧仓无 dsh.plugin.json；旧补丁与本补丁值全等，仅行名换成包子路径。状态：一致
 
 对象⑤ search-router
 
@@ -252,10 +252,10 @@ panel/dsh.plugin.json 不声明面板、无 configSchema、无 id/version（全�
 
 在案区
 
-命令面 —— 默认 dry-run(全量只读体检，有问题 exit 1)、--json(apply 路径打多文档带 phase)、--apply(执行后自动复检，复检有 error ⇒ exit 2)、--only (白名单正则 ^[A-Za-z0-9._-]+$，非法字符 exit 2；查不到 issue-not-found、无 plan issue-not-executable，均零写入)、--states(只读回 doctor-patch-state.json 的 rollbackChain，文件不存在=空链 exit 0、结构非法 exit 2，不跑体检不写盘)、--rollback [--to]、--scope/-s、--config-root/-c、--profile/-p(缺省 web)、--registry(JSON 数组或 {plugins:[]} 追加可解析名)、--now、--help/-h；未知参数打用法 exit 2；--apply 与 --rollback 同给 exit 2。退出码 0/1/2/3/130 语义逐条一致。
+命令面 —— 默认 dry-run(全量只读体检，有问题 exit 1)、--json(apply 路径打多文档带 phase)、--apply(执行后自动复检，复检有 error ⇒ exit 2)、--only (白名单正则 ^[A-Za-z0-9._-]+$，非法字符 exit 2；查不到 issue-not-found、无 plan issue-not-executable，均零写入)、--states(只读回 "doctor-patch-state.json"（运行时产物，读写在 `doctor仓:src/executor.mjs`）的 rollbackChain，文件不存在=空链 exit 0、结构非法 exit 2，不跑体检不写盘)、--rollback [--to]、--scope/-s、--config-root/-c、--profile/-p(缺省 web)、--registry(JSON 数组或 {plugins:[]} 追加可解析名)、--now、--help/-h；未知参数打用法 exit 2；--apply 与 --rollback 同给 exit 2。退出码 0/1/2/3/130 语义逐条一致。
 检查规则 24 条实产（人话归类）—— schema 面 9(utf8-bom/json-syntax/yaml-syntax/required-missing/requirements-invalid/$from-dangling/missing-suite-manifest/alias-target-unresolvable/exports-target-missing)；ref 面 2(unresolvable-local 全文扫 @local/… 整词、命中别名走 rewrite 单点 replace，stale-in-backup 只 info)；env 面 3(node/dsh 版本范围比对、binary-missing 按 PATH 逐个扩展名找)；package 面 3(missing-dependency 按 Node 算法模拟 resolve 产 rewrite+install-package、version-violation、resolution-outside-scope realpath 落 scopeRoot 外只 warning 并按(包名,realpath)去重)；registration 面 2(reg.name-collision 三类各自跨清单重名 error、reg.inject-face-unknown 不在 host-faces 清单 warning)；mount/provider 面 5(P2.4，全靠 scope 根 doctor-signals.json 驱动，一律 info/warning 不产 error：mount.body-without-row/mount.custody-archived/mount.row-without-body(只判 managedNamePrefix 前缀行)/provider.dangling-reference/provider.missing-provider；信号文件缺席则五个检查静默不跑)。
 规范在册但代码没有的 6 条 —— env.env-var-unsatisfied、schema.invalid-version-syntax、schema.drift-package-dual-declaration、reg.unsafe-agent-memory-data-root、reg.missing-manifest、以及 doc 名的 ref.export-target-missing(代码是 schema.exports-target-missing)。状态：未实现（前 5 条两层皆无；后 1 条是 id 搬家）
-执行与安全链（executor 是唯一写盘实现）—— 门禁顺序：文件锁(doctor-apply.lock wx 独占，占用即 LOCK_BUSY)→逐条 confirm→全部 step 先解析校验(一次坏步整轮零写入)→protected 硬断言(命中即整轮拒)→才开写。op 校验族(白名单/root 必须命中 roots/不得绝对路径/不得逃逸 root/install-package 的 file 必须 null 且 old 为包名，各有错误码)。写前逐文件原样复制到 doctor-backups///(created 文件不留备份)。锚点重验 WYSIWYG(写前重开目标数 old 字面出现次数，不足即 ANCHOR_DRIFT，后续步标 skipped)。状态链原子写 doctor-patch-state.json(rollbackChain 逐次追加、files{} 记 originalSha/patchedSha、installedPackages 记版本)。回滚(缺省取链上最后一条、--to 按 stamp、回滚自身也先备份并追加新条目不删链、文件类逐字节覆写、install 类递归删除)。install-package 五条拒写(目标 node_modules 是 symlink/junction 即拒、零网络只认 file: 或调用方传源、本地源须有 package.json+version、版本满足声明、目标已存在即拒、复制失败回删)。protected(.bak- 段对所有 op 永禁；nonScan 四段对文件类 op 全禁，install-package 只豁免 node_modules)。
+执行与安全链（executor 是唯一写盘实现）—— 门禁顺序：文件锁(doctor-apply.lock wx 独占，占用即 LOCK_BUSY)→逐条 confirm→全部 step 先解析校验(一次坏步整轮零写入)→protected 硬断言(命中即整轮拒)→才开写。op 校验族(白名单/root 必须命中 roots/不得绝对路径/不得逃逸 root/install-package 的 file 必须 null 且 old 为包名，各有错误码)。写前逐文件原样复制到 doctor-backups///(created 文件不留备份)。锚点重验 WYSIWYG(写前重开目标数 old 字面出现次数，不足即 ANCHOR_DRIFT，后续步标 skipped)。状态链原子写 "doctor-patch-state.json"（运行时产物）(rollbackChain 逐次追加、files{} 记 originalSha/patchedSha、installedPackages 记版本)。回滚(缺省取链上最后一条、--to 按 stamp、回滚自身也先备份并追加新条目不删链、文件类逐字节覆写、install 类递归删除)。install-package 五条拒写(目标 node_modules 是 symlink/junction 即拒、零网络只认 file: 或调用方传源、本地源须有 package.json+version、版本满足声明、目标已存在即拒、复制失败回删)。protected(.bak- 段对所有 op 永禁；nonScan 四段对文件类 op 全禁，install-package 只豁免 node_modules)。
 配置项 —— host-faces.json 8 个面(llm/tokenMeter/sessions/commands/web/compaction/webServer/subprocess)，声明与读取处一致(engine 启动读一次用于 inject 校验)，但读失败会回落内联同款 8 面副本 ⇒ 两份副本并存需人工同步；source 字段只作出处说明不参与判定。注意 host-faces 里没有 agents 面，而 search-router/agent-memory 都在摸 ctx.get('agents') ⇒ 宿主面清单是 09-15 静态推导，不随宿主升版。可注入环境：DSH_DOCTOR_SCOPE_ROOT/DSH_HOME/DSH_DOCTOR_HOST_VERSION/DSH_DOCTOR_YAML_URL。
 对外 API —— engine runDoctor、satisfiesVersion；executor executeApply/executeRollback/readPatchState/writePatchState/isProtectedPath/planString + 两个 Error 类；CLI 无库型出口(只有 bin: dsh-toolkit-doctor)。状态：文档未记（两份 spec 只描述 JSON 面）。
 测试钉住面（只作覆盖度参考，不当功能源）—— run-tests 16、stage4a 9、stage4b 7、d1 21、stage3 1。未被任何用例钉：requires/panels/displayName/version/contract/configSchema 六个根字段、mount/provider 五条检查(本仓无例，仅桶侧 p24 脚本涉及)、--registry、--profile 缺根 exit 3。
@@ -298,7 +298,7 @@ manifest.healthCheck 可达性 —— 读方在(带 5s 超时)，写方靠批 3 
 
 二、同上一条的推论"盘上写 healthCheck 契约放行、A 判 error" —— 两边都不放行：契约对该键要求函数、JSON 里必为 type error，A 判根字段非法，只是文案不同。真落差在 registers/exports 写在根级（契约只产 info 容忍、A 判 error）与两套必填集相反。已按实测读数改写为 H2。
 
-三、子代理呈报"预设补丁把用户预设纳入、文档未同步" —— 收窄：桶内现行文档三处在案（p0-recon §37 实测 liangshen、migration.md:52、矩阵 3.2 判"文档写窄了"），分叉的只是旧仓 README 的迁移前口径。已按"文档一致、旧仓陈旧"记，不计入落差。
+三、子代理呈报"预设补丁把用户预设纳入、文档未同步" —— 收窄：桶内现行文档三处在案（p0-recon §37 实测 liangshen、docs/migration.md（第 52 行，当时）、矩阵 3.2 判"文档写窄了"），分叉的只是旧仓 README 的迁移前口径。已按"文档一致、旧仓陈旧"记，不计入落差。
 
 未能确认（落档前你需知道的空白，逐条会影响能否钉住）
 
@@ -318,7 +318,7 @@ safe/destructive 两个 fix.class 是否曾被 A 的任一历史版本产出过�
 ## 续档 · 缺失两节的代码级重建（2026-09-23 · 笔 3 · 不改写上面任何一行）
 
 **依据**：协调侧 C1-004 过裁回执第四节缺节处理令。令面第 1 步"先查 `var/scratch/feature-inventory*` 探针"已执行，
-**实测探针不足**：该目录只有 `cfg/profiles` 与 `probe-a/dsh.plugin.json`、`probe-b/dsh.plugin.json` 共 5 个文件，
+**实测探针不足**：该目录只有 `cfg/profiles` 与 "probe-a/dsh.plugin.json"、"probe-b/dsh.plugin.json"（当时探针工作目录已清理、非仓内可核） 共 5 个文件，
 两枚 manifest 是 H2（两套必填清单）的复现夹具——probe-a 纯契约形态、probe-b 纯 CLI 形态带 `healthCheck:true`——
 **不含 ①-B / ⑥ 的任何底表**。按令面第 2 条本应"报协调侧由上会话呈审稿补转"；第 3 条又要求"重建件另笔续档"，
 故本节按**执行侧自己回代码取证**重建，并把它与波 0 断点普查合并做（同一批读码两用）。
@@ -381,7 +381,7 @@ token、零写入** / 未知与无 kind 一律拒 / 不存在 token 仍 `plan-no
 **修复后**同序列第 1 步即 400 拒、诱饵 sha 前后不变。钉子：`test/plan-target-gate.test.mjs`（5 条，含端到端正向
 一发与"塞 file 也无效"反向钉 + 一条防回潮静态钉）。⇒ **W11 两半（a token 跨种消费 / b 任意文件写）至此全闭**；
 真机复验统一挂批 8 观察窗。
-★F-76 真卸载兜底文案恒死 —— `:54` `ABSENCE_COPY_FALLBACK["true-uninstalled"]` 与服务端 `snapshot.mjs:201` 不同字，
+★F-76 真卸载兜底文案恒死 —— `:54` `ABSENCE_COPY_FALLBACK["true-uninstalled"]` 与服务端 `panel/manager/snapshot.mjs#ABSENCE_COPY` 不同字，
 而服务端对**一切非 mounted 态**都发 `statusCopy`（`:384`）⇒ `:248/:869` 的兜底分支不可达。
 （这是对原稿 F-22"兜底文案过时"的**收窄**：文案确实过时，但它今天永不显示 ⇒ 危害等级低于原稿描述。）状态：有出入
 ★F-77 客户端 `CONFIG_FIELDS` 的 `type:"num"`/`"bool"` 与服务端 `config-whitelist.mjs` 的 `type:"number"` 字面不一致
@@ -403,7 +403,7 @@ token、零写入** / 未知与无 kind 一律拒 / 不存在 token 仍 `plan-no
 **健康**：**五卡全无入口 = 整列断**（唯一健康详情通道 `GET /v2/health` 需 registry 条目 ⇒ 内置恒不可达；
 面板上能看到的"健康"只有整仓级 `POST /doctor/dry-run` 与 `/doctor/states` 两份 CLI 报告，不是逐插件健康）。**这一格是缺陷不是设计**：
 桶内 `manifest.healthCheck` 读链已在（批 3 接通），但内置零模块导出它（H3）⇒ 无数据可显示，而契约又承诺逐插件健康。
-卡片状态文案权威面：三态 label 硬编码在客户端 `stateOf:239-272`，缺席态文案在服务端 `snapshot.mjs:197-205 ABSENCE_COPY`，依赖态在 `plugin-registry.mjs:83 DEPENDENCIES` ⇒ 三处三份。
+卡片状态文案权威面：三态 label 硬编码在客户端 `stateOf:239-272`，缺席态文案在服务端 `panel/manager/snapshot.mjs#ABSENCE_COPY`，依赖态在 `panel/manager/plugin-registry.mjs#DEPENDENCIES` ⇒ 三处三份。
 fetch 面共 28 条，客户端调用与服务端 exact 路由**零缺口**（无"客户端打不存在的路由"、无"客户端有调用但服务端未注册"）；
 写路由一律 `guard({change:true})` + `isAllowedWrite`（loopback socket+loopback Host，或配对严格判定）+ `isSafeStateChange`（`sec-fetch-site`、Origin.host==Host）；
 客户端**从不显式带**任何 CSRF/配对头，靠浏览器注入 Origin/Sec-Fetch 与 `credentials:'same-origin'` 送 `dsh_pair` cookie ⇒ Host 非 loopback 时全 403。
@@ -430,7 +430,7 @@ F-70 的 `title/what` 取数与 `:1287-1298` 逐字读。F-75 的 `executePlan` 
 ⇒ 搜索行为、引擎链、缓存、HTML 解析**一面都没钉**。状态：有出入（开工令"测试空白区"之③）
 ★F-81 点名越部署名单（开工令高危②）—— `requestedEngines` 只对照 `ENGINES` 注册表、`runSearch` 里
 `requestedEngines(searchReq) ?? engineList(cfg)` ⇒ 显式点名整体取代部署链；`ENGINES` 8 项含 `sogou`/`'360'`，
-部署名单 `cordis.patch.yml:61` 6 项 ⇒ 点名未部署引擎照样真打外网。状态：有出入（我方直接实读，非引用）
+部署名单 `cordis.patch.yml`（第 61 行，当时） 6 项 ⇒ 点名未部署引擎照样真打外网。状态：有出入（我方直接实读，非引用）
 ★F-82 引擎注册表与部署配置两份名单并存且无对账 —— `ENGINES`(8) / `ENGINE_LAYERS.cn` / `defaultConfig().engines` 三处各自维护，
 只有 `cordis.patch.yml` 那一份是"部署事实"；`requestedEngines` 的错误文案还把**全 8 项**当"known"打给用户
 ⇒ 与部署名单直接矛盾，会教模型去点未部署引擎。状态：有出入
@@ -452,13 +452,13 @@ F-81 状态由"有出入"翻正为**已修复**；F-82 的"两份名单各自维
 而 `cache` 随 `apply()` 每实例一份 ⇒ 同进程双实例会**共享冷却与节流、不共享结果缓存**（第二实例的限速会被第一实例带动）。状态：有出入
 ★F-85 `proxyMemo` 是 `WeakMap` 且以 cfg 对象为键（`:336/:347-352`），而 `currentCfg()` 每次**新建对象**（`:147`）
 ⇒ 该 memo 实际永不命中（**代理推断**，由对象身份得出，未实测）。状态：未核实
-★F-86 `manifest.id` 与挂载名/行 id 三者不同字 —— `dsh.plugin.json:4` 写 `dsh/web-search-local`，
+★F-86 `manifest.id` 与挂载名/行 id 三者不同字 —— `lib/web-search-local/dsh.plugin.json` 的 id 字段（当时第 4 行） 写 `dsh/web-search-local`，
 patch 行 id 与 `default.name` 都是 `web-search-local`；对内置无影响（宿主 patch 通道按 `name` 装载），
 但经 registry 通道装它时 `reg.name-collision`/卸载台账按哪个名字记账须写明（`uninstall.mjs` 按 `lib/<dir>` 目录名）。状态：有出入（轻）
 ★F-87 `web_search_engine` 工具**无声明面** —— 实现在 `WSL:1351` 经 `ctx.get('tools').register(...)` 注册工具
 + `:1355` 一段 systemPrompt；而 manifest `registers` 根本没有 tools 槽、`commands:[]` ⇒ 契约缺表达（与 H3/批 10 同族，
 provides 三槽也不含 tools）。状态：有出入：契约无表达
-【2026-09-26 W2 余笔复算确认＋处置呈裁】现 HEAD 锚漂至 `lib/web-search-local/index.js:1384`（tools.register）与 `:1377-1383`（systemPrompt section 'tool:web_search_engine'）；manifest registers={inject:[web],events:[],services:[],commands:[],providers:[local-multi,local-fetch]}、provides 仅 providers——原判"契约无表达"成立。补声明＝契约扩槽（provides 第四槽/registers.tools）＝契约语义变更，越 W2"面板可见面与文案诚实化"授权且触碰契约协调边界 ⇒ 按升级规则不自裁，报协调侧裁归属（建议随契约 v1.2/W9）。W2 内无码可修、无钉。
+【2026-09-26 W2 余笔复算确认＋处置呈裁】现 HEAD 锚漂至 `lib/web-search-local/index.js`（第 1384 行，当时）（tools.register）与 `:1377-1383`（systemPrompt section 'tool:web_search_engine'）；manifest registers={inject:[web],events:[],services:[],commands:[],providers:[local-multi,local-fetch]}、provides 仅 providers——原判"契约无表达"成立。补声明＝契约扩槽（provides 第四槽/registers.tools）＝契约语义变更，越 W2"面板可见面与文案诚实化"授权且触碰契约协调边界 ⇒ 按升级规则不自裁，报协调侧裁归属（建议随契约 v1.2/W9）。W2 内无码可修、无钉。
 ★F-88 未声明的依赖面 —— `inject` 只声明 `["web"]`，实现另开 `ctx.inject(['settings'], …)`（`:1443`）并
 `ctx.get('tools')`/`ctx.get('systemPrompt')`（`:1351/:1354`）⇒ 三个未声明环境面（有 try/catch 兜底，但宿主是否保证在场仓内无契约可查；
 `doctor仓:host-faces.json` 的 8 个面里也没有 `tools`/`systemPrompt`）。状态：有出入（与"未能确认"第 5 条同源，本条给出精确名单）
@@ -468,9 +468,9 @@ provides 三槽也不含 tools）。状态：有出入：契约无表达
 ★F-90 `manifest.configSchema` 只 1 键而生效面是 14 键 —— 批 4 之后"模块导出赢"，面板与 registry 写回链按
 `Config` 的 14 键校验；盘上 manifest 那份仍写 1 键 ⇒ **声明与生效不一致**（原稿 F-8 桶根同族，这里是子插件实例）。
 `Config` 14 键逐个被读（含 `searxngBaseUrl`/`proxyUrl`/`skipWithoutProxy`/三类超时与冷却/`userAgent`），除 F-79 那两个之外无死键。状态：有出入
-★F-91 剔除外来 MIT 件的耦合面（为两阶段目标第 2 步预置的清单，非缺陷）—— `package.json:29` 导出映射、
-桶根 `dsh.plugin.json:66` alias、`cordis.patch.yml:58-61` 与 `:8` 的 `fetchProvider: local-fetch`、
-`lib/search-router/index.js:36 DELEGATE_LOCAL="local-multi"` 硬编码 provider id、`panel/manager/{plugin-registry,snapshot,uninstall,custody}.mjs` 的表与按目录名 rmSync、
+★F-91 剔除外来 MIT 件的耦合面（为两阶段目标第 2 步预置的清单，非缺陷）—— `package.json#exports` 导出映射、
+桶根 `dsh.plugin.json#aliases` alias、`cordis.patch.yml`（第 58-61 行，当时） 与 `:8` 的 `fetchProvider: local-fetch`、
+`lib/search-router/index.js#DELEGATE_LOCAL（值 "local-multi"）` 硬编码 provider id、`panel/manager/{plugin-registry,snapshot,uninstall,custody}.mjs` 的表与按目录名 rmSync、
 `doctor-signals.json` 的 `requiresProviders`、面板客户端与 `panel.html` 文案。**静态 import 桶内该模块者：零**（红线 1 已守）。状态：在案（开源前置工作项）
 
 在案区（重建件）
@@ -588,7 +588,7 @@ H4 入横切、90/91 终数、正典化）**仍挂收口批**、不提前。本�
 
 - 修法＝专案单点 `rateThrottleRoutingOn()`（两渲染器各一份、同判据），状态行以主功能（路由/冷却/降档）
   为准、主动节流并列呈现；黄警告框在路由开着时不再说"所以现在没生效"；**两层全关**才用原"暂不生效"。
-- 缺省语义贴源码：`routing` 键或 `enabled` 键缺席都算**开**（`index.js:150/:167`），面板取不到那一层
+- 缺省语义贴源码：`routing` 键或 `enabled` 键缺席都算**开**（`lib/rate-throttle/index.js`（第 150、167 行，当时）），面板取不到那一层
   则**退回通用语义不臆断**——这两种情形各有一格钉。
 - 不为一家造通用按插件语义表（预支性机制是本仓缺陷清单头号形态）；泛化触发条件写在 `debt.md#31b ④`。
 
@@ -598,16 +598,16 @@ H4 入横切、90/91 终数、正典化）**仍挂收口批**、不提前。本�
 ### 三、引用处同步（按"不回改已提交笔"，以下位置原文保留、以本节为准）
 
 1. 本文 `:177`（F-45 行原文含"卸载或预设回滚后仍说它在生效"）——**高估半句以本节更正为准**。
-2. `docs/repair-plan-20260923.md:152` §3 批 5 格、`:191` 覆盖账、`:323` §9.4：均写作"两处失真"，与本节一致。
-3. `docs/repair-plan-20260923.md:361` §9.6 把 F-71 也派给批 5-3 ⇒ 与上面三处互斥，**本笔未做 F-71**，
+2. `docs/repair-plan-20260923.md`（第 152 行，当时） §3 批 5 格、`:191` 覆盖账、`:323` §9.4：均写作"两处失真"，与本节一致。
+3. `docs/repair-plan-20260923.md`（第 361 行，当时） §9.6 把 F-71 也派给批 5-3 ⇒ 与上面三处互斥，**本笔未做 F-71**，
    已呈裁（见计划新增 §12）；本笔交付面＝两处。
-4. `docs/debt.md:178`（#30b ①）"F-45/F-49 两处失真仍挂 5-3"——本笔已按该口径兑现。
-5. `docs/add-sub-plugin.md:162`"批 5-3 在治其中两处失真"——同上，一致。
+4. `docs/debt.md`（第 178 行，当时）（#30b ①）"F-45/F-49 两处失真仍挂 5-3"——本笔已按该口径兑现。
+5. `docs/add-sub-plugin.md`（第 162 行，当时）"批 5-3 在治其中两处失真"——同上，一致。
 
 ### 四、本笔未覆盖面（防被读成"面板卡面已全诚实"）
 
 卡片静态描述文案（`:191`、`:214`）与四卡"改完要重启"提示位仍归 **W2**；F-71 及其
-`:1867`（实测漂到 `panel/client/index.js:1879`）未动且属**代理实读、须先复算**（`:396`）；真机面统一挂
+`:1867`（实测漂到 `panel/client/index.js`（第 1879 行，当时））未动且属**代理实读、须先复算**（`:396`）；真机面统一挂
 **批 8 观察窗**。逐条见 `debt.md#31b`。
 
 ## C-3 两处错账复算结论（2026-09-26 · EXE-BOOT-005 择机纯文档笔 · 纯追加，不回改上面任何一行）
