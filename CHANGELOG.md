@@ -6,6 +6,27 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### agent-memory 全量采集·工作区闸修复·记忆注入接线（2026-09-29，EXE-BOOT-011 施工批；C1-007 施工令·用户全单批准）
+
+- **工作区闸修复（缺陷修复）**：created/claimed 工作区取数改读宿主会话 `session.header.cwd`
+  （逐环回落，命中环随自日志 `wsRing` 落行）——此前终端回落 process.cwd()，闸实际比较"宿主
+  启动目录"，跨启动/换目录续写被全拦（9/28–29 自日志 3× WORKSPACE_MISMATCH、零 collected 实证）。
+  闸 win32 大小写归一（同区不同大小写不再误拦；真跨区仍拦，handoverToWorkspace 流程原样）。
+- **R1 全量采集（功能增）**：全部用户消息入账——指令性→待办（编号/流转不变），非指令→新增
+  「一般输入」栏（只追加、status=已记录、不参与未完成计数；溢出时已完成先移、一般输入次移入
+  archive；编号全栏共享连续）。`isInstructionText` 职责改为分栏判据。自日志 claimed 行带
+  kind（instruction|general）。
+- **记忆注入接线（功能增，R4/R6）**：`agentMemory` 系统提示词变量——每次装配注入恢复要点节选
+  （任务摘要/未完成指令/永久指令/新鲜度，≤1200 字符；未注册会话空串零负担；systemPrompt 面不在
+  位不注册、回调异常降级空串，挂载与请求零破坏）。manifest/patch 行声明 `inject: [systemPrompt]`
+  （**patch 基准第 4 次滚存 a663f61b→b0f304c9**；doctor host-faces.json 补录该面）。预设模板
+  `{{agentMemory}}` 行＝部署步骤，候用户批准后写入（生效前"自动回灌"未端到端点亮，如实注）。
+- **压缩正典副本补全**：已搁置条目并入正典采集（未完成全谱＝进行中/待办/已搁置，与恢复报告
+  口径一致；排列在活跃条目后让优先级）。
+- 回归面：node --test 466→479（＋13 新钉）；p22 A-inject 真值格随 manifest 更新（165/165 维持）。
+  归因与取证：`var/scratch/exe-boot-011-20260929/`；账面：计划 §35、debt #51、README「升级与
+  宿主触点」节；各笔独立可 revert（`20c85d6`/`ec4db85`/`82bfa5e`/`521f5d9`）。
+
 ### 六个 README 文档补齐（2026-09-28，用户基本要求令）
 
 - **每个子插件与插件桶自此各有 README**：新增仓库根 `README.md`（桶总览：五子插件清单＋桶本体 registry/doctor/面板＋目录地图＋挂载部署实况＋改动红线指针）与 `lib/{agent-memory,compact-router,rate-throttle,search-router,web-search-local}/README.md` 五份。

@@ -1774,3 +1774,53 @@ W2 批末真机窗已闭（C1-007 批复入账）：用户目检半全对——�
   自日志落盘与启动清扫均在**下一次宿主重启后生效**（正常路径行为面、无卡面变化；9/14 残件届时
   自动回收——已向用户预告）；记忆案活体判别窗排程归协调侧（窗步骤含用户重启＋发指令＋长对话
   触压缩；届时自日志面即为判别数据源）。取证 `var/scratch/exe-boot-010-20260927/`。
+## 35. EXE-BOOT-011 施工批落账：记忆停写案四笔修复/新增＋升级路四件（2026-09-29 · C1-007 施工令·用户全单批准 · 纯追加，不回改上面任何一行）
+
+- **前半·归因定谳（纯读，开工令 2）**：主根因＝**WORKSPACE_MISMATCH 全拒**，机制＝插件
+  工作区取数与宿主对象形状错位（插件读 `session.cwd`/`agent.workspace`，安装版宿主 0.1.5-rc.1
+  真值在 `session.header.cwd`——宿主自用取法 `dsh-agent-loop lib/index.js:1536` 实证；claimed
+  载荷 `{message,turn}` 无 cwd、部署 defaultWorkspace:null）⇒ 终端回落 process.cwd()，闸字串
+  全等实际比较"上次/本次宿主启动目录"——同启动目录自洽即通（9/14–9/18 入账成功的机制解释，
+  与 ledger 结构面 ≥13 会话显著超裸头基线互证）、换目录/跨启动全拦（9/28–29 自日志 3×
+  WORKSPACE_MISMATCH、零 collected）。registry 工作区字段记录值＝注册那次宿主启动目录
+  （6c77/f7e6 与宿主会话桶分歧实证）。**质疑两条**：stage3 实为 a–f 六项（脚本从无 g 项，
+  `git log -S "PASS g"` 空——包基线"stage3 a–g"系陈旧描述，后续基线口径改 a–f）；patch 基准
+  符口径＝sha256 截 8 备查。README 批验收文本（开工令 1）随 011 呈报入账。取证
+  `var/scratch/exe-boot-011-20260929/findings-011.md`。
+- **施工（开工令 3，用户"按建议"全单批准 A/B甲/C/D/Ea/F/G，三不案不做）**：
+  - **笔1（`toolkit@20c85d6`）取数链修＋G＋二.2 取数可见**：wsInfoOf header.cwd 优先逐环回落
+    （created/claimed/model-switch 四处同源）＋assertWritable win32 大小写归一（错误信息保留
+    原值、空值 fail-closed）＋自日志 wsRing 命中环；钉 WS1-5＋LC3 跨实例 resume（先红 5/6→绿）。
+  - **笔2（`toolkit@ec4db85`）R1 全量采集（甲案）**：「一般输入」栏（编号池共享、溢出次序＝
+    已完成先移→一般输入次移、ENTRY_LOG_IMMUTABLE 只追加、计数排除）；kind 字段（outcome
+    集合不变）；isInstructionText 职责改分栏判据；recover 概览计一般输入；钉 D11-13＋
+    RUNTIME2/SELFLOG-L1 重钉（先红 5/5→绿）。
+  - **笔3（`toolkit@82bfa5e`）agentMemory 注入接线（案 C+F）**：buildRecoveryBrief 四要素限长
+    lenient＋buildRecoveryReport lenient 选项；挂载期 systemPrompt.variable('agentMemory')
+    （fail-soft 双闸）；manifest/patch 行 inject:[systemPrompt]，**patch 基准第 4 次滚存
+    a663f61b/3160B→b0f304c9/3164B**（数据变更、守卫未放宽；q2 ④ 工作区==HEAD 守卫未提交态
+    照例红、提交后自愈＝D-17 先例）；doctor `7ba8251` host-faces.json 补录 systemPrompt 面
+    （9/15 派生遗漏，安装版 dsh-system-prompt lib:211 实证）；钉 F5/F6/WIRE6/WIRE7＋p22 真值格。
+  - **笔4（`toolkit@521f5d9`）正典已搁置并入（案 D 最小缺口版）**：施工前复核正典已携带永久
+    双行＋进行中/待办（§11 先例），实际缺口仅已搁置——readLedgerItems 三栏对齐恢复报告口径
+    （呈报原案如实修正、防重复注入膨胀）；钉 adapter 两格（先红→绿；一格期望串笔误自曝修正）。
+  - **笔5（账面，本节）**：README 部署句既诺更正＋「升级与宿主触点」节（触点清单六项：依赖/
+    坏法/观测）＋「备而未用」清单（E b 批修脚本/llm-face 案 3/子代理支持）＋数据迁移纪律
+    （备份＋可逆，二.4）＋debt #51＋CHANGELOG。
+- **读数**：nt 466→479（＋13：WS1-5＋LC3＋D11-13＋F5/F6/WIRE6/WIRE7）；门禁 6/6（笔3/4 后
+  自愈态复跑 全部通过）＋p1 314/0＋p22 165/165＋p24m 720/720＋regression 14 项＋pcc 0＋
+  doctor {21,26,11,7}＋stage3 a–f 全 PASS＋`~/.dsh` hash 逐字节同（`*-pen1/2/3b/3c/4.log`）。
+- **C 部署步骤备案（只备不写，用户资产规矩）**：目标文件＝`~/.dsh/.agent-presets/liangshen/
+  agent.cordis.yml`（梁神预设 persona 行）；写入内容＝persona `config.prefix` 文本末尾追加
+  空行＋`{{agentMemory}}` 一行（恢复要点自带【会话记忆】头，无标签行）；先例＝预设 dir 有
+  `liangshen.bak-*` 整目录备份先例、profile 有 `package.json.bak-*` 文件备份先例——执行时
+  复制 `agent.cordis.yml` → `agent.cordis.yml.bak-<日期>-agentmemory` 后原子写、写后回读校验；
+  回退＝还原 .bak；生效＝下次宿主重启（与插件同窗）。**风险注记（入 README 触点节）**：
+  `{{agentMemory}}` 引用与插件挂载强耦合——插件未挂载时变量未注册 ⇒ 宿主严格插值对未知变量
+  抛错（每请求崩）⇒ 模板行与插件必须同进同退（卸载 toolkit 前先回退模板行）。
+- **真机验收窗素材包（排窗归协调侧）**：①重启宿主＋**换目录启动**＋发指令 → 自日志 claimed
+  行 wsRing=header＋outcome=collected＋kind 落行、台账增长（笔1/笔2 修复面）；②ee2f/f7e6
+  修复后续写复核（ee2f 记录 sandbox、f7e6 记录 system32——两枚历史记录在 Ea 口径下首次续写
+  需过 handoverToWorkspace 用户确认，属预期行为非缺陷）；③C 生效核对＝模板写入后新会话首请求
+  上下文含【会话记忆】节（模型可复述未完成指令/永久双行）；④一般输入分栏核对＝闲聊消息入
+  「一般输入」栏、指令入待办。
