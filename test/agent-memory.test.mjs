@@ -1311,7 +1311,7 @@ test('RUNTIME1: 新对话自动注册 —— 幂等（同 dshSessionId 不重复
   assert.throws(() => runtime.onSessionStart({ root, dshSessionId: hostFor(99) }), (e) => e.code === 'RUNTIME_NEEDS_WORKSPACE');
 });
 
-test('RUNTIME2: 指令逐消息持续采集 —— 指令入台账、非指令跳过、消息 id 幂等、B 会话零变化', () => {
+test('RUNTIME2: 用户输入全量采集（R1，施工笔 B）—— 指令入待办、非指令入一般输入栏、消息 id 幂等、B 会话零变化', () => {
   runtime.__resetRuntimeCursor();
   const root = tmpRoot();
   const wsA = wsOf(root, 'ws-a');
@@ -1321,23 +1321,30 @@ test('RUNTIME2: 指令逐消息持续采集 —— 指令入台账、非指令�
   const bLedgerBefore = rawOf(root, b.sid, 'ledger.md');
   const bProgBefore = rawOf(root, b.sid, 'progress.md');
 
-  // 指令消息 → 入台账
+  // 指令消息 → 待办栏
   const c1 = runtime.onUserMessage({ root, sid: a.sid, messageId: 'm1', text: '请按要求逐条统计 429', workspace: wsA, modelTurn: 1 });
   assert.equal(c1.collected, true);
-  // 非指令消息 → 跳过
+  assert.equal(c1.kind, 'instruction');
+  // 非指令消息 → 一般输入栏（R1 全量采集；不再 skipped:not-instruction）
   const c2 = runtime.onUserMessage({ root, sid: a.sid, messageId: 'm2', text: '今天天气不错', workspace: wsA });
-  assert.equal(c2.skipped, 'not-instruction');
+  assert.equal(c2.collected, true, 'R1：全部输入入账');
+  assert.equal(c2.kind, 'general');
   // 同 id 重复 → 幂等跳过
   const c3 = runtime.onUserMessage({ root, sid: a.sid, messageId: 'm1', text: '请按要求逐条统计 429', workspace: wsA, modelTurn: 2 });
   assert.equal(c3.skipped, 'duplicate');
   // 再一条指令 → 累计
   const c4 = runtime.onUserMessage({ root, sid: a.sid, messageId: 'm3', text: '务必按时长分组输出', workspace: wsA, modelTurn: 3 });
   assert.equal(c4.collected, true);
+  assert.equal(c4.kind, 'instruction');
   const ledA = m.readLedger(root, a.sid);
   const todos = ledA.sections['待办'];
-  assert.equal(todos.length, 2, '两条指令入台账');
+  assert.equal(todos.length, 2, '两条指令入待办');
   assert.ok(todos.some((e) => e.desc.includes('请按要求逐条统计')));
   assert.ok(todos.some((e) => e.desc.includes('务必按时长分组输出')));
+  const general = ledA.sections['一般输入'];
+  assert.equal(general.length, 1, '非指令入一般输入栏');
+  assert.equal(general[0].status, '已记录');
+  assert.ok(general[0].desc.includes('今天天气不错'), '一般输入保原文');
   // 隔离：B 会话目录零变化
   assert.equal(rawOf(root, b.sid, 'ledger.md'), bLedgerBefore, 'B 台账零变化');
   assert.equal(rawOf(root, b.sid, 'progress.md'), bProgBefore, 'B 进度零变化');
@@ -2066,5 +2073,116 @@ test('HF1-HF4: assertFreshForHandover —— 新鲜放行/过期拦截（策略�
   assert.throws(
     () => m.assertFreshForHandover(root2, s2.sid),
     (e) => e.code === 'HANDOVER_NEEDS_TURN'
+  );
+});
+
+/* ================= WS：工作区取数链＋闸大小写归一（EXE-BOOT-011 施工笔 A/G） =================
+ * 定因（var/scratch/exe-boot-011-20260929/findings-011.md §2b/2d）：安装版宿主
+ * dsh-agent-loop lib/index.js:1536 宿主自用 `agent?.session.header.cwd` —— 真实形状下
+ * Session 实例无 .cwd、Agent 无 .workspace、claimed 载荷无 cwd；旧取数链终端回落
+ * process.cwd() ⇒ 闸实际比较"上次/本次宿主启动目录"（跨启动即拦，9/28–29 全拒实证）。
+ * 本族钉真实宿主形状（session.header.cwd 在位）＋逐环回落＋命中环自日志可见（wsRing）。
+ */
+function mockWsCtx() {
+  const handlers = new Map();
+  return {
+    handlers,
+    on(name, fn) { handlers.set(name, fn); return () => handlers.delete(name); },
+    emit(name, payload) {
+      const fn = handlers.get(name);
+      if (!fn) return Promise.resolve(undefined);
+      return Promise.resolve(fn(payload, async () => ({ kind: 'allowed' })));
+    },
+  };
+}
+
+test('WS1: created 取数 header.cwd 优先（真实宿主形状：Session 仅 header.cwd，无顶层 .cwd）', async () => {
+  runtime.__resetRuntimeCursor();
+  const root = tmpRoot();
+  const wsReal = wsOf(root, 'ws-real');
+  const wsDecoy = wsOf(root, 'ws-decoy');
+  const ctx = mockWsCtx();
+  registerPlugin(ctx, { dataRoot: root, defaultWorkspace: wsDecoy });
+  const HOST = hostFor(601);
+  await ctx.emit('session/created', { id: HOST, header: { cwd: wsReal }, taskSummary: 'WS' });
+  const rec = m.readRegistry(root).sessions[0];
+  assert.equal(rec.homeWorkspace, wsReal, 'created 记录 header.cwd（不落 defaultWorkspace 凑数环）');
+  assert.equal(rec.currentWorkspace, wsReal, 'currentWorkspace 同源');
+});
+
+test('WS2: claimed 取数 header.cwd 命中即采集（defaultWorkspace 仅诱饵；错误行携带 wsRing）', async () => {
+  runtime.__resetRuntimeCursor();
+  const root = tmpRoot();
+  const wsReal = wsOf(root, 'ws-real');
+  const wsDecoy = wsOf(root, 'ws-decoy');
+  const a = m.createSession(root, { dshSessionId: hostFor(602), taskSummary: 'WS2', workspace: wsReal });
+  const ctx = mockWsCtx();
+  registerPlugin(ctx, { dataRoot: root, defaultWorkspace: wsDecoy });
+  await ctx.emit('agent/inbox/claimed', {
+    agent: { session: { id: hostFor(602), header: { cwd: wsReal } } },
+    message: { id: 'ws2-1', content: '请记住 header 命中即采集' },
+  });
+  const led = m.readLedger(root, a.sid);
+  assert.ok(led.sections['待办'].some((e) => e.desc.includes('header 命中即采集')), 'claimed 经 header.cwd 采集入账');
+});
+
+test('WS3: 回落环逐级兜底且命中环自日志可见（agent.workspace / process 环）', async () => {
+  runtime.__resetRuntimeCursor();
+  const root = tmpRoot();
+  const wsReal = wsOf(root, 'ws-real');
+  const a = m.createSession(root, { dshSessionId: hostFor(603), taskSummary: 'WS3', workspace: wsReal });
+  const ctx = mockWsCtx();
+  registerPlugin(ctx, { dataRoot: root }); // 无 defaultWorkspace：回落到 agent.workspace
+  // ③a agent.workspace 环：session 无 cwd/header，agent 带 workspace → 采集成功且 wsRing 如实
+  await ctx.emit('agent/inbox/claimed', {
+    agent: { session: { id: hostFor(603) }, workspace: wsReal },
+    message: { id: 'ws3-1', content: '请记住 agent.workspace 回落环' },
+  });
+  assert.ok(
+    m.readLedger(root, a.sid).sections['待办'].some((e) => e.desc.includes('agent.workspace 回落环')),
+    'agent.workspace 回落环兜底采集',
+  );
+  // ③b process 环：session/agent 双无 → 回落 process.cwd()，与记录不符 → 闸拦；错误行 wsRing=fallback:process 可观测
+  await ctx.emit('agent/inbox/claimed', {
+    agent: { session: { id: hostFor(603) } },
+    message: { id: 'ws3-2', content: '请记住 process 回落环' },
+  });
+  assert.ok(
+    !m.readLedger(root, a.sid).sections['待办'].some((e) => e.desc.includes('process 回落环')),
+    'process 凑数环与记录不符 → 闸拦（不静默跨区写入）',
+  );
+});
+
+test('WS4: 自日志 wsRing 观测面 —— created/claimed 行携带命中环（header/回落环如实落行）', async () => {
+  runtime.__resetRuntimeCursor();
+  const root = tmpRoot();
+  const wsReal = wsOf(root, 'ws-real');
+  const ctx = mockWsCtx();
+  registerPlugin(ctx, { dataRoot: root });
+  const HOST = hostFor(604);
+  await ctx.emit('session/created', { id: HOST, header: { cwd: wsReal }, taskSummary: 'WS4' });
+  const createdRow = fs.readFileSync(path.join(root, 'logs', 'agent-memory.jsonl'), 'utf8')
+    .split('\n').filter(Boolean).map((l) => JSON.parse(l)).find((r) => r.event === 'created');
+  assert.equal(createdRow.wsRing, 'header', 'created 行携带 wsRing=header');
+  await ctx.emit('agent/inbox/claimed', {
+    agent: { session: { id: HOST, header: { cwd: wsReal } } },
+    message: { id: 'ws4-1', content: '请记住 wsRing 观测' },
+  });
+  const claimedRow = fs.readFileSync(path.join(root, 'logs', 'agent-memory.jsonl'), 'utf8')
+    .split('\n').filter(Boolean).map((l) => JSON.parse(l)).filter((r) => r.event === 'claimed').at(-1);
+  assert.equal(claimedRow.wsRing, 'header', 'claimed 行携带 wsRing=header');
+});
+
+test('WS5: 闸大小写归一（win32）—— 同路径不同大小写不误拦；真跨区仍拦且错误保留原值', () => {
+  if (process.platform !== 'win32') return; // 归一仅 win32 生效；他平台维持字串全等
+  const root = tmpRoot();
+  const lower = wsOf(root, 'ws-case');
+  const upper = path.join(path.dirname(lower), path.basename(lower).toUpperCase());
+  const a = m.createSession(root, { sid: sidFor(603), taskSummary: 'case', workspace: lower });
+  m.addEntry(root, a.sid, { desc: '大小写归一后可写', workspace: upper }); // 不抛 = 归一生效
+  assert.throws(
+    () => m.addEntry(root, a.sid, { desc: '真跨区', workspace: wsOf(root, 'ws-other') }),
+    (e) => e.code === 'WORKSPACE_MISMATCH' && e.callerWorkspace === wsOf(root, 'ws-other'),
+    '真跨区仍拦；callerWorkspace 保留调用方原值（错误信息不归一）',
   );
 });
