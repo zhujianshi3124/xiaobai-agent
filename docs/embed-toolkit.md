@@ -94,6 +94,64 @@ ctx 上，`toolkit/*` 与 `tk2/*` 两组服务名各自可查、互不撞名（c
 - 配对服务归宿主：toolkit 只 `ctx.get('remoteWebUiPairing')`，取不到就 fail-closed（拒绝），
   绝不自己造一个。
 
+### 4.1 门禁分级口径（F-19 的"成文半边" · 2026-09-29 EXE-BOOT-015 正典化批笔 B）
+
+> 本节只做一件事：把**现行实现里已经在跑的分级口径**写成可对照的文字（防口径漂移、给后续新增路由立基准）。
+> 内容全部取自代码与实数，**没有新增约束、没有改动任何一条路由的标注或行为**。
+> 归属考据见 `docs/feature-inventory-20260923.md`《C-3 两处错账复算结论》二（八锚互证）与
+> `docs/repair-plan-20260923.md` §15.3；立项口径见同计划 W11 行"precheck 读目录维持、门禁分级口径统一成文"。
+
+**一、分级怎么落成的（判据在注册处，不在 HTTP 方法上）**
+每条路由注册时经 `panel/index.js#guard` 的第二个参数显式标注：`{ change: true }` ⇒ **写闸**；不给标注 ⇒
+**只读闸**（`panel/manager/v2-api.mjs` 的 v2 表把 `change` 做成表字段，由同一 `guard` 消费，口径相同）。
+⇒ 归类看**标注**，不看路由名字、也不机械看方法：现行表里既有"名字带 dry-run、零落盘却走写闸"的
+`POST {base}/doctor/dry-run`，也有"带请求体却走只读闸"的 `POST {base}/v2/install/precheck`。
+
+**二、两闸的实测差异（写闸＝只读闸的全部＋两重加压）**
+- 只读闸（`isAllowedRead`）：loopback socket **AND**（Host 是 loopback **OR** 宿主配对服务判已配对
+  **OR** 服务缺席时退 `devicesFile` hasOwn 兜底）。
+- 写闸（`isAllowedWrite`）：loopback socket **AND**（Host loopback **OR** 服务严格校验），**禁止 hasOwn 兜底**
+  （P2.0②），随后再加 `isSafeStateChange`：`sec-fetch-site ≠ cross-site` 且 `Origin.host == Host`。
+  ⇒ CSRF 这一重**只加压在写闸上**；两闸都要求 socket 对端是 loopback 字面量（`127.0.0.1`/`::1`，
+  `localhost` 判非本机——取值域见上 §4 第三条，★5 定稿）。
+
+**三、现行全表（32 条，实数取自代码；复跑口径见本节末）**
+- **只读闸 10 条**：`GET {base}/ui`、`GET {base}/snapshot`、`GET {base}/custody`、`GET {base}/plan/status`、
+  `GET {base}/doctor/states`、`GET {base}/v2/connector`（下发连接件的 route），以及 v2 的
+  `GET {base}/v2/snapshot`、`GET {base}/v2/health`、`GET {base}/v2/events` ＋ 下条第四项例外。
+- **写闸 22 条**：v1 域 17 条＝`POST` 的 `doctor/dry-run`、`plan`、`toggle/plan`、`config/plan`、
+  `uninstall/plan`、`uninstall/execute`、`restore/plan`、`restore/execute`、`mount/plan`、`mount/execute`、
+  `execute`、`doctor/apply/plan`、`doctor/apply/execute`、`doctor/rollback/plan`、`doctor/rollback/execute`、
+  `snapshot-restore/plan`、`snapshot-restore/execute`；v2 域 5 条＝`POST` 的 `install/confirm`、`uninstall`、
+  `enabled`、`reload`、`config`。
+- 两条对账：**10＋22＝32**（与 §3 前缀化表、`test/p7-embed.test.mjs` 的 32 条同口径）；写闸 22 条的组成＝
+  v1 域 **plan 族 9 条＋execute 族 7 条＋dry-run 1 条**（＝17）＋ **v2 写面 5 条**。plan 族自身零落盘，
+  但它签发 5 分钟内可被对应 `execute` 消费的 token（`apply-engine` 的 `DEFAULT_PLAN_TTL_MS`，重启即空）
+  ⇒ 属写链一环，与 execute 同闸顺理成章。
+- **一条反直觉的现行标注，如实登记而不补理由**：`POST {base}/doctor/dry-run` 名带 dry-run、实现只是经
+  `panel/manager/doctor-runner.mjs` 起一次 CLI 子进程做只读体检（不落盘、不签 token），却标 `change: true`
+  走写闸。本节按"判据在注册标注"这条**实况**成文，**不替它发明一个代码里没有的归类理由**——
+  它连同 precheck 一起说明：现行分级不是"是否落盘"的逐条机械判定，而是注册处的显式标注，
+  这正是本节要把口径写下来、留给后续批次对照的原因。
+
+**四、precheck 为何是例外（全表唯一"带请求体的 POST 走只读闸"）**
+`panel/manager/v2-api.mjs#installPrecheck` 走只读闸，是因为它**不落盘、不签发任何写凭据、不改 registry 状态**：
+它只做四件读事——按来源解析入口（`registry/src/loader.ts` 的 `resolveLocalSource`，**这一步会 import 候选模块，
+故模块顶层代码随之执行**）、撞 id 比对（读内存 registry 实况）、按 `manifest.requires` 跑合成规则的真探测
+（PATH 查二进制、端口试绑、外部 API 发 GET、env 只判存在不打印值）、对 `configSchema` 拿空配置真校验。
+护栏只有 §4 那一套（loopback＋配对/兜底＋64 KiB 请求体上限）。
+⇒ 它的"读任意本地目录"能力是**既裁维持**（裁决 4：`precheck` 读目录维持），本节点不改动、不收紧；
+清单里 F-19 的状态判定仍为"有出入：与 v2 写路由口径不齐"（成文≠翻正，见 `docs/feature-inventory-20260923.md`
+《正典化》第四节随批注）。
+**给未来新增路由的基准用法**（是把上面这套口径对照着用，不是新立规矩）：带请求体的 POST 默认**归写闸**；
+若确要按只读闸放行，须能在本节第一、四段这两条判据上说清"不落盘、不签写凭据"，并随批把该归类呈协调侧过裁
+——现行 32 条里这样的例子**只有 1 条**，援引它不等于获得同样的豁免权。
+
+**五、本节的取证（可复跑）**
+分级表由只读工装从现行实现抽取：`var/scratch/exe-boot-015-20260929/fn-gate-route-classes.mjs`
+⇒ 实档 `var/scratch/exe-boot-015-20260929/gate-route-classes-baseline.txt`（32＝只读闸 10＋写闸 22；
+只读闸内带 POST 的条数＝1）。日后路由增删，本节数字与实档须随批更新（README 基本要求令同口径）。
+
 ## 5. 边界如实陈述（这几条是"没做到的"，别当已交付）
 
 1. **宿主不认 `panels` 描述符 ⇒ 不融合布局。** 当前 `@linxin666/dsh-web-all` 不读契约的 `panels`
