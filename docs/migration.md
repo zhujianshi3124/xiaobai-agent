@@ -50,7 +50,7 @@ toolkit 自身也在 P7 走了同一条路：根 `dsh.plugin.json` 加上 `id=ds
 
 compact-router 不在 `cordis.patch.yml` 里，由 `scripts/apply-preset-patch.mjs` 改写 agent 预设
 （`~/.dsh/.agent-presets/*/agent.cordis.yml`），状态记于 `preset-patch-state.json`。
-迁移处置：**预设作为一种挂载面保留**，面板的卸载/恢复/挂载对它有独立分支（`manager/uninstall.mjs`
+迁移处置：**预设作为一种挂载面保留**，面板的卸载/恢复/挂载对它有独立分支（`panel/manager/uninstall.mjs`
 的 preset 系列函数 + 保管区 `.panel-custody`），语义与 P2.4 验收资产一致（软/真卸载、恢复三态、
 收据只读对账）。它**没有**两层开关（面板不渲染其启停，恒按事实呈现）。
 

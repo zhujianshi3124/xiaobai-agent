@@ -148,7 +148,7 @@ panel/dsh.plugin.json 不声明面板、无 configSchema、无 id/version（全�
 
 ★手动归档命令不存在 —— 设计 §7 承诺 archive  命令，既无 cordis 命令也无 CLI 子命令，只有两个库函数。状态：未实现
 
-★引导注入的归属写错 —— 设计说"由 agent-memory 注入模块"负责，实现在兄弟插件 compact-router/guidance.js；为解耦，桶内 workspace-health.js 已把模板复制成本地一份。状态：有出入："唯一模板"变两处副本，漂移无守卫（现值逐字相同）
+★引导注入的归属写错 —— 设计说"由 agent-memory 注入模块"负责，实现在兄弟插件 lib/compact-router/guidance.js；为解耦，桶内 workspace-health.js 已把模板复制成本地一份。状态：有出入："唯一模板"变两处副本，漂移无守卫（现值逐字相同）
 
 ★面板文案超出实现 —— "记住你说过的话和项目里的重要信息，下次对话还能用上"：实际只记当前会话的指令/进度并引导读文件，跨会话要靠人列候选+移交，无检索。状态：有出入
 
@@ -196,7 +196,7 @@ panel/dsh.plugin.json 不声明面板、无 configSchema、无 id/version（全�
 能力面 —— 压缩引擎替换(继承 BasicCompactionEngine 只改 summarize()，auto/llm/instant 三模派发)；instantOnceFor(agent)(对兄弟插件暴露的免 LLM 一次性接口，自清不动 override，rate-throttle 降档压缩靠它)；压缩存档(每次先落全量原文 JSONL、24MB 上限、每会话留 archiveKeep 份、摘要带指针、写失败不阻断)；LLM 摘要富集(追加台账正典副本+memory 引导+存档指针、6KB 封顶)；checkpoint 在场证据(摘要含"始终用中文回复"+"指令先落账"双行则写正向证据)；agent-memory.js 旁挂(台账读正典/永久指令、hostId→sid 反解、陈旧提示；对兄弟走 try-catch+动态 import('../agent-memory/lib/index.js')，符合红线 1、正是分工说明 §5 B 卡指定做法)；guidance.js(固定模板引导+默认数据根 ~/.agent-memory，只从 root/sid 生成不从用户消息提取)；archive.js(写/列/剪枝/指针/富集，全 best-effort)；instant-digest.js(免 LLM 抽取式摘要：指令保全、前轮 checkpoint 只继承条目、进度区+resume 契约、预算裁剪)。
 审查文档遗留 —— P0/P1(补 tool-call/tool_use/function_call 分支、嵌套去重)已落地；P2(对文件粘贴降权 original task request)状态：未实现。
 配置项 —— mode/fallbackOnRateLimit(auto 下仅 429/配额错误降级 instant) + 14 个 instant 预算键 + archive/archiveKeep + agentMemoryRoot/instantAgentMemoryGuidance/agentMemoryLib 逐个回代码都在构造函数读，无死键（但全都没进 configSchema，见星标）；预设行实际只写 4 个键。
-补丁脚本作用域 —— 桶内脚本改两个面：随包预设 standard/ptc/cordis（实路径在 npm 全局）+ 用户预设 ~/.dsh/.agent-presets/（排除 .bak，minimal 刻意不碰）。状态：一致（现行文档在案：p0-recon/migration.md/矩阵 3.2 都记了，矩阵还判"文档括号只覆盖用户面、写窄了"）；分叉的是旧仓 README 那句"liangshen 不动它，历史红线"——它属迁移前口径，不作落差计
+补丁脚本作用域 —— 桶内脚本改两个面：随包预设 standard/ptc/cordis（实路径在 npm 全局）+ 用户预设 ~/.dsh/.agent-presets/（排除 .bak，minimal 刻意不碰）。状态：一致（现行文档在案：p0-recon.md、migration.md、矩阵 3.2 都记了，矩阵还判"文档括号只覆盖用户面、写窄了"）；分叉的是旧仓 README 那句"liangshen 不动它，历史红线"——它属迁移前口径，不作落差计
 面板 —— 自身不声明 panel，只在 toolkit-panel 当卡片；卡片副标题"上下文压缩"、弹窗叫"压缩"、描述未提三模式。状态：有出入：文案与真实能力面有落差（面板注释自认不同源）
 兄弟插件静态 import —— 生产代码未破红线 1；唯一静态引用兄弟源码的是旧仓 test-instant-digest.mjs:10，桶内同名测试已改动态。状态：一致
 
@@ -372,7 +372,7 @@ token、零写入** / 未知与无 kind 一律拒 / 不存在 token 仍 `plan-no
 摘掉 `patch-edit` 赋值（过窄方向）⇒ 恰 2 条红；拒绝时顺手吃 token ⇒ 恰 4 条"不被消耗"红。
 本条状态由"有出入"翻正为**已修复**；W11 的另半边（`POST /plan` 可指任意本地文件，`F-19`）**未动**，
 按 C1-006 批复走"先只读对账、名单经快批后才改代码"。
-**【同日 W11-b 笔已落地，F-19 翻正】** 通用 `/plan` 只接受 `target="patch"`（目标固定 `toolkitRoot/cordis.patch.yml`），
+**【同日 W11-b 笔已落地，F-19 翻正】** 通用 `/plan` 只接受 `target="patch"`（目标固定 `cordis.patch.yml`（桶根）），
 `target != "patch"` ⇒ 新错误码 `plan-target-unsupported`(400)，**整个"客户端指定文件"通道关闭**（连 `target="patch"`
 时塞 `file` 也不看）。对账结论（批复已采信）：全仓仅此一处接受客户端传路径，两套界面与全部 scripts/test **零调用方**
 使用非 patch 目标，保管区/预设面各走自己的路由 ⇒ 收紧比原口径（"patch 域 + 保管区白名单"）更紧且零功能损失。
@@ -435,7 +435,7 @@ F-70 的 `title/what` 取数与 `:1287-1298` 逐字读。F-75 的 `executePlan` 
 只有 `cordis.patch.yml` 那一份是"部署事实"；`requestedEngines` 的错误文案还把**全 8 项**当"known"打给用户
 ⇒ 与部署名单直接矛盾，会教模型去点未部署引擎。状态：有出入
 **【2026-09-25 R3 笔落位读数 · F-81 与 F-82 的点名半边已修】** ① `requestedEngines(searchReq, cfg)` 追加与
-`engineList(cfg)` 的交集判定：越界点名 ⇒ `WebError` 且**请求一次都不发出**（`test/web-search-local-engines.test.mjs`
+`engineList(cfg)` 的交集判定：越界点名 ⇒ `WebError` 且**请求一次都不发出**（`test/web-search-local.engines.test.mjs`
 以 fetch 观测面计数实证，含 `'360'` 字符串与 YAML 裸数字 `360` 两种形态、以及"混含已部署+未部署整体拒绝"）；
 ② 错误文案改列部署名单并点名 `not deployed`，`unknown search engine` 一支只留给能力表里真没有的名字；
 ③ **本条"会教模型去点未部署引擎"那半已一并收**：`web_search_engine` 的工具描述与 `tool:web_search_engine`
@@ -529,7 +529,7 @@ provider id `local-multi`/`local-fetch`（`ctx.effect` 内注册、dispose 摘�
 `file` 字段当目标文件，无目录/白名单限制；只要该文件里有唯一 `- id: <rowId>` 锚就能签出写方案并落盘（写前
 自动备份，但备份不是允许写它的理由）；护栏只有 loopback + 配对 + CSRF + 64KiB。文档与注释全篇按"改
 `cordis.patch.yml`"叙述，未披露这扇门。状态：**原稿冻结时成立（有出入）→ 已由 `toolkit@92b3400`（W11-b）修复**
-——`/plan` 只接受 `target="patch"`（目标固定 `toolkitRoot/cordis.patch.yml`），其余 ⇒ `plan-target-unsupported`(400)，
+——`/plan` 只接受 `target="patch"`（目标固定 `cordis.patch.yml`（桶根）），其余 ⇒ `plan-target-unsupported`(400)，
 且 `file` 字段本路由**一字不看**（关通道，不是越界才拦）。全仓对账：两套界面与全部 scripts/test **零调用方**
 使用该分支，保管区/预设面各走自己的路由 ⇒ 收紧零功能损失。硬证据（tmp 诱饵、真仓与 `~/.dsh` 零触碰）：修复前
 两步请求即改写诱饵文件（sha `1442c138521c → 8fa956003caf`），修复后首步 400 拒、sha 不变。

@@ -74,7 +74,7 @@ registry 的 legacy 适配器会合成 manifest（id 落 `legacy/<包名>`，无
    实现见 `registry/src/loader.ts` 的 `resolveEntry`：
    - **① `requirements.exports['.']` —— 正典位置。** doctor 独立仓把 `exports` 定为
      `requirements` 的必填键，并对**以 `./` 开头**的条目逐条断言目标文件真实存在（非 `./` 写法
-     —— 如 `x.js`、绝对路径、`file://` —— doctor 直接放过，别把"逐条"读成"无例外"）；
+     —— 如任意未声明入口名、绝对路径、`file://` —— doctor 直接放过，别把"逐条"读成"无例外"）；
      顶层 `exports` 反而不在 doctor 的清单根字段白名单（`MANIFEST_TOP_KEYS`）里，写上去当场产 error。
      **套件根的继承指针是强制而非可选**：套件根**必须**写 `{"$from":"package.json#exports"}` 且
      `requirements.exports` **只能有 `$from` 这一个键**；非套件根**禁止**用 `$from`（两种违反都产
@@ -82,7 +82,7 @@ registry 的 legacy 适配器会合成 manifest（id 落 `legacy/<包名>`，无
    - **② 顶层 `exports['.']` —— legacy 兼容位。** 命中一定打 warn（经 registry 的 A1 warn 通道
      落日志，event=`entry-declaration`）；与正典并存时**正典赢**，warn 点名被忽略的那一份。
    - **③ `package.json` 的 `exports['.']`（字符串或 `{".":{default|node}}`）→ `main`；
-     ④ `index.js`/`index.mjs` 目录惯例** —— 第④级仅在当前三级**都没有声明**时才走到（宿主 Node 约定，T0/G1）。
+     ④ `index`（`.js`/`.mjs`） 目录惯例** —— 第④级仅在当前三级**都没有声明**时才走到（宿主 Node 约定，T0/G1）。
    - **红线：显式声明（①②③）指向不存在的文件 ⇒ 直接 `entry-not-found` 并给拼好的绝对路径，
      绝不静默回退后面的顺位**（回退就是拿惯例掩盖 manifest 与实现不同步）。
      【批 6（★10）已落地】第③级同样算作者显式写的声明：`package.json` 的 `exports['.']`（裸字符串 /
@@ -96,7 +96,7 @@ registry 的 legacy 适配器会合成 manifest（id 落 `legacy/<包名>`，无
    - 解析结果的可观测面：`ResolvedPlugin.entrySource`（七种来源值，见 `registry/src/types.ts`）
      与 `entryWarnings`。
    - ⚠️ **`.` 是"包主导出"，不必然是插件入口。** 本仓 `lib/agent-memory` 即此形态：
-     `"." → ./lib/index.js` 是指令台账数据库（非插件形状），插件在 `"./plugin" → plugin.js`
+     `"." → lib/agent-memory/lib/index.js` 是指令台账数据库（非插件形状），插件在 `"./plugin" → plugin.js`
      （宿主 `cordis.patch.yml` 挂的也是 `@local/dsh-toolkit/agent-memory/plugin`）。
      因此**按目录路径装它会得到 `plugin-shape-invalid`**，报错文案会点名同表可改装的文件；
      这不是缺陷（装载器不代为挑选），要装请按文件路径装。

@@ -113,7 +113,7 @@
 | R5 | **compact-router 预设装载路径特殊**：由 apply-preset-patch.mjs 改写预设文件，registry 接管生命周期会与预设机制双轨 | S6 回归红 | registry 将"预设"作为一种安装来源/挂载面保留；compact-router 迁移时预设改写脚本保留为 legacy 适配，实测走查 |
 | R6 | **双 Schema 体系**：schemastery（包依赖）vs zod（web-search-local 实际用）；宿主表单标准是 schemastery | configSchema 契约选型摇摆 | 契约规定 configSchema = **schemastery Schema 对象或其可序列化描述**；zod 的在迁移期做适配转换；P1 定稿 |
 | R7 | **面板双渲染器**（React client + panel.html）与大量硬编码文案/分支 | REQ-5 工作量 ×2 | 建议通用渲染只做 React client 一份，panel.html 降级为"受限只读视图"或废弃（见 Q 决策 N3） |
-| R8 | **P2.4 深度生命周期回归面大**：软/真卸载、保管区、恢复三态、挂载的验收资产（p24-verify 53 项、ui-matrix 666 项）必须全绿 | S6 红 | registry 的卸装/恢复/挂载直接复用 `manager/uninstall.mjs` 既有实现层，面板只换数据源，不重写语义 |
+| R8 | **P2.4 深度生命周期回归面大**：软/真卸载、保管区、恢复三态、挂载的验收资产（p24-verify 53 项、ui-matrix 666 项）必须全绿 | S6 红 | registry 的卸装/恢复/挂载直接复用 `panel/manager/uninstall.mjs` 既有实现层，面板只换数据源，不重写语义 |
 | R9 | **无 CI、无 typecheck**：DoD 要求 CI（typecheck/lint/unit/contract/e2e）全绿 | 门禁无载体 | P1 一并补 GitHub Actions（或本地 gate 脚本），TS 范围见 Q 决策 N1 |
 | R10 | **Windows 特有**：junction 链接问题有前科（.doctor-link-backup 现场）、路径大小写、fs.watch 行为 | fsPaths 探测、包解析预检不可靠 | 预检用 realpath 归一（doctor 已有同款处理）；S 场景在 Windows 实机跑 |
 | R11 | **安全红线**：新 registry 路由必须沿用 loopback+配对+CSRF guard（写 fail-closed）；禁止在日志/报告输出 envVar 值 | 安全回退 | guard 抽公共模块复用；precheck 的 envVar 检查只输出"存在/缺失"布尔 |
