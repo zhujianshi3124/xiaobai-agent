@@ -2467,7 +2467,7 @@ doctor `7ba8251..HEAD` ＝ 2 文件 **76 增／15 删**。逐笔 numstat 与合�
 - **已完成五项（全绿）**：M3＝`~/.dsh` 扫描面 hash 三时点（baseline/certified/certified2）逐字节同；
   M5＝agent-memory 活体在档（registry 54 会话、自日志 44 行、`wsRing`/kind 族字段在场，末活动
   2026-09-29T04:37Z，宿主停机期间无新活动属自然）；M6＝rate-throttle 日志面在档（llm-requests.jsonl
-  3.85MB、learned.json 928B）；M7＝门禁与全部读数两轮（certified/certified2）全绿；M8＝
+  3.85MB、限额学习文件 928B）；M7＝门禁与全部读数两轮（certified/certified2）全绿；M8＝
   `test/w2-health-fold.test.mjs` 在 nt 内持续绿（bundle 级三步钉）。
 - **演练插件**：`drill/probe`（纯契约最小形：manifest 只带必填四件、零 legacy/零 requires/零 provides；
   模块顶层零副作用）已构建于 `var/scratch/exe-boot-017-20260930/drill-plugin/`，并经**本地 registry
