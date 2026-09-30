@@ -57,7 +57,10 @@ async function makeStack(t) {
     servicePrefix: 'toolkit',
     statePath: join(tmp, 'state.json'),
     retryBackoffMs: 1,
-    loadTimeoutMs: 250,
+    // flake 两振立案（010 首振/017 二振，同签名：满载首跑文件级红、独立 nt 同树绿）：250ms 是本文件自设
+    // 的装载预算（生产缺省 30_000），实测空闲 p99=35ms、32 进程风暴 max=130ms，系统级突发可偶发击穿 250ms
+    // ⇒ 裕度放宽到 3000（12× idle p99），五格断言与真装载覆盖零改动（禁为绿弱化断言）。档：debt 环境注记。
+    loadTimeoutMs: 3000,
     autoload: false,
   })
   const doc = createDoctor(ctx, { servicePrefix: 'toolkit', watchInterval: 0, probes: fakeProbes() }, registry)
