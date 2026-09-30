@@ -34,7 +34,9 @@ test/           测试（node --test）
 
 ## 挂载与部署实况
 
-- 部署行在 `cordis.patch.yml`（基准 sha256 `a663f61b…`/3160B）：`web`／`web-search-deepseek`
+- 部署行在 `cordis.patch.yml`（基准 sha256 `b0f304c9…`/3190B，EXE-BOOT-018 实读复核更正；
+  前值 `a663f61b…`/3160B 系 09-29 第 4 次滚存前旧基准，随 011 批 agentMemory 接线滚存即已过期）：
+  `web`／`web-search-deepseek`
   既有行 config，`rate-throttle`／`web-search-local`／`web-search-router`／
   `agent-memory-runtime`／`toolkit-manager` 五行为 insert；**compact-router 不在 patch**——
   由 `scripts/apply-preset-patch.mjs` 改写预设 compaction 行名（预设托管）。
