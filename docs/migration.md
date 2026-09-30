@@ -62,8 +62,12 @@ compact-router 不在 `cordis.patch.yml` 里，由 `scripts/apply-preset-patch.m
 
 1. 消费方迁移完毕：doctor 独立 CLI（沙箱仓 `@local/dsh-toolkit-doctor`）的根字段白名单已同步扩展
    （`requires` / `panels` 于 doctor@6839cc1 加入），但**旧字段仍被它校验**——收紧要两仓同批。
-2. 面板不再读旧字段：`panel/manager/plugin-registry.mjs` 的 5 插件硬编码清单与
-   `snapshot.mjs` 的 `ORIGINS/ROW_IDS` 映射仍在使用（这是 P2.4 深度生命周期资产，面板纪律要求原样保留）。
+2. 面板改读提供面正典、表继续存在（**2026-09-30 终批 B＝子案一改述**，EXE-BOOT-017；原句"面板不再读旧字段"
+   与本条自引的面板纪律正面冲突、按字面永不满足——2026-09-22 审定轮已判明"可改的只有'读哪个字段'"）：
+   `panel/manager/plugin-registry.mjs` 的 5 插件硬编码清单与 `snapshot.mjs` 的 `ORIGINS/ROW_IDS` 映射
+   **按面板纪律原样保留**（P2.4 深度生命周期资产，一张不退役）；面板注册面的**读取来源**已切为
+   **provides 优先、缺席回落 legacy**（`snapshot.mjs` 走 `extractRegisters`，与 loader 同口径——
+   W9/改名批已落的行为，本改述零新行为、零面板纪律解除，只是把既成事实写进前置文案）。
 3. 有替代表达：契约缺"提供面"字段（见 `docs/debt.md` #12）——`requirements.registers.*` 目前
    **不可移除**，否则注册冲突检查失明。
 
