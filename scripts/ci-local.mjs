@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // 本机 CI 门禁（债务 #5 的可执行部分）：一条命令跑完全链，单一退出码。
 //
-// 为什么不是"只放一个 .github/workflows"：本仓**没有 git 远端**，且依赖 @deepseek-ai/* 私有源
-// （cordis / dsh-web / dsh-settings / dsh-compaction-basic）——公共 runner 上 `npm ci` 直接装不出来。
-// 所以正本门禁必须在本机跑；`.github/workflows/ci.yml` 只是给"能取到私有源的 self-hosted runner"
-// 预留的结构，**未在本环境执行过**（如实申报，见 workflows 文件头注）。
+// 为什么不是"只放一个 .github/workflows"：本仓**没有 git 远端**，且门禁依赖本机 doctor CLI
+// 绝对路径（DOCTOR_CLI）与 Windows 宿主面。@deepseek-ai/* 依赖自 S2 正名批（G8）起全部经
+// 公共 registry 解析（lock 全 resolved、npm ci 实证可复装）——历史"私有源装不出来"陈述已过时废止。
+// 所以正本门禁仍在本机跑；`.github/workflows/ci.yml` 只是远端 runner 的预留结构，
+// **未在本环境执行过**（如实申报，见 workflows 文件头注）。
 //
 // 用法：node scripts/ci-local.mjs [--with-scan]
 //   默认跑：build×3 + pluggable-lint + no-subplugin-import-check + typecheck×3 + node --test

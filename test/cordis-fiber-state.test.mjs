@@ -97,27 +97,30 @@ test('枚举顺序不变式：六个状态必须互不相同，registry 的终�
   assert.deepEqual(values.slice().sort((a, b) => a - b), [0, 1, 2, 3, 4, 5], '与 cordis 4.0.2 的 FiberState 声明顺序一一对应')
 })
 
-// ── E2 · peer 范围守卫 ─────────────────────────────────────────────────────
+// ── E2 · cordis 范围守卫 ─────────────────────────────────────────────────
 // 装入判定按 cordis 4.0.2 的 fiber 行为校准（docs/debt.md D-5 / docs/contract.md §7 D-5），
-// 原先 peerDependencies 写成 ">=4.0.0-rc <5"，把未经校准的 4.0.0/4.0.1/更早 rc 全放进来，
+// 原先依赖声明写成 ">=4.0.0-rc <5"，把未经校准的 4.0.0/4.0.1/更早 rc 全放进来，
 // 且本地 devDependencies 钉住 4.0.2 会掩盖这个差异（本仓装了才"看着没事"）。
-// 收紧后 peer 面必须只放行 >=4.0.2；这里用**本仓自己的 semver 引擎**判定，
+// 收紧后声明面必须只放行 >=4.0.2；这里用**本仓自己的 semver 引擎**判定，
 // 与上面 FiberState 数值守卫配套：范围放行 + 数值对得上，才算校准过。
-test('E2：peerDependencies 的 cordis 范围必须排除未经 fiber 行为校准的版本', () => {
+// S2 正名批 G8（2026-10-01）起 cordis 自 peerDependencies 转正为 dependencies（vendor 撤除、
+// 公共源实装）——校准纪律不变，声明位置随依赖形态从 peer 挪到 dependencies（守卫命题不变）。
+test('E2：cordis 依赖范围必须排除未经 fiber 行为校准的版本（G8 转正后验 dependencies）', () => {
   const pkg = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'package.json'), 'utf8'))
-  const peer = pkg.peerDependencies['@deepseek-ai/cordis']
-  assert.equal(peer, `^${CORDIS_MIN_CALIBRATED}`, 'peer 范围应恰为 ^4.0.2（放行 >=4.0.2 <5.0.0）')
+  const dep = pkg.dependencies['@deepseek-ai/cordis']
+  assert.equal(dep, `^${CORDIS_MIN_CALIBRATED}`, 'dependencies 范围应恰为 ^4.0.2（放行 >=4.0.2 <5.0.0）')
+  assert.equal(pkg.peerDependencies['@deepseek-ai/cordis'], undefined, 'G8 起 cordis 不再声明为 peer（防双声明语义漂移）')
 
   for (const tooOld of ['4.0.0', '4.0.1', '4.0.0-rc.3', '4.0.2-rc.1']) {
     assert.equal(
-      versionSatisfies(tooOld, peer),
+      versionSatisfies(tooOld, dep),
       false,
-      `${tooOld} 未经校准，不得被 peer 范围放行（R13/D-5 纪律）`,
+      `${tooOld} 未经校准，不得被依赖范围放行（R13/D-5 纪律）`,
     )
   }
-  assert.equal(versionSatisfies(CORDIS_MIN_CALIBRATED, peer), true, '校准基线本身必须在范围内')
-  assert.equal(versionSatisfies('4.9.0', peer), true, '4.x 仍在范围内——升级由 S1/S4 + 本守卫把关，不由 peer 一刀切')
-  assert.equal(versionSatisfies('5.0.0', peer), false, '跨主版本必须被 peer 挡下')
+  assert.equal(versionSatisfies(CORDIS_MIN_CALIBRATED, dep), true, '校准基线本身必须在范围内')
+  assert.equal(versionSatisfies('4.9.0', dep), true, '4.x 仍在范围内——升级由 S1/S4 + 本守卫把关，不由范围声明一刀切')
+  assert.equal(versionSatisfies('5.0.0', dep), false, '跨主版本必须被范围声明挡下')
 
   // 本地开发钉的版本不得低于校准基线，否则"本仓绿了"不代表嵌进宿主也绿
   const dev = pkg.devDependencies['@deepseek-ai/cordis']
