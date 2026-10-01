@@ -16,7 +16,7 @@
 | profile | `~/.dsh/profiles/web`，pnpm workspace；`dsh.profile.bundles` 声明 bundle 装载序 | profile `~/.dsh/profiles/web/package.json`（第 11-22 行，当时） |
 | 装载模型 | patch 层合成：各 bundle 的 `dsh.bundle.patch` → profile `cordis.patch.yml` → `--patch` 覆盖；`- insert` 行 `name:` = 模块说明符，宿主 import 后按 cordis 约定实例化 | profile `~/.dsh/profiles/web/cordis.yml`（第 1-4 行，当时） 注释；toolkit `toolkit:package.json`（第 26-30 行，当时） |
 | 子插件导出约定 | ESM 命名导出 `name` / `inject` / `apply(ctx, config)`（或 default 对象）；无统一 Config Schema 导出 | `lib/rate-throttle/index.js`（第 66-67、149 行，当时）、`lib/search-router/index.js`（第 27-29 行，当时）、`lib/agent-memory/plugin.js`（第 19、105、276-277 行，当时） |
-| Schema 体系 | 宿主标准为 schemastery（toolkit 依赖 `@deepseek-ai/schemastery`）；但 web-search-local 实际用 **zod** 导出 `Config` | `lib/web-search-local/index.js#Config`；toolkit `toolkit:package.json`（第 36 行，当时） |
+| Schema 体系 | 宿主标准为 schemastery（toolkit 依赖 `@deepseek-ai/schemastery`）；但 web-search-local 实际用 **zod** 导出 `Config` | `web-search-local` （已随 S1 剔除批出包） 原 index.js 的 `Config`；toolkit `toolkit:package.json`（第 36 行，当时） |
 | 动态装载先例 | toolkit 全仓 **无任何 `ctx.plugin(` 调用**——装载权全在宿主，toolkit 是"被动装载的兄弟集合"，不是运行时意义上的桶 | 全 lib+panel grep 零命中 |
 | 运行版本 | Node v24.19.0（engines >=22 满足）、pnpm 11.22.0、Windows 10 22631 | 实测 |
 | 测试/CI | `npm test` = `pluggable-lint` + `node --test`；**无 .github/CI 配置、无 typecheck**（全仓纯 JS，无 tsconfig） | `package.json`（第 5-7 行，当时）；`scripts/pluggable-lint.mjs` |
@@ -31,7 +31,7 @@
 | 成员 | 代码位置 | 导出形态 | 装载路径（boot 时谁插入它） | manifest |
 |---|---|---|---|---|
 | rate-throttle | `lib/rate-throttle/index.js` | `name`/`inject:["llm","tokenMeter"]`/`apply` | toolkit bundle patch `- insert: id: rate-throttle`（`cordis.patch.yml`（第 14 行，当时）） | 有（`lib/rate-throttle/dsh.plugin.json`） |
-| web-search-local | `lib/web-search-local/index.js` | `Config`(zod)/default | 同上，`id: web-search-local`（`cordis.patch.yml`（第 58 行，当时）） | 有 |
+| web-search-local | `web-search-local` （已随 S1 剔除批出包） 原 index.js | `Config`(zod)/default | 同上，`id: web-search-local`（`cordis.patch.yml`（第 58 行，当时）） | 有 |
 | search-router | `lib/search-router/index.js` | `name`/`inject:["web"]`/default | 同上，`id: web-search-router`（`cordis.patch.yml`（第 64 行，当时）） | 有 |
 | agent-memory | `lib/agent-memory/plugin.js`（运行时入口）+ `lib/agent-memory/lib/index.js`（被兄弟惰性探测的库入口） | `name:'agent-memory-runtime'`/`register`=apply，**双入口** | patch insert `id: agent-memory-runtime, name: '@local/dsh-toolkit/agent-memory/plugin'`（`cordis.patch.yml`（第 74 行，当时）） | 有 |
 | compact-router | `lib/compact-router/index.js` | `name`/inject/default | **特殊**：不在 cordis.patch.yml；由 `scripts/apply-preset-patch.mjs` 改写 agent 预设 `~/.dsh/.agent-presets/*/agent.cordis.yml`（实测 liangshen 预设 :286），状态记于 `preset-patch-state.json` | 有（含 `optionalDeps: [agent-memory]`） |

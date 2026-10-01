@@ -6,6 +6,25 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### 开源 S1 剔除批：web-search-local 出包＋search-router 降"可缺席 provider 位"（2026-09-30，C1-007 阶段二·副本线；G1/G2(b)/G3 用户终批"按建议"）
+
+- **剔除 MIT 外来件 web-search-local**（两阶段目标第二步）：`lib/web-search-local/` 三文件出包，F-91 耦合面
+  八点全清（exports 映射／桶 aliases／patch 两处／search-router 硬编码／panel 四 manager／doctor-signals／
+  面板文案／测试随剔）。**对外行为面**：本套件不再内置本地搜索——`local-multi`/`local-fetch` 两 provider
+  不再存在，官方搜索不受影响。
+- **search-router 保留为路由骨架（G2(b)）**：本地半边降为**可缺席 provider 位**（`DELEGATE_LOCAL` 位保留）；
+  选中本地而位空时**显式回落官方搜索**并警示「本地搜索未配置」（G3，绝不静默）；任何注册 `local-multi` 的
+  搜索插件可插位。
+- **面板四卡**（原五卡）：web-search-local 卡与 dependency-broken 联动面随出包退役（providerDependencies
+  清空）；登记表四卡；真卸载/重装/挂载全链矩阵对 search-router 复用（B1 改双真卸载同批、C2/C3 改单真）。
+- **patch 基准滚存（副本线第 1 次）**：`b0f304c9…`/3190B → `693cfcd7…`/3084B；p24 两处硬闸期望值同步，
+  守卫机制未放宽。
+- 新钉三枚：registry 四卡负向钉＋出包面词面清零钉（`test/s1-removal-pins.test.mjs`）、G3 缺席回落行为钉
+  （`test/search-router.test.mjs`）。
+- 门禁步数仍 6（默认链 5）；`node --test` 新基线 468（原 484，随测试面退役 −16）；p1-smoke 309（−5）、
+  p22-cards-ui 147（−18）、p24-ui-matrix 608（−112）、p24-verify 62（+1 新格）——退役格与改造口径全录
+  `docs/repair-plan-20260923.md` §44 与 `docs/debt.md` A#59。
+
 ### 第一阶段（本地自用版）五环终验通过、正式收官（2026-09-30，EXE-BOOT-018；纯文档账面批，运行时行为零变化）
 
 - **五环（装/用/配/管/检）全流程真机终验通过**：机器半 M1–M8 全 8 项绿（面板 API 通达；演练插件
