@@ -18,8 +18,7 @@ window.__ModuleLoader__.load({
 			"agent-memory": "记住你说过的话和项目里的重要信息，下次对话还能用上。",
 			"compact-router": "对话变长时自动压缩历史内容，省上下文又不断片；压缩方式有自动、LLM 摘要、即时抽取三种，可随时切换。",
 			"rate-throttle": "在多个模型服务之间自动换路、出错冷却与降档压缩，避开限额和故障；另有请求限速开关（默认关闭）。",
-			"search-router": "决定每次联网搜索走哪条路：官方搜索还是本地搜索。",
-			"web-search-local": "提供不依赖官方接口的本地搜索引擎，可自选搜索源。"
+			"search-router": "决定每次联网搜索走哪条路：官方搜索还是本地搜索。"
 		};
 		// ---- 标识符一律「英文原名 + 中文注释」形态 ----
 		// 原名来自插件目录名 / 包名本体，是稳定可检索的标识；
@@ -28,8 +27,7 @@ window.__ModuleLoader__.load({
 			"agent-memory": "记忆",
 			"compact-router": "上下文压缩",
 			"rate-throttle": "限流",
-			"search-router": "搜索路由",
-			"web-search-local": "本地网页搜索"
+			"search-router": "搜索路由"
 		};
 		// 英文原名：优先用快照里的真实包名尾部，回退到目录名
 		function originalName(plugin) {
@@ -66,8 +64,7 @@ window.__ModuleLoader__.load({
 			"agent-memory": "记忆",
 			"compact-router": "压缩",
 			"rate-throttle": "限流",
-			"search-router": "搜索路由",
-			"web-search-local": "本地搜索"
+			"search-router": "搜索路由"
 		};
 		function p24Name(plugin) {
 			var cn = P24_CN[(plugin && plugin.dir) || ""];
@@ -899,26 +896,6 @@ window.__ModuleLoader__.load({
 					timing: "确认执行后立即删除；对运行中的系统，将在下次重启时停用；重启前仍按当前状态运行。",
 					restorePath: "本次删除不可恢复。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
 					confirm: "请手动输入 search-router 两次并点「确认彻底删除」，或点「取消」。"
-				}
-			},
-			"web-search-local": {
-				soft: {
-					title: "软卸载「本地搜索 web-search-local」",
-					del: "让 DSH 下次启动时不再加载「本地搜索」功能模块；把面板里一项网页抓取系统设置改回「系统默认（未指定）」（不删除磁盘上的源代码文件，源码保留在本地）。",
-					consequence: "重启后，网页抓取退回到系统默认行为；「搜索路由」的搜索功能将不可用（它依赖本插件）；若需搜索请同时卸载或保留其一；重启前仍按当前状态运行。",
-					timing: "本次执行后，将于下次重启时停用；重启前仍按当前状态运行。",
-					archive: "无需存档，源代码文件保留。",
-					restorePath: "面板 →「本地搜索 web-search-local」卡片 → 点「恢复」。恢复时若那项系统设置已被其他程序改掉，面板会先提示你选择「保留当前值」还是「恢复成卸载前的值」，不会自动覆盖。",
-					restart: "恢复后需要重启才生效。",
-					confirm: "请手动输入 web-search-local 后点「确认软卸载」，或点「取消」。"
-				},
-				true: {
-					title: "真卸载「本地搜索 web-search-local」——彻底删除，不留副本",
-					del: "确认执行后：① 让 DSH 下次启动时不再加载该功能模块；② 把面板里一项网页抓取系统设置改回「系统默认（未指定）」；③ 彻底删除磁盘上的本地搜索源代码目录（lib/web-search-local），不保留任何副本。",
-					consequence: "重启后，网页抓取退回到系统默认行为；「搜索路由」的搜索功能将不可用（它依赖本插件）；重启前仍按当前状态运行。",
-					timing: "确认执行后立即删除；对运行中的系统，将在下次重启时停用；重启前仍按当前状态运行。",
-					restorePath: "本次删除不可恢复。等项目开源后，你可以重新下载安装，届时面板会检测到「已安装未挂载」并帮你重新挂载。",
-					confirm: "请手动输入 web-search-local 两次并点「确认彻底删除」，或点「取消」。"
 				}
 			}
 		};

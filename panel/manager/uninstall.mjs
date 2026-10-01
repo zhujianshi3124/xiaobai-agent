@@ -248,7 +248,8 @@ function rowIdLineOf(block) {
  * 每条留痕记的是「我原本紧跟在 prevTop 之后、紧邻 nextTop 之前」；块只由本面板摘/插，
  * 故该邻接关系在恢复期仍然是原布局的事实。
  * 为什么需要它：仅凭前后两锚会在同批多摘时失真——C2 先摘 rate-throttle/agent-memory（软）
- * 再摘 search-router/web-search-local（真）时，web-search-local 记录下的两个锚都已不在场，
+ * 再摘 search-router/web-search-local（真；后者已随开源 S1 剔除批出包，此处为历史场景）时，
+ * web-search-local 记录下的两个锚都已不在场，
  * 逐条恢复（C3）时会落到错位置，使 cordis.patch.yml 无法字节级回基线（B1⑦ / C3② 硬断言）。
  */
 function panelRowAdjacencies(toolkitRoot) {

@@ -30,13 +30,12 @@ const pluginName = async (entryPath) => (await import(new URL('file:///' + entry
 
 const silent = { info: () => {}, warn: () => {}, error: () => {} }
 
-// ── ① 五个内置插件 + 套件根：逐条断言来源与结果 ──────────────────────────
+// ── ① 四个内置插件（web-search-local 已随开源 S1 剔除批出包）+ 套件根：逐条断言来源与结果 ──
 
 const BUILTINS_WITH_INDEX = [
   ['compact-router', 'lib/compact-router'],
   ['rate-throttle', 'lib/rate-throttle'],
   ['search-router', 'lib/search-router'],
-  ['web-search-local', 'lib/web-search-local'],
 ]
 
 for (const [label, rel] of BUILTINS_WITH_INDEX) {

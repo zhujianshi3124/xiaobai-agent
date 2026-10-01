@@ -473,12 +473,14 @@ function selfcheckCases() {
       const c = unwrapExports({ name: 'C' })
       return a.name === 'A' && b.name === 'B' && c.name === 'C'
     }],
-    ['行号映射：engines 的键能定位到 cordis.patch.yml 的真实行', () => {
+    ['行号映射：enabled 的键能定位到 cordis.patch.yml 的真实行', () => {
+      // S1 剔除批改例：原用例锚 web-search-local 行的 engines 键，该行已随 MIT 外来件出包；
+      // 换 rate-throttle 行的 config.enabled——本条验证的是行号映射机制本身，不锚特定行。
       const { entries, linesOf: lo } = loadPatch()
-      const prefix = rowPrefixOf(entries, 'web-search-local')
-      const ln = lo.get(`${prefix}.config.engines`)
+      const prefix = rowPrefixOf(entries, 'rate-throttle')
+      const ln = lo.get(`${prefix}.config.enabled`)
       const text = readFileSync(PATCH_PATH, 'utf8').split(/\r?\n/)[ln - 1] ?? ''
-      return text.includes('engines:')
+      return text.includes('enabled:')
     }],
   ]
 }

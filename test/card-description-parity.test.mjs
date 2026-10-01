@@ -23,7 +23,7 @@ function parseDescriptions(rel) {
   const re = /"([a-z-]+)":\s*"([^"]*)"/g
   let m
   while ((m = re.exec(block))) out[m[1]] = m[2]
-  assert.ok(Object.keys(out).length >= 5, rel + ' 描述表应解析出 5 卡: ' + JSON.stringify(Object.keys(out)))
+  assert.ok(Object.keys(out).length >= 4, rel + ' 描述表应解析出 4 卡（web-search-local 已随开源 S1 剔除批出包）: ' + JSON.stringify(Object.keys(out)))
   return out
 }
 
@@ -53,10 +53,9 @@ test('描述落差族 · rate-throttle 描述两半齐：主功能（换路/冷�
   }
 })
 
-test('描述落差族 · 反向钉：其余三卡描述不被本批翻动（快照逐字·双通道）', () => {
+test('描述落差族 · 反向钉：其余两卡描述不被本批翻动（快照逐字·双通道）', () => {
   for (const table of [reactDesc, htmlDesc]) {
     assert.equal(table['agent-memory'], '记住你说过的话和项目里的重要信息，下次对话还能用上。')
     assert.equal(table['search-router'], '决定每次联网搜索走哪条路：官方搜索还是本地搜索。')
-    assert.equal(table['web-search-local'], '提供不依赖官方接口的本地搜索引擎，可自选搜索源。')
   }
 })

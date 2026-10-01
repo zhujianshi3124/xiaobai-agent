@@ -6,15 +6,7 @@
     "@local/dsh-toolkit/compact-router"
   ],
   "hostProviderKeys": [
-    { "rowId": "web", "key": "searchProvider", "note": "搜索 provider 宿主键（真/软卸载 search-router 时 unset）" },
-    { "rowId": "web", "key": "fetchProvider", "note": "网页抓取 provider 宿主键（真/软卸载 web-search-local 时 unset）" }
+    { "rowId": "web", "key": "searchProvider", "note": "搜索 provider 宿主键（真/软卸载 search-router 时 unset）" }
   ],
-  "providerDependencies": [
-    {
-      "mountedRow": "web-search-router",
-      "requiresProviders": ["local-multi", "local-fetch"],
-      "warning": "已加载，但依赖的本地搜索未安装——搜索功能不可用",
-      "evidence": "P24-EVIDENCE.md §①：search-router 依赖 web-search-local 注册的 local 能力"
-    }
-  ]
+  "providerDependencies": []
 }

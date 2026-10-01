@@ -1,11 +1,11 @@
 # dsh-toolkit 总装补丁：一个 bundle 层替代五个旧插件的 patch 层。
-# 行为与旧 profile 最终生效状态等价（search-router 层覆盖 web-search-local 层后的结果）。
+# 开源 S1 剔除批（C1-007 G1/G3，2026-09-30）：web-search-local 行与 web.fetchProvider 已随
+# MIT 外来件剔除；search-router 保留为路由骨架，本地搜索位（local-multi）可缺席（缺席回落官方）。
 # compact-router 不在此：由 scripts/apply-preset-patch.mjs 改写预设 compaction 行名。
 
 - id: web
   config:
     searchProvider: auto-search
-    fetchProvider: local-fetch
 
 - id: web-search-deepseek
   disabled: false
@@ -54,13 +54,6 @@
                 - { provider: modelscope-gateway, model: deepseek-ai/DeepSeek-V4-Flash-0731 }
                 - { provider: modelscope-gateway-2, model: deepseek-ai/DeepSeek-V4-Flash-0731 }
       inject: [llm, tokenMeter]
-
-- insert:
-    - id: web-search-local
-      name: '@local/dsh-toolkit/web-search-local'
-      config:
-        engines: [searxng, google, duckduckgo, mojeek, bing, baidu]
-      inject: [web]
 
 - insert:
     - id: web-search-router

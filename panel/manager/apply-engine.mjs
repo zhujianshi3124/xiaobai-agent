@@ -254,9 +254,11 @@ export const LITERAL_DISABLED_VALUES = ["true", "false"];
  * 修复前只有一层：`findCrossReferences(text, {rowId})`，而面板客户端从不传 `alsoMatch`
  * ⇒ 匹配词恒等于行 id。两个后果：
  *   ① patch 里以 **provider id** 引用本插件的行看不见（`web` 行的
- *      `searchProvider: auto-search` / `fetchProvider: local-fetch` 正是这种写法）；
- *   ② **声明式依赖**在文本里没有字面引用（`web-search-router` 那行不会写 web-search-local
- *      的名字），扫文本永远扫不到，而那恰恰是后果最重的一类（整条搜索链断掉）。
+ *      `searchProvider: auto-search` 正是这种写法；原 `fetchProvider: local-fetch`
+ *      例已随 web-search-local 出包移除，开源 S1 剔除批）；
+ *   ② **声明式依赖**在文本里没有字面引用（历史上 `web-search-router` 那行不会写
+ *      web-search-local 的名字；该联动已随 S1 剔除批清空，DEPENDENCIES 现为空表、
+ *      declaredDependents 机制保留待用），扫文本永远扫不到，而那恰恰是后果最重的一类。
  * 现在两类都补上：needles 由登记表给出，声明依赖由 `declaredDependents` 反向给出。
  *
  * 语义不变：**只报告、不阻断**（管理入口如实告知，决定权在用户）。

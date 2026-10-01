@@ -70,13 +70,13 @@ const LEGACY_TRIAD = { manifestVersion: 1, name: '@local/dsh-toolkit/parity', re
 check('前置：DOCTOR_CLI 可解析', existsSync(DOCTOR_CLI), DOCTOR_CLI)
 check('前置：契约 dist 暴露 validateManifest 与 provides 面', typeof validateManifest === 'function' && typeof contract.PLUGIN_CONTRACT_VERSION === 'string')
 
-// ── A 存量 7 份 manifest：契约 ok ⇒ doctor 不得对同一文件报 schema error ─────────────────
+// ── A 存量 6 份 manifest（S1 剔除批 7→6）：契约 ok ⇒ doctor 不得对同一文件报 schema error ──
 const builtinManifests = ['dsh.plugin.json', 'panel/dsh.plugin.json']
 for (const e of readdirSync(join(ROOT, 'lib'), { withFileTypes: true })) {
   const rel = 'lib/' + e.name + '/dsh.plugin.json'
   if (e.isDirectory() && existsSync(join(ROOT, rel))) builtinManifests.push(rel)
 }
-check('A0 内置 manifest 计数 = 7（5 lib + 桶根 + panel）', builtinManifests.length === 7, builtinManifests.join(', '))
+check('A0 内置 manifest 计数 = 6（4 lib + 桶根 + panel）', builtinManifests.length === 6, builtinManifests.join(', '))
 
 const realReport = runDoctorJson(ROOT)
 const schemaIssuesByFile = new Map()

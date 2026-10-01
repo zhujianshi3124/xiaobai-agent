@@ -7,17 +7,19 @@
 // effectNoteHtml，editable 卡不双渲染——渲染面钉在 p22-cards-ui）。
 //
 // 本文件钉服务端权威面（buildSnapshot 真实仓取数，只读）；p22 钉两渲染器呈现面。
-// 各卡配置来源复算（2026-09-26）：agent-memory-runtime／web-search-local／web-search-router
-// 三行 config 块实测在 cordis.patch.yml；compact-router 无 patch 行、预设托管。
+// 各卡配置来源复算（2026-09-26；S1 剔除批后＝agent-memory-runtime／web-search-router
+// 两行 config 块实测在 cordis.patch.yml——web-search-local 行已随该批删除）；
+// compact-router 无 patch 行、预设托管。
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { join } from 'node:path'
 import { buildSnapshot, buildConfigPanel } from '../panel/manager/snapshot.mjs'
 
 const repoRoot = join(import.meta.dirname, '..')
-const FOUR = ['agent-memory', 'compact-router', 'web-search-local', 'search-router']
+// S1 剔除批后非可写卡＝三张（web-search-local 已出包；rate-throttle 是可写卡、另一支钉）。
+const FOUR = ['agent-memory', 'compact-router', 'search-router']
 
-test('W2-余件 · 四卡提示位：服务端逐卡下发 effectNote 且文案点名真实配置来源', async () => {
+test('W2-余件 · 非可写卡提示位：服务端逐卡下发 effectNote 且文案点名真实配置来源', async () => {
   const snap = await buildSnapshot({ toolkitRoot: repoRoot })
   for (const dir of FOUR) {
     const p = snap.plugins.find((x) => x.dir === dir)
@@ -31,7 +33,6 @@ test('W2-余件 · 四卡提示位：服务端逐卡下发 effectNote 且文案�
     )
   }
   assert.match(snap.plugins.find((x) => x.dir === 'agent-memory').configPanel.effectNote, /agent-memory-runtime 行/)
-  assert.match(snap.plugins.find((x) => x.dir === 'web-search-local').configPanel.effectNote, /web-search-local 行/)
   assert.match(snap.plugins.find((x) => x.dir === 'compact-router').configPanel.effectNote, /预设托管/)
 })
 

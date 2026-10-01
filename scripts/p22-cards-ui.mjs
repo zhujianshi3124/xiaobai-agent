@@ -174,12 +174,11 @@ const EXPECT = [
   { dir: "compact-router", toggle: false, layer2: null },
   { dir: "rate-throttle", toggle: true, layer2: "关闭" },
   { dir: "search-router", toggle: true, layer2: "该插件没有内部开关" },
-  { dir: "web-search-local", toggle: true, layer2: "该插件没有内部开关" },
 ];
 
 const tree = reactR.render(snap);
 const cards = reactR.cardsOf(tree);
-check("react renderer: every plugin produced a card (5)", cards.length === 5, "cards=" + cards.length);
+check("react renderer: every plugin produced a card (4)", cards.length === 4, "cards=" + cards.length);
 check("react renderer: card order matches snapshot.plugins", cards.every((c, i) => c.props.plugin.dir === snap.plugins[i].dir));
 
 for (const exp of EXPECT) {
@@ -226,14 +225,13 @@ const INJECT_EXPECT = {
   "compact-router": ["llm", "tokenMeter", "sessions", "commands"],
   "rate-throttle": ["llm", "tokenMeter"],
   "search-router": ["web"],
-  "web-search-local": ["web"],
   "agent-memory": ["systemPrompt"], // EXE-BOOT-011 施工笔3（案 C）：agentMemory 系统提示词变量接线
 };
 const fmtInject = (a) => (a && a.length > 0) ? a.join(", ") : "（无）";
 
-// ① snapshot 真值（与 manifest registers.inject 实况逐字对表）
-check("inject: snapshot 四卡真值＝manifest registers.inject 实况（compact-router/rate-throttle/search-router/web-search-local）",
-  ["compact-router", "rate-throttle", "search-router", "web-search-local"].every((d) =>
+// ① snapshot 真值（与 manifest registers.inject 实况逐字对表）（S1 剔除批四→三枚举）
+check("inject: snapshot 三卡真值＝manifest registers.inject 实况（compact-router/rate-throttle/search-router）",
+  ["compact-router", "rate-throttle", "search-router"].every((d) =>
     JSON.stringify((snap.plugins.find((x) => x.dir === d) || {}).inject) === JSON.stringify(INJECT_EXPECT[d])));
 check("inject: snapshot agent-memory 真值＝[systemPrompt]（EXE-BOOT-011 施工笔3：agentMemory 变量接线）",
   JSON.stringify((snap.plugins.find((x) => x.dir === "agent-memory") || {}).inject) === JSON.stringify(["systemPrompt"]));
@@ -539,7 +537,7 @@ htmlR.setPatch(PATCH_TEXT);
     htmlLabelOf(impostor) === RT_LABEL.bothOff, htmlLabelOf(impostor));
   check("E2 react: 别家卡即使出现 routing.enabled 也不被专案接管",
     reactLabelOf(impostor) === RT_LABEL.bothOff, String(reactLabelOf(impostor)));
-  for (const dir of ["agent-memory", "search-router", "web-search-local"]) {
+  for (const dir of ["agent-memory", "search-router"]) {
     const p = snap.plugins.find((x) => x.dir === dir);
     check("E2 反向钉 " + dir + ": 真实卡状态行不受牵连（html）", htmlLabelOf(p) === "运行中 · 正在生效", htmlLabelOf(p));
     check("E2 反向钉 " + dir + ": 真实卡状态行不受牵连（react）", reactLabelOf(p) === "运行中 · 正在生效", String(reactLabelOf(p)));
@@ -562,11 +560,12 @@ htmlR.setPatch(PATCH_TEXT);
     reactLabelOf(crOff) === "已软卸载 · 本体保留 · 可一键恢复", String(reactLabelOf(crOff)));
 }
 
-// ---- W2 余件 · 断点修复批②：四卡"改完要重启"提示位（两渲染器 + rate-throttle 不双渲染）----
+// ---- W2 余件 · 断点修复批②：非可写卡"改完要重启"提示位（两渲染器 + rate-throttle 不双渲染）----
+// （S1 剔除批：非可写卡 4→3，web-search-local 已出包。）
 {
-  const FOUR = ["agent-memory", "compact-router", "web-search-local", "search-router"];
-  for (const dir of ["agent-memory", "compact-router", "rate-throttle", "search-router", "web-search-local"]) {
-    const isFour = FOUR.includes(dir);
+  const THREE = ["agent-memory", "compact-router", "search-router"];
+  for (const dir of ["agent-memory", "compact-router", "rate-throttle", "search-router"]) {
+    const isNote = THREE.includes(dir);
     const p = snap.plugins.find((x) => x.dir === dir);
     const serverCopy = p && p.configPanel ? p.configPanel.effectNote : undefined;
 
@@ -578,16 +577,16 @@ htmlR.setPatch(PATCH_TEXT);
       : null;
     const rendered = noteEl ? noteEl.type(noteEl.props) : null;
     const rtxt = rendered ? textOf(rendered).join(" ") : "";
-    check("[" + dir + "] react: restart hint " + (isFour ? "present" : "absent（在 ConfigEditor 内，不双渲染）"), (rtxt.length > 0) === isFour, rtxt.slice(0, 30));
-    if (isFour) {
+    check("[" + dir + "] react: restart hint " + (isNote ? "present" : "absent（在 ConfigEditor 内，不双渲染）"), (rtxt.length > 0) === isNote, rtxt.slice(0, 30));
+    if (isNote) {
       check("[" + dir + "] react: hint == server effectNote 逐字", rtxt === serverCopy, String(serverCopy).slice(0, 30));
       check("[" + dir + "] react: hint 点出重启边界", rtxt.includes("重启 DSH 才生效"));
     }
 
     // html：兜底页 effectNoteHtml
     const hhtml = htmlR.effectNoteHtml(p);
-    check("[" + dir + "] html: restart hint " + (isFour ? "present" : "absent"), (hhtml.length > 0) === isFour);
-    if (isFour) {
+    check("[" + dir + "] html: restart hint " + (isNote ? "present" : "absent"), (hhtml.length > 0) === isNote);
+    if (isNote) {
       check("[" + dir + "] html: hint == server effectNote 逐字", hhtml === '<div class="effectNote">' + serverCopy + "</div>", String(serverCopy).slice(0, 30));
       check("[" + dir + "] html: hint 点出重启边界", hhtml.includes("重启 DSH 才生效"));
     }

@@ -197,7 +197,8 @@ check("rate-throttle configPanel.editable = true", rt.configPanel.editable === t
 check("rate-throttle 当前值含 enabled=false / routing.enabled=true（与 patch 一致）",
   rt.configPanel.values.enabled === "false" && rt.configPanel.values.routing.enabled === "true");
 check("rate-throttle effectNote 提示重启生效且无遮蔽", (rt.configPanel.effectNote || "").includes("重启"));
-for (const d of ["agent-memory", "compact-router", "web-search-local"]) {
+for (const d of ["agent-memory", "compact-router"]) {
+  // （web-search-local 原为第三张"无内部开关"卡，已随开源 S1 剔除批出包。）
   const p = s1.plugins.find((x) => x.dir === d);
   check(d + " = 无内部开关 / 不可编辑", p.configPanel.editable === false && p.configPanel.noInternalSwitch === true);
 }

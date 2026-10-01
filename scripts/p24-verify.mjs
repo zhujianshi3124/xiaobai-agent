@@ -23,7 +23,9 @@ const BASE_SHA = createHash("sha256").update(readFileSync(patchPath, "utf8")).di
 // 基准滚存（第 3 次，2026-09-27 W9 第二段 D-19，用户拍板案一：相关 patch 行加原生 inject:）：e8051fe9… → a663f61b…。
 // 基准滚存（第 4 次，2026-09-29 EXE-BOOT-011 施工笔3，C1-007 施工令批准案 C：agent-memory 行加
 // inject: [systemPrompt]——agentMemory 系统提示词变量接线，宿主面实证 dsh-system-prompt lib:211）：a663f61b… → b0f304c9…。
-const BASELINE_SHA_EXPECTED = "b0f304c94818bf9aba106ea0fdd9a69ce52ac5b3e0de579a1e883ac8d58bd7f1";
+// 基准滚存（第 5 次＝副本线第 1 次，2026-09-30 C1-007 开源 S1 剔除批：删 web-search-local 行与
+// web.fetchProvider，G1/G3 既裁）：b0f304c9… → 693cfcd7…。
+const BASELINE_SHA_EXPECTED = "693cfcd7daa6be9819b8a8fb99d1e837a541e2e28ca2eec93379d9e3a747efb7";
 if (BASE_SHA !== BASELINE_SHA_EXPECTED) {
   console.error("ABORT: 真实 cordis.patch.yml 基线漂移（" + BASE_SHA.slice(0, 12) + "）——拒绝在非基准态跑验证");
   process.exit(1);
@@ -48,7 +50,7 @@ function makeCopy(name, { patchText, withPlugins = true } = {}) {
   cpSync(join(root, "package.json"), join(dir, "package.json"));
   cpSync(join(root, "preset-patch-state.json"), join(dir, "preset-patch-state.json"));
   if (withPlugins) {
-    for (const p of ["agent-memory", "compact-router", "rate-throttle", "search-router", "web-search-local"]) {
+    for (const p of ["agent-memory", "compact-router", "rate-throttle", "search-router"]) {
       mkdirSync(join(dir, "lib", p), { recursive: true });
       cpSync(join(root, "lib", p, "dsh.plugin.json"), join(dir, "lib", p, "dsh.plugin.json"));
       writeFileSync(join(dir, "lib", p, "body.js"), "// body of " + p + "\n", "utf8");
@@ -135,7 +137,7 @@ async function snapshotOf(dir) {
   const snap = await snapshotOf(dir);
   const sr = snap.plugins.find((p) => p.dir === "search-router");
   check("③ 快照：search-router=soft-unmounted 且本体在", sr.status === "soft-unmounted" && sr.bodyPresent);
-  check("③ 快照：web-search-local 不受牵连（仍 mounted）", snap.plugins.find((p) => p.dir === "web-search-local").status === "mounted");
+  check("③ 快照：rate-throttle 不受牵连（仍 mounted）", snap.plugins.find((p) => p.dir === "rate-throttle").status === "mounted");
   // 恢复三态：B（写回）
   const rp = createSoftRestorePlan({ toolkitRoot: dir, plugin: "search-router", hostKeyChoice: "restore-backup" });
   const re = executeSoftRestore({ plan: rp, toolkitRoot: dir });
@@ -145,7 +147,9 @@ async function snapshotOf(dir) {
   const plan2 = createSoftUninstallPlan({ toolkitRoot: dir, plugin: "search-router" });
   executeSoftUninstall({ plan: plan2, toolkitRoot: dir, backupRoot: backupRootFor(dir) });
   const patched = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
-  const occupiedText = patched.replace("# dsh-toolkit", "# dsh-toolkit").replace("  config:\r\n    fetchProvider:", "  config:\r\n    searchProvider: official-only\r\n    fetchProvider:");
+  // 占用态构造（S1 剔除批改锚）：软卸载后 web 行留 `config:` 空壳——向第一个 config 壳
+  // 插入他源 searchProvider，模拟「恢复时宿主键已被别的程序占值」。
+  const occupiedText = patched.replace("  config:\r\n", "  config:\r\n    searchProvider: official-only\r\n");
   writeFileSync(join(dir, "cordis.patch.yml"), occupiedText, "utf8");
   const rp2 = createSoftRestorePlan({ toolkitRoot: dir, plugin: "search-router", hostKeyChoice: "restore-backup" });
   check("③ 恢复冲突：conflict 三态数据（current/backup）非空", rp2.conflict && rp2.conflict.currentValue === "official-only" && rp2.conflict.backupValue.includes("auto-search"), JSON.stringify(rp2.conflict));
@@ -154,12 +158,12 @@ async function snapshotOf(dir) {
   check("③ 恢复 A（保留当前值）：行块插回但宿主键未被覆盖", !/^    searchProvider: auto-search/m.test(readFileSync(join(dir, "cordis.patch.yml"), "utf8")) && re3.ok);
 }
 
-// ---------- ④⑤ 销毁式真卸载全链路（web-search-local）+ 重装 → 挂载 ----------
+// ---------- ④⑤ 销毁式真卸载全链路（search-router；S1 剔除批原主角 web-search-local 出包，换现存可销毁件）+ 重装 → 挂载 ----------
 {
-  const dir = makeCopy("true-wsl");
+  const dir = makeCopy("true-sr");
   const before = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
-  const libDir = join(dir, "lib", "web-search-local");
-  const stash = join(work, "true-wsl-reinstall-stash"); // 暂存放副本仓之外（避免被 doctor 当作在案本体）
+  const libDir = join(dir, "lib", "search-router");
+  const stash = join(work, "true-sr-reinstall-stash"); // 暂存放副本仓之外（避免被 doctor 当作在案本体）
   cpSync(libDir, stash, { recursive: true }); // 模拟「开源后重新下载」的源码来源（测试内自建）
   const countFiles = (d) => {
     let n = 0;
@@ -168,10 +172,10 @@ async function snapshotOf(dir) {
   };
   const fileCount = countFiles(libDir);
 
-  const plan = createTrueUninstallPlan({ toolkitRoot: dir, plugin: "web-search-local", userReason: "删旧换新测试", confirmCopy: "{}" });
+  const plan = createTrueUninstallPlan({ toolkitRoot: dir, plugin: "search-router", userReason: "删旧换新测试", confirmCopy: "{}" });
   const exec = executeTrueUninstall({ plan, toolkitRoot: dir, backupRoot: backupRootFor(dir) });
   check("④ 销毁式：lib 目录已删", !existsSync(libDir));
-  check("④ 销毁式：行块摘除 + 宿主键 fetchProvider unset", !readFileSync(join(dir, "cordis.patch.yml"), "utf8").includes("- id: web-search-local") && !/^    fetchProvider:/m.test(readFileSync(join(dir, "cordis.patch.yml"), "utf8")));
+  check("④ 销毁式：行块摘除 + 宿主键 searchProvider unset", !readFileSync(join(dir, "cordis.patch.yml"), "utf8").includes("- id: web-search-router") && !/^    searchProvider:/m.test(readFileSync(join(dir, "cordis.patch.yml"), "utf8")));
 
   const manifest = readCustodyManifest(dir, exec.custodyId);
   check("④ 收据：kind = true-uninstall-receipt", manifest.kind === "true-uninstall-receipt" && manifest.schemaVersion === 2);
@@ -192,44 +196,42 @@ async function snapshotOf(dir) {
   check("⑤ 硬判据：收据目录**无 body/**（不留副本）", !existsSync(join(dir, ".panel-custody", exec.custodyId, "body")) && manifest.bodyStored === false);
   check("⑤ 硬判据：收据不含恢复用字段（body / restore）", manifest.body === undefined && manifest.restore === undefined);
   check("⑤ 硬判据：.panel-custody 全域无任何源码副本", !anySourceCopy(join(dir, ".panel-custody")));
-  check("⑤ 收据：rebuild 行块 + 宿主键事实齐（重装挂载依据）", !!manifest.rebuild.rowBlock && !!manifest.rebuild.hostKey && String(manifest.rebuild.hostKey.raw).includes("fetchProvider"));
+  check("⑤ 收据：rebuild 行块 + 宿主键事实齐（重装挂载依据）", !!manifest.rebuild.rowBlock && !!manifest.rebuild.hostKey && String(manifest.rebuild.hostKey.raw).includes("searchProvider"));
   check("⑤ 收据：listCustody 标注 mountable", listCustody(dir).some((e) => e.custodyId === exec.custodyId && e.mountable === true));
 
   const snap = await snapshotOf(dir);
-  const wsl = snap.plugins.find((p) => p.dir === "web-search-local");
   const sr = snap.plugins.find((p) => p.dir === "search-router");
-  check("⑥ 快照：web-search-local=true-uninstalled（5 卡仍渲染）", wsl.status === "true-uninstalled" && snap.plugins.length === 5);
-  check("⑥ 快照：「无副本」文案逐字命中", wsl.statusCopy === "已卸载（无副本）· 重新安装后面板可挂载", wsl.statusCopy);
-  check("⑥ 快照：restoreAvailable=false（无恢复路径）", wsl.restoreAvailable === false && wsl.canMount === false);
-  check("⑥ 快照：search-router=dependency-broken 文案命中", sr.status === "dependency-broken" && sr.mounted === true && sr.statusCopy.includes("依赖的本地搜索未安装"));
+  check("⑥ 快照：search-router=true-uninstalled（4 卡仍渲染）", sr.status === "true-uninstalled" && snap.plugins.length === 4);
+  check("⑥ 快照：「无副本」文案逐字命中", sr.statusCopy === "已卸载（无副本）· 重新安装后面板可挂载", sr.statusCopy);
+  check("⑥ 快照：restoreAvailable=false（无恢复路径）", sr.restoreAvailable === false && sr.canMount === false);
 
   // —— 重装（外部副本放回 lib）→ 面板检测「已安装未挂载」→ 挂载 ——
   cpSync(stash, libDir, { recursive: true });
   const snap2 = await snapshotOf(dir);
-  const wsl2 = snap2.plugins.find((p) => p.dir === "web-search-local");
-  check("⑤ 重装后：installed-unmounted + canMount=true（可挂载）", wsl2.status === "installed-unmounted" && wsl2.canMount === true, wsl2.status + "/" + wsl2.canMount);
-  check("⑤ 重装后：restoreAvailable 仍 false（恢复只属软卸载）", wsl2.restoreAvailable === false);
+  const sr2 = snap2.plugins.find((p) => p.dir === "search-router");
+  check("⑤ 重装后：installed-unmounted + canMount=true（可挂载）", sr2.status === "installed-unmounted" && sr2.canMount === true, sr2.status + "/" + sr2.canMount);
+  check("⑤ 重装后：restoreAvailable 仍 false（恢复只属软卸载）", sr2.restoreAvailable === false);
 
-  const mp = createMountPlan({ toolkitRoot: dir, plugin: "web-search-local" });
+  const mp = createMountPlan({ toolkitRoot: dir, plugin: "search-router" });
   const me = executeMount({ plan: mp, toolkitRoot: dir, backupRoot: backupRootFor(dir) });
   check("⑤ 挂载：patch sha 回基线（字节级）", sha(readFileSync(join(dir, "cordis.patch.yml"), "utf8")) === sha(before));
-  check("⑤ 挂载：宿主键回原值 fetchProvider: local-fetch", /^    fetchProvider: local-fetch/m.test(readFileSync(join(dir, "cordis.patch.yml"), "utf8")));
+  check("⑤ 挂载：宿主键回原值 searchProvider: auto-search", /^    searchProvider: auto-search/m.test(readFileSync(join(dir, "cordis.patch.yml"), "utf8")));
   check("⑤ 挂载：executeMount 回传 mounted=true", me.mounted === true);
   const snap3 = await snapshotOf(dir);
-  check("⑤ 挂载后：5 卡全 mounted 且无 dependency-broken", snap3.plugins.every((p) => p.status === "mounted"));
+  check("⑤ 挂载后：4 卡全 mounted 且无 dependency-broken", snap3.plugins.every((p) => p.status === "mounted"));
 
   // —— 无收据 ⇒ 拒绝挂载（面板不臆造 config）——
   const dir3 = makeCopy("mount-no-receipt");
   let nc = null;
-  try { createMountPlan({ toolkitRoot: dir3, plugin: "web-search-local" }); } catch (e) { nc = e.code; }
+  try { createMountPlan({ toolkitRoot: dir3, plugin: "search-router" }); } catch (e) { nc = e.code; }
   check("⑤ 无收据 → mount-no-receipt 拒绝（零硬编码，不臆造 config）", nc === "mount-no-receipt", String(nc));
 
   // —— 恢复 API 对真卸载一律拒绝 ——
   const dir4 = makeCopy("true-restore-refused");
-  const p4 = createTrueUninstallPlan({ toolkitRoot: dir4, plugin: "web-search-local" });
+  const p4 = createTrueUninstallPlan({ toolkitRoot: dir4, plugin: "search-router" });
   executeTrueUninstall({ plan: p4, toolkitRoot: dir4, backupRoot: backupRootFor(dir4) });
   let rr = null;
-  try { createSoftRestorePlan({ toolkitRoot: dir4, plugin: "web-search-local" }); } catch (e) { rr = e.code; }
+  try { createSoftRestorePlan({ toolkitRoot: dir4, plugin: "search-router" }); } catch (e) { rr = e.code; }
   check("⑤ 真卸载后恢复被拒（body-missing：无副本可恢复）", rr === "body-missing", String(rr));
 }
 
@@ -328,15 +330,16 @@ async function snapshotOf(dir) {
   // 基线副本：0 error 0 mount 信号
   const base = runDoctor(makeCopy("doc-base"));
   check("⑦ doctor 基线副本：error=0 且无 mount 信号", base.summary.error === 0 && !base.issues.some((i) => i.category === "mount"));
-  // A5：真卸载 web-search-local → missing-provider warning（search-router 仍挂载）
+  // A5（S1 剔除批改造）：原场景"真卸载 web-search-local → missing-provider warning"随
+  // providerDependencies 清空退役（搜索依赖登记已不存在）——改钉"清空后 doctor 不再产该类 warning"。
   const dir = makeCopy("doc-a5");
-  const plan = createTrueUninstallPlan({ toolkitRoot: dir, plugin: "web-search-local" });
+  const plan = createTrueUninstallPlan({ toolkitRoot: dir, plugin: "search-router" });
   executeTrueUninstall({ plan, toolkitRoot: dir, backupRoot: backupRootFor(dir) });
   const r = runDoctor(dir);
   const mount = r.issues.filter((i) => i.category === "mount");
-  check("⑦ A5：missing-provider warning 在案（文案命中）", mount.some((i) => i.id === "provider.missing-provider" && i.severity === "warning" && i.message.includes("依赖的本地搜索未安装")), JSON.stringify(mount.map((i) => i.id)));
-  check("⑦ A5：缺席提示 severity≠error 且 doctor error=0", r.summary.error === 0 && mount.every((i) => i.severity !== "error"));
-  check("⑦ A5：无 dangling warning（fetchProvider 已 unset）", !mount.some((i) => i.id === "provider.dangling-reference"));
+  check("⑦ A5（改）：依赖登记清空后不产 missing-provider（退役负向钉）", !mount.some((i) => i.id === "provider.missing-provider"), JSON.stringify(mount.map((i) => i.id)));
+  check("⑦ A5（改）：mount 类提示 severity≠error 且 doctor error=0", r.summary.error === 0 && mount.every((i) => i.severity !== "error"));
+  check("⑦ A5（改）：无 dangling warning（真卸载行块已摘）", !mount.some((i) => i.id === "provider.dangling-reference"));
   // dangling：手工把 searchProvider 指向不存在的 provider
   const dir2 = makeCopy("doc-dangling");
   const t = readFileSync(join(dir2, "cordis.patch.yml"), "utf8").replace("searchProvider: auto-search", "searchProvider: ghost-provider");
@@ -408,7 +411,7 @@ async function snapshotOf(dir) {
 // ---------- 收尾：真实仓零写入自证 ----------
 {
   const nowSha = sha(readFileSync(patchPath, "utf8"));
-  check("真实 cordis.patch.yml 全程零写入（基准 a663f61b… 不变）", nowSha === BASE_SHA && BASE_SHA === BASELINE_SHA_EXPECTED);
+  check("真实 cordis.patch.yml 全程零写入（基准 693cfcd7… 不变；判据随滚存笔动态，文案随本笔在位改对）", nowSha === BASE_SHA && BASE_SHA === BASELINE_SHA_EXPECTED);
   rmSync(work, { recursive: true, force: true });
 }
 
