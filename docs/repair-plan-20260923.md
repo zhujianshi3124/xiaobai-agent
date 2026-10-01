@@ -2968,3 +2968,91 @@ doctor dry-run 0/0/0（桶内 CLI）、守卫红 0（token 3246、覆盖 91）�
 021 开局自跑对表逐项命中（实档 `var/logs/2026-10-01/boot021-open-*.log`）：三冻结面（源仓 04816b8／
 在用 doctor ce31f83 且树净／在用 patch b0f304c9 sha256 实读）＋链尾 72b1b00＋树净＋门禁 6/6（115.1s）＋
 parity 54/54＋regression 18 项（清单实数核对）＋守卫红 0（token 3246、覆盖 91）。
+
+## 52. S3 收紧批施工账：收紧笔（甲'形）＋收口账＋批末真机窗（2026-10-01 · EXE-BOOT-021 · 副本线）
+
+**令源**：EXE-BOOT-021 启动包 §八.2–§八.5（收紧笔甲'形终裁·用户令；收口账；批末非侵入真机复验）。
+
+### 52.1 笔序（四笔，各自独立可 revert）
+
+`5d44dc6`（验收笔：plan §51，迁移笔 72b1b00 验收入账＋两追认＋flake 记录）→
+`b663a6f`（勘误笔：§51 两处行号形态引用改符号名，守卫 2 红清偿——本批首笔即被自家守卫抓红，本职见效）→
+`68e7a68`（**收紧笔**：甲'形落码＋版本 1.2.0＋夹具六份保命题＋钉子＋parity 扩网）→
+本笔（收口账：debt C-3 收口注＋C-4 同步注＋本节＋CHANGELOG 1.2.0＋README v1.2 同步）。
+批末读数以批末申报为唯一依据（树间 diff 统计）。
+
+### 52.2 收紧笔设计落位（020 WIP 按甲'形判读实录）
+
+**判定形**：只管双写——`manifestHasContract`（非空 `contract` 串，正本移入 `contract/src/validate.ts`、
+`registry/src/loader.ts` 同源 import）为条件位；`LEGACY_ERROR_FIELDS`＝manifestVersion/顶层 registers/
+顶层 exports 在**带契约面**清单判双写 error，**无契约面**（纯宿主原生形态）降 info 容忍；
+`LEGACY_INFO_FIELDS` 五名两种形态都 info（＝debt C-4 七条的码面化）。② 级兼容位与 A1 通道零改动
+（F2②③ 四格钉继续绿＝判据）。契约版本 1.2.0
+同批（Q3 既裁）；"提示串"无独立字面量（validate.ts 文案引常量）。
+
+**WIP 评估（能捡/重做）**：020 整档 WIP（301 行）的**两档名单、版本注释、parity E 段/D12/D13/D22、
+contract.test 三格**可捡；**无条件 error 判定形不可捡**（甲'硬套"两档拆档"原形＝禁）——error 档补
+条件位；无契约面语境为零 WIP 未覆盖面，新立对举格。**020 十二红逐格重分析（零凑绿）**：
+
+| 红格（12） | 命题 | 甲'形处置 | 命题保全 |
+|---|---|---|---|
+| 批5-1 ×4（config-schema 降级 fail-closed） | 降级路径 fail-closed，与 manifestVersion 无涉 | 夹具 schema-plugin/unverified-schema 摘 manifestVersion（契约面清单不再携带＝迁移后正形态） | ✓ 降级/预检命题原样，契约闸不再先拒 |
+| 正向 fixture（contract.test.mjs「正向 fixture」格） | 全量合法 manifest 通过＋存量字段 info | valid-manifest.json 摘 manifestVersion；断言 manifestVersion→name | ✓（该断言本已被前置④ deepEqual 体系接管） |
+| P5-#2（configSchema 真校验阻断） | 必填缺失→安装阻断 | schema-plugin 夹具同上 | ✓ |
+| T0 ×2（表单累积／refs 解引用） | 面板配置面行为 | 同一 schema-plugin 夹具随上 | ✓ |
+| F2② ×2／F2③／F2⓪-dual | ② 级兼容位＋A1 通道＋顺位 | 三夹具摘 contract 转纯宿主原生形态（② 级真实用户建模＝甲'承诺的装载半边）；entry-legacy-top 补 package.json 保 pluginId 断言同形；F2② 格补 legacy:true／无契约面断言 | ✓ 格断言一字未动 |
+
+新夹具形态注记如实：entry-provides-dual 摘 contract 后是"无契约面但携 provides 词汇"的混合形——
+它建模的是甲'容忍面下的装载器顺位行为（resolveEntry 分支无关性），非生产清单形态，已在该夹具
+displayName 与 F2 节注写明。
+
+### 52.3 变异自检四发（实档 `boot021-s3d-mutate.log`；工装 `s3d-mutate.mjs`）
+
+M-T1 摘条件位（改无条件 error）⇒ 甲'原生形态格＋parity D23＋**A panel 格**红；M-T2 摘 error 档
+（三名并入 info）⇒ 收紧本体格＋D12/D13/D22＋**E1/E3/E4**（在册口径回弹）红；M-T3 摘版本提升 ⇒
+版本格红；M-T4 摘 ② 级 A1 warn ⇒ F2② 两格红。每发还原后源文件 sha256 逐字节相同。
+**首轮预期两处写错按实况更正复跑（不以改预期凑绿）**：M-T1 漏料 A panel（panel 正是仓内原生形态
+实例，无条件判必然连带翻面）；M-T2 漏料 E 段三格（error 档摘除 ⇒ "契约在册"口径回弹 17 键）。
+
+### 52.4 收紧笔读数（实档 `boot021-s3d-gate-final2.log`）
+
+门禁 **6/6 全绿（130.4s）**；nt **505/0**（500→505＝新钉 5：拆档三格＋条件位对举格＋判据格）；
+doctor 真实仓 dry-run **0/0/0**（桶内 CLI）；parity **56/56**（54→56：D22/D23 新格＋D12/D13 合流
+同向红＋E 段 14/14 重写，H4 十七键口径作废）；regression **18 项全绿**；守卫红 **0**（token 3254、
+覆盖 91、自证 51/51）；patch 校验 ✓ 基准 **5c4e6980/3328B** 未动。
+**全绿路径的"双写红集来源"写明**：六份生产清单零双写（迁移笔已清空，甲'形下零 ok 翻面——
+`boot021-t4-drills.log` C 段逐份实证 ok=true 零 error）；双写 error 只存在于对账探针与测试夹具
+（有意构造，D12/D13/D22 与收紧本体格）。**flake 如实报**：收紧笔首跑门禁撞 `R1 全局 registry 并发写`
+（第 1、2 步各一次，负载时序族既有立案＝§51.3），复跑即绿，未动码未放宽。
+
+### 52.5 批末非侵入真机复验（实档 `boot021-t4-drills.log`；工装 `t4-drills.mjs`）
+
+**宿主状态如实申报**：宿主 3080 未监听（停机态，`baseline-shas.json` 在档）——宿主通道装-卸闭环
+（018 M2 形）本窗不可行（零宿主重启红线），**该面停报候排窗**。装载面复验按等价改排由副本线自有
+机械在真机实路径完成（真实 Core＋resolveLocalSource、真路径真 FS，与 F2 测试同构；写入面仅沙箱
+tmp/scratch）：
+
+- **A 三新槽真装载**：drill-v13（provides.entry/inject/tools 纯契约形）install ok→active、⓪ 级命中、
+  legacy=false、零双声明告警、inject/tools 装载取数逐面实证。
+- **B 迁移后清单形真装载**：drill-migrated（生产迁移形状复刻：provides 已迁＋legacy 空骨架）装-活全过。
+- **C 五生产成员真装载（副本线真路径）**：rate-throttle/compact-router/search-router 走 ⓪、桶根走
+  ①($from)、逐份"带契约面＋甲'收紧 ok=true 零 error"实证；agent-memory 按其现状（C-4 第 6 条）ok=true，
+  目录装载＝B1 情形 A 结构化报错（终态设计行为，报错点名子路径改装法）＋显式文件路径装载不受影响；
+  panel 经 registry 通道仍被 D-15 显式闸拒（追认项 1 的真机复核）。
+- **D 双写拒判真行为**：drill-doublewrite（契约面＋manifestVersion＋顶层 exports）装载器闸内拒
+  （plugin-shape-invalid、文案点名双写）、契约判恰两条双写 error、registry 通道拒装且报告带成因。
+- **E 纯宿主原生形真装载**：drill-native（无契约面＋manifestVersion＋顶层 exports）install ok→
+  legacy=true、② 级命中、必带提醒、A1 通道落日志（event=entry-declaration／errorCode=
+  legacy-entry-declaration／pluginId 取自 package.json#name）——"宿主原生形态照样能装（带提醒）"
+  的对外承诺真机实证。
+- **F 清场三判据**：state.json 装前后 sha 逐字节同（本窗零宿主通道写，a8a5d0aa…/41B＝018 基线同值）；
+  在用 patch 基准逐字节同（b0f304c9）；~/.dsh 扫描面 5 文件（018 M3 同口径）逐字节同。
+  **~/.dsh 全树口径注记**：全树 1.8 万文件为宿主应用活数据（附件/日志/用量账），不入判据面，
+  判据面维持 018 既定 5 文件扫描面。
+
+### 52.6 边界与不做
+
+在用仓 04816b8＋五直挂＋面板在用实例＋在用 patch 基准 b0f304c9 零触碰；在用 doctor（ce31f83）冻结；
+~/.dsh 只读；宿主零重启零触碰（停机态如实记录，宿主通道复验窗候排）；对外发布零动作
+（S5 发布门前用户终批前置不变）。`scripts/terminal-acceptance-report.mjs` 的在用沙箱 doctor 硬调
+（020 停靠报告点名观察项，本地线工装、不在 18 项门禁清单内）**本批不动**，随批末申报候裁。
