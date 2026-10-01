@@ -1,6 +1,7 @@
 // P2.4 插件登记表：卸载/恢复的知识单一来源（snapshot ROW_IDS 的超集，六态与卸载共用）。
 // 口径（p24-design.md §1 分类定案表）：
-//   - 联动三插件（限流/压缩/记忆）默认软卸载；搜索两插件默认真卸载；软/真入口并存。
+//   - 联动三插件（限流/压缩/记忆）默认软卸载；搜索一插件（search-router）默认真卸载；软/真入口并存。
+//     （web-search-local 原同列"搜索两插件"，已随开源 S1 剔除批整体出包，登记表四卡。）
 //   - toolkit-manager 不提供自我卸载（面板自我保护，同「不自带开关」先例）。
 //   - hostKey：搜索插件真/软卸载时需同步 unset 的 web 宿主键（方案 A，§6）。
 //   - 恢复方向冲突三态：宿主键被占用 → 引擎抛 host-key-occupied → 路由转三态弹窗。
@@ -49,15 +50,6 @@ export const PLUGINS = {
     managedBy: "patch",
     providers: ["auto-search"],
   },
-  "web-search-local": {
-    rowId: "web-search-local",
-    pkg: "@local/dsh-toolkit/web-search-local",
-    category: "search",
-    defaultMode: "true",
-    hostKey: "fetchProvider",
-    managedBy: "patch",
-    providers: ["local-multi", "local-fetch"],
-  },
 };
 
 /** 行 id → 插件名（`web` 等平台行不属本表，返回 null）。 */
@@ -78,15 +70,12 @@ export function crossRefNeedles(rowId) {
   return plugin ? [...(PLUGINS[plugin].providers ?? [])] : [];
 }
 
-// 联动感知（P24-EVIDENCE §①③，证据阶段定案）：search-router 挂载而 web-search-local
-// 缺席 ⇒ dependency-broken（搜索功能不可用；doctor 以 missing-provider warning 标注）。
-export const DEPENDENCIES = [
-  {
-    plugin: "search-router",
-    requires: "web-search-local",
-    note: "已加载，但依赖的本地搜索未安装——搜索功能不可用",
-  },
-];
+// 联动感知（P24-EVIDENCE §①③，证据阶段定案；S1 剔除批改口径）：search-router 挂载而
+// web-search-local 缺席 ⇒ dependency-broken（搜索功能不可用；doctor 以 missing-provider warning 标注）。
+// 开源 S1 剔除批（C1-007 G1）：web-search-local 已随 MIT 外来件整体出包，登记表四卡、
+// 本联动表清空——本地搜索位改为 search-router 内的**可缺席 provider 位**（缺席回落官方＋
+// 服务端警示，见 lib/search-router/index.js G3），不再走面板 dependency-broken 面。
+export const DEPENDENCIES = [];
 
 /**
  * 声明式依赖的反向查询（H2）：摘除/停用 `plugin` 时，哪些插件按登记表会失去依赖。

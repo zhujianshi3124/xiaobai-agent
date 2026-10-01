@@ -137,14 +137,13 @@ test('批5-1 · 形态完全不认识 ⇒ 降级（同一条静默放行面）',
   }
 })
 
-test('批5-1 · 反向钉：仓内 6 份真实 manifest 的 configSchema 仍走真校验（verified:true）', async () => {
+test('批5-1 · 反向钉：仓内 5 份真实 manifest 的 configSchema 仍走真校验（verified:true）', async () => {
   const files = [
     'dsh.plugin.json',
     join('lib', 'agent-memory', 'dsh.plugin.json'),
     join('lib', 'compact-router', 'dsh.plugin.json'),
     join('lib', 'rate-throttle', 'dsh.plugin.json'),
     join('lib', 'search-router', 'dsh.plugin.json'),
-    join('lib', 'web-search-local', 'dsh.plugin.json'),
   ]
   for (const rel of files) {
     const manifest = JSON.parse(readFileSync(join(import.meta.dirname, '..', rel), 'utf8'))

@@ -14,7 +14,7 @@
     "test": "npm run build:contract && npm run build:registry && npm run build:doctor && node scripts/pluggable-lint.mjs && node scripts/p4-no-subplugin-import-check.mjs && npm run typecheck && node --test --test-force-exit"
   },
   "type": "module",
-  "description": "本地 DSH 套件：rate-throttle / compact-router / agent-memory / search-router / web-search-local 五合一入口；一个版本号管全部。",
+  "description": "DSH 套件：rate-throttle / compact-router / agent-memory / search-router 四合一入口；一个版本号管全部。",
   "exports": {
     ".": "./index.js",
     "./contract": "./contract/dist/index.js",
@@ -26,7 +26,6 @@
     "./agent-memory": "./lib/agent-memory/lib/index.js",
     "./agent-memory/plugin": "./lib/agent-memory/plugin.js",
     "./search-router": "./lib/search-router/index.js",
-    "./web-search-local": "./lib/web-search-local/index.js",
     "./package.json": "./package.json"
   },
   "files": [

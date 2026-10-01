@@ -292,9 +292,8 @@ check("CSRF blocks doctor cross-site POST", csrf === 403, "status " + csrf);
 
 const snapMod = await import(pathToFileURL(join(panelDir, "manager", "snapshot.mjs")).href);
 const snap = await snapMod.buildSnapshot({ toolkitRoot: root });
-check("snapshot sees 5 business plugins", Array.isArray(snap.plugins) && snap.plugins.length === 5, "n=" + (snap.plugins && snap.plugins.length));
-const wsl = snap.plugins.find((p) => p.dir === "web-search-local");
-check("web-search-local marked derived/gausszhou", !!(wsl && wsl.origin === "derived" && wsl.upstream === "@gausszhou/dsh-web-search-local"));
+check("snapshot sees 4 business plugins", Array.isArray(snap.plugins) && snap.plugins.length === 4, "n=" + (snap.plugins && snap.plugins.length));
+// （web-search-local 已随开源 S1 剔除批出包，原 derived/gausszhou 断言格随之退役。）
 check("self id is toolkit-manager", snap.self && snap.self.id === "toolkit-manager", snap.self && snap.self.id);
 check("self panel patch-mounted", snap.self && snap.self.managedBy === "patch");
 
@@ -313,14 +312,14 @@ const clientSrc = readFileSync(join(panelDir, "client", "index.js"), "utf8");
 const htmlSrc = readFileSync(join(panelDir, "client", "panel.html"), "utf8");
 const snapshotSrc = readFileSync(join(panelDir, "manager", "snapshot.mjs"), "utf8");
 
-// ① 每卡片一句中文功能描述：五个插件全覆盖
+// ① 每卡片一句中文功能描述：四个插件全覆盖（S1 剔除批五→四）
 const descBlock = /var DESCRIPTIONS = \{([\s\S]*?)\n\t\t\};/.exec(clientSrc);
 check("client has DESCRIPTIONS map", !!descBlock);
 const descKeys = descBlock ? (descBlock[1].match(/"([a-z][a-z0-9-]*)":/g) || []).map((s) => s.replace(/[":]/g, "")) : [];
-for (const dir of ["agent-memory", "compact-router", "rate-throttle", "search-router", "web-search-local"]) {
+for (const dir of ["agent-memory", "compact-router", "rate-throttle", "search-router"]) {
   check("desc covers " + dir, descKeys.includes(dir));
 }
-check("desc count == 5", descKeys.length === 5, String(descKeys.length));
+check("desc count == 4", descKeys.length === 4, String(descKeys.length));
 
 // ① 状态三态人话
 check("state running label", clientSrc.includes("运行中 · 正在生效"));
@@ -350,7 +349,7 @@ check("has CN_NAMES map", !!cnBlock);
 const cnVals = cnBlock
   ? (cnBlock[1].match(/:\s*"([^"]+)"/g) || []).map((s) => s.replace(/^:\s*"/, "").replace(/"$/, ""))
   : [];
-for (const label of ["记忆", "上下文压缩", "限流", "搜索路由", "本地网页搜索"]) {
+for (const label of ["记忆", "上下文压缩", "限流", "搜索路由"]) {
   check("cn annotation " + label, cnVals.includes(label));
 }
 check("no DISPLAY_NAMES map anymore", !clientSrc.includes("DISPLAY_NAMES") && !htmlSrc.includes("DISPLAY_NAMES"));
@@ -359,8 +358,8 @@ check("has annotated helper", clientSrc.includes("function annotated"));
 // 卡片标题必须用英文原名（originalName），中文只作副标题
 check("card title uses originalName", /esc\(originalName\(p\)\)/.test(htmlSrc) && /originalName\(plugin\)/.test(clientSrc));
 check("cn name is subtitle not title", /styles\.subtitle/.test(clientSrc) && /class="subtitle"/.test(htmlSrc));
-// 五个英文原名必须以标识形态出现
-for (const en of ["agent-memory", "compact-router", "rate-throttle", "search-router", "web-search-local"]) {
+// 四个英文原名必须以标识形态出现（S1 剔除批五→四）
+for (const en of ["agent-memory", "compact-router", "rate-throttle", "search-router"]) {
   check("english original name " + en, clientSrc.includes(en) && htmlSrc.includes(en));
 }
 // 页面其它标识符位置同样「英文原名 + 中文注释」
@@ -539,7 +538,7 @@ check("client keeps defensive fallback", clientSrc.includes("rowAnchorFromPatch"
   // （走引擎层直接调用，避免改动真实文件）
   const eng2 = await import(pathToFileURL(join(panelDir, "manager", "apply-engine.mjs")).href);
   const refText = readFileSync(join(root, "cordis.patch.yml"), "utf8").replace(
-    /(\r?\n)(- insert:\r?\n    - id: web-search-local)/,
+    /(\r?\n)(- insert:\r?\n    - id: web-search-router)/,
     "$1- id: other-row$1  config:$1    uses: rate-throttle$1$1$2",
   );
   const refHits = eng2.findCrossReferences(refText, { rowId: "rate-throttle" });
@@ -597,10 +596,11 @@ check("client keeps defensive fallback", clientSrc.includes("rowAnchorFromPatch"
   check("P2.2b fallback page tells the user to edit a conditional row by hand",
     htmlSrc2.includes("请手工编辑"));
 
-  // ---- P2.2b 全卡覆盖：4 张可 toggle 卡的锚点行号与真实文件对账 ----
-  // （agent-memory 的 77 行是用户实际点击时看到的行号，必须逐字对上；D-19 滚存后 58→59/64→66/74→77）
+  // ---- P2.2b 全卡覆盖：3 张可 toggle 卡的锚点行号与真实文件对账 ----
+  // （S1 剔除批后 3 张：web-search-local 行已出包；行号随该批滚存重测——web-search-router 66→59、
+  //   agent-memory-runtime 77→70；rate-throttle 14 不变）
   const patchLines = readFileSync(join(root, "cordis.patch.yml"), "utf8").split(/\r?\n/);
-  const CARD_LINES = [["rate-throttle", 14], ["web-search-local", 59], ["web-search-router", 66], ["agent-memory-runtime", 77]];
+  const CARD_LINES = [["rate-throttle", 14], ["web-search-router", 59], ["agent-memory-runtime", 70]];
   for (const [id, line] of CARD_LINES) {
     const found = patchLines.findIndex((l) => new RegExp("^\\s*- id:\\s*" + id + "\\s*$").test(l));
     check("P2.2b anchor line reconciled for " + id, found + 1 === line, "line " + (found + 1) + " (expected " + line + ")");

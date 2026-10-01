@@ -49,12 +49,12 @@ const LAYERS = [
   },
   {
     n: "②",
-    name: "五插件清单（声明 requirements/exports，不含挂载行）",
-    carrier: "lib/{rate-throttle,compact-router,agent-memory,search-router,web-search-local}/dsh.plugin.json",
+    name: "四插件清单（声明 requirements/exports，不含挂载行）",
+    carrier: "lib/{rate-throttle,compact-router,agent-memory,search-router}/dsh.plugin.json",
     phys: join(root, "lib"),
     evidence: [
       "面板卡片判据：panel/manager/snapshot.mjs:112 readdirSync(libRoot) + 清单存在性",
-      "glob 命中 5 份（本脚本 §2 逐个复核）",
+      "glob 命中 4 份（本脚本 §2 逐个复核）（S1 剔除批 5→4）",
     ],
   },
   {
@@ -110,7 +110,7 @@ const nestedRows = rows.filter((r) => r.indent > 0);
 console.log("\n  统计：顶层行 " + topRows.length + " 个" + "（" + topRows.map((r) => r.id).join(", ") + "）");
 console.log("        嵌套行 " + nestedRows.length + " 个" + "（" + nestedRows.map((r) => r.id).join(", ") + "）");
 
-const TOOLKIT_IDS = ["rate-throttle", "web-search-local", "web-search-router", "agent-memory-runtime", "toolkit-manager"];
+const TOOLKIT_IDS = ["rate-throttle", "web-search-router", "agent-memory-runtime", "toolkit-manager"];
 const allIds = rows.map((r) => r.id);
 const counts = {};
 for (const id of allIds) counts[id] = (counts[id] || 0) + 1;
@@ -118,12 +118,12 @@ const dupes = Object.entries(counts).filter(([, n]) => n > 1);
 check("① 层内无重复 id 行（含五个 toolkit id）", dupes.length === 0,
   dupes.length ? "重复: " + JSON.stringify(dupes) : "全部 id 恰好出现 1 次（共 " + allIds.length + " 个）");
 const missing = TOOLKIT_IDS.filter((id) => !allIds.includes(id));
-console.log("  五个 toolkit id 在本层命中：" + TOOLKIT_IDS.map((id) => id + "×" + (counts[id] || 0)).join("  "));
-check("① 五个 toolkit id 中仅 compact-router 无对应行（toolkit 侧预期如此）",
+console.log("  四个 toolkit id 在本层命中：" + TOOLKIT_IDS.map((id) => id + "×" + (counts[id] || 0)).join("  "));
+check("① 四个 toolkit id 中仅 compact-router 无对应行（toolkit 侧预期如此）",
   missing.length === 0 && nestedRows.filter((r) => r.id === "toolkit-manager").length === 1,
   "缺行: " + (missing.length ? missing.join(",") : "无"));
 console.log("  注：嵌套 id 中 v4-pro/v4-flash 是 rate-throttle.routing.staticGroups 的组 id，不是插件挂载行；");
-console.log("      真正的 5 个插件挂载行 = rate-throttle / web-search-local / web-search-router / agent-memory-runtime / toolkit-manager。");
+console.log("      真正的 4 个插件挂载行 = rate-throttle / web-search-router / agent-memory-runtime / toolkit-manager（S1 剔除批 5→4）。");
 
 const OVERRIDE_PAT = /(^|\s)(override|overrides|replace|replaces|shadow|shadowing|覆盖|遮蔽|取代)(\s|:|$)/i;
 const overrideHits = patchLines.map((l, i) => ({ n: i + 1, l })).filter((x) => OVERRIDE_PAT.test(x.l.split("#")[0]));
@@ -135,7 +135,7 @@ check("① 文件为 CRLF（与 P2 写路径前提一致）",
 // ============================================================
 // §2 第②层：五个 lib/*/dsh.plugin.json
 // ============================================================
-console.log("\n=== §2 第②层 lib/*/dsh.plugin.json ×5 ===\n");
+console.log("\n=== §2 第②层 lib/*/dsh.plugin.json ×4 ===\n");
 const libRoot = join(root, "lib");
 const libDirs = readdirSync(libRoot, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name).sort();
 const manifests = [];
@@ -149,7 +149,7 @@ for (const d of libDirs) {
   console.log("      top-level keys: " + Object.keys(j).join(", "));
 }
 console.log("");
-check("② 成卡目录数 = 5", manifests.length === 5, "实测 " + manifests.length + "：" + manifests.map((m) => m.dir).join(", "));
+check("② 成卡目录数 = 4", manifests.length === 4, "实测 " + manifests.length + "：" + manifests.map((m) => m.dir).join(", "));
 // P5 契约化不变量更新（2026-09-19，REQ-9）：顶层新增契约字段 id/displayName/version/
 // contract/configSchema 是子插件契约身份，不是 layer② 的 patch 指令——继续禁止
 // patch/override/bundle/rows 类字段（任何层级）与嵌套 id；顶层契约 id 例外。
@@ -355,7 +355,7 @@ if (!SCAN_PRESETS) {
 // §6 汇总
 // ============================================================
 console.log("\n=== §6 汇总 ===");
-console.log("  四层中：第①层 = 仓根 cordis.patch.yml；第②层 = lib/*/dsh.plugin.json ×5；");
+  console.log("  四层中：第①层 = 仓根 cordis.patch.yml；第②层 = lib/*/dsh.plugin.json ×4；");
 console.log("          第③层 = panel/dsh.plugin.json；第④层 = scripts/apply-preset-patch.mjs -> ~/.dsh/.agent-presets。");
 console.log("");
 console.log("  " + passed + "/" + (passed + failed) + " PASS" + (failed ? "  <-- 有 FAIL" : ""));

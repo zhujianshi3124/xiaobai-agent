@@ -394,7 +394,7 @@ const PLUGIN_STATIC_KEYS = ['name', 'inject', 'Config', 'configSchema', 'provide
  * `inject` 写成模块级命名导出，纯替换会让 cordis 读不到依赖门控）。
  * 但**本仓内置入口不再依赖这份宽度**：三个曾因此分叉的入口已把元数据自带到 default 上
  * （compact-router 的 `static name`、agent-memory 的 `{name, apply}` default、
- * web-search-local 的 `Config`），两通道逐字一致由 `test/dual-channel-parity.test.mjs` 钉住。
+ * web-search-local 的 `Config`——该件已随开源 S1 剔除批出包），两通道逐字一致由 `test/dual-channel-parity.test.mjs` 钉住。
  *
  * 一处必须知道的副作用：合并是**就地改写**插件对象（函数/类的 `name` 只能通过
  * `defineProperty` 换），作用在模块里那个对象本身，不是副本。所以同一模块对象一旦被本
@@ -506,6 +506,7 @@ export async function resolveLocalSource(input: PluginSource): Promise<ResolvedP
     // ★3（契约 v1.1 批 4）：configSchema **模块导出赢**——两处都在时用模块那份覆盖落盘那份。
     // 此前是反的（manifest 有值即不采纳模块值），令 contract.md §5 的承诺句长期失真（D-12），
     // 可观测后果：web-search-local 生效的是 manifest 的 1 键 schema，不是模块 14 键 Config。
+    // （历史例；该件已随开源 S1 剔除批出包，口径由 test/config-schema-degradation.test.mjs 沿用。）
     // Config / configSchema 都在 PLUGIN_STATIC_KEYS 六键内 ⇒ default 形态下已由
     // mergeNamespaceStatics 补到插件对象上，故这里读 rec 就够，不需要命名空间回退。
     const rec = (plugin && typeof plugin === 'object' ? plugin : {}) as Record<string, unknown>

@@ -213,11 +213,12 @@ test('v1.2 前置④·第 9 名必 error：名单外的拼写不得被当作 leg
   assert.equal(result.info.filter((i) => i.path === 'registrs').length, 0, 'error 侧不得同时混入 info（两套口径不许打同一格）');
 });
 
-test('v1.2 前置④·影响面实测复用：七份内置 manifest 的顶层 legacy 键全在册（收紧前必读）', () => {
+test('v1.2 前置④·影响面实测复用：六份内置 manifest 的顶层 legacy 键全在册（收紧前必读）', () => {
   // 数据复用：recon §4 的"7 份 manifest 根字段枚举"在此变成可跑断言，而不是文档里的一段话。
+  // （S1 剔除批后枚举面 7→6：web-search-local 已出包，v1.3 迁移清单同口径 6 份。）
   const roots = [
     'lib/agent-memory', 'lib/compact-router', 'lib/rate-throttle',
-    'lib/search-router', 'lib/web-search-local', '.', 'panel',
+    'lib/search-router', '.', 'panel',
   ];
   const seenTop = new Set();
   const seenReq = new Set();
@@ -231,7 +232,7 @@ test('v1.2 前置④·影响面实测复用：七份内置 manifest 的顶层 le
       for (const k of Object.keys(m.requirements)) seenReq.add(k);
     }
   }
-  assert.equal(count, 7, '枚举面＝有 manifest 的单元 7（5 lib + 桶根 + panel），与 recon §4 的数法一致');
+  assert.equal(count, 6, '枚举面＝有 manifest 的单元 6（4 lib + 桶根 + panel），与 recon §4 的数法一致（S1 剔除批 7→6）');
   // 顶层实况六名（registers/exports 在内置清单里只作为 requirements 的子键出现，不在顶层）
   assert.deepEqual([...seenTop].sort(), ['aliases', 'manifestVersion', 'name', 'optionalDeps', 'requiredAliases', 'requirements']);
   assert.deepEqual([...seenReq].sort(), ['binaries', 'exports', 'packages', 'registers', 'runtime']);

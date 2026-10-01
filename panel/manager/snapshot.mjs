@@ -17,13 +17,8 @@ const ORIGINS = {
   "compact-router": { origin: "local" },
   "rate-throttle": { origin: "local" },
   "search-router": { origin: "local" },
-  "web-search-local": {
-    origin: "derived",
-    upstream: "@gausszhou/dsh-web-search-local",
-    author: "gausszhou",
-    license: "MIT",
-    note: "基于 gausszhou 作品，保留原名归属；本地套件名空间挂载名不影响 upstream 归属。",
-  },
+  // 开源 S1 剔除批（C1-007 G1）：web-search-local（origin: derived，upstream
+  // @gausszhou/dsh-web-search-local，MIT）已随 MIT 外来件整体出包，面板四卡。
 };
 
 const ROW_IDS = {
@@ -31,7 +26,6 @@ const ROW_IDS = {
   "compact-router": null,
   "rate-throttle": "rate-throttle",
   "search-router": "web-search-router",
-  "web-search-local": "web-search-local",
 };
 
 export function parseRootRows(patchText) {
@@ -267,21 +261,21 @@ export function searchRouterModeShadow({ envMode, hot }) {
  *   - rate-throttle：唯一可写（18 白名单字段，§八）；生效值 = patch（§八已钉死无遮蔽）。
  *   - search-router：mode 只读展示「生效值 + 来源」（第 15 轮方案 1 —— 热 JSON 现有
  *     mode 键，patch 编辑无效；写热 JSON 属红线，列 P2.5 候选）。
- *   - agent-memory / compact-router / web-search-local：插件 config 无 enabled 键且
- *     源码不读 ⇒ 「无内部开关」，无可写入口。
+ *   - agent-memory / compact-router：插件 config 无 enabled 键且
+ *     源码不读 ⇒ 「无内部开关」，无可写入口。（web-search-local 已随开源 S1 剔除批出包，四卡。）
  */
 /**
  * W2 余件（断点修复批②的 W2 半边）：四卡"改完要重启"提示位。
  * rate-throttle 早有 effectNote（可写参数框内渲染），其余四卡此前**零说明位**
  * （断点取证：panel/docs/evidence/BREAKPOINT-FORENSICS-20260923.md——"重载"列
  * 恒不可达是设计，但用户视角无提示）。文案按各卡**真实配置来源**逐卡给词，
- * 不许一串通抄：agent-memory／web-search-local／search-router 三行的 config 块
+ * 不许一串通抄：agent-memory／search-router 两行的 config 块
  * 实测在 cordis.patch.yml（2026-09-26 复算）；compact-router 无 patch 行、预设托管。
+ * （web-search-local 行已随开源 S1 剔除批从 patch 与本表移除。）
  */
 const RESTART_EFFECT_NOTE = {
   "agent-memory": "本卡没有面板配置入口；配置在 cordis.patch.yml 的 agent-memory-runtime 行里，改完要重启 DSH 才生效。",
   "compact-router": "本卡没有面板配置入口；配置由预设托管（apply-preset-patch.mjs 维护），预设的改动要重启 DSH 才生效。",
-  "web-search-local": "本卡没有面板配置入口；配置在 cordis.patch.yml 的 web-search-local 行里，改完要重启 DSH 才生效。",
 };
 
 export function buildConfigPanel(dir, rowId, patchText, { hotRouterPath, envMode } = {}) {

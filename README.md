@@ -4,15 +4,14 @@
 registry／doctor／管理面板，并携带五个子插件。本 README 是**桶总览**（用户基本要求令，
 2026-09-28 补齐）；各子插件细节见 `lib/<插件名>/README.md`。
 
-## 子插件清单（五个）
+## 子插件清单（四个；web-search-local 已随开源 S1 剔除批出包）
 
 | 子插件 | 一句话（权威卡面文案） | 目录 |
 |---|---|---|
 | agent-memory（智能体内存台账） | 记住你说过的话和项目里的重要信息，下次对话还能用上。 | [`lib/agent-memory`](lib/agent-memory/README.md) |
 | compact-router（压缩路由） | 对话变长时自动压缩历史内容，省上下文又不断片；压缩方式有自动、LLM 摘要、即时抽取三种，可随时切换。 | [`lib/compact-router`](lib/compact-router/README.md) |
 | rate-throttle（速率限制与换源路由） | 在多个模型服务之间自动换路、出错冷却与降档压缩，避开限额和故障；另有请求限速开关（默认关闭）。 | [`lib/rate-throttle`](lib/rate-throttle/README.md) |
-| search-router（搜索路由） | 决定每次联网搜索走哪条路：官方搜索还是本地搜索。 | [`lib/search-router`](lib/search-router/README.md) |
-| web-search-local（本地网页搜索与抓取） | 提供不依赖官方接口的本地搜索引擎，可自选搜索源。 | [`lib/web-search-local`](lib/web-search-local/README.md) |
+| search-router（搜索路由） | 决定每次联网搜索走哪条路：官方搜索还是本地搜索（本地搜索位可缺席，缺席回落官方并警示）。 | [`lib/search-router`](lib/search-router/README.md) |
 
 ## 桶本体提供什么
 
@@ -34,11 +33,12 @@ test/           测试（node --test）
 
 ## 挂载与部署实况
 
-- 部署行在 `cordis.patch.yml`（基准 sha256 `b0f304c9…`/3190B，EXE-BOOT-018 实读复核更正；
-  前值 `a663f61b…`/3160B 系 09-29 第 4 次滚存前旧基准，随 011 批 agentMemory 接线滚存即已过期）：
+- 部署行在 `cordis.patch.yml`（基准 sha256 `693cfcd7…`/3084B，C1-007 开源 S1 剔除批滚存
+  （副本线第 1 次：删 web-search-local 行与 web.fetchProvider）；前值 `b0f304c9…`/3190B 系
+  EXE-BOOT-018 收官时基准）：
   `web`／`web-search-deepseek`
-  既有行 config，`rate-throttle`／`web-search-local`／`web-search-router`／
-  `agent-memory-runtime`／`toolkit-manager` 五行为 insert；**compact-router 不在 patch**——
+  既有行 config，`rate-throttle`／`web-search-router`／
+  `agent-memory-runtime`／`toolkit-manager` 四行为 insert；**compact-router 不在 patch**——
   由 `scripts/apply-preset-patch.mjs` 改写预设 compaction 行名（预设托管）。
 - 桶与子插件均为宿主 patch/预设通道挂载，不进 registry 状态面（内置插件路径）。
 

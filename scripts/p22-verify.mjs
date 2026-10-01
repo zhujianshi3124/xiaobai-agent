@@ -101,10 +101,10 @@ function freshPatch() {
   const selfRefs = eng.findCrossReferences(text, { rowId: "rate-throttle", alsoMatch: ["@local/dsh-toolkit/rate-throttle"] });
   check("real patch: rate-throttle is not referenced by others", selfRefs.length === 0, JSON.stringify(selfRefs));
 
-  // 正例：构造一个引用它的行块
+  // 正例：构造一个引用它的行块（S1 剔除批后插入锚换 web-search-router 行）
   const withRef = lf(text).replace(
-    "    - id: web-search-local\n",
-    "    - id: other-row\n      config:\n        uses: rate-throttle\n\n    - id: web-search-local\n",
+    "    - id: web-search-router\n",
+    "    - id: other-row\n      config:\n        uses: rate-throttle\n\n    - id: web-search-router\n",
   );
   const refs = eng.findCrossReferences(withRef, { rowId: "rate-throttle", alsoMatch: ["@local/dsh-toolkit/rate-throttle"] });
   check("cross-ref detected when another block references the id", refs.length === 1, JSON.stringify(refs));
@@ -264,15 +264,14 @@ function freshPatch() {
 
 // ---------- 7. 全卡覆盖：每张**可 toggle 卡**各跑一次 toggle plan ----------
 //
-// 起因：上轮只证过 rate-throttle 一张，而面板开放 toggle 的是 4 张卡。
+// 起因：上轮只证过 rate-throttle 一张，而面板开放 toggle 的是 3 张卡（S1 剔除批前 4 张）。
 // 「只证 1 张」等于没证 —— 本段把每一张都真跑一遍，并对齐锚点行号。
 const CARDS = [
   { dir: "rate-throttle", rowId: "rate-throttle", line: 14, pkg: "@local/dsh-toolkit/rate-throttle", xref: { patch: 0, declared: 0, any: [] } },
-  // H2（债务 D-14）：两张搜索卡被停用时要报出"以 provider id 写的引用"（patch 命中）；
-  // web-search-local 另有一条**声明式依赖**（search-router 依赖它，文本里看不见）。
-  { dir: "web-search-local", rowId: "web-search-local", line: 59, pkg: "@local/dsh-toolkit/web-search-local", xref: { patch: 1, declared: 1, any: [/fetchProvider:\s*local-fetch/] } },
-  { dir: "search-router", rowId: "web-search-router", line: 66, pkg: "@local/dsh-toolkit/search-router", xref: { patch: 1, declared: 0, any: [/searchProvider:\s*auto-search/] } },
-  { dir: "agent-memory", rowId: "agent-memory-runtime", line: 77, pkg: "@local/dsh-toolkit/agent-memory", xref: { patch: 0, declared: 0, any: [] } },
+  // H2（债务 D-14）：搜索卡被停用时要报出"以 provider id 写的引用"（patch 命中）。
+  // （web-search-local 原另有声明式依赖一条，已随开源 S1 剔除批出包；行号随该批滚存 66→59/77→70。）
+  { dir: "search-router", rowId: "web-search-router", line: 59, pkg: "@local/dsh-toolkit/search-router", xref: { patch: 1, declared: 0, any: [/searchProvider:\s*auto-search/] } },
+  { dir: "agent-memory", rowId: "agent-memory-runtime", line: 70, pkg: "@local/dsh-toolkit/agent-memory", xref: { patch: 0, declared: 0, any: [] } },
 ];
 {
   for (const card of CARDS) {
@@ -440,8 +439,8 @@ const CARDS = [
   eng.executePlan(plan.token);
   const after = lf(readFileSync(file, "utf8"));
 
-  // (a) 每一行的 config 子树逐字节不变（两层无覆盖）
-  const cfgKeys = ["rate-throttle", "web-search-local", "web-search-router", "agent-memory-runtime"];
+  // (a) 每一行的 config 子树逐字节不变（两层无覆盖）（S1 剔除批后枚举 4→3）
+  const cfgKeys = ["rate-throttle", "web-search-router", "agent-memory-runtime"];
   let allCfgSame = true;
   for (const id of cfgKeys) {
     if (layerTwoOf(before, id) !== layerTwoOf(after, id)) allCfgSame = false;
@@ -459,7 +458,7 @@ const CARDS = [
 
   const stale = eng.createTogglePlan({ file, rowId: "agent-memory-runtime", enabled: false, backupRoot });
   eng.putPlan(stale);
-  const third = readFileSync(file, "utf8").replace("    - id: web-search-local\r\n", "    - id: web-search-local\r\n      disabled: false\r\n");
+  const third = readFileSync(file, "utf8").replace("    - id: web-search-router\r\n", "    - id: web-search-router\r\n      disabled: false\r\n");
   writeFileSync(file, third, "utf8");
   let e = null;
   try { eng.executePlan(stale.token); } catch (err) { e = err; }

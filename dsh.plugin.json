@@ -65,8 +65,7 @@
     "@local/dsh-compact-router": "@local/dsh-toolkit/compact-router",
     "@local/agent-memory": "@local/dsh-toolkit/agent-memory",
     "dsh-rate-throttle": "@local/dsh-toolkit/rate-throttle",
-    "dsh-search-router": "@local/dsh-toolkit/search-router",
-    "@gausszhou/dsh-web-search-local": "@local/dsh-toolkit/web-search-local"
+    "dsh-search-router": "@local/dsh-toolkit/search-router"
   },
   "requirements": {
     "runtime": {

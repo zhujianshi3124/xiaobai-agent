@@ -58,7 +58,6 @@ const ENTRIES = [
   { label: 'rate-throttle', path: join(ROOT, 'lib', 'rate-throttle') },
   { label: 'compact-router', path: join(ROOT, 'lib', 'compact-router') },
   { label: 'search-router', path: join(ROOT, 'lib', 'search-router') },
-  { label: 'web-search-local', path: join(ROOT, 'lib', 'web-search-local') },
   { label: 'agent-memory/plugin.js', path: join(ROOT, 'lib', 'agent-memory', 'plugin.js') },
 ]
 
@@ -81,7 +80,6 @@ test('分歧已修死：三个内置入口在两条通道里都给出声明名 /
     // `plugin.Config` 走原型链），两条通道同样继承 ⇒ 一致，不是分歧。
     ['compact-router', { name: 'compact-router', inject: ['commands', 'llm', 'sessions', 'tokenMeter'], hasConfig: true }],
     ['agent-memory/plugin.js', { name: 'agent-memory-runtime', inject: [], hasConfig: false }],
-    ['web-search-local', { name: 'web-search-local', inject: ['web'], hasConfig: true }],
   ]
   for (const [label, want] of cases) {
     const entry = ENTRIES.find((e) => e.label === label)
