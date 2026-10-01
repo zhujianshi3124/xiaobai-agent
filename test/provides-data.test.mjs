@@ -19,7 +19,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { validateManifest } from '@local/dsh-toolkit/contract';
+import { validateManifest } from 'dsh-toolkit/contract';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readManifest = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));

@@ -8,8 +8,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 
-import { ToolkitRegistryCore, cordisHost } from '@local/dsh-toolkit/registry'
-import { createDoctor } from '@local/dsh-toolkit/doctor'
+import { ToolkitRegistryCore, cordisHost } from 'dsh-toolkit/registry'
+import { createDoctor } from 'dsh-toolkit/doctor'
 // panel 内部模块走相对路径（package exports 只暴露 contract/registry/doctor 三个公共子路径）
 import { createV2Api, toPanelRoutes } from '../panel/manager/v2-api.mjs'
 import { createRealtimeConnector } from '../panel/manager/realtime-connector.mjs'

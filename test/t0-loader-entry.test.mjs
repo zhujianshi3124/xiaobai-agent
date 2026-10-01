@@ -13,8 +13,8 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { resolveLocalSource, SourceError } from '@local/dsh-toolkit/registry'
-import { ToolkitRegistryCore, cordisHost } from '@local/dsh-toolkit/registry'
+import { resolveLocalSource, SourceError } from 'dsh-toolkit/registry'
+import { ToolkitRegistryCore, cordisHost } from 'dsh-toolkit/registry'
 import { Context } from '@deepseek-ai/cordis'
 
 function tmpRoot(t) {

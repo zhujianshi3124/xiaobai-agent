@@ -9,7 +9,7 @@ import assert from 'node:assert/strict'
 import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 
-import { resolveLocalSource, FIBER_PENDING, FIBER_ACTIVE } from '@local/dsh-toolkit/registry'
+import { resolveLocalSource, FIBER_PENDING, FIBER_ACTIVE } from 'dsh-toolkit/registry'
 
 const fixtureDir = (name) => join(import.meta.dirname, 'fixtures', 'registry', name)
 const ROOT = join(import.meta.dirname, '..')

@@ -60,7 +60,7 @@ compact-router 不在 `cordis.patch.yml` 里，由 `scripts/apply-preset-patch.m
 
 `KNOWN_LEGACY_FIELDS` 目前是 info 级容忍。收紧为 error 的前置条件（三条全满足才动）：
 
-1. 消费方迁移完毕：doctor 独立 CLI（沙箱仓 `@local/dsh-toolkit-doctor`）的根字段白名单已同步扩展
+1. 消费方迁移完毕：doctor 独立 CLI（沙箱仓 `dsh-toolkit-doctor`）的根字段白名单已同步扩展
    （`requires` / `panels` 于 doctor@6839cc1 加入），但**旧字段仍被它校验**——收紧要两仓同批。
 2. 面板改读提供面正典、表继续存在（**2026-09-30 终批 B＝子案一改述**，EXE-BOOT-017；原句"面板不再读旧字段"
    与本条自引的面板纪律正面冲突、按字面永不满足——2026-09-22 审定轮已判明"可改的只有'读哪个字段'"）：
@@ -104,7 +104,7 @@ compact-router 不在 `cordis.patch.yml` 里，由 `scripts/apply-preset-patch.m
 | 检查 | 落在哪 | 为什么 |
 |---|---|---|
 | 注册冲突（撞名）、manifest 根字段校验、`requires` 合成规则、周期巡检、健康历史 | **进程内服务**（`doctor/`，桶内） | 面板要实时、要事件流、要免重启。两个服务（`${prefix}/registry`、`${prefix}/doctor`）都经 `provideService` 真进容器，面板外也可 `ctx.get` 取到（`test/toolkit-services.test.mjs` 4 例，含双实例不撞名） |
-| 仓级文件面：schema 语法/BOM/JSON-YAML 清单校验、`@local/*` 引用完整性、包依赖解析、跨目录链接、挂载/provider 三检查、`requirements` 键集与 `./` 目标存在性、`$from` 的套件根专属规则 | **独立 CLI**（沙箱仓 `@local/dsh-toolkit-doctor`） | 需要扫全盘文件与备份目录，属一次性静态审计。**严重级纪律与进程内相反：缺席/缺依赖类一律 info/warning，绝不产 error**（它的验收红线是真实仓 `0/0/0`）。面板以 `execFile` 调它：**缺省 180s**、`--states` 为 **60s**（★15 定稿：原文"120s"是 2026-09-18 的旧值，09-19 的 `b3b1575` 已放宽；源头读数还留在 `docs/p0-recon.md`，本轮一并修） |
+| 仓级文件面：schema 语法/BOM/JSON-YAML 清单校验、`@local/*` 引用完整性、包依赖解析、跨目录链接、挂载/provider 三检查、`requirements` 键集与 `./` 目标存在性、`$from` 的套件根专属规则 | **独立 CLI**（沙箱仓 `dsh-toolkit-doctor`） | 需要扫全盘文件与备份目录，属一次性静态审计。**严重级纪律与进程内相反：缺席/缺依赖类一律 info/warning，绝不产 error**（它的验收红线是真实仓 `0/0/0`）。面板以 `execFile` 调它：**缺省 180s**、`--states` 为 **60s**（★15 定稿：原文"120s"是 2026-09-18 的旧值，09-19 的 `b3b1575` 已放宽；源头读数还留在 `docs/p0-recon.md`，本轮一并修） |
 
 **失败语义按路由分述（★15 定稿：原文"不可达即返回 `degraded`"把一条路由的行为说成了整域）**：
 `/doctor/states` 不可达 ⇒ `200 {ok:false, degraded:true}`；`/doctor/dry-run` ⇒ **`500` + `ok:false`**

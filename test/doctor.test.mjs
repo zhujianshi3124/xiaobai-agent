@@ -9,9 +9,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 
-import { createRegistry } from '@local/dsh-toolkit/registry'
-import { createDoctor } from '@local/dsh-toolkit/doctor'
-import { contractEventName } from '@local/dsh-toolkit/contract'
+import { createRegistry } from 'dsh-toolkit/registry'
+import { createDoctor } from 'dsh-toolkit/doctor'
+import { contractEventName } from 'dsh-toolkit/contract'
 
 const fixtureDir = (name) => join(import.meta.dirname, 'fixtures', 'registry', name)
 const ENV_KEY = 'FIXTURE_REQUIRED_VAR'

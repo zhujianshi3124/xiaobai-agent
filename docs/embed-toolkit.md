@@ -21,15 +21,15 @@
   当提供面比对 ⇒ 经面板装 toolkit 根之后再装任何需要 `webServer` 的插件，会被 `reg.name-collision`
   拒装。`docs/contract.md` §2.1 与 §7 D-10，批 2 纠正）、
   `panels` 只有一个描述符（宿主不读它，见 §5 第 1 条与 `docs/contract.md` §7 D-8）。
-- 装载本入口与装载 `@local/dsh-toolkit/panel` 是同一个面板的两种入口写法，**同一进程内二选一**
+- 装载本入口与装载 `dsh-toolkit/panel` 是同一个面板的两种入口写法，**同一进程内二选一**
   （两个都装 = 同名路由注册两次；前缀不同则各管各的）。
-- 装载本入口与装载 `@local/dsh-toolkit/panel` 是同一个面板的两种入口写法，**同一进程内二选一**
+- 装载本入口与装载 `dsh-toolkit/panel` 是同一个面板的两种入口写法，**同一进程内二选一**
   （两个都装 = 同名路由注册两次；前缀不同则各管各的）。
 
 ## 2. 宿主只需要做两件事
 
 ```js
-const toolkit = await import('@local/dsh-toolkit')      // 或按宿主自己的插件装载机制
+const toolkit = await import('dsh-toolkit')      // 或按宿主自己的插件装载机制
 toolkit.apply(ctx, { servicePrefix: 'mybucket' })       // config 全部可选，缺省=历史行为
 ```
 

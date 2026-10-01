@@ -250,7 +250,7 @@ for (const name of readdirSync(bkRoot).sort()) {
   console.log("      " + name.padEnd(46) + " size=" + String(statSync(p).size).padStart(5)
     + "  toolkit-manager=" + (has ? "有" : "无 ") + (nm ? "  name=" + nm : ""));
 }
-console.log("\n  结论：该行的**首次创建时刻未留档**；可归因的最早证据是 10:59 arm-manifest 快照（已含该行、旧名 @local/dsh-toolkit/panel），");
+console.log("\n  结论：该行的**首次创建时刻未留档**；可归因的最早证据是 10:59 arm-manifest 快照（已含该行、旧名 dsh-toolkit/panel），");
 console.log("        19:55:50 被改写为 path-like（ledger 逐版对账表 :72）。");
 console.log("        2026-09-18 第 11 轮**语义化提交**（commit `22fde85`）⇒ 该行已入 git 历史，溯源缺口就此封闭。");
 

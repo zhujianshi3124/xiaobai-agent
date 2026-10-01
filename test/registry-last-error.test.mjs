@@ -18,7 +18,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 
-import { createRegistry, ToolkitRegistryCore, cordisHost } from '@local/dsh-toolkit/registry'
+import { createRegistry, ToolkitRegistryCore, cordisHost } from 'dsh-toolkit/registry'
 import { createV2Api } from '../panel/manager/v2-api.mjs'
 
 const fixtureDir = (name) => join(import.meta.dirname, 'fixtures', 'registry', name)

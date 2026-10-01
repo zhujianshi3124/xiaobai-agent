@@ -28,7 +28,7 @@ import {
   isValidServicePrefix,
   validateManifest,
   DEFAULT_SERVICE_PREFIX,
-} from '@local/dsh-toolkit/contract'
+} from 'dsh-toolkit/contract'
 
 const ROOT = resolve(import.meta.dirname, '..')
 const asUrl = (p) => pathToFileURL(p).href // Windows 下动态 import 必须走 file:// URL
@@ -259,12 +259,12 @@ test('根 manifest 的 configSchema 覆盖 apply() 真正读取的配置键（�
 
 test('包导出面：宿主可按 Node 约定解析 "."（根入口）与 "./panel"（R12 迁包子路径的前提）', async () => {
   const req = createRequire(join(ROOT, 'package.json'))
-  const dot = req.resolve('@local/dsh-toolkit')
-  const panel = req.resolve('@local/dsh-toolkit/panel')
+  const dot = req.resolve('dsh-toolkit')
+  const panel = req.resolve('dsh-toolkit/panel')
   assert.equal(resolve(dot), resolve(ROOT, 'index.js'))
   assert.equal(resolve(panel), resolve(ROOT, 'panel', 'index.js'))
   // loader 与宿主同源：以目录形态安装 toolkit 自己，必须解析到同一个根入口
-  const { resolveLocalSource } = await import('@local/dsh-toolkit/registry')
+  const { resolveLocalSource } = await import('dsh-toolkit/registry')
   const resolved = await resolveLocalSource({ kind: 'local', path: ROOT })
   assert.equal(resolve(resolved.entryPath), resolve(ROOT, 'index.js'))
   assert.equal(resolved.legacy, false, '根 dsh.plugin.json 带 contract ⇒ 契约插件而非 legacy')

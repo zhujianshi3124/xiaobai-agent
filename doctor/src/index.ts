@@ -14,9 +14,9 @@ export { synthesizeRules } from './rules.js'
 export type { DoctorOptions, Probes, RuleRuntime, DoctorLogger } from './types.js'
 
 import { DoctorService } from './doctor.js'
-import { cordisHost } from '@local/dsh-toolkit/registry'
+import { cordisHost } from 'dsh-toolkit/registry'
 import type { Context } from '@deepseek-ai/cordis'
-import type { ToolkitDoctor, ToolkitRegistry } from '@local/dsh-toolkit/contract'
+import type { ToolkitDoctor, ToolkitRegistry } from 'dsh-toolkit/contract'
 import type { DoctorOptions, HealthReport } from './types.js'
 
 export interface CreatedDoctor {

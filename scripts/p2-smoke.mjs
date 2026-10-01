@@ -94,7 +94,7 @@ if (!located) {
   process.exit(1);
 }
 check("nearest package is panel/package.json", located.dir === join(root, "panel"), located.pkgPath);
-check("package name @local/dsh-toolkit/panel", located.pkg.name === "@local/dsh-toolkit/panel", located.pkg.name);
+check("package name dsh-toolkit/panel", located.pkg.name === "dsh-toolkit/panel", located.pkg.name);
 
 const dsh = located.pkg.dsh || {};
 const clientDecl = dsh.client;

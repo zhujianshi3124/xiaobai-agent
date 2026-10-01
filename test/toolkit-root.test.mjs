@@ -23,8 +23,8 @@ import { Context } from '@deepseek-ai/cordis'
 import { moduleToolkitRoot, resolveToolkitRoot } from '../panel/manager/toolkit-root.mjs'
 import { createToolkitServices } from '../panel/manager/registry-host.mjs'
 import { createV2Api } from '../panel/manager/v2-api.mjs'
-import { createRegistry } from '@local/dsh-toolkit/registry'
-import { AUDIT_EVENTS } from '@local/dsh-toolkit/contract'
+import { createRegistry } from 'dsh-toolkit/registry'
+import { AUDIT_EVENTS } from 'dsh-toolkit/contract'
 
 const REPO_ROOT = resolve(import.meta.dirname, '..')
 const FIXTURE = join(REPO_ROOT, 'test', 'fixtures', 'registry', 'save-probe-plugin')

@@ -1,6 +1,6 @@
 # rate-throttle（速率限制与换源路由）
 
-`@local/dsh-toolkit/rate-throttle`（manifest id `dsh/rate-throttle`）——在多个模型服务之间
+`dsh-toolkit/rate-throttle`（manifest id `dsh/rate-throttle`）——在多个模型服务之间
 自动换路、出错冷却与降档压缩，避开限额和故障；另有请求限速开关（默认关闭）（权威卡面文案）。
 
 ## 它做什么（代码实况，v3）

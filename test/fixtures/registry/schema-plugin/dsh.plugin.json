@@ -1,6 +1,6 @@
 {
   "manifestVersion": 1,
-  "name": "@local/dsh-toolkit/schema-plugin",
+  "name": "dsh-toolkit/schema-plugin",
   "id": "dsh/schema-plugin",
   "displayName": "带必填配置的夹具",
   "version": "0.1.0",

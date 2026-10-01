@@ -19,9 +19,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 
-import { validateConfigAgainstSchema } from '@local/dsh-toolkit/contract'
-import { createRegistry } from '@local/dsh-toolkit/registry'
-import { createDoctor } from '@local/dsh-toolkit/doctor'
+import { validateConfigAgainstSchema } from 'dsh-toolkit/contract'
+import { createRegistry } from 'dsh-toolkit/registry'
+import { createDoctor } from 'dsh-toolkit/doctor'
 
 const fixtureDir = (name) => join(import.meta.dirname, 'fixtures', 'registry', name)
 

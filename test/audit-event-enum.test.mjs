@@ -15,7 +15,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { AUDIT_EVENTS, CONTRACT_EVENT_NAMES, contractEventName, DEFAULT_SERVICE_PREFIX } from '@local/dsh-toolkit/contract'
+import { AUDIT_EVENTS, CONTRACT_EVENT_NAMES, contractEventName, DEFAULT_SERVICE_PREFIX } from 'dsh-toolkit/contract'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 

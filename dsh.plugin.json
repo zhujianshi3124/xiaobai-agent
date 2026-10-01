@@ -1,9 +1,9 @@
 {
   "manifestVersion": 1,
-  "name": "@local/dsh-toolkit",
+  "name": "dsh-toolkit",
   "id": "dsh/toolkit",
   "displayName": "DSH 工具箱（registry/doctor/面板总装）",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "contract": "^1.0",
   "requires": {
     "node": ">=22",
@@ -62,10 +62,10 @@
     }
   ],
   "aliases": {
-    "@local/dsh-compact-router": "@local/dsh-toolkit/compact-router",
-    "@local/agent-memory": "@local/dsh-toolkit/agent-memory",
-    "dsh-rate-throttle": "@local/dsh-toolkit/rate-throttle",
-    "dsh-search-router": "@local/dsh-toolkit/search-router"
+    "@local/dsh-compact-router": "dsh-toolkit/compact-router",
+    "@local/agent-memory": "dsh-toolkit/agent-memory",
+    "dsh-rate-throttle": "dsh-toolkit/rate-throttle",
+    "dsh-search-router": "dsh-toolkit/search-router"
   },
   "requirements": {
     "runtime": {
@@ -86,6 +86,6 @@
     }
   },
   "requiredAliases": {
-    "@local/dsh-compact-router": "@local/dsh-toolkit/compact-router"
+    "@local/dsh-compact-router": "dsh-toolkit/compact-router"
   }
 }

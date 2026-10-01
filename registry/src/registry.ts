@@ -31,7 +31,7 @@ import {
   contractEventName,
   contractServiceName,
   validateConfigAgainstSchema,
-} from '@local/dsh-toolkit/contract'
+} from 'dsh-toolkit/contract'
 import type {
   AuditEvent,
   FiberLoadErrorCode,
@@ -42,7 +42,7 @@ import type {
   PluginStatus,
   PrecheckReport,
   ToolkitRegistry,
-} from '@local/dsh-toolkit/contract'
+} from 'dsh-toolkit/contract'
 import { resolveLocalSource, SourceError } from './loader.js'
 import { contractPrecheck } from './precheck.js'
 import { emptyState, loadState, saveState } from './state.js'

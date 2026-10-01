@@ -21,8 +21,8 @@ import {
   FIBER_FAILED,
   FIBER_DISPOSED,
   FIBER_UNLOADING,
-} from '@local/dsh-toolkit/registry'
-import { versionSatisfies } from '@local/dsh-toolkit/contract'
+} from 'dsh-toolkit/registry'
+import { versionSatisfies } from 'dsh-toolkit/contract'
 
 const CORDIS_MIN_CALIBRATED = '4.0.2'
 

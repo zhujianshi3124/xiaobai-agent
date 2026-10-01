@@ -16,8 +16,8 @@ import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { Context } from '@deepseek-ai/cordis'
 
-import { createRegistry } from '@local/dsh-toolkit/registry'
-import { contractEventName } from '@local/dsh-toolkit/contract'
+import { createRegistry } from 'dsh-toolkit/registry'
+import { contractEventName } from 'dsh-toolkit/contract'
 
 const ROOT = resolve(import.meta.dirname, '..')
 const FIXTURE = join(ROOT, 'test', 'fixtures', 'registry', 'flaky-probe-plugin')

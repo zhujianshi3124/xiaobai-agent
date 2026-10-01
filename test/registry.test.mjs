@@ -15,8 +15,8 @@ import {
   FIBER_ACTIVE,
   FIBER_DISPOSED,
   FIBER_UNLOADING,
-} from '@local/dsh-toolkit/registry'
-import { contractEventName, contractServiceName } from '@local/dsh-toolkit/contract'
+} from 'dsh-toolkit/registry'
+import { contractEventName, contractServiceName } from 'dsh-toolkit/contract'
 
 const fixtureDir = (name) => join(import.meta.dirname, 'fixtures', 'registry', name)
 const contractPlugin = fixtureDir('contract-plugin')

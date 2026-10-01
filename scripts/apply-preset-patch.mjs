@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// apply-preset-patch.mjs — mount @local/dsh-toolkit/compact-router into the SHIPPED
+// apply-preset-patch.mjs — mount dsh-toolkit/compact-router into the SHIPPED
 // presets (standard / ptc / cordis) and ACTIVE USER presets under ~/.dsh/.agent-presets
 // by swapping their compaction-basic / old local-route row.
 //
@@ -37,7 +37,7 @@ const ROW_UPSTREAM = [
 
 const ROW_NEW = [
   "    - id: compact-router",
-  "      name: '@local/dsh-toolkit/compact-router'",
+  "      name: 'dsh-toolkit/compact-router'",
   "      config:",
   "        mode: auto",
   "        fallbackOnRateLimit: true",

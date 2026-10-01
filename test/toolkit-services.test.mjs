@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url'
 import { Context } from '@deepseek-ai/cordis'
 
 import { createToolkitServices } from '../panel/manager/registry-host.mjs'
-import { contractServiceName } from '@local/dsh-toolkit/contract'
+import { contractServiceName } from 'dsh-toolkit/contract'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const silent = { info: () => {}, warn: () => {}, error: () => {} }

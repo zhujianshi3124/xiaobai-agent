@@ -33,8 +33,8 @@ import {
   FIBER_FAILED,
   FIBER_DISPOSED,
   FIBER_UNLOADING,
-} from '@local/dsh-toolkit/registry'
-import { contractEventName } from '@local/dsh-toolkit/contract'
+} from 'dsh-toolkit/registry'
+import { contractEventName } from 'dsh-toolkit/contract'
 
 const fixtureDir = (name) => join(import.meta.dirname, 'fixtures', 'registry', name)
 const consumerFixture = fixtureDir('inject-consumer-plugin')

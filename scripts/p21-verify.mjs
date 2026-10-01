@@ -96,7 +96,7 @@ function freshPatch() {
   check("inserted key is a SIBLING of config:, not nested inside it",
     /- id: rate-throttle\n {6}disabled: true\n {6}name:/.test(lf(afterText)),
     JSON.stringify((lf(afterText).match(/- id: rate-throttle\n[\s\S]{0,120}/) || [""])[0].split("\n").slice(0, 3)));
-  check("config: subtree still opens right after name:", /name: '@local\/dsh-toolkit\/rate-throttle'\n\s+config:\n/.test(lf(afterText)));
+  check("config: subtree still opens right after name:", /name: 'dsh-toolkit\/rate-throttle'\n\s+config:\n/.test(lf(afterText)));
   check("execute did not disturb config.enabled (still false)", /- id: rate-throttle[\s\S]{0,400}?config:\n\s+enabled: false/.test(lf(afterText)));
   check("execute left every other row block intact (row count unchanged)",
     lf(beforeText).split(/^- id:/m).length === lf(afterText).split(/^- id:/m).length);
