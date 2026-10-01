@@ -2941,7 +2941,7 @@ node --test 收集面虚高的 selftest 收口处置采认（位置参数/glob �
 各自独立可 revert，副本仓树净。迁移笔申报的三处真问题修复，021 开工窗逐一码面复核在位：
 ① `doctor/cli/src/engine.mjs` 两处只读 legacy 的提供面读点已改走 `registerSlotOf`
 （:1313 inject／:1483 providers，provides 优先、空数组遮蔽，与撞名格、toolkit loader extractRegisters 同口径）；
-② `scripts/p24-verify.mjs:325` 与 `scripts/p24-ui-matrix.mjs:43` 的 doctor CLI 缺省路径已改调桶内成员
+② `scripts/p24-verify.mjs` 与 `scripts/p24-ui-matrix.mjs` 的 doctor CLI 缺省路径（两文件的 `doctorCli`／`DOCTOR_CLI` 常量缺省分支）已改调桶内成员
 （env DOCTOR_CLI 仍可覆盖）；③ `panel/manager/snapshot.mjs` 的 entry 取数 provides.entry 优先（:413）、
 inject/provides 走 extractRegisters（:415/:419），`test/panel-crossrefs.test.mjs` 漂移守卫同源。
 
