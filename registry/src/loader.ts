@@ -519,6 +519,25 @@ export async function resolveLocalSource(input: PluginSource): Promise<ResolvedP
     return { manifest, plugin, legacy: false, source: input, entryPath, entrySource, entryWarnings, registers: extractRegisters(manifestRaw) }
   }
 
+  // D-15 显式闸（C1-007 S2 批裁定重建，2026-10-01）：面板是装配现场（REQ-8），装载它等于让它
+  // 自己装自己 ⇒ 不经 registry 通道装载面板目录。G4 前本闸由偶然机制兜住——panel/package.json#name
+  // 的 "@scope" 使 legacy 合成 id 非法而拒绝；包名去 scope 后合成 id 合法 ⇒ 偶然闸失效，显式判据
+  // 接管：manifest 在场、缺非空 `contract` 字段（即必然落 legacy 合成）、且 manifest name 以
+  // "/panel" 收尾 ⇒ 拒绝。判据刻意收窄在 legacy 容忍面内：契约形态（有 contract）的面板类插件走
+  // 上方正典分支，完全不受影响。
+  if (manifestRaw && !manifestHasContract(manifestRaw)) {
+    const mName = (manifestRaw as Record<string, unknown>)['name']
+    if (typeof mName === 'string' && mName.endsWith('/panel')) {
+      throw new SourceError(
+        'plugin-shape-invalid',
+        `插件入口可用，但 ${manifestPath} **缺非空 \`contract\` 字段**（manifestHasContract 判据：字符串且非空），`
+          + `且 manifest name "${mName}" 以 /panel 收尾＝面板装配现场（REQ-8）：装载它等于让它自己装自己，`
+          + `不经 registry 通道装载（D-15 显式闸；G4 去 scope 后原偶然闸失效，本闸为显式重建）。`
+          + `修法：面板经宿主 bundle/patch 行或 file:// 直挂装载（见 README），勿经 registry 安装面板目录`,
+      )
+    }
+  }
+
   const legacyManifest = synthLegacyManifest(baseDir, entryPath, plugin, input)
   // legacy 也必须通过 id/命名空间等基础校验（合成的不好使就是我们的 bug）。
   const check = validateManifest(legacyManifest)
