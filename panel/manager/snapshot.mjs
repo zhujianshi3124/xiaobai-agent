@@ -407,11 +407,15 @@ export async function buildSnapshot({ toolkitRoot, hotRouterPath = join(homedir(
       author: (ORIGINS[dir] || {}).author || null,
       license: (ORIGINS[dir] || {}).license || null,
       note: (ORIGINS[dir] || {}).note || null,
-      entry: manifest && manifest.requirements && manifest.requirements.exports,
-      inject: (manifest && (manifest.requirements || {}).registers || {}).inject || [],
+      // 入口声明位取数（v1.3 迁移笔，S3／debt C-3 一.2）：`provides.entry` 优先，legacy 表原样回落——
+      // 与装载面 resolveEntry 的 ⓪① 顺位同源。子路径声明（agent-memory 的 './plugin'、panel 的 './client'）
+      // 契约尚无表达（debt C-4 在册），这些清单继续给整张表，不假装已迁。
+      entry: (manifest && manifest.provides && manifest.provides.entry)
+        || (manifest && manifest.requirements && manifest.requirements.exports),
+      inject: extractRegisters(manifest)?.inject || [],
       // 提供面挂提供面键（改名批，§20.2 对照表）；events 甲案顶层平铺（数据源不动）；inject 键名不改、
-      // 取数源改 registers.inject（inject 修法笔：requirements 顶层从未有声明＝B 型缺口，归因见计划 §30.b；
-      // 守卫形同 events 槽与 doctor engine.mjs 同位读法）。
+      // 取数源改走 extractRegisters（v1.3 起 provides.inject 优先、legacy registers.inject 回落＝迁移后单源）。
+      // 守卫形同 events 槽：与 doctor engine.mjs 的 provides 优先读法同位（迁移期两侧不一致即漂移）。
       provides: extractRegisters(manifest) || {},
       events: (manifest && (manifest.requirements || {}).registers || {}).events || [],
       managedBy: raw.patchRow ? "patch" : meta.managedBy === "preset" ? "preset-script" : "none",

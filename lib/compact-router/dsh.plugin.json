@@ -1,12 +1,13 @@
 {
-  "manifestVersion": 1,
   "name": "dsh-toolkit/compact-router",
   "id": "dsh/compact-router",
   "displayName": "压缩路由",
   "version": "1.0.0",
   "contract": "^1.0",
   "provides": {
+    "entry": "./index.js",
     "services": ["compaction"],
+    "inject": ["llm", "tokenMeter", "sessions", "commands"],
     "commands": [
       "compact-mode",
       "compact-llm",
@@ -32,28 +33,10 @@
       }
     },
     "registers": {
-      "inject": [
-        "llm",
-        "tokenMeter",
-        "sessions",
-        "commands"
-      ],
       "events": [],
-      "services": [
-        "compaction"
-      ],
-      "commands": [
-        "compact-mode",
-        "compact-llm",
-        "compact-instant",
-        "compact-auto",
-        "compact-archive"
-      ],
       "providers": []
     },
-    "exports": {
-      ".": "./index.js"
-    }
+    "exports": {}
   },
   "optionalDeps": [
     "dsh-toolkit/agent-memory"

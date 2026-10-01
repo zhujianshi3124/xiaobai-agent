@@ -199,6 +199,32 @@ test('reg.inject-face-unknown：inject 面不在宿主提供面清单，warning 
   assert.ok(hits.every(function (i) { return i.severity === 'warning' && i.fix.class === 'manual' && i.category === 'registration'; }));
 });
 
+// ---- v1.3 迁移笔（S3／C-3 一.3）：inject 与 provider 面的正典读法延伸到本规则 ----
+// F-62 只把**撞名格**改成 provides 优先；inject-face 与 provider 在案集合（bodies.providers）
+// 是同族另外两处只读 legacy 的点。清单把 inject/providers 迁进 provides 后，这两处若不跟着同源，
+// 表现是"集体安静"（不报错、只是不再检查）——比报错更坏，故各立一格钉住。
+test('reg.inject-face-unknown：provides.inject 正典声明的未知面照样查出（迁移笔复现钉，修前此格红）', async function () {
+  const fix = mkFixture('inject-provides');
+  baseFixture(fix);
+  writeJson(path.join(fix.scope, 'lib', 'a', 'dsh.plugin.json'), subManifest('@local/dsh-toolkit/a', { provides: { inject: ['ghost-from-provides'] } }));
+  const report = await run(fix);
+  const hits = ids(report, 'reg.inject-face-unknown');
+  assert.equal(hits.length, 1, '只在 provides.inject 声明的未知注入面必须被查出（legacy 直读会静默漏检）');
+  assert.ok(String(hits[0].message).includes('ghost-from-provides'), '要点名被声明的那个面');
+});
+
+test('reg.inject-face-unknown：provides.inject 空数组遮蔽 legacy（与 registerSlotOf／extractRegisters 同口径）', async function () {
+  const fix = mkFixture('inject-shadow');
+  baseFixture(fix);
+  writeJson(path.join(fix.scope, 'lib', 'a', 'dsh.plugin.json'), subManifest('@local/dsh-toolkit/a', {
+    provides: { inject: [] },
+    registers: { inject: ['ghost-legacy-only'], events: [], services: [], commands: [], providers: [] },
+  }));
+  const report = await run(fix);
+  assert.equal(ids(report, 'reg.inject-face-unknown').length, 0,
+    'provides.inject=[] 是"已声明为空"⇒ 遮蔽 legacy，不得再从旧表取到 ghost-legacy-only');
+});
+
 for (const t of tests) {
   try {
     await t.fn();

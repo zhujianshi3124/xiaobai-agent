@@ -1,10 +1,12 @@
 {
-  "manifestVersion": 1,
   "name": "dsh-toolkit/agent-memory",
   "id": "dsh/agent-memory",
   "displayName": "智能体内存台账",
   "version": "1.0.0",
   "contract": "^1.0",
+  "provides": {
+    "inject": ["systemPrompt"]
+  },
   "configSchema": {
     "type": "object",
     "meta": {},
@@ -23,7 +25,6 @@
     ],
     "packages": {},
     "registers": {
-      "inject": ["systemPrompt"],
       "events": [
         "session/created",
         "agent/inbox/claimed",

@@ -33,7 +33,12 @@ const pluginName = async (entryPath) => (await import(new URL('file:///' + entry
 
 const silent = { info: () => {}, warn: () => {}, error: () => {} }
 
-// ── ① 四个内置插件（web-search-local 已随开源 S1 剔除批出包）+ 套件根：逐条断言来源与结果 ──
+// ── ⓪/① 内置与套件根：逐条断言来源与结果 ──
+//
+// 【S3 迁移笔改口径（2026-10-01，debt C-3 一.3 甲案）】三份只声明 '.' 的内置清单，入口声明位
+// 已从 legacy `requirements.exports` 迁到契约 `provides.entry`（'./plugin'/'./client' 这类**子路径**
+// 声明因契约尚无表达而未迁，见桶根/agent-memory/panel 各自用例与 debt C-4）。命题不变：
+// 入口按**被声明的那一级**解析、命中真实文件、不靠目录惯例猜。
 
 const BUILTINS_WITH_INDEX = [
   ['compact-router', 'lib/compact-router'],
@@ -42,14 +47,16 @@ const BUILTINS_WITH_INDEX = [
 ]
 
 for (const [label, rel] of BUILTINS_WITH_INDEX) {
-  test(`F2①：内置 ${label} 入口来自正典 requirements.exports['.']，且与目录惯例指向同一文件（一致记案）`, async () => {
+  test(`F2⓪：内置 ${label} 入口来自契约正典 provides.entry（迁移笔后现状），且与目录惯例指向同一文件（一致记案）`, async () => {
     const dir = join(ROOT, rel)
     const manifest = JSON.parse(readFileSync(join(dir, 'dsh.plugin.json'), 'utf8'))
-    const declared = manifest.requirements.exports['.']
-    assert.equal(declared, './index.js', `${label} 的正典声明本身就是 index.js ⇒ 本裁定对它零翻面`)
+    const declared = manifest.provides.entry
+    assert.equal(declared, './index.js', `${label} 的契约声明本身就是 index.js ⇒ 本裁定对它零翻面`)
+    assert.equal((manifest.requirements.exports || {})['.'], undefined,
+      `${label} 的 legacy 正典位须已清空（双声明并存＝迁移未做完，本笔要消除的形态）`)
 
     const resolved = await resolveLocalSource({ kind: 'local', path: dir })
-    assert.equal(resolved.entrySource, 'manifest.requirements.exports', '来源必须是正典那一级')
+    assert.equal(resolved.entrySource, 'manifest.provides.entry', '来源必须是 v1.3 正典那一级')
     assert.equal(resolved.entryPath, join(dir, declared))
     assert.deepEqual(resolved.entryWarnings, [], '正典命中且无重复声明 ⇒ 不该有任何告警')
     assert.equal(resolved.legacy, false)
@@ -61,6 +68,10 @@ test('F2①：agent-memory 的正典声明与目录惯例不一致（不一致�
   const dir = join(ROOT, 'lib/agent-memory')
   const manifest = JSON.parse(readFileSync(join(dir, 'dsh.plugin.json'), 'utf8'))
   assert.equal(manifest.requirements.exports['.'], './lib/index.js')
+  // 迁移笔在册例外（成因如实）：同表还声明 './plugin' 子路径，契约 entry 是单值槽、无子路径表达
+  // ⇒ 整张 legacy 表必须留着（B1 情形 A 的可执行报错文案靠它指路，用户已裁"manifest 不改"）。
+  // 该缺口已逐名进 debt C-4（exports 子路径面）。
+  assert.equal(manifest.provides.entry, undefined, 'agent-memory 的入口面今天仍未迁（子路径无契约表达）')
   assert.ok(existsSync(join(dir, 'lib/index.js')), '正典目标真实存在 ⇒ 属情形 A（语义性），不是情形 B（同步缺陷）')
   assert.equal(existsSync(join(dir, 'index.js')), false, '目录下没有 index.js ⇒ 旧实现走惯例兜底必然 entry-not-found')
 })

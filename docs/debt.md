@@ -501,6 +501,51 @@ v1.1 必须择一：**（a）** 契约正式定义入口声明字段（含 `"."`
 - 《D-7 追加》节末"重开条件"（契约正式定义入口声明字段时须一并裁 `.` 的语义）——随上面第 2 项天然触发；
 - 本文 B-1/B-2 的触发条件到达即重开（既裁维持现状，不在 v1.3 清单内、仅留名互见）。
 
+### C-4 · 契约无替代表达（或表达不完整）的 legacy 面清单（2026-10-01 · S3 迁移笔落档 · 纯追加）
+
+**来历**：C1-007 甲案终批（用户"按建议"，2026-10-01）——收紧范围改分层：有替代表达的旧字段转 error，
+无替代的面维持 info 并逐名记清，开源首版带明账发布。本节就是那份明账：**迁移笔今天动不了的面，
+逐名带现声明数与消费点**，候将来契约设计批。成因两条来源：一、质疑报告（`report-s3a-stop-020.md` 第三节）
+事前点名的四族；二、迁移笔施工实测新捞出的三族（不是推测，是门禁与 dry-run 当场翻红抓出来的）。
+**本节不构成开工授权**：任何一项的"补表达"都属契约语义变更，须协调侧开工令＋用户逐项裁命名与归属
+（F-87 与甲案两条先例同口径）。
+
+**一、事前四族（无替代）**
+
+1. **订阅面 `requirements.registers.events`**——现声明 **11 名**：rate-throttle 4、agent-memory 7
+   （桶根／compact-router／search-router／panel 为空数组，空即如实）。**契约里根本没有这个位置**：
+   2026-09-22 裁甲明写"本仓无事件发出方 ⇒ `provides` 不设 events 槽"，而 `requires` 九子字段也无订阅面。
+   消费点三处：`panel/manager/snapshot.mjs` 的 events 行（数据源不动）、`test/agent-memory.selflog.test.mjs`
+   的"静态钉锚共振"格（register 行事件名单与 manifest 逐名 deepEqual）、契约自身的 D-13① 形状校验（`contract/src/validate.ts`）。
+2. **别名面 `aliases` / `requiredAliases`**——桶根 4 条 + 1 条。消费点：`scripts/p4-no-subplugin-import-check.mjs`
+   （**红线 1"禁止静态 import 兄弟插件"的取数源**）、`scripts/doc-ref-guard.mjs`、`panel/manager/snapshot.mjs`、
+   `scripts/p24-ui-matrix.mjs` 两处注入。
+3. **可选依赖面 `optionalDeps`**——compact-router 1 项（`dsh-toolkit/agent-memory`）。AGENTS.md 红线 5
+   （"声明了 optionalDeps 就必须真能降级"）的声明面。
+4. **依赖包面 `requirements.packages`**——compact-router 1 项、search-router 1 项，值都是
+   `{"$from":"package.json#peerDependencies"}`（vendor 转正批 G8 的依赖知识）。契约 `requires` 有 `binaries`
+   而**无 `packages`**。
+
+**二、施工实测新捞出的三族（表达不完整）**
+
+5. **身份名面 `name`**——六份清单全带。`id` 名义上是它的替代，但**替代不完整**：桶内 doctor 用
+   `suiteManifest.name` 加 `exports` 子路径拼"可解析别名集合"（`engine.mjs` 的 `buildResolvableSet`），
+   且 provider 在案集合要求 `parsed.name` 在场——实测删除即破真实仓 dry-run 的 0/0/0。
+   ⇒ 本笔把 `manifestVersion` 转入了 error 档，**`name` 留在 info 档**，与本节第 5 条同批记账。
+6. **`exports` 子路径面**——agent-memory 的 `./plugin`、panel 的 `./client`。契约 `provides.entry` 是**单值槽**，
+   承载不了子路径表 ⇒ agent-memory 的整张 legacy 表必须留着（另含用户对 B1 情形 A"manifest 不改"的既裁：
+   按目录装载产出可执行报错是终态设计，报错文案要靠这张表指路）。
+7. **套件根 `$from` 继承面**——桶根 `requirements.exports` 的 `{"$from":"package.json#exports"}`：
+   它既是入口正典的继承指针，也是第 5 条别名集合的输入 ⇒ 同样不能只靠 `provides.entry` 顶替。
+
+**三、连带修掉的同源读点（本笔落码，记此备查）**：桶内 `doctor/cli/src/engine.mjs` 两处只读 legacy 的
+提供面读点改走 `registerSlotOf`（provides 优先、空数组遮蔽）——`bodies.providers`（provider 在案集合，
+影响 `provider.dangling-reference`／`missing-provider`）与 `reg.inject-face-unknown`。F-62 当时只把**撞名格**
+改了正典读法，这两处是同族遗留。这是"新槽落地 ⇒ 冻结成员必须同源"的实证：不同源的表现不是报错，
+而是**假警告＋集体静默漏检**（后者更坏），故两处各带钉（stage4a 两格＋本仓 parity C12 与真实仓 dry-run）。
+在用沙箱 doctor（`ce31f83`）零触碰＝E-5 分歧账自本笔起新增一条"桶内成员已随 v1.3 同源、在用冻结线未跟进"。
+
+
 ---
 
 ### 用户审定记录（2026-09-22 · C-1 条文 ★1–★20 · 用户批复"全部按建议"）

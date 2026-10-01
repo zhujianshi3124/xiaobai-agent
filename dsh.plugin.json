@@ -1,5 +1,4 @@
 {
-  "manifestVersion": 1,
   "name": "dsh-toolkit",
   "id": "dsh/toolkit",
   "displayName": "DSH 工具箱（registry/doctor/面板总装）",
@@ -11,7 +10,8 @@
     "services": ["webServer"]
   },
   "provides": {
-    "services": ["registry", "doctor"]
+    "services": ["registry", "doctor"],
+    "inject": ["webServer"]
   },
   "configSchema": {
     "type": "object",
@@ -75,7 +75,6 @@
     "binaries": [],
     "packages": {},
     "registers": {
-      "inject": ["webServer"],
       "events": [],
       "services": [],
       "commands": [],

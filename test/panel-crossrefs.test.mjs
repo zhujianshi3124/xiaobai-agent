@@ -17,6 +17,8 @@ import { join, resolve } from 'node:path'
 import { buildCrossRefs, createTogglePlan, executePlan, findCrossReferences, putPlan } from '../panel/manager/apply-engine.mjs'
 import { createSoftUninstallPlan, createTrueUninstallPlan } from '../panel/manager/uninstall.mjs'
 import { PLUGINS, crossRefNeedles, declaredDependents, pluginByRowId } from '../panel/manager/plugin-registry.mjs'
+// v1.3 迁移笔：提供面取数与装载面同源（面板守卫不得自建第二份优先级逻辑）
+import { extractRegisters } from '../registry/dist/loader.js'
 
 const ROOT = resolve(import.meta.dirname, '..')
 const PATCH_SRC = join(ROOT, 'cordis.patch.yml')
@@ -107,14 +109,16 @@ test('边界：平台行（本表没有的 rowId）不抛、只按行 id 查；�
   assert.deepEqual(preset.filter((r) => r.source === 'declared-dependency'), [], 'compact-router 没有被依赖，如实为空')
 })
 
-test('漂移守卫：面板登记表的 providers 必须与各插件 manifest 的 registers.providers 逐条一致', () => {
+test('漂移守卫：面板登记表的 providers 必须与各插件 manifest 的提供面 providers 逐条一致', () => {
   // 面板这份表是"报告用知识"，manifest 那份是"插件自述"。两者漂移就意味着
   // 预检在骗人——所以宁可在这里钉死，也不要在运行时才被发现。
+  // v1.3 迁移笔：取数改走装载面同一个 extractRegisters（provides.providers 优先、legacy registers.providers
+  // 回落）——清单迁到 provides 后若还按 legacy 直读，本守卫会"跟着一起变空而不红"（矩阵文档 4.3 点名的盲区）。
   for (const [name, meta] of Object.entries(PLUGINS)) {
     const manifestPath = join(ROOT, 'lib', name, 'dsh.plugin.json')
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
-    const declared = manifest?.requirements?.registers?.providers ?? []
+    const declared = extractRegisters(manifest)?.providers ?? []
     assert.deepEqual([...(meta.providers ?? [])].sort(), [...declared].sort(),
-      `PLUGINS["${name}"].providers 与 lib/${name}/dsh.plugin.json 的 registers.providers 不一致`)
+      `PLUGINS["${name}"].providers 与 lib/${name}/dsh.plugin.json 的提供面 providers 不一致`)
   }
 })
