@@ -1,8 +1,7 @@
 {
   "id": "fixture/entry-provides-dual",
-  "displayName": "v1.3 扩槽入口夹具（provides.entry 与两份 legacy 声明并存）",
+  "displayName": "v1.3 扩槽入口夹具（provides.entry 与两份 legacy 声明并存；无契约面＝甲'容忍面）",
   "version": "1.0.0",
-  "contract": "^1.0",
   "provides": {
     "entry": "./v13-entry.js",
     "inject": ["webServer"],

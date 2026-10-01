@@ -35,7 +35,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { validateManifest, validateModuleExports } from 'dsh-toolkit/contract'
+import { manifestHasContract, validateManifest, validateModuleExports } from 'dsh-toolkit/contract'
 import type { DshSubPluginManifest, ManifestIssue, PluginSource } from 'dsh-toolkit/contract'
 import type { EntrySource, PluginRegisters, ResolvedPlugin } from './types.js'
 
@@ -145,9 +145,10 @@ function readJson(path: string): Record<string, unknown> | undefined {
   }
 }
 
-function manifestHasContract(m: Record<string, unknown>): boolean {
-  return typeof m['contract'] === 'string' && m['contract'] !== ''
-}
+// manifestHasContract（契约面在判据）自 S3 收紧笔（甲'，2026-10-01）起从契约包 import——
+// 与 validateManifest 的分层条件（LEGACY_ERROR_FIELDS 只对带契约面清单判双写 error）**同一份实现**。
+// 原本两处各写一份逐字相同的判据：判据一旦漂移，"走契约分支校验的清单集合"与"error 档生效的清单集合"
+// 就会各管各的，甲'的分层语义即静默分叉。
 
 /**
  * 读 package.json `exports` 里 `"."` 的**声明值**（不判存在性）：裸字符串、映射里的字符串、

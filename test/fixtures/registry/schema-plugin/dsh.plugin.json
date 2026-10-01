@@ -1,5 +1,4 @@
 {
-  "manifestVersion": 1,
   "name": "dsh-toolkit/schema-plugin",
   "id": "dsh/schema-plugin",
   "displayName": "带必填配置的夹具",

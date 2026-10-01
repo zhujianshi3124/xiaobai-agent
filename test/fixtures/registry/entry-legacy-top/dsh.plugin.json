@@ -1,8 +1,7 @@
 {
   "id": "fixture/entry-legacy-top",
-  "displayName": "legacy 顶层 exports 夹具",
+  "displayName": "legacy 顶层 exports 夹具（纯宿主原生形态：无契约面）",
   "version": "1.0.0",
-  "contract": "^1.0",
   "exports": {
     ".": "./legacy-entry.js"
   }

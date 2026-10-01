@@ -12,8 +12,12 @@
 
 /** 契约版本，semver 管理；破坏性变更必须升主版本并提供适配层（规格 §8）。
  *  1.0.0 → 1.1.0（批 11，2026-09-26）：新增 `provides` 提供面与 events/panels 形状收紧，
- *  均为非破坏增量；旧 manifest 的 `^1.0` 范围继续放行（versionSatisfies 对偶已钉）。 */
-export const PLUGIN_CONTRACT_VERSION = '1.1.0'
+ *  均为非破坏增量；旧 manifest 的 `^1.0` 范围继续放行（versionSatisfies 对偶已钉）。
+ *  1.1.0 → 1.2.0（S3 收紧笔，2026-10-01，C1-007 甲'终裁）：**带契约面**（非空 contract）的清单
+ *  再声明 manifestVersion／顶层 registers／顶层 exports 即判**双写 error**；**纯宿主原生形态**
+ *  （无契约面）维持容忍＋提醒（② 级兼容位与 A1 通道原样保留）。对外承诺：契约面必纯；宿主原生
+ *  形态照样能装（带提醒）。本仓清单已随迁移笔（72b1b00）先迁后收，生产清单零双写、零 ok 翻面。 */
+export const PLUGIN_CONTRACT_VERSION = '1.2.0'
 
 // ── manifest ──────────────────────────────────────────────────────────────
 

@@ -1,8 +1,7 @@
 {
   "id": "fixture/entry-dual",
-  "displayName": "双声明夹具（正典与 legacy 并存）",
+  "displayName": "双声明夹具（正典与 legacy 并存；纯宿主原生形态：无契约面）",
   "version": "1.0.0",
-  "contract": "^1.0",
   "requirements": {
     "node": ">=20",
     "exports": {
