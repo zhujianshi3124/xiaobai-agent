@@ -1415,7 +1415,7 @@ W2 批末真机窗已闭（C1-007 批复入账）：用户目检半全对——�
 
 ### 27.1 D-2 · p23-shadow-scan 覆写历史证据（本次复核：原判成立、未修）
 
-- **是什么**：`scripts/p23-shadow-scan.mjs` 每次运行覆写
+- **是什么**：p23 遮蔽补扫工装（源件 p23-shadow-scan，已随 S2 批笔D 删除）每次运行覆写
   `panel/docs/evidence/P23-SHADOW-SCAN.txt`（生成时刻＋`~/.dsh/settings.yaml` 指纹），违反
   证据目录"只增不改"硬约定；P2.3 的 09-18 快照曾被覆写、`git checkout` 还原（原文 debt D
   区 :449）。**同族第二处**（terminal-acceptance-report.mjs）已于 Pack I 冻结＋`exit(2)` 硬
@@ -1490,7 +1490,7 @@ W2 批末真机窗已闭（C1-007 批复入账）：用户目检半全对——�
 
 ### 28.1 本段三笔（D-18/D-19 用户拍板到达前零动工；第三件引擎统一产品级呈报维持挂 v1.2）
 
-1. **D-2 修法 `7fb2ebf`（独立笔）**：`scripts/p23-shadow-scan.mjs` outPath 改写
+1. **D-2 修法 `7fb2ebf`（独立笔）**：p23 遮蔽补扫工装（源件 p23-shadow-scan，已随 S2 批笔D 删除）outPath 改写
    `P23-SHADOW-SCAN-<UTC 时间戳>.txt`——每次运行落新文件，历史正本（09-18 注册版）零覆写，
    证据"只增不改"由脚本自身保证；头注同步记法。行为证据：运行一次旧正本 sha256
    `720f9a56…` 前后逐字节同、新文件 27 行完整落档。无钉无变异（独立取证脚本、仓内零消费者、
@@ -2626,8 +2626,8 @@ bundle 级三步钉持续绿）双证 ⇒ W2 期顺延的"健康详情折叠"真
 ### 44.4 边界与不做
 
 - 本地仓/~/.dsh/五直挂/面板在用实例/patch 在用基准：零触碰（终态复核见 A#59）。
-- `scripts/p23-shadow-scan.mjs`（链外历史工装）的 web-search-local settings 遮蔽半边随出包失效，
-  未改（不在任何门禁链，留 S2 包化批一并清理——债务 E 节分歧账首行互见）。
+- p23 遮蔽补扫工装（源件 p23-shadow-scan；链外历史工装）的 web-search-local settings 遮蔽半边随出包失效，
+  已按 S2 包化批随令评估处置删除（笔D `164f8aa`；债务 E-3 闭账——分歧账互见）。
 - v1.3 三件套（C-3）未动工；本批只完成"七清单迁移"的前置减项（迁移清单 7→6）。
 
 ## 45. S1 剔除批验收入账（EXE-BOOT-019 开窗验收 · 2026-10-01 · 副本线）
@@ -2680,3 +2680,105 @@ HEAD `04816b8` 且工作树恒净；doctor 仓 `D:\dsh-test-sandbox\projects\doc
 族别未证）；同窗 npm test 内 nt 全绿＋单独三连跑 470/0×3 全绿（实档 boot019-nt-rerun1/2/3.log）
 ⇒ 按 §44.3 申报① 同法按已知型并发竞态 flake 处置，未动码。候裁候选（本窗范围外不擅动）：
 regression-all 失败时保留明细末 N 行，免"再振即查"无从查起。
+
+## 46. S2 包化正名批施工图与读数（C1-007 阶段二第二批 · 2026-10-01 · 副本线独笔，doctor 仓零改动）
+
+**令源与裁定**：EXE-BOOT-019 开工令第 2 条（S2 包化正名批：照已批 G4/G5/G6/G8 施工＋S2.e patch 模板形
+随批呈候裁＋E-3 随批评估处置）；G5 署名 "Copyright (c) 2026 zhujianshi3124"（12 门批准记录既定）。
+全部施工在副本 `D:/dsh-toolkit-opensource`；本地在用仓零触碰（冻结照旧）。
+
+### 46.1 笔序（验收笔＋四施工笔＋本账面笔，各自独立可 revert）
+
+0. `67db4c6` docs(toolkit)——S1 批验收入账（§45，EXE-BOOT-019 开窗验收笔）。
+1. 笔A `79d7fe2` feat(toolkit)——G4 包名去 scope＋版本 1.0.0 全套＋private 撤除＋G5 LICENSE＋
+   全仓同步＋转义/拆分形态漏网 6 处＋patch 基准滚存 693cfcd7→a186a710（副本线第 2 次，机制未放宽）
+   ＋D-15 偶然闸失效如实记录。
+2. 笔B `a8d3ba8` feat(toolkit)——G6 files 收窄＋dsh.bundle.patch 键随撤＋q2-layer §0 evidence 两句
+   在位改对＋npm pack 干跑实证。
+3. 笔C `a4bd5a3` feat(toolkit)——G8 vendor 转正（364 tracked 删＋cordis peer→dependencies＋
+   .gitignore 豁免撤＋lock 全新重生成全 resolved＋npm ci 复装实证）＋"私有源"过时陈述改对（既裁）
+   ＋守卫随形态同步（E2 断言位＋P8/P9 夹具自补键）。
+4. 笔D `164f8aa` chore(toolkit)——E-3 处置：p23-shadow-scan.mjs 删除。
+5. 本账面笔（§46＋debt A#60＋E-1/E-2 行推进＋CHANGELOG S2 节＋守卫 9 红清偿）。
+
+### 46.2 执行实况（口径全录）
+
+- **G4**：包名 `@local/dsh-toolkit`→`dsh-toolkit`；版本 0.1.0→1.0.0 **全套**（package.json＋桶根
+  manifest＋4 子插件 manifest＋panel 包——"一个版本号管全部"既定口径下同值演进）；private 撤除。
+  全仓同步：manifests name/aliases **值**（键＝宿主旧插件名，保留）、doctor-signals
+  managedNamePrefix/presetManagedNames、patch 三处 insert name、panel manager 表、test import/夹具、
+  活文档；**历史账面与存档不回改**（CHANGELOG 历史条目/debt 历史行/repair-plan 历史节/两矩阵/recon/
+  panel/docs 全部照录），CHANGELOG 行 3 元陈述随名改对。宿主部署形态不受影响：在用宿主读在用仓
+  自有 package.json/patch（冻结态），副本名变只在副本线生效。
+- **转义/拆分形态漏网 6 处**（全串 git grep 盲区，批中复跑抓出后同笔补齐）：p21 断言正则
+  （`'@local\/…'` 转义形）、pluggable-lint 三处白名单正则、agent-memory 夹具 path.join 拆分形态、
+  dual-channel D-15 断言正则、plugin.js JSDoc 示例。
+- **G5**：LICENSE 新建（MIT 全文＋`Copyright (c) 2026 zhujianshi3124`）。
+- **G6**：files 收窄＝index.js/dsh.plugin.json/lib 四子插件/panel（＋`!panel/docs` 内账排除，G7
+  已批语义的执行）/contract+registry+doctor 源与 dist/README/CHANGELOG/LICENSE；scripts/test/
+  cordis.patch.yml 出包；`dsh.bundle.patch` 键随撤（发布物不含 patch ⇒ 键成死引用；文件仍在仓根，
+  宿主部署通道照旧）。npm pack 干跑实证：`dsh-toolkit-1.0.0.tgz`、121 文件、385.2 kB、
+  scripts/test/panel/docs 零进入。
+- **G8**：vendor 面 364 tracked 文件 git rm；cordis 自 peer 转正常 dependencies（^4.0.2，dev 精确
+  4.0.2 锚不变）；dsh-* 维持 peer（宿主注入面）；.gitignore vendor 豁免行撤除；lock **全新重生成**
+  （31→34 包、@deepseek-ai 28 条全 resolved 官方 URL）；npm ci 复装实证。版本漂移如实申报：传递
+  依赖 19 包 semver 范围内漂移（dsh-* 传递面 rc.2→rc.3、cosmokit 1.8.5、schemastery 3.18.4），
+  cordis 4.0.2 与三直接 peer（dsh-compaction-basic/dsh-settings/dsh-web）不动；兼容性由门禁全链
+  实证（46.4）。
+- **"私有源"过时陈述改对（既裁项）**：`scripts/ci-local.mjs` 头注＋`.github/workflows/ci.yml`
+  头注两处（真理由改写为"无 git 远端＋doctor CLI 本机路径注入"；README 无此类陈述）。
+- **E-3 处置**：p23-shadow-scan.mjs 删除（笔D）。评估依据：P2.3 一次性只读取证工装、evidence 正本
+  已落档（panel/docs/evidence/P23-SHADOW-SCAN*）、web-search-local settings 遮蔽半边随 S1 出包失效
+  （debt E-3 在案成因）、不在任何门禁链零连锁；副本开源仓不保留引用本机 ~/.dsh 的私有取证脚本。
+- **守卫清偿**：笔D 删件引发 9 红（活 5／存档 4，全为该件路径引用失效）——活文档 5 处在位改写让
+  陈述指对（debt D-2/E-3 行＋repair-plan 三处）；存档件 4 处勘误登记条目追加（覆盖 87→91）；
+  token 3202→3197。笔A 后首扫曾红 9＋token 漂移均同因。
+
+### 46.3 候裁项随批呈（候裁后施工，本批零动）
+
+1. **S2.e patch 模板形方案（两案候裁）**：
+   - 现状：`cordis.patch.yml` 两处机器绝对路径——agent-memory-runtime 行
+     `dataRoot: C:\Users\LENOVO\.agent-memory`、toolkit-manager 行
+     `name: 'file:///D:/dsh-plugins/dsh-toolkit/panel/index.js'`。
+   - **案① 模板附档**：仓根真 patch 维持部署实况（指在用仓）；另出 `cordis.patch.template.yml`
+     （占位符 `<AGENT_MEMORY_DATA_ROOT>`／`<PANEL_ENTRY_URL>`）随包发布＋README 部署节填空说明。
+     p2-smoke 既裁红（E-2）维持至 S5 真机窗副本部署演练。
+   - **案②（建议）仓根 patch 直接模板化**：两处绝对路径换占位符（同上形态）；p2-smoke 相对性断言
+     重定义为"patch 无机器绝对路径"⇒ E-2 既裁红批后消除；patch 基准第 3 次滚存随施工笔；
+     patch-config-check（YAML 语义校验）不受占位符影响（值位替换）。S5 真机窗按模板填空部署。
+   - 两案共同点：模板形 patch 只在副本仓演进；本地在用 patch 基准 `b0f304c9` 零触碰红线不变。
+2. **D-15 偶然闸失效的防呆重建**：G4 去 scope 后 `panel/package.json#name="dsh-toolkit/panel"`
+   的 legacy 合成 id 合法 ⇒ resolveLocalSource 对 panel 入口**装载放行**（legacy:true，019 实证），
+   "面板不经 registry 通道自举"（REQ-8）原有偶然机制（@scope 的 `@` 非法）失效。重建候选：loader
+   legacy 合成分支显式拒绝面板目录（判定面候选：目录名 panel／manifest 无 contract 且模块导出含
+   webServer 面装配键——具体判据候裁后施工图另呈）；测试已如实记录现状行为（dual-channel-parity
+   该格改名＋注记）。属行为面改动，候裁后施工。
+3. **regression-all 失败明细保留**（§45.5 候裁候选延续）：失败时回传明细末 N 行，免"再振即查"
+   无从查起。工装小改，候裁。
+
+### 46.4 批末读数（全链 `--with-scan`；实档 var/logs/2026-10-01/boot019-s2c-gate-post.log，
+账面笔后终读以批末申报引用的 final 实档为准）
+
+**5/6 步绿＋第 2 步 p2-smoke 2 断言红（E-2 同根放大，如实申报）**：
+
+| 面 | 读数 |
+|---|---|
+| 第 1 步 npm test | ✓（build×3＋lint＋零子插件引用守卫＋typecheck×3＋nt 470/0） |
+| 第 2 步 回归全跑 | ✗ 仅 p2-smoke 2 断言（原 file:// 指在用令断言＋包名同步后其 name 投影——同一部署面事实的两个投影）；其余 13 项＋nt 全绿 |
+| 第 3 步 doctor dry-run（scope=副本） | ✓ 0/0/0 |
+| 第 4 步 parity | ✓ |
+| 第 5 步 patch 行配置校验 | ✓（基准 a186a710/3063B 在位） |
+| 第 6 步 文档守卫 | ✓ 红 0（勘误覆盖 91、token 以 final 实档为准，账面笔文字滚动） |
+| 源仓冻结 | 复核 HEAD 04816b8、工作树零未提交（批末再核） |
+
+**如实申报**：① p2-smoke 15/1→14/2（笔A 包名同步的连锁投影，同根 E-2，非新缺陷）；② q2-layer ④
+"磁盘 vs HEAD"格批中未提交态照例红、提交后自愈（D-17 先例）；③ 笔C 后 nt 一度 468/2（E2 守卫
+对撞＋P8 夹具 dsh.bundle.patch 键缺失），随形态同步修复至 470/0；④ lock 重生成漂移 19 传递包
+（46.2）；⑤ 守卫清偿脚本首版中断一次（2629 跨行片段未命中），续跑补齐，以复跑全绿为准。
+
+### 46.5 边界与不做
+
+- 本地仓/~/.dsh/五直挂/面板在用实例/patch 在用基准 `b0f304c9`：零触碰（笔A patch 滚存只动副本仓
+  cordis.patch.yml，与在用基准无涉）。
+- S2.e 两案／D-15 重建／regression-all 明细：候裁后施工，本批零动。
+- v1.3 三件套（S3）：未动工。

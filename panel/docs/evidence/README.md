@@ -247,5 +247,6 @@ node scripts/p22b-retention-scope.mjs > panel/docs/evidence/RETENTION-SCOPE.txt 
 - "src/engine.mjs" —（原引 221 行，共 1 处）跨仓引用未带仓前缀（裁③ 后属红）。真位＝独立 doctor 仓，正典写法 `doctor仓:src/engine.mjs`；本文写于 §10.3 立规之前，历史行不改，此前缀面勘误在此登记。
 - "src/executor.mjs" —（原引 221 行，共 1 处）跨仓引用未带仓前缀（裁③ 后属红）。真位＝`doctor仓:src/executor.mjs`。
 - "doctor-patch-state.json" —（原引 221 行，共 1 处）运行时产物：doctor apply/rollback 写侧在 configRoot 下的状态件（读写在 `doctor仓:src/executor.mjs`），非仓内文件。
+- "scripts/p23-shadow-scan.mjs" —（S2 包化正名批笔E 追加）该件已于本批笔D（`164f8aa`）随 E-3 处置删除；本行系存档时点引用，原文照录不回改。
 
 > 计数自证：本文件登记 7 个 distinct 引用形态，覆盖守卫本批红集中属于本文件的 8 条。

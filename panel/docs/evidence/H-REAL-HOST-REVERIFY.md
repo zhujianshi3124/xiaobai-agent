@@ -339,3 +339,4 @@ function engineList(cfg) {
 > 计数自证：本文件登记 10 个 distinct 引用形态，覆盖守卫本批红集中属于本文件的 12 条。
 
 - "lib/web-search-local/index.js" — S1 剔除批（C1-007 G1）出包后目标不存在；历史指其实现正本。
+- "scripts/p23-shadow-scan.mjs" —（S2 包化正名批笔E 追加）该件已于本批笔D（`164f8aa`）随 E-3 处置删除；本行系存档时点引用，原文照录不回改。
