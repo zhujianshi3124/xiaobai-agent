@@ -17,7 +17,7 @@ registry／doctor／管理面板，并携带五个子插件。本 README 是**�
 
 - **services：`registry` + `doctor`**（`dsh.plugin.json` `provides`）——插件装载/状态对齐器与体检引擎；doctor 的检查知识在独立仓 `projects/doctor`（engine 零硬编码插件名）。
 - **面板**：`toolkit-panel`（`settings.plugins.tab` 槽位，部署行 id `toolkit-manager`，挂 `panel/index.js`）——插件开关、体检、配置编辑、审计视图的唯一管理入口（用户明确要求，长期有效）。
-- **契约**：`contract/`（contract v1.1 正典，`^1.0` 消费）。
+- **契约**：`contract/`（contract v1.2 正典，`^1.0` 消费；v1.2 起带契约面的清单与旧字段双写判 error、纯宿主原生形态容忍＋提醒，见 `docs/contract.md` §2）。
 
 ## 目录地图
 
