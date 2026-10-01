@@ -41,8 +41,8 @@ const LAYERS = [
     carrier: "cordis.patch.yml（仓根）",
     phys: join(root, "cordis.patch.yml"),
     evidence: [
-      "package.json:28  dsh.bundle.patch = ./cordis.patch.yml",
-      "package.json:19-25 files[] 含 cordis.patch.yml（随包发布）",
+      "package.json dsh.bundle.patch 键已随 S2 正名批 G6 撤除（patch 不随包发布；文件仍在仓根，宿主部署通道照旧）",
+      "package.json files[] 已随 S2 正名批 G6 收窄（scripts/test/cordis.patch.yml 出白名单；README/CHANGELOG/LICENSE 进白名单）",
       "面板落盘目标亦为此文件：panel/index.js:275（plan）/ :328（toggle）",
       "默认 backupRoot 由 panel/index.js:171+175 从其所在仓根推导",
     ],
