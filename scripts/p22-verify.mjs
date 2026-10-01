@@ -73,7 +73,8 @@ function freshPatch() {
     /\r\n/.test(text) && !/(?<!\r)\n/.test(text));
 
   const hit = eng.locateRowAnchor(text, "rate-throttle");
-  check("anchor rate-throttle resolves exactly once", hit && hit.lineIndex === 13, "line " + (hit.lineIndex + 1));
+  // 行号随 S2.e 案② 模板形头注 +3 行滚存：13（行 14）→ 16（行 17）。
+  check("anchor rate-throttle resolves exactly once", hit && hit.lineIndex === 16, "line " + (hit.lineIndex + 1));
 
   let missing = null;
   try { eng.locateRowAnchor(text, "no-such-row"); } catch (e) { missing = e; }
@@ -267,11 +268,12 @@ function freshPatch() {
 // 起因：上轮只证过 rate-throttle 一张，而面板开放 toggle 的是 3 张卡（S1 剔除批前 4 张）。
 // 「只证 1 张」等于没证 —— 本段把每一张都真跑一遍，并对齐锚点行号。
 const CARDS = [
-  { dir: "rate-throttle", rowId: "rate-throttle", line: 14, pkg: "dsh-toolkit/rate-throttle", xref: { patch: 0, declared: 0, any: [] } },
+  { dir: "rate-throttle", rowId: "rate-throttle", line: 17, pkg: "dsh-toolkit/rate-throttle", xref: { patch: 0, declared: 0, any: [] } },
   // H2（债务 D-14）：搜索卡被停用时要报出"以 provider id 写的引用"（patch 命中）。
-  // （web-search-local 原另有声明式依赖一条，已随开源 S1 剔除批出包；行号随该批滚存 66→59/77→70。）
-  { dir: "search-router", rowId: "web-search-router", line: 59, pkg: "dsh-toolkit/search-router", xref: { patch: 1, declared: 0, any: [/searchProvider:\s*auto-search/] } },
-  { dir: "agent-memory", rowId: "agent-memory-runtime", line: 70, pkg: "dsh-toolkit/agent-memory", xref: { patch: 0, declared: 0, any: [] } },
+  // （web-search-local 原另有声明式依赖一条，已随开源 S1 剔除批出包；行号随该批滚存 66→59/77→70，
+  //   再随 S2.e 案② 模板形头注 +3 行滚存 59→62/70→73。）
+  { dir: "search-router", rowId: "web-search-router", line: 62, pkg: "dsh-toolkit/search-router", xref: { patch: 1, declared: 0, any: [/searchProvider:\s*auto-search/] } },
+  { dir: "agent-memory", rowId: "agent-memory-runtime", line: 73, pkg: "dsh-toolkit/agent-memory", xref: { patch: 0, declared: 0, any: [] } },
 ];
 {
   for (const card of CARDS) {
