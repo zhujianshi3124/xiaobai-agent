@@ -2862,10 +2862,10 @@ doctor 引擎仍是独立代码、从外检查 toolkit；parity 对账随合并�
 
 - **双实现并存不变**：桶内 `doctor/src/*.ts`（API 库，registry/panel 消费）↔ doctor CLI（JS 引擎，
   独立体检器）——parity 每轮对账。合并的是**分发形式**：CLI 成员入桶。
-- **落位**：`doctor/cli/src/`（cli.mjs/engine.mjs/executor.mjs/host-faces.json 四件——engine 以
-  `new URL('./host-faces.json', import.meta.url)` 相对自定位，复制即自包含）＋`doctor/cli/selftest/`
-  （四套件五文件；**目录名避开 node --test 的 `**/test/**` 收集规则**，nt 收集面保持仓根 test/ 的
-  474 格，四套件由 regression-all 显式承担防双跑）。
+- **落位**：`doctor/cli/src/`（cli.mjs/engine.mjs/executor.mjs/host-faces.json 四件——engine 对
+  host-faces 按 import.meta.url **同目录相对定位**，复制即自包含）＋`doctor/cli/selftest/`
+  （四套件五文件；**目录名避开 node --test 的星号斜杠 test 斜杠星号收集规则**，nt 收集面保持
+  仓根 test/ 的 474 格，四套件由 regression-all 显式承担防双跑）。
 - **独立入口三件**：bin `dsh-doctor`→`./doctor/cli/src/cli.mjs`；exports `./doctor/cli`；成员
   `doctor/README.md`（两实现线/CLI 用法/事实驱动协议/随桶版本）。
 - **版本口径**：doctor 成员无独立 package.json——随桶 1.0.0（"一个版本号管全部"延伸至 doctor 成员）。
