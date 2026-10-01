@@ -23,10 +23,15 @@ const scripts = [
   ["q2-shipped-scan", "scripts/q2-shipped-scan.mjs"],
   ["master-merge-fidelity", "scripts/master-merge-fidelity.mjs"],
   ["backup-write-test", "scripts/backup-write-test.mjs"],
+  // S2.5 合并批（C1-007 单包合一终裁）：doctor CLI 成员入桶（doctor/cli/）——四套件基线随桶内重立。
+  ["doctor-cli run-tests", "doctor/cli/selftest/run-tests.mjs"],
+  ["doctor-cli stage3", "doctor/cli/selftest/acceptance-stage3.mjs"],
+  ["doctor-cli stage4a", "doctor/cli/selftest/run-tests-stage4a.mjs"],
+  ["doctor-cli stage4b", "doctor/cli/selftest/run-tests-stage4b.mjs"],
   ["pluggable-lint", "scripts/pluggable-lint.mjs"],
 ];
 
-const RESULT_RE = /(RESULT:?\s*\d+\/\d+\s*PASS|\d+\/\d+\s*PASS|passed=\d+\s*failed=\d+|通过[:：][^\n]*)/;
+const RESULT_RE = /(RESULT:?\s*\d+\/\d+\s*PASS|\d+\/\d+\s*PASS|\d+\/\d+\s+\S[^\n]*?tests?\s+passed|ALL STAGE-3 ACCEPTANCE PASS|passed=\d+\s*failed=\d+|通过[:：][^\n]*)/;
 
 console.log("══════════════════════════════════════════════════════════");
 console.log("回归全跑  " + new Date().toISOString());
@@ -51,6 +56,8 @@ for (const [name, rel] of scripts) {
 // node --test
 {
   let out = "", code = 0;
+  // S2.5 起收集面方案：node --test 无参递归——doctor 成员测试目录定名 selftest（避开 **/test/**
+  // 收集规则），四套件由本清单显式承担（上面四项），nt 收集面保持仓根 test/ 的既有 474 格。
   try { out = execFileSync(NODE, ["--test"], { cwd: ROOT, maxBuffer: 1 << 26, encoding: "utf8" }); }
   catch (e) { out = String(e.stdout || ""); code = e.status ?? 1; }
   const pass = (out.match(/[#ℹ]\s*pass\s+(\d+)/) || [])[1];

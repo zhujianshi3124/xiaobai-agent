@@ -7,7 +7,7 @@ import { writeFileSync, unlinkSync, readFileSync } from "node:fs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const panelDir = join(root, "panel");
-const defaultDoctorCli = "D:/dsh-test-sandbox/projects/doctor/src/cli.mjs";
+const defaultDoctorCli = join(root, "doctor", "cli", "src", "cli.mjs");
 const doctorCli = process.env.DOCTOR_CLI || defaultDoctorCli;
 const baseUrl = process.env.PANEL_BASE_URL || "";
 const TUNNEL_HOST = "95c04a90ca73e397.dsh-market.com";

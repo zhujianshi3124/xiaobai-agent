@@ -28,7 +28,9 @@ import { join, resolve, dirname } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const DOCTOR_CLI = process.env.DOCTOR_CLI || 'D:/dsh-test-sandbox/projects/doctor/src/cli.mjs'
+// S2.5 合并批：doctor CLI 成员入桶，parity 对账对象改桶内 CLI（doctor/cli/src/cli.mjs）——
+// 两实现语义锁不变（toolkit 内嵌 TS doctor ↔ 桶内 JS CLI 成员）；DOCTOR_CLI 环境变量仍可覆盖。
+const DOCTOR_CLI = process.env.DOCTOR_CLI || join(ROOT, 'doctor', 'cli', 'src', 'cli.mjs')
 
 let passed = 0
 const failures = []

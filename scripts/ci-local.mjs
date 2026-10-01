@@ -9,19 +9,21 @@
 //
 // 用法：node scripts/ci-local.mjs [--with-scan]
 //   默认跑：build×3 + pluggable-lint + no-subplugin-import-check + typecheck×3 + node --test
-//         + 回归全跑 14 项 + 真实仓 doctor dry-run（须 0/0/0）+ patch 行配置校验（I1 / D-16）
+//         + 回归全跑 18 项（含 doctor CLI 四套件，S2.5 起） + 真实仓 doctor dry-run（须 0/0/0）+ patch 行配置校验（I1 / D-16）
 //   --with-scan：追加 p23-verify（不在 regression-all 清单里的两项之一）
 import { spawnSync } from 'node:child_process'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const DOCTOR_CLI = process.env.DOCTOR_CLI || 'D:/dsh-test-sandbox/projects/doctor/src/cli.mjs'
+// S2.5 合并批（C1-007 单包合一终裁，2026-10-01）：doctor CLI 成员已入桶（doctor/cli/src/cli.mjs，
+// 零依赖自包含），门禁默认改调桶内成员——在用沙箱仓自此只服务本地冻结线；DOCTOR_CLI 环境变量仍可覆盖。
+const DOCTOR_CLI = process.env.DOCTOR_CLI || resolve(ROOT, 'doctor/cli/src/cli.mjs')
 const withScan = process.argv.includes('--with-scan')
 
 const steps = [
   ['npm test（build×3 + lint + 零子插件引用守卫 + typecheck×3 + node --test）', 'npm', ['test', '--prefix', ROOT]],
-  ['回归全跑（14 专项脚本 + node --test）', process.execPath, [resolve(ROOT, 'scripts/regression-all.mjs')]],
+  ['回归全跑（18 专项脚本 + node --test）', process.execPath, [resolve(ROOT, 'scripts/regression-all.mjs')]],
   ['doctor 真实仓 dry-run 必须 0/0/0', process.execPath, [DOCTOR_CLI, '--scope', ROOT]],
   // 题 2 裁定的分权边界守卫（契约 v1.1 批 2）：本仓契约与独立 doctor 是两套校验器，
   // "契约管解析行为、doctor 管必填性"最怕静默打脸。裁定条件 a 明写"手动脚本不算守卫"

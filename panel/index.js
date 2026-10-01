@@ -253,10 +253,11 @@ export function apply(ctx, config = {}) {
   // 缺省按模块位置锚定，**不再依赖进程 cwd**。下面 createToolkitServices 传的是
   // 已 resolve 的值（不是原始 config），否则 registry/doctor 会另算一个根。
   const toolkitRoot = resolveToolkitRoot(config);
-  // doctor CLI 面按裁决留在仓外（沙箱独立仓 dsh-toolkit-doctor），路径必须可注入：
-  // config.doctorCli → env TOOLKIT_PANEL_DOCTOR_CLI → 缺省值（本机开发布局的现值，嵌入别机时
-  // 由前两者覆盖；CLI 不在场时体检路由返回 degraded，不假装可用）。
-  const doctorCli = resolve(config.doctorCli || process.env.TOOLKIT_PANEL_DOCTOR_CLI || "D:/dsh-test-sandbox/projects/doctor/src/cli.mjs");
+  // doctor CLI 成员已入桶（S2.5 合并批，C1-007 单包合一终裁）：缺省值＝桶内成员
+  // doctor/cli/src/cli.mjs（零依赖自包含），路径仍可注入：
+  // config.doctorCli → env TOOLKIT_PANEL_DOCTOR_CLI → 缺省值（嵌入别机时由前两者覆盖；
+  // CLI 不在场时体检路由返回 degraded，不假装可用）。
+  const doctorCli = resolve(config.doctorCli || process.env.TOOLKIT_PANEL_DOCTOR_CLI || join(toolkitRoot, "doctor", "cli", "src", "cli.mjs"));
   const devicesFile = resolve(config.devicesFile || process.env.TOOLKIT_PANEL_DEVICES_FILE || defaultDevicesFile());
   // 写前备份根目录（P2.1）。默认放插件仓下的 .panel-backups/ 之外，避免与人工备份混淆。
   const backupRoot = resolve(config.backupRoot || process.env.TOOLKIT_PANEL_BACKUP_ROOT || join(toolkitRoot, ".panel-write-backups"));
