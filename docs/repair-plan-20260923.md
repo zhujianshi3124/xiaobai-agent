@@ -2567,3 +2567,65 @@ bundle 级三步钉持续绿）双证 ⇒ W2 期顺延的"健康详情折叠"真
   沙箱根前缀口径＝C-3 三节候选 1 在案；对账网"单侧过严"盲区类＝C-3 三节候选 3 在案——**五项全在、
   零缺、零补记**。
 - **停靠**：本笔后第一阶段正式闭账；开源阶段（v1.3 等挂账）候用户启令，未启令前零动工。
+
+---
+
+## 44. S1 剔除批施工图与读数（C1-007 阶段二首批 · 2026-09-30 · 副本线独笔，doctor 仓零改动）
+
+**令源与裁定**：S1 剔除批开工令（12 门全批照建议案＋S1→S5 照排；G5 署名随 S2）；两处已定因红处置随批
+（红②＝本批文档笔改写散文引用；红①＝预期红维持至 S2 包化处置 patch）。全部施工在副本
+`D:/dsh-toolkit-opensource`（基线 04816b8）；本地在用仓零触碰（冻结照旧）。
+
+### 44.1 笔序（四笔＋本账面笔，各自独立可 revert）
+
+1. 笔 A `8ff8c63` feat(search-router)——G2(b) 本地半边降"可缺席 provider 位"（DELEGATE_LOCAL 位保留）
+   ＋G3 缺席显式回落官方并警示「本地搜索未配置」（绝不静默）；钉随行为笔（回落格＋双缺席格＋警示断言）。
+2. 笔 B `247dfc6` feat(toolkit)——F-91 八点拆除主体：exports 映射／桶 aliases（@gausszhou 行）／
+   patch 两处（web-search-local 行＋web.fetchProvider）／doctor-signals 两行（fetchProvider 键＋
+   providerDependencies 清空）／panel 四 manager 表与文案／双通道卡文案／测试工装连锁随剔；
+   patch 基准滚存 b0f304c9→693cfcd7（副本线第 1 次；p24 两处硬闸期望值同步、机制未放宽）。
+3. 笔 C `05c32f4` test(toolkit)——出包负向钉两枚（登记面四卡＋活跃词面清零；patch 非注释面口径）。
+4. 笔 D `049dde6` docs(toolkit)——翻账（F-91 翻已清偿＋守卫 25 红清偿＋红② 引用指对＋CHANGELOG 节）。
+5. 本账面笔（计划 §44＋debt A#59＋debt E. 分歧账）。
+
+### 44.2 拆除面实况（口径全录）
+
+- **G3 实文（批末呈令面）**：`createProvider.search` 选中 local 而位空 ⇒
+  `console.warn("search-router: 本地搜索未配置（local-multi 未注册，开源版不内置本地搜索），本次回落官方搜索。")`
+  后以 DELEGATE_OFFICIAL 续行；local/official 双缺席 ⇒ WebError hint
+  "no provider on the local slot and official search is not registered either"。
+  沿 §9.7 分层先例：能力位保留、只降部署事实。
+- **退役格**（非删功能，随件出包）：dependency-broken 面与 missing-provider warning
+  （providerDependencies 清空）、A5 单删场景（UI 矩阵）、S6-C4 引擎镜像对账（patch 无 engines 行）、
+  web-search-local 卡格 112 条（p24-ui-matrix 720→608）。
+- **改造格**：B1 改"双真卸载同批"（search-router＋rate-throttle，两收据并存语义保留）、C2/C3 改单真、
+  ④⑤ 销毁式全链主角换 search-router（宿主键 searchProvider 对称）、panel-crossrefs 用例切
+  web-search-router 行、p22-verify 停用演练同步。
+- **新基线**：nt 470（484−16 退役＋2 新钉）、p1-smoke 309（−5）、p22-cards-ui 147（−18）、
+  p24-verify 62（+1 退役负向格）、p24-ui-matrix 608（−112）、q2-layer 14/14、p22-verify 101/101。
+
+### 44.3 批末读数（全链 `--with-scan`，实档 var/logs/2026-09-30/C1-007-s1-gate-final.log）
+
+**5/6 步绿＋第 2 步 1 处已定因红＝开工令预期态精确命中**：
+
+| 面 | 读数 |
+|---|---|
+| 第 1 步 npm test | ✓（build×3＋lint＋零子插件引用守卫＋typecheck×3＋nt 470/0） |
+| 第 2 步 回归全跑 | ✗ 仅 p2-smoke 1 断言（patch 部署行 file:// 指向在用仓——既裁预期红，维持至 S2）；其余 13 项＋nt 全绿 |
+| 第 3 步 doctor dry-run（scope=副本） | ✓ issues=0 (e0/w0/i0) |
+| 第 4 步 parity | ✓（A0 计数格 7→6 随批同步） |
+| 第 5 步 patch 行配置校验 | ✓（自证用例改锚 rate-throttle config.enabled，行号映射机制验证语义不变） |
+| 第 6 步 文档守卫 | ✓ 红集 0（活文档 19 处在位改写＋存档件勘误 5 条；覆盖 82→87、token 3196；红② 同批闭账） |
+| 源仓冻结 | 复核 HEAD 04816b8、工作树零未提交（批末再核） |
+
+**如实申报三条**：① 批中一轮 npm test 出 agent-memory"并发写 5!==6"一红，三连跑 94/94/94 全绿
+⇒ 已知型并发竞态 flake（fd79c7a 核销先例同族），未动码；② 首版分笔时笔 A 暂存区误吞 git rm 删除
+5 件，未推送前软重置重分（b9e2f96 作废，现四笔纯主题）；③ GATE-EXIT 探测命令 cmd 变量早展开误报 0，
+以门禁 log"存在 1 项异常"为准（第 2 步）。
+
+### 44.4 边界与不做
+
+- 本地仓/~/.dsh/五直挂/面板在用实例/patch 在用基准：零触碰（终态复核见 A#59）。
+- `scripts/p23-shadow-scan.mjs`（链外历史工装）的 web-search-local settings 遮蔽半边随出包失效，
+  未改（不在任何门禁链，留 S2 包化批一并清理——债务 E 节分歧账首行互见）。
+- v1.3 三件套（C-3）未动工；本批只完成"七清单迁移"的前置减项（迁移清单 7→6）。
