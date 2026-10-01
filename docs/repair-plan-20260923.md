@@ -75,7 +75,7 @@
 
 ### 高危② 引擎点名越部署名单 —— 点名只查注册表、不查部署配置（性质：实现本就不收口，非回归）
 
-- **取证**：`toolkit:lib/web-search-local/index.js`
+- **取证**：`web-search-local` （已随 S1 剔除批出包） 原 index.js
   `requestedEngines(searchReq)` 的合法性判据是 `typeof ENGINES[key] !== 'function'` ⇒ **只对照 `ENGINES` 注册表**；
   `runSearch` 里 `const engines = requestedEngines(searchReq) ?? engineList(cfg)` ⇒ **显式点名整体取代部署链**（注释自陈"override REPLACES the configured chain entirely"）。
   而 `ENGINES` 现值仍是 8 项、含 `sogou` 与 `'360'`；部署名单 `cordis.patch.yml`（第 61 行，当时） 是 6 项。
@@ -419,7 +419,7 @@ R1-b 变异＝把取数改回 `p.old` ⇒ 恰该条红；W4-3 两格各带一发
 | pid `26004`（09-22 21:17 PowerShell `dsh web` 手动重启） | `netstat` ⇒ 监听 3080 的 PID = **29208**；`Get-Process -Id 29208` StartTime = **2026-09-25 13:21:32** | 交接之后发生过**一次宿主重启**，**非本会话所为**（本会话零写、零 kill、零重启） |
 | 5 插件挂载正常 | `GET /api/toolkit-panel/snapshot` → `plugins` **5 张卡全部 `mounted:true`**（4× `managedBy:patch` + 1× `preset-script`） | 与预期一致 |
 | `cordis.patch.yml = e8051fe9` 基准未动 | `sha256 = e8051fe9cb04e61889a9a2f3f171efd3ab70c516156768337c0f5e1e85a8453d`、3085 B；`snapshot.patch.path` = `toolkit:cordis.patch.yml` | 基准**未变、不滚存** |
-| 引擎部署 6 项 / 代码池 8 项 | patch 行 `web-search-local.config.engines` 实数 6 项；`toolkit:lib/web-search-local/index.js#ENGINES` 实数 8 键（含 `sogou`、`'360'`） | 与 R3 前置事实一致 |
+| 引擎部署 6 项 / 代码池 8 项 | patch 行 `web-search-local.config.engines` 实数 6 项；`web-search-local` （已随 S1 剔除批出包） 原 index.js 的 `ENGINES` 实数 8 键（含 `sogou`、`'360'`） | 与 R3 前置事实一致 |
 | 探针 `var/scratch/*` 暂留勿删 | 沙箱侧 12 个会话目录全在位，**未清、未动** | 遵令 |
 
 > 另报一条纪律性事实：本会话内 **`spec_check` 工具不可调用**（当前 MCP 面只有 browser-use / builtin / extension-market / node-repl / qmind / sites，无 dsh-repo-spec 服务）。本会话新建的取证件一律按 `agents.md` 文字规矩落 `var/scratch/exe-boot-001-20260925/`，未在工作区根目录散建文件。
@@ -475,7 +475,7 @@ R1-b 变异＝把取数改回 `p.old` ⇒ 恰该条红；W4-3 两格各带一发
 
 #### R3 · 引擎点名受部署名单约束（落位 `F-81`、`F-82` = 令面高危②）— 仓：`toolkit`（**外来 MIT 件区**）
 
-**改动面**：`toolkit:lib/web-search-local/index.js#requestedEngines` 现只比 `#ENGINES`（判据 `typeof ENGINES[key] !== 'function'`）⇒ 追加**与部署面求交集**；调用侧 `#runSearch` 把 `cfg` 传进去（现值 `requestedEngines(searchReq) ?? engineList(cfg)`，注释自陈"override REPLACES the configured chain entirely"）；错误文案（现把 8 项全列为 `known`）改列**部署名单**并点名"未部署"。
+**改动面**：`web-search-local` （已随 S1 剔除批出包） 原 index.js 的 `requestedEngines` 现只比 `#ENGINES`（判据 `typeof ENGINES[key] !== 'function'`）⇒ 追加**与部署面求交集**；调用侧 `#runSearch` 把 `cfg` 传进去（现值 `requestedEngines(searchReq) ?? engineList(cfg)`，注释自陈"override REPLACES the configured chain entirely"）；错误文案（现把 8 项全列为 `known`）改列**部署名单**并点名"未部署"。
 **部署面对象**＝`#engineList(cfg)`（含由 `cfg.searxngBaseUrl` 推出的 `searxng` + `cfg.engines` 经 `String()` 归一的键）。本仓现值：patch 行 6 项 ⇒ 点名 `sogou`/`'360'` 为越界面。
 **`cordis.patch.yml` 不动** ⇒ 判据基准 `e8051fe9`/3085 B 保持、**不滚存**（这是本批可回退性的关键：坏的是判据，不是配置）。
 
@@ -1281,7 +1281,7 @@ registers.inject 数据源；`requires.services` 与 inject 声明不一致是 H
 ### 23.2 F-87 复算呈裁（本批未修，按升级规则不自裁）
 
 原判"契约无表达"复算成立：`tools.register({name:'web_search_engine',…})` 现锚
-`lib/web-search-local/index.js`（第 1384 行，当时）＋systemPrompt section（:1377-1383）；manifest
+`web-search-local` （已随 S1 剔除批出包） 原 index.js（第 1384 行，当时）＋systemPrompt section（:1377-1383）；manifest
 registers={inject:[web],events:[],services:[],commands:[],providers:[…]} 无 tools 槽、provides
 三槽（services/commands/providers）不含 tools。补声明＝契约扩槽（provides 第四槽/registers.tools）
 ＝契约语义变更：越 W2"面板可见面与文案诚实化"授权、触碰契约协调边界（与改名批
@@ -2179,9 +2179,9 @@ doctor `7ba8251..HEAD` ＝ 2 文件 **76 增／15 删**。逐笔 numstat 与合�
 
 **F-87（`tools.register` 提供面在契约无表达）——"真实使用面"查实结论：有真用（证据面三段，各记边界）**
 
-1. 写方在位且非死码：`lib/web-search-local/index.js` 的 `registerEngineSearchTool()` 由插件 apply 路径
+1. 写方在位且非死码：`web-search-local` （已随 S1 剔除批出包） 原 index.js 的 `registerEngineSearchTool()` 由插件 apply 路径
    直接调用（同文件 `registerEngineSearchTool(ctx, currentCfg)` 一处调用点），并同时写 `systemPrompt`
-   的 `tool:web_search_engine` 段；仓内既有钉＝`test/web-search-local.engines.test.mjs`
+   的 `tool:web_search_engine` 段；仓内既有钉＝`web-search-local` 的 engines 钉（原测试文件，随出包退役）
    断言 `web_search_engine` 被注册（R3 批所加）。
 2. 消费方正典已实读到：宿主全局包（`@deepseek-ai/dsh` 0.1.5-rc.1）依赖树内的 `@deepseek-ai/dsh-tools`
    暴露 `register(definition: ToolDefinition): () => void`，并对 `output { schema, render, presentationMeta? }`

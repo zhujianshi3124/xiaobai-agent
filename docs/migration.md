@@ -5,7 +5,7 @@
 
 ## 1. 已完成：5 个存量插件契约化（P5）
 
-`lib/{rate-throttle,compact-router,agent-memory,search-router,web-search-local}/dsh.plugin.json`
+`lib/{rate-throttle,compact-router,agent-memory,search-router}/dsh.plugin.json`（S1 剔除批后 4 份；原清单含 web-search-local）
 就地扩展契约字段（**不新建第二套 manifest 体系**，R1 的处置）：
 
 | 字段 | 值 |

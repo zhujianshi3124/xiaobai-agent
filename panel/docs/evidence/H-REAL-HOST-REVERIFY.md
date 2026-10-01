@@ -337,3 +337,5 @@ function engineList(cfg) {
 - "drift-post.json" —（原引 305 行，共 1 处）取证当时的漂移复测读数文件（同上），非仓内可核。
 
 > 计数自证：本文件登记 10 个 distinct 引用形态，覆盖守卫本批红集中属于本文件的 12 条。
+
+- "lib/web-search-local/index.js" — S1 剔除批（C1-007 G1）出包后目标不存在；历史指其实现正本。

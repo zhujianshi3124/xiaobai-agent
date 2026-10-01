@@ -212,7 +212,7 @@ panel/dsh.plugin.json 不声明面板、无 configSchema、无 id/version（全�
 
 命令 5 个 —— /compact-mode(show|llm|instant|auto|reset)、/compact-llm、/compact-instant、/compact-auto、/compact-archive，全走 ctx.commands.register、会话级覆盖，与 README 及 manifest 同名同数（状态：一致；注意旧 README 的"压缩命令只有 5 条"这条在桶内 configSchema 缺席下没有声明面对账）。
 零工具、零事件（events:[]，一致）。
-能力面 —— 压缩引擎替换(继承 BasicCompactionEngine 只改 summarize()，auto/llm/instant 三模派发)；instantOnceFor(agent)(对兄弟插件暴露的免 LLM 一次性接口，自清不动 override，rate-throttle 降档压缩靠它)；压缩存档(每次先落全量原文 JSONL、24MB 上限、每会话留 archiveKeep 份、摘要带指针、写失败不阻断)；LLM 摘要富集(追加台账正典副本+memory 引导+存档指针、6KB 封顶)；checkpoint 在场证据(摘要含"始终用中文回复"+"指令先落账"双行则写正向证据)；agent-memory.js 旁挂(台账读正典/永久指令、hostId→sid 反解、陈旧提示；对兄弟走 try-catch+动态 import('../agent-memory/lib/index.js')，符合红线 1、正是分工说明 §5 B 卡指定做法)；guidance.js(固定模板引导+默认数据根 ~/.agent-memory，只从 root/sid 生成不从用户消息提取)；archive.js(写/列/剪枝/指针/富集，全 best-effort)；instant-digest.js(免 LLM 抽取式摘要：指令保全、前轮 checkpoint 只继承条目、进度区+resume 契约、预算裁剪)。
+能力面 —— 压缩引擎替换(继承 BasicCompactionEngine 只改 summarize()，auto/llm/instant 三模派发)；instantOnceFor(agent)(对兄弟插件暴露的免 LLM 一次性接口，自清不动 override，rate-throttle 降档压缩靠它)；压缩存档(每次先落全量原文 JSONL、24MB 上限、每会话留 archiveKeep 份、摘要带指针、写失败不阻断)；LLM 摘要富集(追加台账正典副本+memory 引导+存档指针、6KB 封顶)；checkpoint 在场证据(摘要含"始终用中文回复"+"指令先落账"双行则写正向证据)；agent-memory.js 旁挂(台账读正典/永久指令、hostId→sid 反解、陈旧提示；对兄弟走 try-catch＋动态 import（相对本插件即仓内 `lib/agent-memory/lib/index.js`），符合红线 1、正是分工说明 §5 B 卡指定做法)；guidance.js(固定模板引导+默认数据根 ~/.agent-memory，只从 root/sid 生成不从用户消息提取)；archive.js(写/列/剪枝/指针/富集，全 best-effort)；instant-digest.js(免 LLM 抽取式摘要：指令保全、前轮 checkpoint 只继承条目、进度区+resume 契约、预算裁剪)。
 审查文档遗留 —— P0/P1(补 tool-call/tool_use/function_call 分支、嵌套去重)已落地；P2(对文件粘贴降权 original task request)状态：未实现。
 配置项 —— mode/fallbackOnRateLimit(auto 下仅 429/配额错误降级 instant) + 14 个 instant 预算键 + archive/archiveKeep + agentMemoryRoot/instantAgentMemoryGuidance/agentMemoryLib 逐个回代码都在构造函数读，无死键（但全都没进 configSchema，见星标）；预设行实际只写 4 个键。
 补丁脚本作用域 —— 桶内脚本改两个面：随包预设 standard/ptc/cordis（实路径在 npm 全局）+ 用户预设 ~/.dsh/.agent-presets/（排除 .bak，minimal 刻意不碰）。状态：一致（现行文档在案：p0-recon.md、migration.md、矩阵 3.2 都记了，矩阵还判"文档括号只覆盖用户面、写窄了"）；分叉的是旧仓 README 那句"liangshen 不动它，历史红线"——它属迁移前口径，不作落差计
@@ -454,7 +454,7 @@ F-70 的 `title/what` 取数与 `:1287-1298` 逐字读。F-75 的 `executePlan` 
 只有 `cordis.patch.yml` 那一份是"部署事实"；`requestedEngines` 的错误文案还把**全 8 项**当"known"打给用户
 ⇒ 与部署名单直接矛盾，会教模型去点未部署引擎。状态：有出入
 **【2026-09-25 R3 笔落位读数 · F-81 与 F-82 的点名半边已修】** ① `requestedEngines(searchReq, cfg)` 追加与
-`engineList(cfg)` 的交集判定：越界点名 ⇒ `WebError` 且**请求一次都不发出**（`test/web-search-local.engines.test.mjs`
+`engineList(cfg)` 的交集判定：越界点名 ⇒ `WebError` 且**请求一次都不发出**（`web-search-local` 的 engines 钉（原测试文件，随出包退役）
 以 fetch 观测面计数实证，含 `'360'` 字符串与 YAML 裸数字 `360` 两种形态、以及"混含已部署+未部署整体拒绝"）；
 ② 错误文案改列部署名单并点名 `not deployed`，`unknown search engine` 一支只留给能力表里真没有的名字；
 ③ **本条"会教模型去点未部署引擎"那半已一并收**：`web_search_engine` 的工具描述与 `tool:web_search_engine`
@@ -471,13 +471,13 @@ F-81 状态由"有出入"翻正为**已修复**；F-82 的"两份名单各自维
 而 `cache` 随 `apply()` 每实例一份 ⇒ 同进程双实例会**共享冷却与节流、不共享结果缓存**（第二实例的限速会被第一实例带动）。状态：有出入
 ★F-85 `proxyMemo` 是 `WeakMap` 且以 cfg 对象为键（`:336/:347-352`），而 `currentCfg()` 每次**新建对象**（`:147`）
 ⇒ 该 memo 实际永不命中（**代理推断**，由对象身份得出，未实测）。状态：未核实
-★F-86 `manifest.id` 与挂载名/行 id 三者不同字 —— `lib/web-search-local/dsh.plugin.json` 的 id 字段（当时第 4 行） 写 `dsh/web-search-local`，
+★F-86 `manifest.id` 与挂载名/行 id 三者不同字 —— `web-search-local` （已随 S1 剔除批出包） 原 dsh.plugin.json 的 id 字段（当时第 4 行） 写 `dsh/web-search-local`，
 patch 行 id 与 `default.name` 都是 `web-search-local`；对内置无影响（宿主 patch 通道按 `name` 装载），
 但经 registry 通道装它时 `reg.name-collision`/卸载台账按哪个名字记账须写明（`uninstall.mjs` 按 `lib/<dir>` 目录名）。状态：有出入（轻）
 ★F-87 `web_search_engine` 工具**无声明面** —— 实现在 `WSL:1351` 经 `ctx.get('tools').register(...)` 注册工具
 + `:1355` 一段 systemPrompt；而 manifest `registers` 根本没有 tools 槽、`commands:[]` ⇒ 契约缺表达（与 H3/批 10 同族，
 provides 三槽也不含 tools）。状态：有出入：契约无表达
-【2026-09-26 W2 余笔复算确认＋处置呈裁】现 HEAD 锚漂至 `lib/web-search-local/index.js`（第 1384 行，当时）（tools.register）与 `:1377-1383`（systemPrompt section 'tool:web_search_engine'）；manifest registers={inject:[web],events:[],services:[],commands:[],providers:[local-multi,local-fetch]}、provides 仅 providers——原判"契约无表达"成立。补声明＝契约扩槽（provides 第四槽/registers.tools）＝契约语义变更，越 W2"面板可见面与文案诚实化"授权且触碰契约协调边界 ⇒ 按升级规则不自裁，报协调侧裁归属（建议随契约 v1.2/W9）。W2 内无码可修、无钉。
+【2026-09-26 W2 余笔复算确认＋处置呈裁】现 HEAD 锚漂至 `web-search-local` （已随 S1 剔除批出包） 原 index.js（第 1384 行，当时）（tools.register）与 `:1377-1383`（systemPrompt section 'tool:web_search_engine'）；manifest registers={inject:[web],events:[],services:[],commands:[],providers:[local-multi,local-fetch]}、provides 仅 providers——原判"契约无表达"成立。补声明＝契约扩槽（provides 第四槽/registers.tools）＝契约语义变更，越 W2"面板可见面与文案诚实化"授权且触碰契约协调边界 ⇒ 按升级规则不自裁，报协调侧裁归属（建议随契约 v1.2/W9）。W2 内无码可修、无钉。
 ★F-88 未声明的依赖面 —— `inject` 只声明 `["web"]`，实现另开 `ctx.inject(['settings'], …)`（`:1443`）并
 `ctx.get('tools')`/`ctx.get('systemPrompt')`（`:1351/:1354`）⇒ 三个未声明环境面（有 try/catch 兜底，但宿主是否保证在场仓内无契约可查；
 `doctor仓:host-faces.json` 的 8 个面里也没有 `tools`/`systemPrompt`）。状态：有出入（与"未能确认"第 5 条同源，本条给出精确名单）
@@ -491,6 +491,11 @@ provides 三槽也不含 tools）。状态：有出入：契约无表达
 桶根 `dsh.plugin.json#aliases` alias、`cordis.patch.yml`（第 58-61 行，当时） 与 `:8` 的 `fetchProvider: local-fetch`、
 `lib/search-router/index.js#DELEGATE_LOCAL（值 "local-multi"）` 硬编码 provider id、`panel/manager/{plugin-registry,snapshot,uninstall,custody}.mjs` 的表与按目录名 rmSync、
 `doctor-signals.json` 的 `requiresProviders`、面板客户端与 `panel.html` 文案。**静态 import 桶内该模块者：零**（红线 1 已守）。状态：在案（开源前置工作项）
+
+> 【2026-09-30 S1 剔除批翻正（C1-007，副本线）】F-91 八点**全部清偿**：exports 映射条目、桶 manifest aliases 行、
+> `cordis.patch.yml` web-search-local 行＋web 行 fetchProvider、search-router 降"可缺席 provider 位"（G2(b)，DELEGATE_LOCAL
+> 位保留）、panel 四 manager 表与文案、doctor-signals 两行、面板客户端与兜底页文案、测试面随剔（engines 钉退役）——
+> `lib/web-search-local/` 三文件已出包。本条状态自此翻**已清偿**（原文照录在上，不回改）。
 
 在案区（重建件）
 

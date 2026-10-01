@@ -758,3 +758,6 @@ import / eager re-export。**未改 `pluggable-lint.mjs` 代码**（它的覆盖
 - "liangshen/agent.cordis.yml" —（原引 562 行，共 1 处）宿主 profile 面路径缺 ~/.dsh 根。真位＝宿主 profile 目录下的预设文件（写作 "~/.dsh/…/agent.cordis.yml"，运行时面、非仓内可核）。
 
 > 计数自证：本文件登记 13 个 distinct 引用形态，覆盖守卫本批红集中属于本文件的 18 条。
+
+- "lib/web-search-local/dsh.plugin.json" — S1 剔除批（C1-007 G1）出包后目标不存在；历史指其桶内清单正本。
+- "lib/web-search-local/index.js" — 同上；历史指其实现正本（本文件另有 :614 一处同 token）。

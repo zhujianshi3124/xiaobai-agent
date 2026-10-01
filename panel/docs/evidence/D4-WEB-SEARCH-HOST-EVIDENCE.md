@@ -74,3 +74,7 @@ D-4 就此关闭。
 证据＝本文件（§二 三格 + §四 归因），原始输出留档
 `.panel-backups/g-real-host-smoke-20260921/d4-websearch-report.txt`。
 G1 九项清单随之**全部闭环**。
+
+
+## 引用勘误（守卫登记）
+- "lib/web-search-local/dsh.plugin.json" — S1 剔除批（C1-007 G1）出包后目标不存在；历史指其桶内清单正本。

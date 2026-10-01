@@ -173,3 +173,5 @@ migration.md 里**没被引用但读者会去找的**：R1/R2/R5 三处裁决标
 - "@deepseek-ai/dsh/package.json" —（原引 100 行，共 1 处）npm 包名式路径（全局 CLI 的 package.json），非仓内可核；本机实装位置＝AppData/Roaming/npm 下该包。
 
 > 计数自证：本文件登记 4 个 distinct 引用形态，覆盖守卫本批红集中属于本文件的 5 条。
+
+- "lib/web-search-local/dsh.plugin.json" — S1 剔除批（C1-007 G1）出包后目标不存在；历史指其桶内清单正本。
