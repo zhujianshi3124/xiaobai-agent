@@ -397,7 +397,10 @@ check("client keeps defensive fallback", clientSrc.includes("rowAnchorFromPatch"
   check("rate-throttle config-layer enabled still true", rt && rt.enabled === true);
 
   const tm = rows.find((r) => r.id === "toolkit-manager");
-  check("toolkit-manager path-like name survives", !!tm && String(tm.name).startsWith("file:"), tm ? tm.name : "");
+  // S2.e 案②：patch 模板化——toolkit-manager 行 name 为占位符（部署填空），机器绝对路径清零。
+  // 原"file: 前缀"断言钉的是部署实况（对象随模板化不复存在），由占位符＋无机器路径两断言如实取代。
+  check("toolkit-manager placeholder name survives (template form)",
+    !!tm && /^<[A-Z][A-Z0-9_]*>$/.test(String(tm.name)) && !String(tm.name).startsWith("file:") && !String(tm.name).match(/^[A-Za-z]:\\/), tm ? tm.name : "");
 
   // 边界用例（内联，不依赖外部 fixture）
   const nested = ["- insert:", "    - id: e1", "      config:", "        enabled: false", "        routing:", "          enabled: true"].join("\n");
@@ -600,7 +603,8 @@ check("client keeps defensive fallback", clientSrc.includes("rowAnchorFromPatch"
   // （S1 剔除批后 3 张：web-search-local 行已出包；行号随该批滚存重测——web-search-router 66→59、
   //   agent-memory-runtime 77→70；rate-throttle 14 不变）
   const patchLines = readFileSync(join(root, "cordis.patch.yml"), "utf8").split(/\r?\n/);
-  const CARD_LINES = [["rate-throttle", 14], ["web-search-router", 59], ["agent-memory-runtime", 70]];
+  // S2.e 案② 头注 +3 行（模板形说明），行号随滚存笔整体下移：14→17、59→62、70→73。
+  const CARD_LINES = [["rate-throttle", 17], ["web-search-router", 62], ["agent-memory-runtime", 73]];
   for (const [id, line] of CARD_LINES) {
     const found = patchLines.findIndex((l) => new RegExp("^\\s*- id:\\s*" + id + "\\s*$").test(l));
     check("P2.2b anchor line reconciled for " + id, found + 1 === line, "line " + (found + 1) + " (expected " + line + ")");
