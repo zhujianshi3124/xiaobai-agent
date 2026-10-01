@@ -2783,3 +2783,63 @@ regression-all 失败时保留明细末 N 行，免"再振即查"无从查起。
   cordis.patch.yml，与在用基准无涉）。
 - S2.e 两案／D-15 重建／regression-all 明细：候裁后施工，本批零动。
 - v1.3 三件套（S3）：未动工。
+
+## 47. S2 包化正名批验收入账（C1-007 验收令 · 2026-10-01 · 副本线）
+
+**令源**：C1-007 S2 验收入账令（EXE-BOOT-019 续用批第一节）。
+
+### 47.1 六笔验收入账
+
+`79d7fe2`（A：G4+G5 全仓同步＋硬闸滚存第 2 次）／`a8d3ba8`（B：G6＋pack 实证）／`a4bd5a3`
+（C：G8 vendor 转正＋lock 全 resolved）／`164f8aa`（D：E-3 删件）／`ba12f01`（E：账面＋守卫清偿）／
+`056eb06`（勘误：§46 自身三型引用形态 4 红）——批末链尾 `056eb06`，六笔全认账。
+
+### 47.2 批末读数认账
+
+门禁 5/6＋第 2 步 p2-smoke 2 断言红＝**E-2 同根放大非新缺陷**；nt 470/0；守卫红 0/token 3207；
+doctor 0/0/0；parity ✓；pack 干跑（121 文件、内账零泄漏）；vendor 转正（lock 全 resolved、npm ci
+复装实证）；LICENSE＋署名；版本全套 1.0.0——全部采认入账。
+
+### 47.3 如实申报认账（五条全认）
+
+版本全套＝"一个版本号管全部"完整执行；lock 漂移 19 传递包＝semver 固有；E2/P8 守卫随形态同步＝
+命题不变；flake 一振三连绿；GATE_EXIT 以档为准——认账。S1 验收笔 §45 与 flake 观察入档认账。
+
+## 48. 续用批施工账：S2.e 案②＋D-15 显式闸＋regression-all 明细（C1-007 候裁三件裁定落码 · 2026-10-01）
+
+**令源**：C1-007 候裁三件裁定（S2.e 采案②；D-15 防呆重建方向准、判据自拟、超预期即停报；
+regression-all 明细保留准）＋doctor 开源设计呈报令（纯读＋设计，零码动）。
+
+### 48.1 施工笔序（四笔，各自独立可 revert）
+
+1. `b77b5f6` feat(toolkit)——**S2.e 案②**：cordis.patch.yml 模板化（两处机器绝对路径→占位符
+   `<AGENT_MEMORY_DATA_ROOT>`/`<PANEL_ENTRY_URL>`＋头注模板形说明）；E-2 消除：p2-smoke 断言面
+   按模板形如实适配（占位符正向钉＋机器绝对路径反向钉＋面板包面直读断言链保持，locatePkgJson
+   解析链随语义退役），16/16 全绿；agent-memory IG1 断言同步；patch 基准第 7 次滚存（副本线第 3 次）
+   a186a710→5c4e6980/3328B。
+2. `4a1dc7d` fix(registry)——**D-15 显式闸**：loader legacy 合成前显式拒绝面板目录。判据（自拟）：
+   manifest 在场＋缺非空 `contract` 字段＋manifest name 以 "/panel" 收尾 ⇒ plugin-shape-invalid。
+   判据刻意收窄在 legacy 容忍面内（契约形态面板类插件走正典分支完全不受影响——未超裁定语义面）。
+   文案沿用 D-15 四要素；dual-channel-parity 恢复原命题（rejects＋四断言）。
+3. `0a2947d` fix(toolkit)——**S2.e 连锁同步**（回归全跑抓出）：p1-smoke toolkit-manager 断言模板形
+   适配＋p1 CARD_LINES/p22 CARDS/exactly-once 锚点行号随头注 +3 行滚存（14→17/59→62/70→73）。
+4. `45f45c5` test(toolkit)——**regression-all 明细保留**：node --test 失败时回传末 25 条相关行
+   （§45.5 候裁项落码）。
+
+### 48.2 涟漪与如实申报
+
+① p1/p22 的 4+7 红系两因：p1 toolkit-manager "file: 前缀"断言（S2.e 漏网点——涟漪面清单漏查
+p1-smoke，如实申报）＋头注 +3 行致锚点行号对账红；均随笔 3 同步闭红（p1 309/0、p22 101/101）。
+② matrix 注释链滚存脚本一次断行事故（replace 锚未含行尾把"成因全文…"断成裸代码行 ⇒ SyntaxError）
+即修，608/0 复验。③ E-2 红消除验证：p2-smoke 16/0（占位符正向钉＋反向钉在场，断言强度不减——
+原 path-like/file URL 断言对象为部署实况，随模板化由两枚新钉如实取代，非为绿弱化）。④ q2-layer ④
+"磁盘 vs HEAD"批中照例红、提交后自愈（D-17 先例）。⑤ doctor 呈报零码动：在用 doctor 只读实读
+（链尾 ce31f83/无 remote/零 npm 依赖/四套件 22/22 等），正本落沙箱 `docs/doctor-opensource-design-c1-007.md`
+（D-G1～D-G6 六门候裁；E-5 候选行候裁后转正；toolkit files 补 doctor-signals.json 为附带候裁）。
+
+### 48.3 续用批批末读数与边界
+
+- 批末 final 以批末申报实档为准（门禁预期：**6/6 全绿**——E-2 消除后第 2 步应零红；nt 470/0；
+  守卫红 0；doctor 0/0/0）。
+- 边界：本地在用仓/~/.dsh/五直挂/面板在用实例/patch 在用基准 b0f304c9 零触碰；**在用 doctor
+  （沙箱 projects/doctor）零触碰**（呈报只读）；D-15 判据语义面未超裁定（无需停报）。
