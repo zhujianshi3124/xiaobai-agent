@@ -92,15 +92,26 @@ export interface HealthCheckCtx {
  * `requires` 整体可选（零需求的插件不必写空对象），其余字段名未变。
  */
 /**
- * 提供面（契约 v1.1 新增，C-1 第 1 项）：本插件**注册进环境**的东西。
+ * 提供面（契约 v1.1 新增，C-1 第 1 项；v1.3 扩槽，C-3/F-87）：本插件**注册进环境**的东西。
  * 与 `requires` 严格分向——`requires.services` 是"我要用的"，`provides.services` 是"我登记的"。
  * 事件的订阅面不在这里：它留在 legacy `requirements.registers.events`（2026-09-22 裁定采甲，
  * 本仓无事件发出方 ⇒ `provides` 不设 events 槽；见 docs/contract.md §2.1 末）。
+ *
+ * **v1.3 扩槽三面**（C-3 一.2 落码；迁移期 legacy 正典位继续回落，双读顺序见 loader）：
+ * - `entry`：装载入口声明（相对本成员根的模块路径）——新正典位，替代 legacy
+ *   `requirements.exports['.']`（D-7 追加的"."语义裁定随落）。
+ * - `inject`：装载时注入宿主面名单——替代 legacy `requirements.registers.inject`。
+ * - `tools`：本插件经宿主 tools 服务注册的工具名单（F-87）。边界随行（C-3 一.2 原文）：
+ *   宿主运行时是否真把该 tool 装配进模型可见面**未证**；本仓 node_modules 类型面**没有**
+ *   `tools` 服务（该面只在宿主 bundle、仓外）——manifest 只承载声明，装配语义归宿主。
  */
 export interface ManifestProvides {
   services?: string[]
   commands?: string[]
   providers?: string[]
+  entry?: string
+  inject?: string[]
+  tools?: string[]
 }
 
 export interface DshSubPluginManifest {

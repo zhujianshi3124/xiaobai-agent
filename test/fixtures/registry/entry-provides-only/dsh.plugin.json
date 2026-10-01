@@ -1,0 +1,11 @@
+{
+  "id": "fixture/entry-provides-only",
+  "displayName": "v1.3 扩槽入口夹具（纯契约形态：三面齐载，零 legacy 字段）",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "provides": {
+    "entry": "./v13-entry.js",
+    "inject": ["webServer"],
+    "tools": ["fixture_probe"]
+  }
+}

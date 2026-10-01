@@ -1,0 +1,9 @@
+{
+  "id": "fixture/entry-provides-missing",
+  "displayName": "v1.3 扩槽入口夹具（provides.entry 声明了却不存在的文件）",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "provides": {
+    "entry": "./declared-v13-missing.js"
+  }
+}
