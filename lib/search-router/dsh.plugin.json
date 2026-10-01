@@ -1,12 +1,13 @@
 {
-  "manifestVersion": 1,
   "name": "dsh-toolkit/search-router",
   "id": "dsh/search-router",
   "displayName": "搜索路由（按会话模型选后端）",
   "version": "1.0.0",
   "contract": "^1.0",
   "provides": {
-    "providers": ["auto-search"]
+    "entry": "./index.js",
+    "providers": ["auto-search"],
+    "inject": ["web"]
   },
   "configSchema": {
     "type": "object",
@@ -36,18 +37,10 @@
       "@deepseek-ai/dsh-web": { "$from": "package.json#peerDependencies" }
     },
     "registers": {
-      "inject": [
-        "web"
-      ],
       "events": [],
       "services": [],
-      "commands": [],
-      "providers": [
-        "auto-search"
-      ]
+      "commands": []
     },
-    "exports": {
-      ".": "./index.js"
-    }
+    "exports": {}
   }
 }

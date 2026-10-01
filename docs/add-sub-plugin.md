@@ -79,7 +79,12 @@ manifest 自此在 doctor 侧零 schema issue。但 **`requirements` 一旦写�
      （单值槽，不是 `.` 表项；非空由契约校验强制）。与下面 ①② 任一 legacy 声明同时在场时 **⓪ 级赢**，
      并打一条 warn **点名被忽略的每一份** legacy 声明；声明了却指向不存在的文件同样产 `entry-not-found`，
      不回退。装载侧入口面自此有契约表达，`entrySource='manifest.provides.entry'`。
-     本仓 6 份清单**今天都还没写这一级**（写它属 S3 迁移笔，随"迁纯契约形态"同批落），本节只登记顺位。
+     【S3 迁移笔现状（2026-10-01）】compact-router／rate-throttle／search-router 三份已写 ⓪ 级，
+     且 legacy 表的 `.` 同步清空（双声明并存形态在本仓已消除；钉子＝`test/provides-data.test.mjs` 的
+     "legacy 侧不得留已迁走的声明"与 `test/loader-entry-resolution.test.mjs` 的 F2⓪ 三格）。
+     桶根与 agent-memory **今天仍走 ① 级**，成因逐名在册＝`docs/debt.md` C-4：桶根的 `$from` 继承面
+     被冻结 doctor 的别名可解析集合消费（`engine.mjs` 的 `buildResolvableSet`），agent-memory 同表还有
+     `./plugin` 子路径而契约 `entry` 是单值槽（子路径无表达）。
    - **① `requirements.exports['.']` —— legacy 正典（v1.3 起的回落位）。** doctor 独立仓把 `exports` 定为
      `requirements` 的必填键，并对**以 `./` 开头**的条目逐条断言目标文件真实存在（非 `./` 写法
      —— 如任意未声明入口名、绝对路径、`file://` —— doctor 直接放过，别把"逐条"读成"无例外"）；

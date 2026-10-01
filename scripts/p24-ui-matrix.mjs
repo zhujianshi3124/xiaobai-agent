@@ -35,7 +35,12 @@ if (BASE_SHA !== BASE_SHA_EXPECT) {
   process.exit(1);
 }
 
-const DOCTOR_CLI = "D:\\dsh-test-sandbox\\projects\\doctor\\src\\cli.mjs";
+// S2.5 门禁自包含切换的补齐处（S3 迁移笔查出，2026-10-01）：原硬编码在用沙箱 doctor
+// （D:\dsh-test-sandbox\projects\doctor@ce31f83，S2.5 起只服务本地冻结线）。矩阵跑的是**仓内副本 scope**，
+// 用冻结 CLI 会与本仓装载面不同源——清单把 provider 声明迁进 provides 后，冻结 CLI 只读
+// legacy registers.providers，会造出一条假 dangling-reference 警告（A0/C3 两格因此红）。
+// 切到桶内成员＝门禁第 3 步与 parity 用的同一个 CLI；DOCTOR_CLI 环境变量仍可覆盖。
+const DOCTOR_CLI = process.env.DOCTOR_CLI || join(root, "doctor", "cli", "src", "cli.mjs");
 // 批 2 操作台文案常量（与两渲染器逐字一致；矩阵断言 = 环节在产品面，叠加 8.3 规则）
 const CONSOLE_EMPTY_ROLLBACK = "还没有可以回滚的体检操作——体检操作台还没有改过任何东西。";
 const CONSOLE_EMPTY_SNAPSHOT = "还没有可恢复的配置快照——面板每次改动配置前都会自动留一份，做过改动后这里就有了。";

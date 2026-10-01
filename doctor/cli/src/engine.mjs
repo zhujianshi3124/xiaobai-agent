@@ -1307,8 +1307,10 @@ function buildRegistrationIssues(records, hostFaces) {
     }
   }
   for (const rec of manifests) {
-    const reg = rec.parsed.requirements.registers || {};
-    const inject = Array.isArray(reg.inject) ? reg.inject : [];
+    // v1.3 迁移笔（S3）：inject 与三分类同族——清单把注入面迁进 provides.inject 后，这里若还只读
+    // legacy registers.inject，本规则对已迁清单集体失明（不报错，只是不再检查＝更坏）。
+    // registerSlotOf 与撞名格、toolkit loader extractRegisters 逐字同口径（provides 优先、空数组遮蔽）。
+    const inject = registerSlotOf(rec.parsed, 'inject');
     const seen = new Set();
     for (const face of inject) {
       if (!face || seen.has(face)) continue;
@@ -1474,7 +1476,11 @@ function buildMountIssues(records) {
     if (rec.rel.indexOf('lib/') !== 0 || rec.rel.indexOf('dsh.plugin.json') === -1) continue;
     const parsed = rec.parsed;
     if (!parsed || !parsed.name) continue;
-    const providers = ((parsed.requirements || {}).registers || {}).providers || [];
+    // v1.3 迁移笔（S3／debt C-3 一.3 甲案）：provider 面走 registerSlotOf（provides 优先、缺席回落 legacy
+    // requirements.registers）——与上方撞名格同源（F-62 只修了撞名那一格，本格是同族的第二处只读旧面）。
+    // 清单把 providers 声明迁进 provides 后若此处仍直读 legacy，dangling-reference 与 missing-provider
+    // 会集体失明（把"在案的 provider"看成空集，反手给一条假警告）。
+    const providers = registerSlotOf(parsed, 'providers');
     bodies.push({ name: parsed.name, rel: rec.rel, providers: providers });
   }
 

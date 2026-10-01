@@ -209,6 +209,39 @@ for (const rel of builtinManifests) {
   check('C10 契约对新槽族的拼错名仍拒（entries 不得静默失效；expected 含六槽名）',
     vTypoNew.ok === false && typoChild.length === 1 && /inject/.test(String(typoChild[0].expected)) && /entry/.test(String(typoChild[0].expected)),
     'ok=' + vTypoNew.ok + ' expected=' + String(typoChild[0] && typoChild[0].expected))
+
+  // C11/C12（S3 迁移笔，甲案终批）：迁移后的两种形态各自钉一面——
+  //   纯契约（零 legacy 根字段）＋provides 三面；混合形态（provides 已迁＋info 级遗留骨架在场）
+  //   ＝本仓六份清单今天的真实形状。doctor 侧仍按"根字段在册与否"取样（套件级规则如 aliases 表、
+  //   exports macro 由本文件 B/D 段与 doctor 自有四套件负责，此处不替整张规则表背书）。
+  const pure = {
+    ...CONTRACT_BASE,
+    provides: { services: ['parity.svc'], inject: ['parity.face'], entry: './index.js' },
+  }
+  const reportPure = runDoctorJson(tmpScope('mig-pure', pure))
+  const pureIllegal = (reportPure.issues || []).filter((i) => /清单根字段非法/.test(String(i.message)))
+  const vPure = validateManifest(pure)
+  check('C11 纯契约 manifest（无 requirements＋provides 三面齐载）：契约 ok、doctor 不报根字段非法',
+    vPure.ok === true && pureIllegal.length === 0 && (vPure.info || []).length === 0,
+    'contract.ok=' + vPure.ok + ' errors=' + JSON.stringify((vPure.errors || []).map((e) => e.code + '@' + e.path))
+    + ' info=' + JSON.stringify((vPure.info || []).map((i) => i.path)) + ' doctor=' + JSON.stringify(pureIllegal.map((i) => i.message)))
+
+  const mixed = {
+    ...CONTRACT_BASE,
+    // 迁移后的遗留残留＝requirements 骨架 + 无替代根字段三名；manifestVersion/name 已删（有替代）
+    requirements: LEGACY_TRIAD.requirements,
+    provides: { services: ['parity.svc'], inject: ['parity.face'], entry: './index.js' },
+    aliases: { 'old-parity': 'parity/unit' }, optionalDeps: ['@local/optional'],
+  }
+  const reportMixed = runDoctorJson(tmpScope('mig-mixed', mixed))
+  const mixedIllegal = (reportMixed.issues || []).filter((i) => /清单根字段非法/.test(String(i.message)))
+  const vMixed = validateManifest(mixed)
+  const mixedInfo = (vMixed.info || []).map((i) => i.path)
+  check('C12 混合形态（provides 已迁＋遗留骨架在场）：契约 ok 且 info 恰含该三名、doctor 不报根字段非法',
+    vMixed.ok === true && mixedIllegal.length === 0
+    && mixedInfo.includes('requirements') && mixedInfo.includes('aliases') && mixedInfo.includes('optionalDeps')
+    && !mixedInfo.includes('manifestVersion') && !mixedInfo.includes('name'),
+    'ok=' + vMixed.ok + ' info=' + JSON.stringify(mixedInfo) + ' doctor=' + JSON.stringify(mixedIllegal.map((i) => i.message)))
 }
 
 // ── D 重叠面逐规则对账（契约 v1.2 题一终批＝案二：维持两引擎＋对账网扩面）────────────

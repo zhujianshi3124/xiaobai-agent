@@ -1,10 +1,13 @@
 {
-  "manifestVersion": 1,
   "name": "dsh-toolkit/rate-throttle",
   "id": "dsh/rate-throttle",
   "displayName": "速率限制与换源路由",
   "version": "1.0.0",
   "contract": "^1.0",
+  "provides": {
+    "entry": "./index.js",
+    "inject": ["llm", "tokenMeter"]
+  },
   "configSchema": {
     "type": "object",
     "meta": {},
@@ -46,10 +49,6 @@
     "binaries": [],
     "packages": {},
     "registers": {
-      "inject": [
-        "llm",
-        "tokenMeter"
-      ],
       "events": [
         "llm/adapters-updated",
         "agent/request",
@@ -60,8 +59,6 @@
       "commands": [],
       "providers": []
     },
-    "exports": {
-      ".": "./index.js"
-    }
+    "exports": {}
   }
 }

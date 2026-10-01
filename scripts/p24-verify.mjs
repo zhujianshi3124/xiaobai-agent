@@ -320,7 +320,9 @@ async function snapshotOf(dir) {
 
 // ---------- ⑦ doctor-signal.test（副本 doctor 全链路）----------
 {
-  const doctorCli = "D:\\dsh-test-sandbox\\projects\\doctor\\src\\cli.mjs";
+  // 与门禁第 3 步同源：桶内 doctor CLI 成员（S2.5 自包含切换补齐处，S3 迁移笔查出——
+  // 在用沙箱 CLI 是 ce31f83 冻结线，只读 legacy registers.providers，会对迁移后的清单造假警告）
+  const doctorCli = process.env.DOCTOR_CLI || join(root, "doctor", "cli", "src", "cli.mjs");
   function runDoctor(dir) {
     // doctor cli 约定：issues 数 > 0 即退出码 1（含 info）——捕获后仍解析 stdout JSON
     let out = "";
