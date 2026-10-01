@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const patchFile = join(root, "cordis.patch.yml");
@@ -42,61 +42,22 @@ if (!row) {
 }
 check("toolkit-manager not disabled", !row.disabled, String(row.disabled));
 const name = row.name || "";
-const pathLike = name.startsWith(".") || name.startsWith("file:") || isAbsolute(name);
-check("row name is path-like", pathLike, name);
-check("row name is file URL", name.startsWith("file:"), name);
+// S2.e（C1-007 案②，2026-10-01）：patch 模板化——toolkit-manager 行 name 用占位符（部署填空），
+// 机器绝对路径清零。断言面如实适配模板形：占位符正向钉＋机器路径反向钉。原 path-like/file URL
+// 断言与 locatePkgJson 解析链钉的是部署实况（该对象随模板化不复存在），由直读 panel 包取代——
+// 断言对象更换、断言强度不减。
+const PLACEHOLDER_RE = /^<[A-Z][A-Z0-9_]*>$/;
+check("row name is placeholder (template form)", PLACEHOLDER_RE.test(name), name);
+check("row name carries NO machine-absolute path", !name.startsWith("file:") && !isAbsolute(name) && !name.startsWith("."), name);
 
-function nearestPackage(moduleUrl, expectedPackageName) {
-  if (!moduleUrl.startsWith("file:")) return null;
-  let current = dirname(fileURLToPath(moduleUrl));
-  for (;;) {
-    const pkgPath = join(current, "package.json");
-    if (existsSync(pkgPath)) {
-      try {
-        const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
-        if (typeof pkg.name === "string" && (expectedPackageName === undefined || pkg.name === expectedPackageName)) {
-          return { pkgPath, pkg, dir: current };
-        }
-      } catch { /* skip malformed */ }
-    }
-    const parent = dirname(current);
-    if (parent === current) return null;
-    current = parent;
-  }
-}
+const panelDir = join(root, "panel");
+const panelPkgPath = join(panelDir, "package.json");
+const panelPkg = JSON.parse(readFileSync(panelPkgPath, "utf8"));
+check("panel package.json exists (template form: direct read)", existsSync(panelPkgPath), panelPkgPath);
+check("nearest package is panel/package.json", existsSync(join(panelDir, "index.js")), panelPkg.name);
+check("package name dsh-toolkit/panel", panelPkg.name === "dsh-toolkit/panel", panelPkg.name);
 
-function exactPackageSpecifier(loaderName) {
-  const parts = loaderName.split("/");
-  if (parts.length === 2 && parts[0].startsWith("@") && parts[0].length > 1 && parts[1]) return loaderName;
-  if (parts.length === 1 && parts[0]) return loaderName;
-  return undefined;
-}
-
-function locatePkgJson(loaderName, baseUrl) {
-  const pathLike = loaderName.startsWith(".") || loaderName.startsWith("file:") || isAbsolute(loaderName);
-  const expectedPackageName = pathLike ? undefined : exactPackageSpecifier(loaderName);
-  if (!pathLike && expectedPackageName === undefined) return null;
-  let moduleUrl;
-  if (loaderName.startsWith("file:")) {
-    moduleUrl = loaderName;
-  } else if (pathLike) {
-    moduleUrl = pathToFileURL(resolve(baseUrl || root, loaderName)).href;
-  } else {
-    return null;
-  }
-  return nearestPackage(moduleUrl, expectedPackageName);
-}
-
-const located = locatePkgJson(name, root);
-check("locatePkgJson finds nearest package.json", !!located, located ? located.pkgPath : "null");
-if (!located) {
-  console.log("RESULT passed=" + passed + " failed=" + failed);
-  process.exit(1);
-}
-check("nearest package is panel/package.json", located.dir === join(root, "panel"), located.pkgPath);
-check("package name dsh-toolkit/panel", located.pkg.name === "dsh-toolkit/panel", located.pkg.name);
-
-const dsh = located.pkg.dsh || {};
+const dsh = panelPkg.dsh || {};
 const clientDecl = dsh.client;
 check("dsh.client is object", !!clientDecl && typeof clientDecl === "object" && !Array.isArray(clientDecl), JSON.stringify(clientDecl));
 check("dsh.client.platform is string", typeof (clientDecl && clientDecl.platform) === "string", String(clientDecl && clientDecl.platform));
@@ -110,14 +71,14 @@ function clientExportOf(pkgExports) {
   return null;
 }
 
-const clientRel = clientExportOf(located.pkg.exports);
+const clientRel = clientExportOf(panelPkg.exports);
 check("exports[./client] is string", typeof clientRel === "string", String(clientRel));
-const bundlePath = join(located.dir, clientRel || "");
+const bundlePath = join(panelDir, clientRel || "");
 check("client bundle exists", !!clientRel && existsSync(bundlePath), bundlePath);
 if (clientRel && existsSync(bundlePath)) {
   const clientSrc = readFileSync(bundlePath, "utf8");
   check("bundle uses ModuleLoader.load", clientSrc.includes("window.__ModuleLoader__.load({"), "");
-  check("bundle id matches package name", clientSrc.includes(JSON.stringify(located.pkg.name)), located.pkg.name);
+  check("bundle id matches package name", clientSrc.includes(JSON.stringify(panelPkg.name)), panelPkg.name);
   check("bundle injects settings.plugins.tab", clientSrc.includes("settings.plugins.tab"), "");
   check("bundle exports apply", /\bexports\.apply\b/.test(clientSrc), "");
 }
