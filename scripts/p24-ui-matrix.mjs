@@ -24,9 +24,11 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const patchPath = join(root, "cordis.patch.yml");
 // 基准滚存：ce0b0b81… →（H5 加引号修 360）→ bb7af96f… →（Pack I 删除 360/搜狗，引擎 8→6）→ e8051fe9… →（D-19 行级原生 inject:×3 落行块末尾，C1-007 用户拍板案一）→ a663f61b… →（EXE-BOOT-011 施工笔3，C1-007 施工令批准案 C：agent-memory 行加 inject: [systemPrompt]——agentMemory 变量接线）→ b0f304c9… →（C1-007 开源 S1 剔除批：删 web-search-local 行与 web.fetchProvider，副本线第 1 次滚存）→ 693cfcd7…。
 // 基准滚存（第 6 次＝副本线第 2 次，2026-10-01 C1-007 开源 S2 正名批：三处 insert name 随包名去 scope 同步，G4 既裁）：693cfcd7… → a186a710…。
-// 与 scripts/p24-verify.mjs 同步；五次都是**数据**变更，守卫机制未放宽。成因全文与该文件内注释、
+// 与 scripts/p24-verify.mjs 同步；五次都是**数据**变更，守卫机制未放宽。
+// 第 7 次（副本线第 3 次，S2.e 案② patch 模板化）：693cfcd7 → a186a710 → 5c4e6980（占位符替代两处机器绝对路径）。
+// 成因全文与该文件内注释、
 // panel/docs/evidence/H-REAL-HOST-REVERIFY.md、docs/debt.md A#24 / A#25 / 计划 §29 / §44。
-const BASE_SHA_EXPECT = "a186a710746a73509db301a2e879a74e2a68049bacc9d761cfe1ab40a86ff452";
+const BASE_SHA_EXPECT = "5c4e69801d8d6e851bc8549f469da683312641e853e340f26e563cb632d2242d";
 const BASE_SHA = createHash("sha256").update(readFileSync(patchPath, "utf8")).digest("hex");
 if (BASE_SHA !== BASE_SHA_EXPECT) {
   console.error("ABORT: 真实 cordis.patch.yml 基线漂移（" + BASE_SHA.slice(0, 12) + "）——拒绝在非基准态跑矩阵");

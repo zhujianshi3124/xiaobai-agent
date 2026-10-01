@@ -1671,7 +1671,7 @@ test('IG1: 套件级 cordis.patch.yml + package.json exports（等价替换 inst
   const patchText = fs.readFileSync(path.join(suiteRoot, 'cordis.patch.yml'), 'utf8');
   assert.ok(patchText.includes('- id: agent-memory-runtime'), 'patch 含挂载 id');
   assert.ok(patchText.includes("name: 'dsh-toolkit/agent-memory/plugin'"), 'patch 含套件 mount 行名');
-  assert.ok(patchText.includes('dataRoot: C:\\Users\\LENOVO\\.agent-memory'), 'patch 含 dataRoot');
+  assert.ok(patchText.includes('dataRoot: <AGENT_MEMORY_DATA_ROOT>'), 'patch 含 dataRoot 占位符（S2.e 模板形）');
   assert.ok(patchText.includes('defaultWorkspace: null'), 'patch 含 defaultWorkspace');
 
   const pkg = JSON.parse(fs.readFileSync(path.join(suiteRoot, 'package.json'), 'utf8'));

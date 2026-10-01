@@ -1,6 +1,9 @@
 # dsh-toolkit 总装补丁：一个 bundle 层替代五个旧插件的 patch 层。
 # 开源 S1 剔除批（C1-007 G1/G3，2026-09-30）：web-search-local 行与 web.fetchProvider 已随
 # MIT 外来件剔除；search-router 保留为路由骨架，本地搜索位（local-multi）可缺席（缺席回落官方）。
+# 开源 S2.e（C1-007 案②，2026-10-01）：本文件为**模板形**——两处机器绝对路径改为占位符，
+# 部署时填空：<AGENT_MEMORY_DATA_ROOT>＝agent-memory 数据根（目录路径）；
+# <PANEL_ENTRY_URL>＝面板入口的 file:// URL（指向本包 panel/index.js）。
 # compact-router 不在此：由 scripts/apply-preset-patch.mjs 改写预设 compaction 行名。
 
 - id: web
@@ -70,10 +73,10 @@
     - id: agent-memory-runtime
       name: 'dsh-toolkit/agent-memory/plugin'
       config:
-        dataRoot: C:\Users\LENOVO\.agent-memory
+        dataRoot: <AGENT_MEMORY_DATA_ROOT>
         defaultWorkspace: null
       inject: [systemPrompt]
 
 - insert:
     - id: toolkit-manager
-      name: 'file:///D:/dsh-plugins/dsh-toolkit/panel/index.js'
+      name: '<PANEL_ENTRY_URL>'
