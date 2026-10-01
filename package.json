@@ -32,19 +32,14 @@
     "dsh.plugin.json",
     "lib/",
     "panel/",
+    "!panel/docs",
     "contract/",
     "registry/",
     "doctor/",
-    "scripts/",
-    "test/",
-    "cordis.patch.yml",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
   ],
-  "dsh": {
-    "bundle": {
-      "patch": "./cordis.patch.yml"
-    }
-  },
   "engines": {
     "node": ">=22"
   },
