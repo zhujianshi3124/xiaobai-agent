@@ -14,6 +14,11 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 - **发布物（files）**：白名单收窄——`scripts/`、`test/`、`cordis.patch.yml` 不随包发布；`README.md`/`CHANGELOG.md`/`LICENSE` 随包；`panel/docs`（工程内账）排除。npm pack 实证 121 文件/385.2 kB。
 - **依赖**：`@deepseek-ai/cordis` 自 peerDependencies 转正常 dependency（仓内 vendor 面 364 文件撤除，全量经公共 registry 解析，lock 全 resolved）；`dsh-*` 维持 peerDependencies（宿主运行时注入面）。历史「私有源」陈述废止（`npm ci` 可复装实证）。
 - **仓内**：链外历史工装 p23-shadow-scan 删除（E-3 处置）；文档引用勘误登记覆盖 87→91。
+- **部署补丁模板化（S2.e 案②）**：`cordis.patch.yml` 两处机器绝对路径改为占位符
+  （`<AGENT_MEMORY_DATA_ROOT>`／`<PANEL_ENTRY_URL>`），部署时填空——发布语义＝模板即源。
+- **行为修复**：registry 通道对面板目录的装载拒绝改为显式判据（D-15 显式闸）——面板是装配现场
+  （REQ-8），不经 registry 通道装载；契约形态的面板类插件不受影响。
+
 - **行为注记**：包名去 scope 后 panel 入口的 legacy 合成 id 变合法，registry 通道对面板目录由拒绝改为放行（legacy 形态）——「面板不经 registry 通道自举」防呆的显式重建候裁中（repair-plan §46.3）。
 ### 开源 S1 剔除批：web-search-local 出包＋search-router 降"可缺席 provider 位"（2026-09-30，C1-007 阶段二·副本线；G1/G2(b)/G3 用户终批"按建议"）
 
