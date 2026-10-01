@@ -2629,3 +2629,54 @@ bundle 级三步钉持续绿）双证 ⇒ W2 期顺延的"健康详情折叠"真
 - `scripts/p23-shadow-scan.mjs`（链外历史工装）的 web-search-local settings 遮蔽半边随出包失效，
   未改（不在任何门禁链，留 S2 包化批一并清理——债务 E 节分歧账首行互见）。
 - v1.3 三件套（C-3）未动工；本批只完成"七清单迁移"的前置减项（迁移清单 7→6）。
+
+## 45. S1 剔除批验收入账（EXE-BOOT-019 开窗验收 · 2026-10-01 · 副本线）
+
+**令源**：EXE-BOOT-019 开工令第 1 条（五笔＋预期态精确命中＋六条如实申报全认账＋G3 实文采认）。
+**验收前置自核**（已过）：副本链尾 `08f5941` 且工作树恒净；源仓 `D:\dsh-plugins\dsh-toolkit`
+HEAD `04816b8` 且工作树恒净；doctor 仓 `D:\dsh-test-sandbox\projects\doctor` 与沙箱档案位
+（var/scratch、var/logs、docs）绝对路径通达。
+
+### 45.1 五笔在链核对（各自独立可 revert）
+
+1. `8ff8c63` 笔A feat(search-router)——G2(b) 可缺席位＋G3 回落警示；
+2. `247dfc6` 笔B feat(toolkit)——F-91 八点拆除＋patch 基准滚存 693cfcd7/3084B；
+3. `05c32f4` 笔C test(toolkit)——出包负向钉两枚（登记面四卡＋活跃词面清零）；
+4. `049dde6` 笔D docs(toolkit)——翻账＋守卫 25 红清偿＋红② 闭账＋CHANGELOG S1 节；
+5. `08f5941` 笔E docs(toolkit)——计划 §44＋debt A#59 收账＋debt E. 分歧账开立。
+
+### 45.2 预期态精确命中（019 开工基线自跑对表；实档沙箱 `var/logs/2026-10-01/boot019-baseline-gate.log`）
+
+门禁 5/6 步绿＋第 2 步 p2-smoke 1 断言既裁红（E-2，维持至 S2）＝开工令预期态精确命中：
+
+- npm test ✓（build×3＋lint＋零子插件引用守卫＋typecheck×3＋nt 470/0）；p1 309/0；
+- p21 53/53、p22 101/101、p22-cards 147/147、p22b 17/17、p23 ✓、p24-verify 62/0、
+  p24-ui-matrix 608/0、q2-layer 14/14、q2-shipped 21/21、master-merge 38/38、backup-write 23/23；
+- doctor dry-run 0/0/0（scope=副本）；parity ✓；patch 行配置校验 ✓（cordis.patch.yml 3084B、
+  链尾触笔 `247dfc6`＝滚存基准 693cfcd7 在位）；文档守卫红 0（扫描 32 份、token 3200、勘误覆盖 87——
+  token 3200 为笔E 账面笔之后口径，§44.3 记 3196 系笔E 前读数，两口径差异成因在档无矛盾）。
+
+### 45.3 六条如实申报全认账
+
+① 作废笔软重置未上链：`b9e2f96` 不在任何分支历史（`git branch --contains` 零输出；对象库悬空
+   残留无害），链上四笔＋账面笔均纯主题——认账。
+② flake 新族一振观察（§44.3 申报①：agent-memory"并发写 5!==6"一振、三连 94/94/94 绿）——认账，
+   候观察续行。
+③ GATE-EXIT 探测命令变量早展开误报 0，以门禁 log"存在 1 项异常"为准——认账。
+④ S5＝发布门口径确认〔协调侧〕——认账（对外发布前用户终批，本仓规矩）。
+⑤ debt 分歧账节令面原称"D"、实落"E"（既有 D 节顺延），如实申报——认账。
+⑥ v1.3 内置清单迁移 7→6 随 S1 剔除入账——认账。
+
+### 45.4 G3 实文采认（019 复核码面在场，与 §44.2 批末呈令实文逐字一致）
+
+`lib/search-router/index.js`：选中 local 而 provider 位空 ⇒
+`console.warn("search-router: 本地搜索未配置（local-multi 未注册，开源版不内置本地搜索），本次回落官方搜索。")`
+后以 DELEGATE_OFFICIAL 续行；local/official 双缺席 ⇒ WebError hint
+"no provider on the local slot and official search is not registered either"。绝不静默。
+
+### 45.5 验收窗新增观察（不动码，随窗申报）
+
+019 开工基线第 2 步内 node --test 一振 469/1（regression-all 摘要器只回传计数、失败明细被丢弃，
+族别未证）；同窗 npm test 内 nt 全绿＋单独三连跑 470/0×3 全绿（实档 boot019-nt-rerun1/2/3.log）
+⇒ 按 §44.3 申报① 同法按已知型并发竞态 flake 处置，未动码。候裁候选（本窗范围外不擅动）：
+regression-all 失败时保留明细末 N 行，免"再振即查"无从查起。
