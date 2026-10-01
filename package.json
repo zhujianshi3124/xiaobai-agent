@@ -14,12 +14,16 @@
   },
   "type": "module",
   "description": "DSH 套件：rate-throttle / compact-router / agent-memory / search-router 四合一入口；一个版本号管全部。",
+  "bin": {
+    "dsh-doctor": "./doctor/cli/src/cli.mjs"
+  },
   "exports": {
     ".": "./index.js",
     "./contract": "./contract/dist/index.js",
     "./panel": "./panel/index.js",
     "./registry": "./registry/dist/index.js",
     "./doctor": "./doctor/dist/index.js",
+    "./doctor/cli": "./doctor/cli/src/cli.mjs",
     "./rate-throttle": "./lib/rate-throttle/index.js",
     "./compact-router": "./lib/compact-router/index.js",
     "./agent-memory": "./lib/agent-memory/lib/index.js",
@@ -36,6 +40,8 @@
     "contract/",
     "registry/",
     "doctor/",
+    "!doctor/cli/selftest",
+    "doctor-signals.json",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"
