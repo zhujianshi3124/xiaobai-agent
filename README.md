@@ -1,6 +1,6 @@
 # dsh-toolkit（DSH 工具箱）
 
-`@local/dsh-toolkit`（manifest id `dsh/toolkit`）——DSH 宿主的插件桶：一个 bundle 层总装
+`dsh-toolkit`（manifest id `dsh/toolkit`）——DSH 宿主的插件桶：一个 bundle 层总装
 registry／doctor／管理面板，并携带五个子插件。本 README 是**桶总览**（用户基本要求令，
 2026-09-28 补齐）；各子插件细节见 `lib/<插件名>/README.md`。
 

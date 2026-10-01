@@ -1,6 +1,6 @@
 # search-router（搜索路由）
 
-`@local/dsh-toolkit/search-router`（manifest id `dsh/search-router`）——决定每次联网搜索走
+`dsh-toolkit/search-router`（manifest id `dsh/search-router`）——决定每次联网搜索走
 哪条路：官方搜索还是本地搜索（权威卡面文案）。
 
 ## 它做什么（代码实况）

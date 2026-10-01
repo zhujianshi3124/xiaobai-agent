@@ -23,9 +23,10 @@ import { createHash } from "node:crypto";
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const patchPath = join(root, "cordis.patch.yml");
 // 基准滚存：ce0b0b81… →（H5 加引号修 360）→ bb7af96f… →（Pack I 删除 360/搜狗，引擎 8→6）→ e8051fe9… →（D-19 行级原生 inject:×3 落行块末尾，C1-007 用户拍板案一）→ a663f61b… →（EXE-BOOT-011 施工笔3，C1-007 施工令批准案 C：agent-memory 行加 inject: [systemPrompt]——agentMemory 变量接线）→ b0f304c9… →（C1-007 开源 S1 剔除批：删 web-search-local 行与 web.fetchProvider，副本线第 1 次滚存）→ 693cfcd7…。
+// 基准滚存（第 6 次＝副本线第 2 次，2026-10-01 C1-007 开源 S2 正名批：三处 insert name 随包名去 scope 同步，G4 既裁）：693cfcd7… → a186a710…。
 // 与 scripts/p24-verify.mjs 同步；五次都是**数据**变更，守卫机制未放宽。成因全文与该文件内注释、
 // panel/docs/evidence/H-REAL-HOST-REVERIFY.md、docs/debt.md A#24 / A#25 / 计划 §29 / §44。
-const BASE_SHA_EXPECT = "693cfcd7daa6be9819b8a8fb99d1e837a541e2e28ca2eec93379d9e3a747efb7";
+const BASE_SHA_EXPECT = "a186a710746a73509db301a2e879a74e2a68049bacc9d761cfe1ab40a86ff452";
 const BASE_SHA = createHash("sha256").update(readFileSync(patchPath, "utf8")).digest("hex");
 if (BASE_SHA !== BASE_SHA_EXPECT) {
   console.error("ABORT: 真实 cordis.patch.yml 基线漂移（" + BASE_SHA.slice(0, 12) + "）——拒绝在非基准态跑矩阵");
@@ -1084,7 +1085,7 @@ section("批2 操作台/双回滚（D 段）");
   const apiD1 = makeApi(dirD1);
   // 造 fixable：套件 manifest 加 aliases 表（旧名→新名），把旧名写进 doctor-signals.json（scope 扫描面）
   const suiteManifest = JSON.parse(readFileSync(join(dirD1, "dsh.plugin.json"), "utf8"));
-  suiteManifest.aliases = Object.assign({}, suiteManifest.aliases, { "@local/dsh-compact-router": "@local/dsh-toolkit/compact-router" });
+  suiteManifest.aliases = Object.assign({}, suiteManifest.aliases, { "@local/dsh-compact-router": "dsh-toolkit/compact-router" });
   writeFileSync(join(dirD1, "dsh.plugin.json"), JSON.stringify(suiteManifest, null, 2) + "\n", "utf8");
   const signalsPath = join(dirD1, "doctor-signals.json");
   const signalsOriginal = readFileSync(signalsPath, "utf8");
@@ -1162,7 +1163,7 @@ section("批2 操作台/双回滚（D 段）");
   const dirD5 = makeCopy("doc-d5");
   const apiD5 = makeApi(dirD5);
   const suiteM5 = JSON.parse(readFileSync(join(dirD5, "dsh.plugin.json"), "utf8"));
-  suiteM5.aliases = Object.assign({}, suiteM5.aliases, { "@local/dsh-compact-router": "@local/dsh-toolkit/compact-router" });
+  suiteM5.aliases = Object.assign({}, suiteM5.aliases, { "@local/dsh-compact-router": "dsh-toolkit/compact-router" });
   writeFileSync(join(dirD5, "dsh.plugin.json"), JSON.stringify(suiteM5, null, 2) + "\n", "utf8");
   const sig5 = join(dirD5, "doctor-signals.json");
   writeFileSync(sig5, readFileSync(sig5, "utf8").replace(/\}\s*$/, "  ,\"_legacyNote\": \"stale @local/dsh-compact-router\"\n}\n"), "utf8");

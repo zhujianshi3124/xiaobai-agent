@@ -19,7 +19,7 @@ import {
   contractServiceName,
   contractEventName,
   isValidServicePrefix,
-} from '@local/dsh-toolkit/contract';
+} from 'dsh-toolkit/contract';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixture = (name) => JSON.parse(readFileSync(join(here, 'fixtures', 'contract', name), 'utf8'));
@@ -179,7 +179,7 @@ test('v1.2 前置④·逐名 info：八名各自单独在场都只产一条 info
     aliases: { 'old-name': 'dsh/parity-legacy' },
     exports: { '.': './index.js' },
     manifestVersion: 1,
-    name: '@local/dsh-toolkit/parity-legacy',
+    name: 'dsh-toolkit/parity-legacy',
     optionalDeps: ['@local/optional'],
     registers: { services: ['parity'], events: [], commands: [], providers: [] },
     requiredAliases: { 'old-name': 'dsh/parity-legacy' },

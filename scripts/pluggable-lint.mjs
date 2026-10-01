@@ -39,11 +39,11 @@ function selfPluginOfTestFile(abs) {
 const SHARED_MODULES = ['contract', 'registry', 'doctor'];
 
 function isSibling(spec, fromFile, selfPlugin) {
-  if (spec === '@local/dsh-toolkit') return false;
-  const sharedRe = /^@local\/dsh-toolkit\/([^/]+)(?:\/|$)/;
+  if (spec === 'dsh-toolkit') return false;
+  const sharedRe = /^dsh-toolkit\/([^/]+)(?:\/|$)/;
   const shared = sharedRe.exec(spec);
   if (shared && SHARED_MODULES.includes(shared[1])) return false;
-  const aliasRe = /^@local\/dsh-toolkit\/([^/]+)(?:\/|$)/;
+  const aliasRe = /^dsh-toolkit\/([^/]+)(?:\/|$)/;
   const alias = aliasRe.exec(spec);
   if (alias) return alias[1] !== selfPlugin;
   if (!spec.startsWith('.') && !spec.startsWith('/')) return false;
@@ -103,7 +103,7 @@ function report(file, ref, kindLabel) {
   if (seen.has(key)) return;
   seen.add(key);
   const rel = path.relative(root, file).replace(/\\/g, '/');
-  const aliasRe = /^@local\/dsh-toolkit\/([^/]+)(?:\/|$)/;
+  const aliasRe = /^dsh-toolkit\/([^/]+)(?:\/|$)/;
   const target = aliasRe.exec(ref.spec);
   const targetName = target ? target[1] : '兄弟插件';
   violations.push(rel + ':' + ref.line + ' ' + kindLabel + targetName + '（spec: ' + ref.spec + '）—— 违反 AGENTS.md 第 ' + (kindLabel === 'eager re-export ' ? '2' : '1') + ' 条，请改为运行时惰性探测（try-catch + 动态 import）');

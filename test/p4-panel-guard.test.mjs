@@ -87,7 +87,7 @@ test('⑤ lib/ 模块引用照旧判红，且豁免文件也不放过（豁免�
   // 三种模块引用形态各自都要有牙（本批施工中途曾把 import() 那条写成 \s+，静默漏判过一形）
   const dynamicForm = scanText({ text: "const m = await import('./lib/agent-memory/index.js')\n", names, exemptNames: true })
   assert.ok(dynamicForm.some((h) => h.rule === 'module'), '动态 import() 形态')
-  const noSpace = scanText({ text: `import x from '@local/dsh-toolkit/lib/agent-memory';\n`, names, exemptNames: true })
+  const noSpace = scanText({ text: `import x from 'dsh-toolkit/lib/agent-memory';\n`, names, exemptNames: true })
   assert.ok(noSpace.some((h) => h.rule === 'module'), 'import 与 ( 之间无空格也必须抓到')
 })
 

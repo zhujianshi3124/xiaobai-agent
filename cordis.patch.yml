@@ -12,7 +12,7 @@
 
 - insert:
     - id: rate-throttle
-      name: '@local/dsh-toolkit/rate-throttle'
+      name: 'dsh-toolkit/rate-throttle'
       config:
         enabled: false
         throttleProviders: []
@@ -57,7 +57,7 @@
 
 - insert:
     - id: web-search-router
-      name: '@local/dsh-toolkit/search-router'
+      name: 'dsh-toolkit/search-router'
       config:
         mode: auto
         officialProviders: [llm-deepseek]
@@ -68,7 +68,7 @@
 
 - insert:
     - id: agent-memory-runtime
-      name: '@local/dsh-toolkit/agent-memory/plugin'
+      name: 'dsh-toolkit/agent-memory/plugin'
       config:
         dataRoot: C:\Users\LENOVO\.agent-memory
         defaultWorkspace: null

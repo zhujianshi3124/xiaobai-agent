@@ -30,9 +30,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 
-import { createRegistry, cordisHost, resolveLocalSource, FIBER_ACTIVE } from '@local/dsh-toolkit/registry'
-import { DoctorService } from '@local/dsh-toolkit/doctor'
-import { contractEventName } from '@local/dsh-toolkit/contract'
+import { createRegistry, cordisHost, resolveLocalSource, FIBER_ACTIVE } from 'dsh-toolkit/registry'
+import { DoctorService } from 'dsh-toolkit/doctor'
+import { contractEventName } from 'dsh-toolkit/contract'
 
 const fixtureDir = (name) => join(import.meta.dirname, 'fixtures', 'registry', name)
 const consumerFixture = fixtureDir('inject-consumer-plugin')

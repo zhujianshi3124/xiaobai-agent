@@ -1,6 +1,6 @@
 if (typeof window !== "undefined" && window.__ModuleLoader__ && typeof window.__ModuleLoader__.load === "function") {
 window.__ModuleLoader__.load({
-	id: "@local/dsh-toolkit/panel",
+	id: "dsh-toolkit/panel",
 	factory: (require) => {
 		var module = { exports: {} };
 		var exports = module.exports;

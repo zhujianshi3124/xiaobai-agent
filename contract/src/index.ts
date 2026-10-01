@@ -1,8 +1,8 @@
 /**
  * DSH Sub-Plugin Contract v1 —— 唯一公共出口（D1 单一契约）。
  *
- * JS 侧（存量插件/面板）以 `import('@local/dsh-toolkit/contract')` 引用；
- * 类型从本模块的 .d.ts 获取（JSDoc `@type {import('@local/dsh-toolkit/contract').DshSubPluginManifest}`）。
+ * JS 侧（存量插件/面板）以 `import('dsh-toolkit/contract')` 引用；
+ * 类型从本模块的 .d.ts 获取（JSDoc `@type {import('dsh-toolkit/contract').DshSubPluginManifest}`）。
  * 禁止在其他位置复制契约类型定义。
  */
 

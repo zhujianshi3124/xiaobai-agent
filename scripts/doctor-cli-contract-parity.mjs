@@ -65,7 +65,7 @@ function tmpScope(name, manifest) {
 }
 
 const CONTRACT_BASE = { id: 'parity/unit', displayName: '对账夹具', version: '1.0.0', contract: '^1.0' }
-const LEGACY_TRIAD = { manifestVersion: 1, name: '@local/dsh-toolkit/parity', requirements: { runtime: {}, binaries: [], packages: {}, registers: {}, exports: { '.': './index.js' } } }
+const LEGACY_TRIAD = { manifestVersion: 1, name: 'dsh-toolkit/parity', requirements: { runtime: {}, binaries: [], packages: {}, registers: {}, exports: { '.': './index.js' } } }
 
 check('前置：DOCTOR_CLI 可解析', existsSync(DOCTOR_CLI), DOCTOR_CLI)
 check('前置：契约 dist 暴露 validateManifest 与 provides 面', typeof validateManifest === 'function' && typeof contract.PLUGIN_CONTRACT_VERSION === 'string')
@@ -245,7 +245,7 @@ for (const rel of builtinManifests) {
     healthCheck: 'x',
     provides: { services: ['parity.svc'] },
     // legacy 侧 8 键
-    manifestVersion: 1, name: '@local/dsh-toolkit/parity-keyset',
+    manifestVersion: 1, name: 'dsh-toolkit/parity-keyset',
     requirements: { runtime: {}, binaries: [], packages: {}, registers: {}, exports: { '.': './index.js' } },
     registers: { services: ['parity-legacy'] }, exports: { '.': './index.js' },
     aliases: { 'old-parity': 'parity/unit' }, optionalDeps: ['@local/optional'], requiredAliases: { 'old-parity': 'parity/unit' },

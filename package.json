@@ -1,7 +1,6 @@
 {
-  "name": "@local/dsh-toolkit",
-  "version": "0.1.0",
-  "private": true,
+  "name": "dsh-toolkit",
+  "version": "1.0.0",
   "scripts": {
     "build:contract": "tsc -p contract/tsconfig.json",
     "build:registry": "tsc -p registry/tsconfig.json",

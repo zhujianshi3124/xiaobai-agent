@@ -1,9 +1,9 @@
 {
   "manifestVersion": 1,
-  "name": "@local/dsh-toolkit/rate-throttle",
+  "name": "dsh-toolkit/rate-throttle",
   "id": "dsh/rate-throttle",
   "displayName": "速率限制与换源路由",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "contract": "^1.0",
   "configSchema": {
     "type": "object",

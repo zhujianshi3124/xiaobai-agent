@@ -453,7 +453,7 @@ export async function buildSnapshot({ toolkitRoot, hotRouterPath = join(homedir(
     toolkitVersion: pkg.version || null,
     self: {
       id: "toolkit-manager",
-      name: (panelRow && panelRow.name) || "@local/dsh-toolkit/panel",
+      name: (panelRow && panelRow.name) || "dsh-toolkit/panel",
       managedBy: panelRow ? "patch" : "unmounted",
       enabled: !!(panelRow && panelRow.enabled),
     },

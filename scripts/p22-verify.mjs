@@ -98,7 +98,7 @@ function freshPatch() {
 {
   const file = freshPatch();
   const text = readFileSync(file, "utf8");
-  const selfRefs = eng.findCrossReferences(text, { rowId: "rate-throttle", alsoMatch: ["@local/dsh-toolkit/rate-throttle"] });
+  const selfRefs = eng.findCrossReferences(text, { rowId: "rate-throttle", alsoMatch: ["dsh-toolkit/rate-throttle"] });
   check("real patch: rate-throttle is not referenced by others", selfRefs.length === 0, JSON.stringify(selfRefs));
 
   // 正例：构造一个引用它的行块（S1 剔除批后插入锚换 web-search-router 行）
@@ -106,7 +106,7 @@ function freshPatch() {
     "    - id: web-search-router\n",
     "    - id: other-row\n      config:\n        uses: rate-throttle\n\n    - id: web-search-router\n",
   );
-  const refs = eng.findCrossReferences(withRef, { rowId: "rate-throttle", alsoMatch: ["@local/dsh-toolkit/rate-throttle"] });
+  const refs = eng.findCrossReferences(withRef, { rowId: "rate-throttle", alsoMatch: ["dsh-toolkit/rate-throttle"] });
   check("cross-ref detected when another block references the id", refs.length === 1, JSON.stringify(refs));
   // 不硬编码行号（依赖 fixture 变换，脆）；改断言"指向的行确实是那条引用"，
   // 且行号落在文件范围内 —— 更有意义也更稳。
@@ -267,11 +267,11 @@ function freshPatch() {
 // 起因：上轮只证过 rate-throttle 一张，而面板开放 toggle 的是 3 张卡（S1 剔除批前 4 张）。
 // 「只证 1 张」等于没证 —— 本段把每一张都真跑一遍，并对齐锚点行号。
 const CARDS = [
-  { dir: "rate-throttle", rowId: "rate-throttle", line: 14, pkg: "@local/dsh-toolkit/rate-throttle", xref: { patch: 0, declared: 0, any: [] } },
+  { dir: "rate-throttle", rowId: "rate-throttle", line: 14, pkg: "dsh-toolkit/rate-throttle", xref: { patch: 0, declared: 0, any: [] } },
   // H2（债务 D-14）：搜索卡被停用时要报出"以 provider id 写的引用"（patch 命中）。
   // （web-search-local 原另有声明式依赖一条，已随开源 S1 剔除批出包；行号随该批滚存 66→59/77→70。）
-  { dir: "search-router", rowId: "web-search-router", line: 59, pkg: "@local/dsh-toolkit/search-router", xref: { patch: 1, declared: 0, any: [/searchProvider:\s*auto-search/] } },
-  { dir: "agent-memory", rowId: "agent-memory-runtime", line: 70, pkg: "@local/dsh-toolkit/agent-memory", xref: { patch: 0, declared: 0, any: [] } },
+  { dir: "search-router", rowId: "web-search-router", line: 59, pkg: "dsh-toolkit/search-router", xref: { patch: 1, declared: 0, any: [/searchProvider:\s*auto-search/] } },
+  { dir: "agent-memory", rowId: "agent-memory-runtime", line: 70, pkg: "dsh-toolkit/agent-memory", xref: { patch: 0, declared: 0, any: [] } },
 ];
 {
   for (const card of CARDS) {

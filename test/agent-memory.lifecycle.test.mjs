@@ -1,5 +1,5 @@
 /**
- * @local/dsh-toolkit（agent-memory）— 生命周期整轮钉（EXE-BOOT-009 开工令 3，素材建议①）
+ * dsh-toolkit（agent-memory）— 生命周期整轮钉（EXE-BOOT-009 开工令 3，素材建议①）
  *
  * 定位：以**公开 API**（createSession / addEntry / setEntryStatus / appendMilestone /
  * updateStatus(已移交) / onSessionDisposed）在临时数据根驱动整轮生命周期，断言

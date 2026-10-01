@@ -1,6 +1,6 @@
 # Changelog
 
-本文件记录 @local/dsh-toolkit 的对外可见变更。格式遵循 Keep a Changelog；
+本文件记录 dsh-toolkit 的对外可见变更。格式遵循 Keep a Changelog；
 版本号 semver。工具箱泛化改造的阶段产出按 P0–P8 记录（规格见判定台账，阶段号
 P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`）。
 

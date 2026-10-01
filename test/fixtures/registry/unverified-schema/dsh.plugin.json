@@ -1,6 +1,6 @@
 {
   "manifestVersion": 1,
-  "name": "@local/dsh-toolkit/unverified-schema",
+  "name": "dsh-toolkit/unverified-schema",
   "id": "dsh/unverified-schema",
   "displayName": "校验降级夹具（重建结果不可执行校验）",
   "version": "0.1.0",

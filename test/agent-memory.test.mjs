@@ -1,5 +1,5 @@
 /**
- * @local/dsh-toolkit（agent-memory）— 自动化测试（设计稿 §8 约束 A-G/L + 2026-09-10 全局化修订）
+ * dsh-toolkit（agent-memory）— 自动化测试（设计稿 §8 约束 A-G/L + 2026-09-10 全局化修订）
  *
  * 全局布局：数据根 = 机器级全局目录（测试全部显式传临时 root 隔离；A4 验证
  * env 覆盖与主目录默认解析）。运行：node test/run-all.mjs
@@ -1670,7 +1670,7 @@ test('IG1: 套件级 cordis.patch.yml + package.json exports（等价替换 inst
   const suiteRoot = SUITE_ROOT;
   const patchText = fs.readFileSync(path.join(suiteRoot, 'cordis.patch.yml'), 'utf8');
   assert.ok(patchText.includes('- id: agent-memory-runtime'), 'patch 含挂载 id');
-  assert.ok(patchText.includes("name: '@local/dsh-toolkit/agent-memory/plugin'"), 'patch 含套件 mount 行名');
+  assert.ok(patchText.includes("name: 'dsh-toolkit/agent-memory/plugin'"), 'patch 含套件 mount 行名');
   assert.ok(patchText.includes('dataRoot: C:\\Users\\LENOVO\\.agent-memory'), 'patch 含 dataRoot');
   assert.ok(patchText.includes('defaultWorkspace: null'), 'patch 含 defaultWorkspace');
 
@@ -1850,13 +1850,13 @@ test('P1-P6: preflight 检查函数（版本/依赖/位置/挂载/备份/全局�
   assert.equal(locMiss[0].ok, false);
   // P4 预设挂载（含 id 冲突）
   const preset = path.join(pdir, 'agent.cordis.yml');
-  fs.writeFileSync(preset, '- id: agent-memory-runtime\n  name: \'@local/dsh-toolkit/agent-memory/plugin\'\n  config: {}\n', 'utf8');
-  assert.equal(checkPresetMount(preset, 'agent-memory-runtime', '@local/dsh-toolkit/agent-memory/plugin').ok, true);
+  fs.writeFileSync(preset, '- id: agent-memory-runtime\n  name: \'dsh-toolkit/agent-memory/plugin\'\n  config: {}\n', 'utf8');
+  assert.equal(checkPresetMount(preset, 'agent-memory-runtime', 'dsh-toolkit/agent-memory/plugin').ok, true);
   const presetNoMount = path.join(pdir, 'empty.yml');
   fs.writeFileSync(presetNoMount, '- id: other\n  name: x\n', 'utf8');
-  assert.equal(checkPresetMount(presetNoMount, 'agent-memory-runtime', '@local/dsh-toolkit/agent-memory/plugin').ok, false);
+  assert.equal(checkPresetMount(presetNoMount, 'agent-memory-runtime', 'dsh-toolkit/agent-memory/plugin').ok, false);
   fs.writeFileSync(preset, '- id: agent-memory-runtime\n  name: a\n- id: agent-memory-runtime\n  name: b\n', 'utf8');
-  assert.equal(checkPresetMount(preset, 'agent-memory-runtime', '@local/dsh-toolkit/agent-memory/plugin').ok, false, 'id 重复→冲突即中止');
+  assert.equal(checkPresetMount(preset, 'agent-memory-runtime', 'dsh-toolkit/agent-memory/plugin').ok, false, 'id 重复→冲突即中止');
   // P5 备份就绪
   const bak = path.join(pdir, 'backup');
   fs.mkdirSync(path.join(bak, 'snapshots'), { recursive: true });
@@ -1909,11 +1909,11 @@ test('P8: checkBundleMountResolvable —— bundle 合成 + 真实 import（正�
   };
   const home = tmpRoot();
   const profileDir = path.join(home, 'profiles', 'web');
-  const bundleDir = path.join(profileDir, 'node_modules', '@local', 'dsh-toolkit');
+  const bundleDir = path.join(profileDir, 'node_modules', 'dsh-toolkit');
   copyRecursive(path.join(SUITE_ROOT, 'lib'), path.join(bundleDir, 'lib'));
   fs.copyFileSync(path.join(SUITE_ROOT, 'package.json'), path.join(bundleDir, 'package.json'));
   fs.copyFileSync(path.join(SUITE_ROOT, 'cordis.patch.yml'), path.join(bundleDir, 'cordis.patch.yml'));
-  fs.writeFileSync(path.join(profileDir, 'package.json'), JSON.stringify({ name: 'p', private: true, dsh: { profile: { bundles: ['@local/dsh-toolkit'] } } }), 'utf8');
+  fs.writeFileSync(path.join(profileDir, 'package.json'), JSON.stringify({ name: 'p', private: true, dsh: { profile: { bundles: ['dsh-toolkit'] } } }), 'utf8');
   fs.writeFileSync(path.join(profileDir, 'cordis.yml'), '[]\n', 'utf8');
   fs.writeFileSync(path.join(profileDir, 'cordis.patch.yml'), '[]\n', 'utf8');
   const res = await checkBundleMountResolvable({ profileDir, home, ...located, mountId: 'agent-memory-runtime' });
@@ -1936,19 +1936,19 @@ test('P9: checkBundleMountResolvable —— 错误引用反向 FAIL 且报错可
   const stake = (overwritePatch, overwritePlugin) => {
     const home = tmpRoot();
     const profileDir = path.join(home, 'profiles', 'web');
-    const bundleDir = path.join(profileDir, 'node_modules', '@local', 'dsh-toolkit');
+    const bundleDir = path.join(profileDir, 'node_modules', 'dsh-toolkit');
     copyRecursive(path.join(SUITE_ROOT, 'lib'), path.join(bundleDir, 'lib'));
     if (overwritePlugin !== null) {
       fs.writeFileSync(path.join(bundleDir, 'lib', 'agent-memory', 'plugin.js'), overwritePlugin, 'utf8');
     }
     fs.copyFileSync(path.join(SUITE_ROOT, 'package.json'), path.join(bundleDir, 'package.json'));
     fs.writeFileSync(path.join(bundleDir, 'cordis.patch.yml'), overwritePatch, 'utf8');
-    fs.writeFileSync(path.join(profileDir, 'package.json'), JSON.stringify({ name: 'p', private: true, dsh: { profile: { bundles: ['@local/dsh-toolkit'] } } }), 'utf8');
+    fs.writeFileSync(path.join(profileDir, 'package.json'), JSON.stringify({ name: 'p', private: true, dsh: { profile: { bundles: ['dsh-toolkit'] } } }), 'utf8');
     fs.writeFileSync(path.join(profileDir, 'cordis.yml'), '[]\n', 'utf8');
     fs.writeFileSync(path.join(profileDir, 'cordis.patch.yml'), '[]\n', 'utf8');
     return { home, profileDir };
   };
-  const badNamePatch = "- insert:\n    - id: agent-memory-runtime\n      name: '@local/dsh-toolkit/agent-memory/nope'\n      config:\n        dataRoot: C:/tmp\n        defaultWorkspace: null\n";
+  const badNamePatch = "- insert:\n    - id: agent-memory-runtime\n      name: 'dsh-toolkit/agent-memory/nope'\n      config:\n        dataRoot: C:/tmp\n        defaultWorkspace: null\n";
   const a = stake(badNamePatch, null);
   const resA = await checkBundleMountResolvable({ profileDir: a.profileDir, home: a.home, ...located, mountId: 'agent-memory-runtime' });
   assert.equal(resA.ok, false, '错误 name 应 FAIL');

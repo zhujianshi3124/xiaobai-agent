@@ -28,5 +28,5 @@
     { "id": "main", "title": "限流概览" }
   ],
   "manifestVersion": 1,
-  "name": "@local/dsh-toolkit/rate-throttle"
+  "name": "dsh-toolkit/rate-throttle"
 }

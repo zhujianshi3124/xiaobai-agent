@@ -14,7 +14,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { Context } from '@deepseek-ai/cordis'
 
-import { cordisHost } from '@local/dsh-toolkit/registry'
+import { cordisHost } from 'dsh-toolkit/registry'
 
 const tick = (ms = 20) => new Promise((r) => setTimeout(r, ms))
 
