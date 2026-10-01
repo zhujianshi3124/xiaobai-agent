@@ -55,8 +55,10 @@ const KNOWN_CONTRACT_FIELDS = new Set([
   'healthCheck',
 ])
 
-/** `provides` 的封闭三槽（契约 v1.1 定稿；events 故意不在内，见 docs/contract.md §2.1 末）。 */
-const PROVIDES_SLOTS = ['services', 'commands', 'providers'] as const
+/** `provides` 的名单槽（v1.1 三槽＋v1.3 扩槽 inject/tools；events 故意不在内，见 docs/contract.md §2.1 末）。 */
+const PROVIDES_LIST_SLOTS = ['services', 'commands', 'providers', 'inject', 'tools'] as const
+/** `provides` 的单值槽（v1.3 扩槽）：入口声明，字符串非空。 */
+const PROVIDES_ENTRY_SLOT = 'entry'
 
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}\/[a-z0-9][a-z0-9-]{0,63}$/
 const ENV_KEY_RE = /^[A-Za-z_][A-Za-z0-9_]*$/
@@ -179,14 +181,15 @@ export function validateManifest(input: unknown): ManifestValidation {
     }
   }
 
-  // provides：提供面（契约 v1.1 · C-1 第 1 项）。三槽皆可选的非空字符串数组；
-  // 未知子键与顶层未知字段同口径拒绝——拼错槽位名会静默失效（不设"容忍多余键"的口子）。
+  // provides：提供面（契约 v1.1 · C-1 第 1 项；v1.3 扩槽 entry/inject/tools）。名单槽皆可选的非空
+  // 字符串数组；entry 是单值非空字符串。未知子键与顶层未知字段同口径拒绝——拼错槽位名会静默失效
+  // （不设"容忍多余键"的口子）。
   const provides = input['provides']
   if (provides !== undefined) {
     if (!isObject(provides)) {
-      errors.push(issue('provides', 'type', 'error', 'provides 必须是对象（{services?, commands?, providers?}）', 'object', provides))
+      errors.push(issue('provides', 'type', 'error', 'provides 必须是对象（{services?, commands?, providers?, entry?, inject?, tools?}）', 'object', provides))
     } else {
-      for (const slot of PROVIDES_SLOTS) {
+      for (const slot of PROVIDES_LIST_SLOTS) {
         const list = provides[slot]
         if (list === undefined) continue
         if (!Array.isArray(list)) {
@@ -199,8 +202,13 @@ export function validateManifest(input: unknown): ManifestValidation {
           }
         })
       }
+      const entryDecl = provides[PROVIDES_ENTRY_SLOT]
+      if (entryDecl !== undefined && (typeof entryDecl !== 'string' || entryDecl.trim() === '')) {
+        errors.push(issue('provides.entry', 'type', 'error', 'provides.entry 必须是非空字符串（相对本成员根的入口模块路径）', 'string', entryDecl))
+      }
       for (const key of Object.keys(provides)) {
-        if ((PROVIDES_SLOTS as readonly string[]).includes(key)) continue
+        if ((PROVIDES_LIST_SLOTS as readonly string[]).includes(key)) continue
+        if (key === PROVIDES_ENTRY_SLOT) continue
         if (key === 'events') {
           errors.push(
             issue(
@@ -215,7 +223,7 @@ export function validateManifest(input: unknown): ManifestValidation {
           continue
         }
         errors.push(
-          issue(`provides.${key}`, 'unknown-field', 'error', `provides 未知子字段 "${key}"（拼错槽位名会静默失效，予以拒绝）`, PROVIDES_SLOTS.join(' | '), key),
+          issue(`provides.${key}`, 'unknown-field', 'error', `provides 未知子字段 "${key}"（拼错槽位名会静默失效，予以拒绝）`, [...PROVIDES_LIST_SLOTS, PROVIDES_ENTRY_SLOT].join(' | '), key),
         )
       }
     }

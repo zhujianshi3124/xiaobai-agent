@@ -10,8 +10,9 @@
  *      - 存在但只有旧 manifestVersion:1 字段（无 contract）→ **legacy**（术语表：
  *        "未实现契约的普通 DSH 插件"），合成契约 manifest
  *      - 不存在 → legacy
- *   2. 入口解析（D-7 裁定 2026-09-21；实现见 resolveEntry）：
- *      ① `requirements.exports['.']` —— **正典位置**（doctor 仓把 `exports` 定为
+ *   2. 入口解析（D-7 裁定 2026-09-21；v1.3 扩槽 C-3 一.2 加 ⓪ 级；实现见 resolveEntry）：
+ *      ⓪ `provides.entry` —— **v1.3 新正典**（相对本成员根的模块路径；与 legacy 并存时新正典赢并 warn）。
+ *      ① `requirements.exports['.']` —— **legacy 正典（迁移期回落位）**（doctor 仓把 `exports` 定为
  *         `requirements` 的必填键并逐条断言目标真实存在；顶层 `exports` 不在其
  *         `MANIFEST_TOP_KEYS` 白名单里）。套件根写法 `{"$from":"package.json#exports"}`
  *         按继承语义把表换成 `package.json#exports`。
@@ -19,7 +20,7 @@
  *         warn 指出忽略了哪一份重复声明。
  *      ③ `package.json` 的 `exports['.']` → `main`（宿主 Node 约定，T0/G1）。package.json
  *         同样是作者显式写的声明 ⇒ **★10 红线（批 6）已扩到本级**。
- *      ④ `index.js`/`index.mjs` 目录惯例 —— 仅当前三级都没有声明时才兜底。
+ *      ④ `index.js`/`index.mjs` 目录惯例 —— 仅当前四级都没有声明时才兜底。
  *      **任一显式声明（①②③）指向不存在的文件即报 entry-not-found，绝不静默回退**
  *      （manifest 与实现同步是红线；回退就是在掩盖）。找不到入口时报可执行 fix 文案
  *      （含 monorepo 根的插件子包候选指引）。
@@ -39,17 +40,21 @@ import type { DshSubPluginManifest, ManifestIssue, PluginSource } from 'dsh-tool
 import type { EntrySource, PluginRegisters, ResolvedPlugin } from './types.js'
 
 /**
- * 归一提取**提供面**：逐槽优先读新契约 `provides.{services,commands,providers}`，缺席才回落到
- * 旧 `requirements.registers.*`（回落属迁移期行为，正源在批 10 的数据落地）。
- * `requires.services` 是**纯依赖面**，不再被借用为提供面 —— 借用会让"共同依赖同一服务"的第二个插件
- * 被 `reg.name-collision` 误阻断（契约 v1.1 的 P0-2 假阳性，实证见 docs/contract-v1.1-recon.md §7）。
+ * 归一提取**提供面**：逐槽优先读新契约 `provides.{services,commands,providers,inject,tools}`（名单槽，
+ * v1.3 扩槽补后两名），缺席才回落到旧 `requirements.registers.*`（回落属迁移期行为，正源在批 10 的数据落地）。
+ * v1.3 扩槽（C-3 一.2）同族双读：`provides.inject`／`provides.tools` 优先，legacy
+ * `requirements.registers.{inject,tools}` 回落。`requires.services` 是**纯依赖面**，不再被借用为
+ * 提供面 —— 借用会让"共同依赖同一服务"的第二个插件被 `reg.name-collision` 误阻断
+ * （契约 v1.1 的 P0-2 假阳性，实证见 docs/contract-v1.1-recon.md §7）。
+ * tools 槽边界（C-3 一.2 原文随行）：宿主运行时装配面未证；本仓类型面无 tools 服务——
+ * 本提取只承载**声明**，供注册冲突检查与体检对账，装配语义归宿主。
  */
 export function extractRegisters(m: Record<string, unknown> | undefined): PluginRegisters | undefined {
   if (!m) return undefined
   const provides = m['provides'] as Record<string, unknown> | undefined
   const legacyRequirements = m['requirements'] as Record<string, unknown> | undefined
   const legacyRegisters = legacyRequirements?.['registers'] as Record<string, unknown> | undefined
-  const pickSlot = function (slot: 'services' | 'commands' | 'providers'): string[] | undefined {
+  const pickSlot = function (slot: 'services' | 'commands' | 'providers' | 'inject' | 'tools'): string[] | undefined {
     const fromProvides = provides?.[slot]
     if (Array.isArray(fromProvides)) return fromProvides as string[]
     const fromLegacy = legacyRegisters?.[slot]
@@ -58,11 +63,15 @@ export function extractRegisters(m: Record<string, unknown> | undefined): Plugin
   const services = pickSlot('services')
   const commands = pickSlot('commands')
   const providers = pickSlot('providers')
-  if (!services && !commands && !providers) return undefined
+  const inject = pickSlot('inject')
+  const tools = pickSlot('tools')
+  if (!services && !commands && !providers && !inject && !tools) return undefined
   return {
     ...(services ? { services } : {}),
     ...(commands ? { commands } : {}),
     ...(providers ? { providers } : {}),
+    ...(inject ? { inject } : {}),
+    ...(tools ? { tools } : {}),
   }
 }
 
@@ -245,24 +254,50 @@ function declaredExportsHint(manifest: Record<string, unknown> | undefined, base
 }
 
 /**
- * 入口解析（D-7 裁定 2026-09-21，顺序与 loader.ts 头注、add-sub-plugin.md §1 同源）：
- *   ① requirements.exports['.']（正典；$from 则按继承语义换成 package.json#exports 的表）
+ * 入口解析（D-7 裁定 2026-09-21，顺序与 loader.ts 头注、add-sub-plugin.md §1 同源；
+ * 契约 v1.3 扩槽 C-3 一.2 在最前加 ⓪ 级）：
+ *   ⓪ provides.entry（**v1.3 新正典**，相对本成员根的模块路径字符串；与 legacy 并存时它赢并 warn）
+ *   ① requirements.exports['.']（legacy 正典＝迁移期回落位；$from 则按继承语义换成 package.json#exports 的表）
  *   ② 顶层 exports['.']（legacy 兼容位，命中打 warn；与正典并存时正典赢并 warn）
  *   ③ package.json 的 exports['.'] → main（宿主 Node 约定，T0/G1）
  *   ④ index.js / index.mjs 目录惯例（前面各级都没有声明时才兜底）
  *
- * 红线：①②③ 这类**显式声明**指向不存在的文件 ⇒ 直接 entry-not-found 并给出该绝对路径，
+ * 红线：⓪①②③ 这类**显式声明**指向不存在的文件 ⇒ 直接 entry-not-found 并给出该绝对路径，
  * 绝不静默回退到后面的顺位（回退就是拿惯例掩盖 manifest 与实现不同步）。
  */
 function resolveEntry(dir: string, manifest: Record<string, unknown> | undefined): EntryResolution {
   const warnings: string[] = []
   const pkg = readJson(join(dir, 'package.json'))
+  // ⓪ v1.3 新正典（C-3 一.2 扩槽）：provides.entry —— 最高优先。
+  const provides = manifest?.['provides'] as Record<string, unknown> | undefined
+  const providesEntry = provides?.['entry']
   const requirements = manifest?.['requirements'] as Record<string, unknown> | undefined
   const canonicalTable = requirements?.['exports']
   const inheritsFromPkg = isExportsMacro(canonicalTable)
   const effectiveCanonicalTable = inheritsFromPkg ? pkg?.['exports'] : canonicalTable
   const canonicalDot = dotDeclaration(effectiveCanonicalTable)
   const legacyDot = dotDeclaration(manifest?.['exports'])
+
+  if (typeof providesEntry === 'string' && providesEntry.trim() !== '') {
+    const p = join(dir, providesEntry)
+    if (!existsSync(p)) {
+      throw new SourceError('entry-not-found', declaredMissingMessage(
+        'v1.3 正典位置 provides.entry', providesEntry, p, dir, manifest,
+        `provides.entry="${providesEntry}"`,
+      ))
+    }
+    // 双声明并存一律可见（legacy 两份都点名）：静默忽略等于把"哪一份生效"留给读者猜。
+    const ignored: string[] = []
+    if (canonicalDot !== undefined) ignored.push(`requirements.exports['.']="${canonicalDot}"`)
+    if (legacyDot !== undefined) ignored.push(`顶层 exports['.']="${legacyDot}"`)
+    if (ignored.length > 0) {
+      warnings.push(
+        `双声明并存：入口按 v1.3 正典 provides.entry="${providesEntry}" 解析，已忽略 legacy ${ignored.join('、')}`
+        + '（迁移期请删掉 legacy 那一份；两套同时在场时，改其一而忘改其二即声明与实装分叉）',
+      )
+    }
+    return { path: p, source: 'manifest.provides.entry', warnings }
+  }
 
   if (inheritsFromPkg && canonicalDot === undefined && pkg?.['exports'] !== undefined) {
     warnings.push(
@@ -341,9 +376,11 @@ function declaredMissingMessage(
   absPath: string,
   dir: string,
   manifest: Record<string, unknown> | undefined,
+  /** 声明形态的可读渲染；缺省按 exports 表的 `位置['.']="值"` 形。v1.3 的 provides.entry 是单值槽，不是表项。 */
+  declarationLabel?: string,
 ): string {
   const parts = [
-    `manifest 声明了入口却指向不存在的文件：${positionLabel}['.']="${dot}" → ${absPath}（该文件不存在）`,
+    `manifest 声明了入口却指向不存在的文件：${declarationLabel ?? `${positionLabel}['.']="${dot}"`} → ${absPath}（该文件不存在）`,
     'manifest 与实现必须同步，装载器**不会**回退到 package.json 或 index.js 惯例去猜一个能用的入口',
   ]
   const requirements = manifest?.['requirements'] as Record<string, unknown> | undefined

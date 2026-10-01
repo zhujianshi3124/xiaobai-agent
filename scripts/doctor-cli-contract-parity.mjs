@@ -7,7 +7,8 @@
 //   A 存量 7 份 manifest：契约判 ok ⇒ doctor 不得对同一文件报 schema 级 error（不得互相打脸）
 //   B 纯契约 manifest（无 legacy 三必填）：两侧都放行根必填面；requirements **在场才管**、
 //     缺席时的整段跳过由本段钉成可见断言（契约 v1.2 前置①，recon §8.3 连带修正）
-//   C provides：doctor 放行键名（批 1）且对拼错名仍判非法；契约对三槽形状与未知子键收紧（批 2）
+//   C provides：doctor 放行键名（批 1）且对拼错名仍判非法；契约对槽形状与未知子键收紧（批 2 三槽；
+//     v1.3 扩槽后为五名单槽＋entry 单值槽，C8～C10 三格钉新槽的两侧接缝，EXE-BOOT-020 扩槽笔）
 //   D 重叠面**逐规则**对账（契约 v1.2 题一终批＝案二"维持两引擎＋对账网扩面"，EXE-BOOT-016 笔 2）：
 //     两套校验器都管的每一条字段规则，逐条钉住"各侧判什么"——同向红／契约严 doctor 宽／方向相反
 //     三类各按实况登记，不许混成一句"大致一致"。夹具与判据先经实测（probe-overlap-faces.mjs）。
@@ -176,6 +177,38 @@ for (const rel of builtinManifests) {
   check('C7 provides.events 被拒且点名 requirements.registers.events（裁定采甲）',
     vEv.ok === false && (vEv.errors || []).some((e) => e.path === 'provides.events' && /registers\.events/.test(String(e.expected) + String(e.message))),
     JSON.stringify((vEv.errors || []).map((e) => e.code + '@' + e.path + '#' + (e.expected || ''))))
+
+  // C8～C10（v1.3 扩槽，debt C-3 一.2／F-87）：新三槽 entry/inject/tools 的两侧接缝。
+  // 分工不变＝"形状与未知子键归契约、根键名在册归 doctor"；doctor 对 provides 的值面零校验
+  // 是已裁边界（本段把它保持为可见断言，不偷偷扩成"doctor 也开始校验"）。
+  const six = {
+    ...CONTRACT_BASE,
+    ...LEGACY_TRIAD,
+    provides: {
+      services: ['parity.svc'], commands: ['parity.cmd'], providers: ['parity.prov'],
+      entry: './index.js', inject: ['parity.face'], tools: ['parity_tool'],
+    },
+  }
+  const scopeSix = tmpScope('provides-six-slots', six)
+  const reportSix = runDoctorJson(scopeSix)
+  const sixIllegal = (reportSix.issues || []).filter((i) => /清单根字段非法/.test(String(i.message)))
+  check('C8 契约接受六槽齐载的 provides（v1.3 扩槽 entry/inject/tools）', validateManifest(six).ok === true,
+    JSON.stringify((validateManifest(six).errors || []).map((e) => e.code + '@' + e.path)))
+  check('C8b doctor 对六槽齐载不报根字段非法（provides 仍是它认识的根键）', sixIllegal.length === 0,
+    sixIllegal.map((i) => i.message).join(' / '))
+
+  const badEntry = { ...six, provides: { ...six.provides, entry: 42 } }
+  const vEntry = validateManifest(badEntry)
+  check('C9 契约拒 entry 非字符串（单值槽与名单槽分形），doctor 侧仍不报根字段非法',
+    vEntry.ok === false && (vEntry.errors || []).some((e) => e.path === 'provides.entry' && e.code === 'type'),
+    JSON.stringify((vEntry.errors || []).map((e) => e.code + '@' + e.path)))
+
+  const typoNew = { ...six, provides: { ...six.provides, entries: './index.js' } }
+  const vTypoNew = validateManifest(typoNew)
+  const typoChild = (vTypoNew.errors || []).filter((e) => e.code === 'unknown-field' && e.path === 'provides.entries')
+  check('C10 契约对新槽族的拼错名仍拒（entries 不得静默失效；expected 含六槽名）',
+    vTypoNew.ok === false && typoChild.length === 1 && /inject/.test(String(typoChild[0].expected)) && /entry/.test(String(typoChild[0].expected)),
+    'ok=' + vTypoNew.ok + ' expected=' + String(typoChild[0] && typoChild[0].expected))
 }
 
 // ── D 重叠面逐规则对账（契约 v1.2 题一终批＝案二：维持两引擎＋对账网扩面）────────────
@@ -206,6 +239,11 @@ for (const rel of builtinManifests) {
     { n: 'D09 requires.services 非数组＝契约严', m: M({ requires: { services: 'llm' } }), c: ['red', /type@requires\.services/], d: ['green', /requires/] },
     { n: 'D10 provides 未知子键＝契约严', m: M({ provides: { prividers: ['a'] } }), c: ['red', /unknown-field@provides\.prividers/], d: ['green', /provides/] },
     { n: 'D11 provides.services 非数组＝契约严', m: M({ provides: { services: 'a' } }), c: ['red', /type@provides\.services/], d: ['green', /provides/] },
+    // D19～D21（v1.3 扩槽随新槽扩的对账面）：新三槽都在"契约管形状、doctor 管键名"的既有分权里，
+    // 各格给该槽自己的违例形态；doctor 侧一律 green＝它对 provides 的值面零校验（已裁边界，不背书）。
+    { n: 'D19 provides.entry 非字符串＝契约严（单值槽）', m: M({ provides: { entry: 42 } }), c: ['red', /type@provides\.entry/], d: ['green', /provides/] },
+    { n: 'D20 provides.tools 非数组＝契约严（F-87 新槽与三旧槽同族）', m: M({ provides: { tools: 'parity_tool' } }), c: ['red', /type@provides\.tools/], d: ['green', /provides/] },
+    { n: 'D21 provides.inject 成员空白＝契约严（按下标定位）', m: M({ provides: { inject: ['ok.face', '  '] } }), c: ['red', /type@provides\.inject\[1\]/], d: ['green', /provides/] },
     { n: 'D12 顶层 registers＝方向相反（H4 在册）', m: M({ registers: { services: ['a'] } }), c: ['ok', 'registers'], d: ['red', /清单根字段非法: registers/] },
     { n: 'D13 顶层 exports＝方向相反（H4 在册）', m: M({ exports: { '.': './index.js' } }), c: ['ok', 'exports'], d: ['red', /清单根字段非法: exports/] },
     { n: 'D14 顶层 healthCheck＝同向红、成因不同名', m: M({ healthCheck: 'x' }), c: ['red', /type@healthCheck/], d: ['red', /清单根字段非法: healthCheck/] },

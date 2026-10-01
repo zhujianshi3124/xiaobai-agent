@@ -69,9 +69,11 @@ export interface RegistryOptions {
  * `docs/add-sub-plugin.md` §1 与 `loader.ts` 头注的解析顺序。
  */
 export type EntrySource =
-  /** 正典：`dsh.plugin.json` 的 `requirements.exports['.']`。 */
+  /** v1.3 新正典：`dsh.plugin.json` 的 `provides.entry`（C-3 一.2 扩槽；优先级最高）。 */
+  | 'manifest.provides.entry'
+  /** legacy 正典：`dsh.plugin.json` 的 `requirements.exports['.']`（迁移期回落位）。 */
   | 'manifest.requirements.exports'
-  /** 正典的套件根形态：`requirements.exports` 为 `{"$from":"package.json#exports"}` 时继承的表。 */
+  /** legacy 正典的套件根形态：`requirements.exports` 为 `{"$from":"package.json#exports"}` 时继承的表。 */
   | 'manifest.requirements.exports($from)'
   /** legacy 兼容位：顶层 `exports['.']`，命中必带 warn。 */
   | 'manifest.exports(legacy)'
@@ -83,11 +85,15 @@ export type EntrySource =
   /** 来源本身就是入口文件路径（.js/.mjs）。 */
   | 'explicit-file'
 
-/** 插件对外注册面（用于注册冲突检查；从 manifest 新旧两种形态归一提取）。 */
+/** 插件对外注册面（用于注册冲突检查；从 manifest 新旧两种形态归一提取；v1.3 扩槽含 inject/tools）。 */
 export interface PluginRegisters {
   services?: string[] | undefined
   commands?: string[] | undefined
   providers?: string[] | undefined
+  /** v1.3 扩槽：注入宿主面名单（provides.inject 优先，legacy requirements.registers.inject 回落）。 */
+  inject?: string[] | undefined
+  /** v1.3 扩槽（F-87）：工具名单声明（宿主装配面未证，C-3 一.2 边界随行）。 */
+  tools?: string[] | undefined
 }
 
 /** 解析来源得到的模块与 manifest（legacy 已合成）。 */

@@ -64,15 +64,23 @@ registry 的 legacy 适配器会合成 manifest（id 落 `legacy/<包名>`，无
 ```
 
 ⚠️ **上面这份"最小例"只过本仓契约，不过独立 doctor CLI。** 独立 doctor 把 `manifestVersion` / `name` /
-`requirements` 三项定为**必填**，且要求 `requirements` 必含 `runtime`/`binaries`/`packages`/`registers`/
-`exports` 五键（缺一条即 `schema.required-missing` error）。本仓 7 份 manifest 全部两套字段都带，
-正是因为要同时过两个校验器。分权口径见 `docs/contract.md` §4 与 §7 D-7、`docs/debt.md` C-1 现状注记。
+`requirements` 三项**曾**定为必填（缺一条即 `schema.required-missing` error）——**该必填集已于 2026-09-29
+撤销**（`doctor仓@ce31f83`，契约 v1.2 前置①，修法正典＝`docs/contract-v1.1-recon.md` §8.3）：纯契约
+manifest 自此在 doctor 侧零 schema issue。但 **`requirements` 一旦写了，它必含
+`runtime`/`binaries`/`packages`/`registers`/`exports` 五键仍由 doctor 逐条判**（"在场才管"）。本仓 6 份 manifest（开源 S1 剔除批 7→6）全部两套字段都带，
+正是撤销前"要同时过两个校验器"的实况；分权口径见 `docs/contract.md` §4 与 §7 D-7、`docs/debt.md` C-1 现状注记。
 
 要点：
 
-1. **入口解析（四级顺位，2026-09-21 D-7 裁定「三级正典」后已实现；本节是解析行为的正本叙述）**，
+1. **入口解析（⓪～④ 五级顺位；①～④ 为 2026-09-21 D-7 裁定「三级正典」后已实现的四級，⓪ 级＝契约 v1.3
+   扩槽（S3 / `docs/debt.md` C-3 一.2）新增的 `provides.entry`；本节是解析行为的正本叙述）**，
    实现见 `registry/src/loader.ts` 的 `resolveEntry`：
-   - **① `requirements.exports['.']` —— 正典位置。** doctor 独立仓把 `exports` 定为
+   - **⓪ `provides.entry` —— 契约 v1.3 新正典（迁移期最优先）。** 值是**相对本成员根的模块路径字符串**
+     （单值槽，不是 `.` 表项；非空由契约校验强制）。与下面 ①② 任一 legacy 声明同时在场时 **⓪ 级赢**，
+     并打一条 warn **点名被忽略的每一份** legacy 声明；声明了却指向不存在的文件同样产 `entry-not-found`，
+     不回退。装载侧入口面自此有契约表达，`entrySource='manifest.provides.entry'`。
+     本仓 6 份清单**今天都还没写这一级**（写它属 S3 迁移笔，随"迁纯契约形态"同批落），本节只登记顺位。
+   - **① `requirements.exports['.']` —— legacy 正典（v1.3 起的回落位）。** doctor 独立仓把 `exports` 定为
      `requirements` 的必填键，并对**以 `./` 开头**的条目逐条断言目标文件真实存在（非 `./` 写法
      —— 如任意未声明入口名、绝对路径、`file://` —— doctor 直接放过，别把"逐条"读成"无例外"）；
      顶层 `exports` 反而不在 doctor 的清单根字段白名单（`MANIFEST_TOP_KEYS`）里，写上去当场产 error。
@@ -82,8 +90,8 @@ registry 的 legacy 适配器会合成 manifest（id 落 `legacy/<包名>`，无
    - **② 顶层 `exports['.']` —— legacy 兼容位。** 命中一定打 warn（经 registry 的 A1 warn 通道
      落日志，event=`entry-declaration`）；与正典并存时**正典赢**，warn 点名被忽略的那一份。
    - **③ `package.json` 的 `exports['.']`（字符串或 `{".":{default|node}}`）→ `main`；
-     ④ `index`（`.js`/`.mjs`） 目录惯例** —— 第④级仅在当前三级**都没有声明**时才走到（宿主 Node 约定，T0/G1）。
-   - **红线：显式声明（①②③）指向不存在的文件 ⇒ 直接 `entry-not-found` 并给拼好的绝对路径，
+     ④ `index`（`.js`/`.mjs`） 目录惯例** —— 第④级仅在 ⓪①②③ **都没有声明**时才走到（宿主 Node 约定，T0/G1）。
+   - **红线：显式声明（⓪①②③）指向不存在的文件 ⇒ 直接 `entry-not-found` 并给拼好的绝对路径，
      绝不静默回退后面的顺位**（回退就是拿惯例掩盖 manifest 与实现不同步）。
      【批 6（★10）已落地】第③级同样算作者显式写的声明：`package.json` 的 `exports['.']`（裸字符串 /
      映射里的字符串 / 对象形态 `default`|`node`）或 `main` 声明了却指向不存在的文件 ⇒ 当场报错，

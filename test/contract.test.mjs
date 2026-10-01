@@ -399,3 +399,89 @@ test('服务与事件名：一律 ${servicePrefix}/…，非法前缀抛错', ()
   assert.throws(() => contractServiceName('a/b', 'registry'), TypeError);
   assert.throws(() => contractEventName('', 'registry:plugin-added'), TypeError);
 });
+
+// ── v1.3 扩槽（S3 / debt C-3 一.2）：provides 的 entry 单值槽＋inject/tools 名单槽 ──────
+//
+// 施工图正本＝`docs/debt.md` C-3 一.2：给入口声明与 inject 声明以契约替代表达（现正典位仍是
+// `requirements.exports` 的 `.` 项与 `requirements.registers.inject`），F-87 tools 槽随同批。
+// 两条边界（宿主运行时是否真把 tool 装配进模型可见面**未证**／本仓类型面无 `tools` 服务）
+// 随行写在 `contract/src/types.ts` 的该槽注释里，本节不替宿主背书。
+//
+// 另立 **provides 槽名全清单守卫**——与 C-2 前置④ 的 KNOWN_LEGACY_FIELDS 全清单钉同一条纪律：
+// 迁移与收紧都不允许建立在只钉住部分名字的名单上，名单增删改名必须当场翻红。取值一律给
+// "该键自己的合法形态"，确保测的是**槽名在册与否**、不是值语义（值面归下面两节）。
+
+const V13_BASE = { id: 'dsh/v13', displayName: '扩槽夹具', version: '1.0.0', contract: '^1.0' };
+const PROVIDES_SLOT_NAMES_CANON = ['commands', 'entry', 'inject', 'providers', 'services', 'tools'];
+
+test('v1.3 扩槽·全清单钉：未知子键的 expected 恰列六槽名（deepEqual＋长度格，增/删/改名任一格即红）', () => {
+  const probe = validateManifest({ ...V13_BASE, provides: { zzzSlot: ['a'] } });
+  const unknown = (probe.errors || []).filter((e) => e.code === 'unknown-field' && e.path === 'provides.zzzSlot');
+  assert.equal(unknown.length, 1, '未知子键必须恰一条 unknown-field');
+  assert.deepEqual(String(unknown[0].expected).split(' | ').sort(), PROVIDES_SLOT_NAMES_CANON);
+  assert.equal(String(unknown[0].expected).split(' | ').length, 6, '槽名长度另钉一格：deepEqual 靠 sort 抵消声明序，长度格防"并号"');
+});
+
+test('v1.3 扩槽·全清单钉：六槽各自单独在场都 ok（名单槽给合法值、entry 给字符串）', () => {
+  const values = {
+    services: ['parity.svc'], commands: ['parity.cmd'], providers: ['parity.prov'],
+    inject: ['webServer'], tools: ['parity_tool'], entry: './index.js',
+  };
+  for (const slot of PROVIDES_SLOT_NAMES_CANON) {
+    const verdict = validateManifest({ ...V13_BASE, provides: { [slot]: values[slot] } });
+    assert.equal(verdict.ok, true, `${slot} 单独在场应放行：${JSON.stringify((verdict.errors || []).map((e) => e.code + '@' + e.path))}`);
+  }
+});
+
+test('v1.3 扩槽·新槽拼错名仍 unknown-field（entries／tool／injects 三形，替代表达不得开静默口子）', () => {
+  for (const typo of ['entries', 'tool', 'injects']) {
+    const verdict = validateManifest({ ...V13_BASE, provides: { [typo]: 'x' } });
+    const hit = (verdict.errors || []).filter((e) => e.code === 'unknown-field' && e.path === `provides.${typo}`);
+    assert.equal(verdict.ok, false, `provides.${typo} 拼错名必须拒`);
+    assert.equal(hit.length, 1, `provides.${typo} 应恰一条 unknown-field：${JSON.stringify((verdict.errors || []).map((e) => e.code + '@' + e.path))}`);
+  }
+});
+
+test('v1.3 扩槽·entry 是单值非空字符串（数组/数字/空串/纯空白都 error 且路径点名 provides.entry）', () => {
+  for (const bad of [['./index.js'], 42, '', '   ']) {
+    const verdict = validateManifest({ ...V13_BASE, provides: { entry: bad } });
+    assert.equal(verdict.ok, false, `entry=${JSON.stringify(bad)} 必须拒`);
+    assert.ok(
+      (verdict.errors || []).some((e) => e.path === 'provides.entry' && e.code === 'type'),
+      `要按 provides.entry 路径点到位：${JSON.stringify((verdict.errors || []).map((e) => e.code + '@' + e.path))}`,
+    );
+  }
+});
+
+test('v1.3 扩槽·inject/tools 与三旧槽同族形状（非数组拒、成员空白按下标定位）', () => {
+  for (const slot of ['inject', 'tools']) {
+    const nonArray = validateManifest({ ...V13_BASE, provides: { [slot]: 'webServer' } });
+    assert.equal(nonArray.ok, false);
+    assert.ok((nonArray.errors || []).some((e) => e.path === `provides.${slot}` && e.code === 'type'));
+
+    const withBlank = validateManifest({ ...V13_BASE, provides: { [slot]: ['ok-name', '  '] } });
+    assert.equal(withBlank.ok, false);
+    assert.ok(
+      (withBlank.errors || []).some((e) => e.path === `provides.${slot}[1]`),
+      `成员下标要定位：${JSON.stringify((withBlank.errors || []).map((e) => e.code + '@' + e.path))}`,
+    );
+  }
+});
+
+test('v1.3 扩槽·六槽齐载整体 ok，且 events 仍专属 legacy（provides.events 照旧拒并指回）', () => {
+  const allSix = validateManifest({
+    ...V13_BASE,
+    provides: {
+      services: ['parity.svc'], commands: ['parity.cmd'], providers: ['parity.prov'],
+      inject: ['webServer'], tools: ['parity_tool'], entry: './index.js',
+    },
+  });
+  assert.equal(allSix.ok, true, JSON.stringify((allSix.errors || []).map((e) => e.code + '@' + e.path)));
+
+  const withEvents = validateManifest({ ...V13_BASE, provides: { events: ['parity/event'] } });
+  assert.equal(withEvents.ok, false, '扩槽不改 events 归属（2026-09-22 裁定采甲：订阅面留在 legacy registers）');
+  assert.ok(
+    (withEvents.errors || []).some((e) => e.path === 'provides.events' && /registers\.events/.test(String(e.expected) + String(e.message))),
+  );
+});
+

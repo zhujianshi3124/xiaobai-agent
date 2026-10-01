@@ -7,6 +7,9 @@
 // （宿主 Node 约定，T0/G1）→ ④ index.js/index.mjs 目录惯例。
 // 红线：①② 这类显式声明指向不存在的文件 ⇒ entry-not-found，**不静默回退**。
 //
+// 【契约 v1.3 扩槽（S3 / debt C-3 一.2）】顺序最前加 ⓪ 级 `provides.entry`（新正典，单值槽）：
+// ①② 自此为 legacy 回落位（迁移期继续认，命中不报错），④ 兜底条件随之变严（前四级都没声明才走）。
+//
 // 本文件的夹具（test/fixtures/registry/entry-*）每个都带一个 index.js 哨兵诱饵，
 // name 前缀 DECOY-：任何一级解析被摘掉都会落到诱饵上，对应用例即精确翻红。
 //
@@ -120,6 +123,49 @@ test('F2③：正典与顶层同时声明 ⇒ 正典赢，并 warn 指出忽略�
   assert.match(resolved.entryWarnings[0], /双声明并存/)
   assert.ok(resolved.entryWarnings[0].includes('requirements.exports'), '要点名生效的是正典位置')
   assert.match(resolved.entryWarnings[0], /legacy-entry\.js/, '要点名被忽略的那一份指向哪里')
+})
+
+// ── ⓪ v1.3 新正典 provides.entry（S3 扩槽 / debt C-3 一.2）──────────────────
+
+test('F2⓪：只有 provides.entry（纯契约形态）时解析成功、命中被声明那份而非诱饵，且零告警', async () => {
+  const dir = fixtureDir('entry-provides-only')
+  const resolved = await resolveLocalSource({ kind: 'local', path: dir })
+  assert.equal(resolved.entrySource, 'manifest.provides.entry', '来源必须是 v1.3 新正典那一级')
+  assert.equal(resolved.entryPath, join(dir, './v13-entry.js'))
+  assert.notEqual(await pluginName(resolved.entryPath), 'fixture-entry-provides-only-DECOY-indexjs', '不得落到目录惯例诱饵')
+  assert.deepEqual(resolved.entryWarnings, [], '只有一份声明 ⇒ 不该有任何告警')
+  assert.equal(resolved.legacy, false)
+  assert.equal(resolved.manifest.id, 'fixture/entry-provides-only')
+})
+
+test('F2⓪：entry 与 legacy 两级（正典位＋顶层）同时声明 ⇒ ⓪ 级赢，一条 warn 同时点名被忽略的两份', async () => {
+  const dir = fixtureDir('entry-provides-dual')
+  const resolved = await resolveLocalSource({ kind: 'local', path: dir })
+  assert.equal(resolved.entrySource, 'manifest.provides.entry')
+  assert.equal(resolved.entryPath, join(dir, './v13-entry.js'))
+  assert.equal(await pluginName(resolved.entryPath), 'fixture-entry-provides-v13')
+  assert.equal(resolved.entryWarnings.length, 1, '双声明并存只发一条告警，内容要覆盖两份被忽略的声明')
+  const warn = resolved.entryWarnings[0]
+  assert.match(warn, /双声明并存/)
+  assert.match(warn, /provides\.entry/, '要点名生效的是 v1.3 正典')
+  assert.match(warn, /canonical-entry\.js/, '要点名被忽略的 requirements.exports 那一份')
+  assert.match(warn, /legacy-entry\.js/, '要点名被忽略的顶层 exports 那一份')
+  assert.match(warn, /迁移期请删掉 legacy 那一份/, '要给迁移动作，不只报现状')
+})
+
+test('F2⓪ 红线：provides.entry 声明的文件不存在 ⇒ entry-not-found，文案按单值槽形态给，绝不回退', async () => {
+  const dir = fixtureDir('entry-provides-missing')
+  await assert.rejects(
+    () => resolveLocalSource({ kind: 'local', path: dir }),
+    (error) => {
+      assert.equal(error.code, 'entry-not-found')
+      assert.match(error.message, /provides\.entry="\.\/declared-v13-missing\.js"/, '要按单值槽写法给字段名与声明值')
+      assert.doesNotMatch(error.message, /provides\.entry\['\.'\]/, 'entry 不是表项，文案不得沿用 exports 的 [\'.\'] 形态')
+      assert.ok(error.message.includes(join(dir, 'declared-v13-missing.js')), '要给拼好的绝对路径')
+      assert.match(error.message, /不会.*回退/, '要写明不回退的理由（manifest 与实现同步是红线）')
+      return true
+    },
+  )
 })
 
 // ── 红线：显式声明指向不存在的文件 ⇒ 不回退 ─────────────────────────────
