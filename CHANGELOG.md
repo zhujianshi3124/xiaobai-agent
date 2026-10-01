@@ -6,6 +6,15 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### 开源 S2 包化正名批：包名/版本/LICENSE/files/依赖形态落地（2026-10-01，C1-007 阶段二·副本线；G4/G5/G6/G8 用户终批照施工）
+
+- **包名/版本**：`@local/dsh-toolkit` → **`dsh-toolkit`**，版本自 **1.0.0** 起（对外首版），`private` 撤除。
+  manifest id `dsh/toolkit` 不变；宿主旧插件别名键（`@local/dsh-compact-router` 等）不变，别名值随新包名。
+- **LICENSE**：新增 MIT 正本，版权行 `Copyright (c) 2026 zhujianshi3124`。
+- **发布物（files）**：白名单收窄——`scripts/`、`test/`、`cordis.patch.yml` 不随包发布；`README.md`/`CHANGELOG.md`/`LICENSE` 随包；`panel/docs`（工程内账）排除。npm pack 实证 121 文件/385.2 kB。
+- **依赖**：`@deepseek-ai/cordis` 自 peerDependencies 转正常 dependency（仓内 vendor 面 364 文件撤除，全量经公共 registry 解析，lock 全 resolved）；`dsh-*` 维持 peerDependencies（宿主运行时注入面）。历史「私有源」陈述废止（`npm ci` 可复装实证）。
+- **仓内**：链外历史工装 p23-shadow-scan 删除（E-3 处置）；文档引用勘误登记覆盖 87→91。
+- **行为注记**：包名去 scope 后 panel 入口的 legacy 合成 id 变合法，registry 通道对面板目录由拒绝改为放行（legacy 形态）——「面板不经 registry 通道自举」防呆的显式重建候裁中（repair-plan §46.3）。
 ### 开源 S1 剔除批：web-search-local 出包＋search-router 降"可缺席 provider 位"（2026-09-30，C1-007 阶段二·副本线；G1/G2(b)/G3 用户终批"按建议"）
 
 - **剔除 MIT 外来件 web-search-local**（两阶段目标第二步）：`lib/web-search-local/` 三文件出包，F-91 耦合面
