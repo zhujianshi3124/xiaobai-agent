@@ -14,6 +14,10 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 - **发布物（files）**：白名单收窄——`scripts/`、`test/`、`cordis.patch.yml` 不随包发布；`README.md`/`CHANGELOG.md`/`LICENSE` 随包；`panel/docs`（工程内账）排除。npm pack 实证 121 文件/385.2 kB。
 - **依赖**：`@deepseek-ai/cordis` 自 peerDependencies 转正常 dependency（仓内 vendor 面 364 文件撤除，全量经公共 registry 解析，lock 全 resolved）；`dsh-*` 维持 peerDependencies（宿主运行时注入面）。历史「私有源」陈述废止（`npm ci` 可复装实证）。
 - **仓内**：链外历史工装 p23-shadow-scan 删除（E-3 处置）；文档引用勘误登记覆盖 87→91。
+- **doctor CLI 并桶（S2.5）**：独立文件面体检器作为桶成员随包分发——`bin: dsh-doctor`、
+  `exports: ./doctor/cli`、`doctor/cli/src/` 四件零依赖自包含（整体抠出即可单独运行）、成员
+  `doctor/README.md`；`doctor-signals.json` 随包（engine 事实驱动协议）。doctor 成员无独立版本号，
+  随桶 1.0.0。
 - **部署补丁模板化（S2.e 案②）**：`cordis.patch.yml` 两处机器绝对路径改为占位符
   （`<AGENT_MEMORY_DATA_ROOT>`／`<PANEL_ENTRY_URL>`），部署时填空——发布语义＝模板即源。
 - **行为修复**：registry 通道对面板目录的装载拒绝改为显式判据（D-15 显式闸）——面板是装配现场

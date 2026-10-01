@@ -2843,3 +2843,67 @@ p1-smoke，如实申报）＋头注 +3 行致锚点行号对账红；均随笔 3
   守卫红 0；doctor 0/0/0）。
 - 边界：本地在用仓/~/.dsh/五直挂/面板在用实例/patch 在用基准 b0f304c9 零触碰；**在用 doctor
   （沙箱 projects/doctor）零触碰**（呈报只读）；D-15 判据语义面未超裁定（无需停报）。
+
+## 49. S2.5 合并批施工账：doctor CLI 并桶（单包合一终裁 · C1-007 用户终裁 · 2026-10-01）
+
+**用户终裁原文照录（不回改）**：
+> "doctor CLI 也要一起开源，但不是另立第二个项目：开源出去的就是一个项目、一个包——插件桶本身，
+> doctor 作为桶里的质检工具并进去；并且并进去之后，doctor 必须仍然可以单独拿去用——就像
+> dsh-web-all 里的每个插件都能单独拿出来用一样，桶只是分发形式，桶里每个成员各自保有独立可用的
+> 入口。开源的东西署我的名（GitHub 用户名 zhujianshi3124）。对外发布（真正见客）之前，必须经我
+> 最终批准。其余按建议。"
+
+**裁决落地**：单包合一推翻 D-G1 两件套形态（`D:\dsh-doctor-opensource` 线不建）；保留自包含切换＋
+signals 随包＋在用 doctor 切换后冻结＋S2.5 先行于 S3；"两引擎"架构不受影响（合的是分发形式，
+doctor 引擎仍是独立代码、从外检查 toolkit；parity 对账随合并重立）；S5 发布门重申（对外发布前
+必须经用户最终批准——任何公开动作零自决）；署名已覆盖（LICENSE 全包含 doctor 成员）。
+
+### 49.1 设计落位（纯读先行实况）
+
+- **双实现并存不变**：桶内 `doctor/src/*.ts`（API 库，registry/panel 消费）↔ doctor CLI（JS 引擎，
+  独立体检器）——parity 每轮对账。合并的是**分发形式**：CLI 成员入桶。
+- **落位**：`doctor/cli/src/`（cli.mjs/engine.mjs/executor.mjs/host-faces.json 四件——engine 以
+  `new URL('./host-faces.json', import.meta.url)` 相对自定位，复制即自包含）＋`doctor/cli/selftest/`
+  （四套件五文件；**目录名避开 node --test 的 `**/test/**` 收集规则**，nt 收集面保持仓根 test/ 的
+  474 格，四套件由 regression-all 显式承担防双跑）。
+- **独立入口三件**：bin `dsh-doctor`→`./doctor/cli/src/cli.mjs`；exports `./doctor/cli`；成员
+  `doctor/README.md`（两实现线/CLI 用法/事实驱动协议/随桶版本）。
+- **版本口径**：doctor 成员无独立 package.json——随桶 1.0.0（"一个版本号管全部"延伸至 doctor 成员）。
+- **零依赖自包含**：在用 doctor 零 npm 依赖 ⇒ 取材即自包含；`--json` 输出顶层 `summary`
+  `{error,warning,info}`（钉测试判据 0/0/0）。
+
+### 49.2 施工笔序（两笔＋本账面笔）
+
+1. `7392e3c` feat(toolkit)——笔A：CLI 源入桶（在用 doctor 仓 ce31f83 **只读**复制，四件字节级
+   一致验证）＋selftest 五件＋成员 README＋独立入口三件＋files 扩（`doctor-signals.json` 随包、
+   `!doctor/cli/selftest`）＋钉测试四格（test/doctor-cli-bundled.test.mjs）。
+2. `be4082d` feat(toolkit)——笔B：门禁自包含切换（ci-local/parity/p1-smoke/panel doctorCli 默认值
+   四处改调桶内成员，env 可覆盖保留）＋regression-all 集成四套件（14→18 项，RESULT_RE 加宽）＋
+   步标签同步。
+3. 本账面笔（§49＋debt E-5 转正＋A#62＋CHANGELOG）。
+
+### 49.3 变异自检与读数
+
+- **钉测试四格**（nt 面自动覆盖）：①成员四件在场＋engine import 自洽（零 npm 依赖）；②桶内 CLI
+  真跑对桶根 dry-run `0/0/0`；③**整体抠出单独运行**——四件拷至临时目录后 `node cli.mjs --json
+  --scope <桶根>` 仍 0/0/0（"桶只是分发形式"的实证格）；④入口三件接线＋随桶 1.0.0。4/4 全绿。
+- **regression-all 18 项全绿**：p1 309/0（doctorCli 桶内切换后）、p2-smoke 16/0、p24 62/0＋608/0、
+  q2 14/14＋21/21、**doctor-cli 四套件 22/22＋ALL STAGE-3＋11/11＋7/7**、nt 474/0（470＋钉 4）。
+- **npm pack 实证**：127 文件/419.4 kB——doctor/cli/src 四件随包、doctor-signals.json 随包、
+  doctor/README.md 随包；selftest/panel/docs/scripts/test 零泄漏。
+- **涟漪如实申报**：① node --test 对 `**/test/**` 的全文件收集（doctor/cli/test 五文件被当文件级
+  子测试各计 1 格，nt 470→479）——以目录改名 selftest 收口（479→474），双跑消除；② nt 收集面
+  限定方案曾试位置参数/glob 两路（node 24 把目录参数当模块执行、glob 计数异常）均不成立，如实
+  记档；③ regression-all nt 段残留 "test/" 参数一轮（pass=0 fail=1），即修即验。
+
+### 49.4 在用 doctor 冻结声明（E-5 转正）
+
+**自笔B `be4082d` 落链起，在用 doctor（沙箱 projects/doctor，冻结点链尾 `ce31f83`）只服务本地
+冻结线、零改动**（debt E-5 转正为正式行：副本侧＝桶内 doctor/cli 成员；回流规矩同 E-4）。
+~/.dsh 只读、宿主零接触照旧。
+
+### 49.5 边界与不做
+
+- 源仓/五直挂/面板在用实例/patch 在用基准 b0f304c9：零触碰。
+- 对外发布（npm publish/开源公开）：**零自决，候用户最终批准**（S5 发布门）。
+- v1.3 三件套（S3）：未动工（S2.5 先行完毕，S3 随后）。
