@@ -2929,3 +2929,42 @@ doctor 引擎仍是独立代码、从外检查 toolkit；parity 对账随合并�
 在用 doctor 冻结声明生效（`ce31f83` 恒净复核，只服务本地冻结线；debt E-5 正式行）。如实申报认账：
 node --test 收集面虚高的 selftest 收口处置采认（位置参数/glob 两路失败尝试已记档 §49.3）；勘误笔
 `3ae2274` commit 文本 token 数字笔误以实档为准。
+
+## 51. S3 迁移笔（甲案口径）验收入账（C1-007 验收令 · 2026-10-01 · 副本线）
+
+**令源**：EXE-BOOT-021 启动包 §八.1（迁移笔验收落账）；令面同时下发 S3 收紧终裁甲'（双写判 error，
+任务 2 施工面，见 §52）。
+
+### 51.1 在链核对与三真问题修复码面复核
+
+`39868ad`（S3 扩槽笔，020 窗落链）＋`72b1b00`（S3 迁移笔·甲案口径，020 窗落链）——两笔在链、
+各自独立可 revert，副本仓树净。迁移笔申报的三处真问题修复，021 开工窗逐一码面复核在位：
+① `doctor/cli/src/engine.mjs` 两处只读 legacy 的提供面读点已改走 `registerSlotOf`
+（:1313 inject／:1483 providers，provides 优先、空数组遮蔽，与撞名格、toolkit loader extractRegisters 同口径）；
+② `scripts/p24-verify.mjs:325` 与 `scripts/p24-ui-matrix.mjs:43` 的 doctor CLI 缺省路径已改调桶内成员
+（env DOCTOR_CLI 仍可覆盖）；③ `panel/manager/snapshot.mjs` 的 entry 取数 provides.entry 优先（:413）、
+inject/provides 走 extractRegisters（:415/:419），`test/panel-crossrefs.test.mjs` 漂移守卫同源。
+
+### 51.2 两处追认落档
+
+1. **panel/dsh.plugin.json 整份不动＝追认**：迁移笔零触碰 panel 清单（无 contract 字段、走 legacy 合成分支；
+   D-15 显式闸判据正是`缺非空 contract`）。给面板补契约面＝解除既裁闸的语义面（面板可能经 registry 通道装载）
+   ＝功能变更，执行侧不自裁、随批呈报——**协调侧追认：维持不动，D-15 判据面保全**。
+2. **info 档保守扩＝追认**：迁移笔只迁`有替代表达`的面，无替代或表达不完整的面原样保留 info 级并逐名进
+   debt C-4（七条）——**协调侧追认：`不知实况不增删功能`优先于`迁得干净`，C-4 明账随开源首版发布**。
+
+### 51.3 flake 两振查因记录（负载时序族，观察继续）
+
+`test/agent-memory.test.mjs` `R1 全局 registry 并发写`在 020 窗门禁第 2 步连振两次（两次同位、第 1 步内
+均绿），按`两振即查`查因＝单独三连复跑 1/3 振、复跑第 2 步 500/0 全绿 ⇒ 负载时序型 flake（既有族，
+debt《环境注记》④），非迁移笔引入、未动码、未放宽门禁。**021 窗开局续报**：独立复跑 node --test 同格
+同因再振 1 次（499/1，`5 !== 6` 并发丢失；实档 `boot021-open-nt.log`），单独复跑该文件 94/94 全绿、
+同日门禁第 1 步 500/0 全绿（`boot021-open-gate.log`）——同族同位，观察继续，不立项不放宽。
+
+### 51.4 读数认账
+
+020 停靠读数（净节点实态复测）采认：nt 500/0、parity 54/54、门禁 6/6（`boot020-s3b-gate3.log` 122.6s）、
+doctor dry-run 0/0/0（桶内 CLI）、守卫红 0（token 3246、覆盖 91）、patch 基准 5c4e6980/3328B 未动。
+021 开局自跑对表逐项命中（实档 `var/logs/2026-10-01/boot021-open-*.log`）：三冻结面（源仓 04816b8／
+在用 doctor ce31f83 且树净／在用 patch b0f304c9 sha256 实读）＋链尾 72b1b00＋树净＋门禁 6/6（115.1s）＋
+parity 54/54＋regression 18 项（清单实数核对）＋守卫红 0（token 3246、覆盖 91）。
