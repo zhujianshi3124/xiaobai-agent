@@ -113,6 +113,44 @@ try {
   await provider.search({ query: "q2" });
   check("official routed -> official delegate", calls.at(-1)[0] === "official");
 
+  // G3 (S1 removal batch): local slot empty -> explicit fallback to official + warning
+  const noLocal = createProvider({
+    readRouted: () => ({ provider: "sensenova-gateway", model: "deepseek-v4-pro" }),
+    readCfg: () => resolveConfig({ mode: "auto" }),
+    providers: () => new Map([[
+      DELEGATE_OFFICIAL,
+      {
+        available: () => true,
+        search: async (req) => { calls.push(["official-fallback", req.query]); return { sources: [{ url: "https://official" }], truncated: false }; },
+      },
+    ]]),
+  });
+  const warns = [];
+  const origWarn = console.warn;
+  console.warn = (msg) => warns.push(String(msg));
+  try {
+    res = await noLocal.search({ query: "q3" });
+  } finally {
+    console.warn = origWarn;
+  }
+  check("local slot empty -> explicit fallback to official", calls.at(-1)[0] === "official-fallback");
+  check("fallback carries explicit 本地搜索未配置 warning", warns.some((w) => w.includes("本地搜索未配置")));
+  check("fallback result returned to caller", res.sources[0].url === "https://official");
+
+  // G3: local mode with empty slot AND official absent -> WebError naming the official delegate
+  const none = createProvider({
+    readRouted: () => undefined,
+    readCfg: () => resolveConfig({ mode: "local" }),
+    providers: () => new Map(),
+  });
+  let threwEmpty = false;
+  try {
+    await none.search({ query: "x" });
+  } catch (e) {
+    threwEmpty = e?.name === "WebError" && /deepseek-official/.test(e.message);
+  }
+  check("local slot empty + official absent -> WebError with hint", threwEmpty);
+
   // missing delegate -> WebError
   const empty = createProvider({
     readRouted: () => ({ provider: "llm-deepseek" }),
