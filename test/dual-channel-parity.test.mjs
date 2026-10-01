@@ -109,15 +109,23 @@ for (const entry of ENTRIES) {
   })
 }
 
-test('面板入口 registry 通道装载行为（G4 去 scope 后 D-15 合成 id 偶然闸失效·如实记录）', async () => {
-  // G4（S2 正名批）前：panel/package.json#name="@local/dsh-toolkit/panel" 的 "@" 使 legacy 合成
-  // id 非法 ⇒ resolveLocalSource 拒绝（plugin-shape-invalid，D-15 裁定其文案四要素），"面板不经
-  // registry 通道自举"（REQ-8）由这一偶然机制兜住。去 scope 后合成 id "dsh-toolkit/panel" 合法
-  // ⇒ 装载放行（legacy:true）。防呆显式重建（loader 侧拒绝面板目录）属行为面改动，候裁；
-  // 本格如实记录现状行为，作为重建施工的前置基线。
-  const r = await resolveLocalSource({ kind: 'local', path: join(ROOT, 'panel', 'index.js') })
-  assert.equal(r.legacy, true, 'panel manifest 无 contract 字段 ⇒ 走 legacy 合成')
-  assert.equal(r.manifest.id, 'dsh-toolkit/panel', '合成 id 取自 package.json#name（去 scope 后合法）')
+test('面板入口不经 registry 通道自举（D-15 显式闸·G4 后重建）', async () => {
+  // 面板是装配现场（REQ-8），装载它等于让它自己装自己 ⇒ 维持拒绝。G4 前拒绝靠偶然闸
+  // （panel/package.json#name 的 "@scope" 使 legacy 合成 id 非法）；包名去 scope 后偶然闸失效
+  // （S2 笔A 曾如实记录放行），loader 显式闸随即重建：manifest 缺非空 contract 且 name 以
+  // /panel 收尾 ⇒ plugin-shape-invalid（registry/src/loader.ts）。文案四要素沿用 D-15 原裁：
+  // 点名真实成因（缺 contract）＋manifest 路径＋包名＋修法。
+  await assert.rejects(
+    () => resolveLocalSource({ kind: 'local', path: join(ROOT, 'panel', 'index.js') }),
+    (error) => {
+      assert.equal(error.code, 'plugin-shape-invalid')
+      assert.match(error.message, /缺非空 `contract` 字段/, '必须点名真实成因')
+      assert.match(error.message, /panel[\\/]dsh\.plugin\.json/, '必须点名是哪份 manifest')
+      assert.match(error.message, /dsh-toolkit/, '必须点名被拿去当 id 的包名')
+      assert.match(error.message, /修法/, '必须给下一步（不许只报 errno）')
+      return true
+    },
+  )
 })
 
 test('副本可信性：本机真 loader 在场时，unwrapExports 与本副本对同一输入同结果（缺席则 skip）', async (t) => {
