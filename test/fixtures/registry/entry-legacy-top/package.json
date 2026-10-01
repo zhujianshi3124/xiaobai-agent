@@ -1,0 +1,7 @@
+{
+  "name": "fixture/entry-legacy-top",
+  "version": "0.1.0",
+  "description": "legacy 顶层 exports 夹具（纯宿主原生形态；package.json#name 供 legacy 合成 id 用，含斜杠使合成 id 与 manifest.id 同形）",
+  "type": "module",
+  "main": "legacy-entry.js"
+}

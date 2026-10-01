@@ -4,9 +4,13 @@
  * 要求：校验失败必须给出精确错误定位——字段路径 + 期望 + 实际，供
  * precheck 报告（REQ-3）直接引用。所有 message 面向人，path 面向机器。
  *
- * 与存量 dsh.plugin.json 的关系：迁移期（REQ-9）内，KNOWN_LEGACY_FIELDS
- * 里的旧字段被容忍并作为 info 问题返回（不参与 ok 判定）；除此之外的
- * 未知顶层字段按 error 处理，防止拼错字段名静默失效。
+ * 与存量 dsh.plugin.json 的关系（S3 收紧笔，2026-10-01，C1-007 甲'终裁）：旧字段**按契约面分层**——
+ * `LEGACY_ERROR_FIELDS` 三名（manifestVersion／顶层 registers／顶层 exports）在**带契约面**
+ * （manifestHasContract：contract 为非空字符串，与 registry loader 的分支判据同一份实现）的清单里
+ * 判 **error**（契约面与旧字段双写）；在**无契约面**的纯宿主原生形态里维持 info 容忍（装载器照样能装，
+ * 带 A1 提醒——对外承诺：契约面必纯；宿主原生形态照样能装（带提醒））。`LEGACY_INFO_FIELDS` 五名
+ * 契约无替代表达或表达不完整（逐名成因见 docs/debt.md C-4），两种形态都维持 info、不参与 ok 判定。
+ * 除此之外的未知顶层字段一律 error，防止拼错字段名静默失效。
  */
 
 import type { DshSubPluginManifest, PanelDescriptor } from './types.js'
@@ -31,7 +35,32 @@ export type ManifestValidation =
   | { ok: true; manifest: DshSubPluginManifest; errors: []; info: ManifestIssue[] }
   | { ok: false; manifest: null; errors: ManifestIssue[]; info: ManifestIssue[] }
 
-/** 迁移期容忍的存量 dsh.plugin.json 字段（REQ-9 完成后收紧为 error）。 */
+/**
+ * 甲'分层收紧（S3／C1-007 甲'终裁，2026-10-01）：迁移期"八个旧字段一律 info"自此**按契约面分层**。
+ *
+ * - **error 面 `LEGACY_ERROR_FIELDS`（有契约替代表达的三个名）**：`manifestVersion`（替代＝
+ *   id/displayName/version/contract 四必填）、顶层 `registers`／顶层 `exports`（替代＝
+ *   `provides.*` 与 `requirements.registers.*`／`requirements.exports['.']`）。**带契约面**
+ *   （manifestHasContract）的清单再声明它们＝契约面与旧字段**双写** ⇒ error；**无契约面**的
+ *   纯宿主原生形态 ⇒ 容忍＋提醒（info），装载器 ② 级兼容位与 A1 warn 通道原样保留（F2②③ 钉）。
+ * - **info 面 `LEGACY_INFO_FIELDS`（无替代或表达不完整的五个名，逐名成因见 docs/debt.md C-4）**：
+ *   `name`（冻结 doctor 拼"可解析别名集合"的输入）、`requirements`（events 订阅面与 packages
+ *   依赖包面的唯一载体）、`aliases`、`optionalDeps`、`requiredAliases` —— 两种形态都维持 info。
+ *
+ * 两档并集＝`KNOWN_LEGACY_FIELDS`（对外语义不变：仍是"已知的存量字段名单"），名单由
+ * `test/contract.test.mjs` 的拆档三格 deepEqual 钉住（并集＋两档各自全清单＋互斥）。
+ */
+export const LEGACY_ERROR_FIELDS = ['manifestVersion', 'registers', 'exports'] as const
+export const LEGACY_INFO_FIELDS = ['name', 'requirements', 'aliases', 'optionalDeps', 'requiredAliases'] as const
+
+/** error 面三名的契约替代品（写进 error 文案，指向正典位置而非只报现状）。 */
+const LEGACY_ERROR_REPLACEMENT: Record<(typeof LEGACY_ERROR_FIELDS)[number], string> = {
+  manifestVersion: '身份与版本由 id/displayName/version/contract 四必填承载',
+  registers: '提供面正典是 provides.{services,commands,providers,inject,tools}（订阅面仍在 requirements.registers.events）',
+  exports: "入口声明正典是 provides.entry（迁移期回落位 requirements.exports['.']，不是顶层）",
+}
+
+/** 存量字段全名单（＝两档并集；顺序为历史声明序，由测试按集合比对）。 */
 export const KNOWN_LEGACY_FIELDS = [
   'manifestVersion',
   'name',
@@ -42,6 +71,15 @@ export const KNOWN_LEGACY_FIELDS = [
   'optionalDeps',
   'requiredAliases',
 ] as const
+
+/**
+ * 契约面在判据（甲'分层的条件位，正本在此）：`contract` 字段为非空字符串即视为带契约面。
+ * registry loader 的契约/legacy 分支选择用的是**同一份实现**（loader.ts 自本笔起改为从这里 import，
+ * 防两处判据漂移：判据若分叉，"带契约面判 error"与"走契约分支校验"就会各管各的集合）。
+ */
+export function manifestHasContract(m: Record<string, unknown>): boolean {
+  return typeof m['contract'] === 'string' && m['contract'] !== ''
+}
 
 const KNOWN_CONTRACT_FIELDS = new Set([
   'id',
@@ -97,12 +135,25 @@ export function validateManifest(input: unknown): ManifestValidation {
     }
   }
 
+  const hasContractFace = manifestHasContract(input)
   for (const key of Object.keys(input)) {
     if (KNOWN_CONTRACT_FIELDS.has(key)) continue
-    if ((KNOWN_LEGACY_FIELDS as readonly string[]).includes(key)) {
+    if ((LEGACY_INFO_FIELDS as readonly string[]).includes(key)) {
       info.push(
-        issue(key, 'unknown-field', 'info', `存量字段 "${key}" 在迁移期被容忍（REQ-9 完成后须移除或映射进契约字段）`),
+        issue(key, 'unknown-field', 'info', `存量字段 "${key}" 维持迁移期容忍——契约今天没有它的替代表达或表达不完整（逐名成因见 docs/debt.md C-4；补表达属契约语义变更，候另行裁决）`),
       )
+      continue
+    }
+    if ((LEGACY_ERROR_FIELDS as readonly string[]).includes(key)) {
+      if (hasContractFace) {
+        errors.push(
+          issue(key, 'unknown-field', 'error', `存量字段 "${key}" 与契约面双写（契约 v1.2 甲'收紧）：带契约面的清单不得再声明它——${LEGACY_ERROR_REPLACEMENT[key as (typeof LEGACY_ERROR_FIELDS)[number]]}。纯宿主原生形态（无 contract 字段）不受此限`),
+        )
+      } else {
+        info.push(
+          issue(key, 'unknown-field', 'info', `存量字段 "${key}" 属纯宿主原生形态（无契约面）：容忍装载、带提醒（对外承诺：宿主原生形态照样能装）；一旦补写契约面，本字段即转双写 error——${LEGACY_ERROR_REPLACEMENT[key as (typeof LEGACY_ERROR_FIELDS)[number]]}`),
+        )
+      }
       continue
     }
     errors.push(issue(key, 'unknown-field', 'error', `未知顶层字段 "${key}"（拼错字段名会静默失效，予以拒绝）`))

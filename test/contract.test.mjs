@@ -15,6 +15,9 @@ import {
   validateManifest,
   validateModuleExports,
   KNOWN_LEGACY_FIELDS,
+  LEGACY_ERROR_FIELDS,
+  LEGACY_INFO_FIELDS,
+  manifestHasContract,
   CONTRACT_EVENT_NAMES,
   contractServiceName,
   contractEventName,
@@ -26,8 +29,8 @@ const fixture = (name) => JSON.parse(readFileSync(join(here, 'fixtures', 'contra
 
 // ── 契约身份 ──────────────────────────────────────────────────────────────
 
-test('契约版本常量为 1.1.0 且 semver 合法（批 11 升次版本；钉的命题不变＝常量是当前生效契约版本且可解析）', () => {
-  assert.equal(PLUGIN_CONTRACT_VERSION, '1.1.0');
+test('契约版本常量为 1.2.0 且 semver 合法（S3 收紧笔升次版本；钉的命题不变＝常量是当前生效契约版本且可解析）', () => {
+  assert.equal(PLUGIN_CONTRACT_VERSION, '1.2.0');
   assert.ok(parseSemver(PLUGIN_CONTRACT_VERSION));
 });
 
@@ -144,11 +147,12 @@ test('正向 fixture：全量合法 manifest 通过，存量字段降级为 info
   assert.equal(result.ok, true);
   if (result.ok) {
     assert.equal(result.manifest.id, 'dsh/rate-throttle');
-    assert.ok(result.info.some((i) => i.path === 'manifestVersion'));
+    // 甲'收紧后该夹具不再携带 manifestVersion（带契约面＝双写 error）；name 属 info 档，仍降级不判红。
+    assert.ok(result.info.some((i) => i.path === 'name'));
     assert.ok(result.info.every((i) => i.severity === 'info'));
   }
   // 名单本身的强度由下方「v1.2 前置④」整节守（原此行的 includes('manifestVersion') 是 1/8 钉，
-  // 收紧动作不允许建立在只钉住一个名字的名单上 ⇒ 已换成 deepEqual 全清单 + 逐名 info + 第 9 名 error）。
+  // 收紧动作不允许建立在只钉住一个名字的名单上 ⇒ 已换成 deepEqual 全清单 + 逐名 info/error 分面钉）。
 });
 
 // ── v1.2 前置④：KNOWN_LEGACY_FIELDS 全清单守卫（EXE-BOOT-016 笔 1）─────────────
@@ -167,33 +171,102 @@ const LEGACY_NAMES_CANON = [
   'requirements',
 ];
 
+// S3 拆档后的两档正典名单（deepEqual 钉在下方「S3 拆档」节；这里先立常量供逐名格与并集格复用）
+const LEGACY_ERROR_NAMES_CANON = ['exports', 'manifestVersion', 'registers'];
+const LEGACY_INFO_NAMES_CANON = ['aliases', 'name', 'optionalDeps', 'requiredAliases', 'requirements'];
+
 test('v1.2 前置④·全清单钉：KNOWN_LEGACY_FIELDS deepEqual 八名（增/删/改名任一格即红）', () => {
   assert.deepEqual([...KNOWN_LEGACY_FIELDS].sort(), LEGACY_NAMES_CANON);
   assert.equal(KNOWN_LEGACY_FIELDS.length, 8, '名单长度另钉一格：deepEqual 靠 sort 抵消声明序，长度格防"并号"');
 });
 
-test('v1.2 前置④·逐名 info：八名各自单独在场都只产一条 info、不产 error', () => {
+// ── S3 甲'收紧：名单拆两档（C1-007 甲'终裁，2026-10-01）────────────────────────
+// 拆档后"收紧了什么"必须各自可钉——并集一格、两档各一格、两档互斥且并起来恰等于并集
+// （任何一名同时进两档或两边都不进，当场翻红）；error 档的**条件位**（带契约面才判）另由
+// 「收紧本体」与「纯宿主原生形态」两格对举钉死。
+
+test("S3 拆档·全清单钉：error 档 deepEqual 三名＋info 档 deepEqual 五名（任一档改动即红）", () => {
+  assert.deepEqual([...LEGACY_ERROR_FIELDS].sort(), ['exports', 'manifestVersion', 'registers'],
+    "error 档＝有契约替代表达的三个名（替代面写在 validate.ts 常量注与 docs/contract.md §2）");
+  assert.deepEqual([...LEGACY_INFO_FIELDS].sort(), ['aliases', 'name', 'optionalDeps', 'requiredAliases', 'requirements'],
+    'info 档＝无替代或表达不完整的五个名（逐名成因＝docs/debt.md C-4）');
+  assert.equal(LEGACY_ERROR_FIELDS.length, 3, '长度格防"并号"');
+  assert.equal(LEGACY_INFO_FIELDS.length, 5, '长度格防"并号"');
+});
+
+test("S3 拆档·两档并集恰等于 KNOWN_LEGACY_FIELDS 且互斥（收紧不许建立在部分名字的名单上）", () => {
+  const union = [...LEGACY_ERROR_FIELDS, ...LEGACY_INFO_FIELDS].sort();
+  assert.deepEqual(union, [...KNOWN_LEGACY_FIELDS].sort(), '两档并起来必须恰是存量字段全名单（多一名少一名都红）');
+  assert.deepEqual(LEGACY_ERROR_FIELDS.filter((k) => LEGACY_INFO_FIELDS.includes(k)), [], '两档必须互斥');
+  assert.deepEqual(union, LEGACY_NAMES_CANON, '并集与历史全名单同集合（收紧没有悄悄扩名单）');
+});
+
+test("v1.2 前置④·S3 拆档后逐名 info：无替代的五名（带契约面在场）各自只产一条 info、不产 error", () => {
   const base = { id: 'dsh/parity-legacy', displayName: '前置④夹具', version: '1.0.0', contract: '^1.0' };
   // 值取各名字的现实形态，防"值形状碰巧触发别的校验"混进这一格的判据里
   const values = {
     aliases: { 'old-name': 'dsh/parity-legacy' },
-    exports: { '.': './index.js' },
-    manifestVersion: 1,
     name: 'dsh-toolkit/parity-legacy',
     optionalDeps: ['@local/optional'],
-    registers: { services: ['parity'], events: [], commands: [], providers: [] },
     requiredAliases: { 'old-name': 'dsh/parity-legacy' },
     requirements: { runtime: { node: '>=22' }, binaries: [], packages: [], registers: {}, exports: {} },
   };
-  for (const key of LEGACY_NAMES_CANON) {
+  for (const key of LEGACY_INFO_NAMES_CANON) {
     const result = validateManifest({ ...base, [key]: values[key] });
     const errDigest = JSON.stringify((result.errors || []).map((e) => e.code + '@' + e.path));
-    assert.equal(result.ok, true, `${key} 应被迁移期容忍，实得 errors=${errDigest}`);
+    assert.equal(result.ok, true, `${key} 属 info 档（契约无替代），不该判红，实得 errors=${errDigest}`);
     const hits = result.info.filter((i) => i.path === key);
     assert.equal(hits.length, 1, `${key} 应恰有一条 info，实得 ${hits.length} 条`);
     assert.equal(hits[0].severity, 'info');
     assert.equal(hits[0].code, 'unknown-field');
+    assert.match(String(hits[0].message), /debt\.md C-4|无替代|表达不完整/, `${key} 的 info 文案要指路到成因清单`);
   }
+});
+
+test("S3 收紧本体·逐名 error：error 档三名**带契约面**在场各产一条 unknown-field error（且不再是 info）", () => {
+  const base = { id: 'dsh/parity-tight', displayName: '收紧夹具', version: '1.0.0', contract: '^1.0' };
+  const values = {
+    manifestVersion: 1,
+    registers: { services: ['parity'], events: [], commands: [], providers: [] },
+    exports: { '.': './index.js' },
+  };
+  for (const key of LEGACY_ERROR_NAMES_CANON) {
+    const result = validateManifest({ ...base, [key]: values[key] });
+    assert.equal(result.ok, false, `${key} 带契约面再声明＝双写 ⇒ 转 error（这条就是"收紧本体"本身）`);
+    const hits = (result.errors || []).filter((e) => e.code === 'unknown-field' && e.path === key);
+    assert.equal(hits.length, 1, `${key} 应恰一条 unknown-field error，实得 ${JSON.stringify((result.errors || []).map((e) => e.code + '@' + e.path))}`);
+    assert.equal(hits[0].severity, 'error');
+    assert.equal((result.info || []).filter((i) => i.path === key).length, 0, `${key} 不得同时再产 info（两档互斥）`);
+    assert.match(String(hits[0].message), /双写|替代/, `${key} 的 error 文案要写清双写语义与替代品`);
+  }
+});
+
+test("S3 甲'分层·纯宿主原生形态：error 档三名**无契约面**在场不产 error、降为 info（条件位的另一侧）", () => {
+  // 与上一格对举：同一批字段、同一批值，唯一的差别是契约面在场与否 ⇒ error/info 翻面。
+  // 无契约面清单本就按既有口径报 required@contract（不在本笔收紧面），此处只钉 legacy 字段不受牵连。
+  const base = { id: 'dsh/parity-native', displayName: '原生形态夹具', version: '1.0.0' };
+  const values = {
+    manifestVersion: 1,
+    registers: { services: ['parity'], events: [], commands: [], providers: [] },
+    exports: { '.': './index.js' },
+  };
+  for (const key of LEGACY_ERROR_NAMES_CANON) {
+    const result = validateManifest({ ...base, [key]: values[key] });
+    const unknownErrors = (result.errors || []).filter((e) => e.code === 'unknown-field');
+    assert.deepEqual(unknownErrors, [], `${key} 在纯宿主原生形态（无契约面）下不得判双写 error，实得 ${JSON.stringify(unknownErrors)}`);
+    assert.ok((result.errors || []).some((e) => e.code === 'required' && e.path === 'contract'),
+      '无契约面本身仍报 required@contract（既有行为，保持可见）');
+    const hits = (result.info || []).filter((i) => i.path === key);
+    assert.equal(hits.length, 1, `${key} 应恰有一条 info（容忍＋提醒），实得 ${hits.length} 条`);
+    assert.match(String(hits[0].message), /纯宿主原生形态|容忍/, `${key} 的 info 文案要点明甲'容忍面`);
+  }
+});
+
+test("S3 甲'分层·判据同源：manifestHasContract 与 loader 分支判据同一份实现（非空字符串才带契约面）", () => {
+  assert.equal(manifestHasContract({ contract: '^1.0' }), true);
+  assert.equal(manifestHasContract({ contract: '' }), false, '空串不算契约面（loader 同判：空 contract 落 legacy 合成）');
+  assert.equal(manifestHasContract({ contract: 42 }), false, '非字符串不算契约面');
+  assert.equal(manifestHasContract({}), false, '缺席不算契约面');
 });
 
 test('v1.2 前置④·第 9 名必 error：名单外的拼写不得被当作 legacy 容忍', () => {
@@ -233,7 +306,9 @@ test('v1.2 前置④·影响面实测复用：六份内置 manifest 的顶层 le
     }
   }
   assert.equal(count, 6, '枚举面＝有 manifest 的单元 6（4 lib + 桶根 + panel），与 recon §4 的数法一致（S1 剔除批 7→6）');
-  // 顶层实况六名（registers/exports 在内置清单里只作为 requirements 的子键出现，不在顶层）
+  // 顶层实况六名（registers/exports 在内置清单里只作为 requirements 的子键出现，不在顶层）。
+  // 甲'收紧后的当场影响面＝零：五份带契约清单只剩 info 档五名（manifestVersion 已随迁移笔删除），
+  // panel 无契约面（manifestVersion 属原生形态容忍）——这枚枚举格钉的是"影响面计算前提仍在"。
   assert.deepEqual([...seenTop].sort(), ['aliases', 'manifestVersion', 'name', 'optionalDeps', 'requiredAliases', 'requirements']);
   assert.deepEqual([...seenReq].sort(), ['binaries', 'exports', 'packages', 'registers', 'runtime']);
   // 顶层六名必须是名单子集：收紧为 error 时，这六名就是内置清单的当场影响面（防后来人以为只动 exports）

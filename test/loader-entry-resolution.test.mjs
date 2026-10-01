@@ -86,10 +86,17 @@ test('F2①：套件根 requirements.exports 的 $from 继承指针按语义解�
 })
 
 // ── ② legacy 顶层声明：装载成功 + warn ──────────────────────────────────
+// S3 甲'收紧（2026-10-01）随行注：② 级兼容位的真实用户是**纯宿主原生形态**清单（无契约面）——
+// 带契约面再写顶层 exports 属双写、契约判 error（loader 契约分支过不了闸）。因此本节三份夹具
+// （entry-legacy-top／entry-dual／entry-provides-dual）自此取掉 contract 字段、按原生形态建模：
+// 甲'承诺"宿主原生形态照样能装（带提醒）"，本节四格钉的就是这句承诺的装载半边。格的断言一字未动。
 
 test('F2②：只有顶层 exports（legacy 位）时解析成功、命中真实声明那份而非诱饵，并带 warn', async () => {
   const dir = fixtureDir('entry-legacy-top')
+  const manifest = JSON.parse(readFileSync(join(dir, 'dsh.plugin.json'), 'utf8'))
+  assert.equal(manifest.contract, undefined, "甲'收紧后本夹具是无契约面的原生形态（② 级的真实用户）")
   const resolved = await resolveLocalSource({ kind: 'local', path: dir })
+  assert.equal(resolved.legacy, true, '原生形态走 legacy 合成分支（A1 通道活着的前提）')
   assert.equal(resolved.entrySource, 'manifest.exports(legacy)')
   assert.equal(resolved.entryPath, join(dir, 'legacy-entry.js'))
   assert.notEqual(await pluginName(resolved.entryPath), 'fixture-entry-legacy-top-DECOY-indexjs', '不得落到目录惯例诱饵')

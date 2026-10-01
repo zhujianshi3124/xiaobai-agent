@@ -51,7 +51,14 @@ export {
 } from './semver.js'
 
 export type { ManifestIssue, IssueSeverity, ManifestValidation } from './validate.js'
-export { validateManifest, validateModuleExports, KNOWN_LEGACY_FIELDS } from './validate.js'
+export {
+  validateManifest,
+  validateModuleExports,
+  KNOWN_LEGACY_FIELDS,
+  LEGACY_ERROR_FIELDS,
+  LEGACY_INFO_FIELDS,
+  manifestHasContract,
+} from './validate.js'
 
 export type { ConfigSchemaIssue, ConfigSchemaResult } from './config-schema.js'
 export { validateConfigAgainstSchema } from './config-schema.js'

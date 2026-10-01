@@ -2,8 +2,9 @@
 
 > 建立：2026-09-20（P8 收尾，债务 #6/#7 清偿）。事实来源＝代码，逐条给 `文件:行号`；
 > 与《toolkit 泛化规格》的偏差在 §7 逐条列明（含用户正式裁决的豁免），不藏。
-> 契约版本常量：`contract/src/types.ts` `PLUGIN_CONTRACT_VERSION = '1.1.0'`（2026-09-26 批 11 升次版本；
-> 1.0.0 → 1.1.0，provides／events／panels 均为非破坏增量，`^1.0` 旧清单零迁移）。
+> 契约版本常量：`contract/src/types.ts` `PLUGIN_CONTRACT_VERSION = '1.2.0'`（2026-09-26 批 11 升次版本
+> 1.0.0 → 1.1.0，provides／events／panels 均为非破坏增量，`^1.0` 旧清单零迁移；2026-10-01 S3 收紧笔
+> 1.1.0 → 1.2.0，甲'终裁＝带契约面的清单与旧字段**双写判 error**、纯宿主原生形态容忍＋提醒，见 §2 末）。
 >
 > **2026-09-22 条文审定轮（用户逐条过目 ★1–★20，批复"全部按建议"）的修订已落在本文，逐条结论见
 > `docs/debt.md`「用户审定记录」。本文定位规则的修正**：行号会漂，**按函数/常量名定位**（同
@@ -23,7 +24,7 @@
 | `id` | ✅ | 命名空间式 `<scope>/<name>`，正则 `^[a-z0-9][a-z0-9-]{0,63}/[a-z0-9][a-z0-9-]{0,63}$`；全局唯一，不是路径 |
 | `displayName` | ✅ | 非空字符串（面板标题用它） |
 | `version` | ✅ | 合法 semver |
-| `contract` | ✅ | 合法 semver **范围**，且必须放行当前契约版本 1.1.0（2026-09-26 批 11 起；如 `^1.0`、`^1.1` 均放行） |
+| `contract` | ✅ | 合法 semver **范围**，且必须放行当前契约版本 1.2.0（2026-10-01 S3 收紧笔起；`^1.0`、`^1.1`、`^1.2` 均放行——三者都覆盖 1.2.0） |
 | `requires` | ⬜ | 对象；子域见 §2.1。整体可缺席（零需求的插件不必写空对象——**对规格的一处放宽**） |
 | `configSchema` | ⬜ | Schema 对象或构造函数；JSON 落盘时是 schemastery 纯定义（§5） |
 | `panels` | ⬜ | 数组，每项必须有非空 `id`（`PanelDescriptor`，其余键开放）。**当前无任何消费者**：面板只把 `entry.manifest.panels` 原样透传（`panel/manager/v2-api.mjs` 的 `panels:` 一行），宿主也不认它（§7 D-8 与 `docs/embed-toolkit.md` §5 第 1 条）；它是"呈现面声明"，不是"提供面"。**【2026-09-26 批 10：形状承诺双路成立】**"数组＋每项非空 id"自此同时约束落盘清单（validateManifest）与模块导出绑定路（bindRuntimeStatics 复用 validateModuleExports 判据，违例 fail-closed 报 `plugin-shape-invalid`；"非空"两路同判，纯空白也拒）——批 3 验收令遗留的"模块绑定绕过 validateManifest"缺口就此关闭 |
@@ -39,18 +40,35 @@
 
 **未知顶层字段 = error**（拼错字段名会静默失效，故拒绝）。迁移期容忍的旧字段清单是封闭的：
 `KNOWN_LEGACY_FIELDS = manifestVersion / name / requirements / registers / exports / aliases /
-optionalDeps / requiredAliases`（`contract/src/validate.ts` 的该常量），它们只产 info 级问题、不参与 ok 判定。
+optionalDeps / requiredAliases`（`contract/src/validate.ts` 的该常量）。
+**S3 甲'收紧（2026-10-01，C1-007 甲'终裁）起按契约面分层**——`manifestHasContract`（contract 为
+非空字符串，与 registry loader 的契约/legacy 分支**同一份实现**）为条件位：
+① **带契约面 + error 档三名 ⇒ error（双写）**：`LEGACY_ERROR_FIELDS = manifestVersion / registers /
+顶层 exports`——这三个名已有契约替代表达（manifestVersion→id/displayName/version/contract 四必填；
+顶层 registers/exports→`provides.*` 与 `requirements.registers.*`／`requirements.exports['.']`），
+带契约面的清单再声明它们＝同一事实两处写，判 error、参与 ok 判定。
+② **纯宿主原生形态（无契约面）⇒ 容忍＋提醒**：error 档三名降为 info、不参与 ok 判定；装载器走
+legacy 合成分支照样能装，② 级兼容位与 A1 warn 通道原样保留（F2②③ 四格钉）。**对外承诺原文**：
+"契约面必纯；宿主原生形态照样能装（带提醒）。"
+③ **info 档五名（两种形态都 info）**：`LEGACY_INFO_FIELDS = name / requirements / aliases /
+optionalDeps / requiredAliases`——契约今天没有替代表达或表达不完整，逐名成因与现声明数在册＝
+`docs/debt.md` C-4（订阅面 events 11 名、别名面 5 条、可选依赖面 1 项、依赖包面 2 项、`name` 与
+`$from`/子路径面各一条）。**开源首版带这份明账发布**：两档状态就是对外承诺的状态，不写成"legacy 已清零"。
+本仓六份生产清单实况（迁移笔后）：五份带契约清单零 error 档三名（双写已在迁移笔清空）、panel 无契约面
+走原生容忍 ⇒ **收紧对生产清单零 ok 翻面**；双写红集只存在于对账探针与夹具（有意构造）。
 **两处必须连带知道的限定**（本清单只描述**本仓契约**的容忍度，不代表另一仓也容忍）：
-① 顶层 `exports` 在本仓是 info，但在独立 doctor 的清单根字段白名单里**不存在** ⇒ 写上去当场
-`清单根字段非法: exports` **error**（入口声明的正典位置见 §4）；
+① 顶层 `exports` 在本仓已随甲'收紧分层（带契约面＝双写 error、无契约面＝info 容忍，见上），但在独立
+doctor 的清单根字段白名单里**不存在**且与契约面无关 ⇒ 无论何种形态，写上去当场
+`清单根字段非法: exports` **error**（入口声明的正典位置见 §4；原生形态下两侧分叉由 parity D23 钉）；
 ② `manifestVersion` / `name` / `requirements` 三项在独立 doctor 侧曾是**必填**（缺则
 `schema.required-missing` error）——**该必填集已于 2026-09-29 撤销**（`doctor仓@ce31f83`，契约 v1.2 前置①，
 修法正典＝`docs/contract-v1.1-recon.md` §8.3）：纯契约 manifest（只带契约九键）自此在 doctor 侧零 schema issue；
 但 **`requirements` 一旦写了，它的五键必填与 `./` 目标存在性仍由 doctor 逐条判**（"在场才管"）。
 ⇒ 本句原写的"本仓容忍与另一仓必填并存"自此收窄为"字段名单仍并存、必填面已部分合流"，
 `docs/debt.md` C-2 前置① 因此关账、前置②与收紧本体仍挂账。
-**收紧时机**：见 `docs/migration.md` §4 与 `docs/debt.md` C-2（P8 时点尚未收紧；2026-09-22 裁定移出 v1.1；
-2026-09-29 v1.2 批只落前置①④，legacy→error 仍未落，题面见计划 §40.4）。
+**收紧时机**：见 `docs/migration.md` §4 与 `docs/debt.md` C-2/C-3（2026-09-22 裁定移出 v1.1；
+2026-09-29 v1.2 批落前置①④；**2026-10-01 S3 收紧笔按甲'终裁落地＝本节 ①②③ 的分层现状**，
+全录见计划 §51/§52 与 debt C-3 收口注）。
 
 ### 2.1 `requires` 子域（预检与巡检的事实来源）
 

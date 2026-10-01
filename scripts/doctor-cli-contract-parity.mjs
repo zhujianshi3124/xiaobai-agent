@@ -12,8 +12,9 @@
 //   D 重叠面**逐规则**对账（契约 v1.2 题一终批＝案二"维持两引擎＋对账网扩面"，EXE-BOOT-016 笔 2）：
 //     两套校验器都管的每一条字段规则，逐条钉住"各侧判什么"——同向红／契约严 doctor 宽／方向相反
 //     三类各按实况登记，不许混成一句"大致一致"。夹具与判据先经实测（probe-overlap-faces.mjs）。
-//   E 根字段**键集**对账＝清单正典 H4 的活体钉：契约接受集 17 键 vs doctor 白名单 14 键，
-//     差集恰 {registers, exports}、反向差集必空。任一侧改键表 ⇒ 当场翻红（H4 从账面变成可跑断言）。
+//   E 根字段**键集**对账＝清单正典 H4 的活体钉：S3 甲'收紧后契约`在册`（不报 unknown-field）14 键
+//     vs doctor 白名单 14 键，两侧各差一名（契约独有 healthCheck／doctor 独有 manifestVersion——
+//     后者是甲'收紧只推契约一档、冻结 CLI 仍认旧键名的必然投影）。任一侧改键表 ⇒ 当场翻红。
 // 手动脚本不算守卫（裁定 21 条件 a）⇒ 本文件由 scripts/ci-local.mjs 作为独立一步调用。
 //
 // 【新规则两仓同批落】口径（W9 先例；随契约 v1.2 入册）：凡新增/改动**两仓重叠面**上的判据，
@@ -68,7 +69,9 @@ function tmpScope(name, manifest) {
 }
 
 const CONTRACT_BASE = { id: 'parity/unit', displayName: '对账夹具', version: '1.0.0', contract: '^1.0' }
-const LEGACY_TRIAD = { manifestVersion: 1, name: 'dsh-toolkit/parity', requirements: { runtime: {}, binaries: [], packages: {}, registers: {}, exports: { '.': './index.js' } } }
+// S3 甲'收紧后本夹具**不再携带 manifestVersion**（带契约面＋manifestVersion＝双写 error＝契约拒；
+// 该名的新状态由 D22 单格钉住）。留下的 name/requirements 属 info 档，正是本仓五份带契约清单今天的真实形态。
+const LEGACY_TRIAD = { name: 'dsh-toolkit/parity', requirements: { runtime: {}, binaries: [], packages: {}, registers: {}, exports: { '.': './index.js' } } }
 
 check('前置：DOCTOR_CLI 可解析', existsSync(DOCTOR_CLI), DOCTOR_CLI)
 check('前置：契约 dist 暴露 validateManifest 与 provides 面', typeof validateManifest === 'function' && typeof contract.PLUGIN_CONTRACT_VERSION === 'string')
@@ -142,7 +145,7 @@ for (const rel of builtinManifests) {
     ['packages', 'registers', 'exports'].every((k) => reqMissing.includes(k)), 'reported=' + reqMissing.join('/'))
   check('B4 契约对同一份带 requirements 的混合形态仍判 ok（两侧不互相打脸）', validateManifest(partial).ok === true)
   const triad = { ...CONTRACT_BASE, ...JSON.parse(JSON.stringify(LEGACY_TRIAD)) }
-  check('B6 齐载 legacy 三根的同一份：两侧都不报根必填缺失（撤销未误伤存量形态）',
+  check("B6 齐载 legacy 双根（name/requirements）的同一份：两侧都不报根必填缺失（撤销未误伤存量形态；manifestVersion 已随甲'收紧转 error 档、由 D22 单独钉）",
     rootMissing(runDoctorJson(tmpScope('with-triad', triad)).issues).length === 0 && validateManifest(triad).ok === true)
 }
 
@@ -277,8 +280,13 @@ for (const rel of builtinManifests) {
     { n: 'D19 provides.entry 非字符串＝契约严（单值槽）', m: M({ provides: { entry: 42 } }), c: ['red', /type@provides\.entry/], d: ['green', /provides/] },
     { n: 'D20 provides.tools 非数组＝契约严（F-87 新槽与三旧槽同族）', m: M({ provides: { tools: 'parity_tool' } }), c: ['red', /type@provides\.tools/], d: ['green', /provides/] },
     { n: 'D21 provides.inject 成员空白＝契约严（按下标定位）', m: M({ provides: { inject: ['ok.face', '  '] } }), c: ['red', /type@provides\.inject\[1\]/], d: ['green', /provides/] },
-    { n: 'D12 顶层 registers＝方向相反（H4 在册）', m: M({ registers: { services: ['a'] } }), c: ['ok', 'registers'], d: ['red', /清单根字段非法: registers/] },
-    { n: 'D13 顶层 exports＝方向相反（H4 在册）', m: M({ exports: { '.': './index.js' } }), c: ['ok', 'exports'], d: ['red', /清单根字段非法: exports/] },
+    // D12/D13：S3 甲'收紧把这两个顶层形态（带契约面时）从 info 转成 error ⇒ 原来的"方向相反（H4 在册）"
+    // 自此**合流为同向红**（两侧都拒，成因不同名：契约报"与契约面双写"，doctor 报"清单根字段非法"）。
+    // 历史方向相反那条陈述照录不改（错账不回改），以本行为准；无契约面时的容忍面由 D23 单独钉。
+    { n: "D12 顶层 registers＝同向红（甲'收紧后契约也拒＝双写）", m: M({ registers: { services: ['a'] } }), c: ['red', /unknown-field@registers/], d: ['red', /清单根字段非法: registers/] },
+    { n: "D13 顶层 exports＝同向红（甲'收紧后契约也拒＝双写）", m: M({ exports: { '.': './index.js' } }), c: ['red', /unknown-field@exports/], d: ['red', /清单根字段非法: exports/] },
+    { n: 'D22 manifestVersion＝收紧本体（契约拒、doctor 仍认该键名）', m: M({ manifestVersion: 1 }), c: ['red', /unknown-field@manifestVersion/], d: ['green', /manifestVersion/] },
+    { n: "D23 纯宿主原生形态带顶层 exports＝契约容忍（零 unknown-field、exports 落 info）、doctor 冻结线照旧判非法", m: { manifestVersion: 1, name: 'dsh-toolkit/parity-native', requirements: { runtime: {}, binaries: [], packages: {}, registers: {}, exports: { '.': './index.js' } }, exports: { '.': './index.js' } }, c: ['required-only', 'exports'], d: ['red', /清单根字段非法: exports/] },
     { n: 'D14 顶层 healthCheck＝同向红、成因不同名', m: M({ healthCheck: 'x' }), c: ['red', /type@healthCheck/], d: ['red', /清单根字段非法: healthCheck/] },
     { n: 'D15 未知根字段 zzNote＝同向红', m: M({ zzNote: 1 }), c: ['red', /unknown-field@zzNote/], d: ['red', /清单根字段非法: zzNote/] },
     { n: 'D16 纯契约 manifest（无 legacy 三必填）＝根必填已撤', m: { ...CONTRACT_BASE }, c: ['ok', null], d: ['green', /缺少必填字段/] },
@@ -294,6 +302,7 @@ for (const rel of builtinManifests) {
     const [dMode, dMatch] = rule.d
     let cOk
     if (cMode === 'red') cOk = cRes.errors.some((s) => cMatch.test(s))
+    else if (cMode === 'required-only') cOk = cRes.errors.length > 0 && cRes.errors.every((s) => s.startsWith('required@')) && cRes.info.includes(cMatch)
     else if (cMatch) cOk = cRes.ok === true && cRes.info.includes(cMatch)
     else cOk = cRes.ok === true
     const dHit = dMsgs.some((s) => dMatch.test(s))
@@ -343,15 +352,18 @@ for (const rel of builtinManifests) {
   const doctorListed = allKeys.filter((k) => !illegal.includes(k))
   const onlyContract = contractListed.filter((k) => !doctorListed.includes(k)).sort()
   const onlyDoctor = doctorListed.filter((k) => !contractListed.includes(k)).sort()
-  check('E1 契约在册根字段 = 17 键（9 契约 + 8 legacy，H4 复算口径）', contractListed.length === 17,
+  check("E1 契约在册根字段 = 14 键（9 契约 + 5 info 档；甲'收紧后 error 面三名不算在册，H4 的 17 键口径自此作废）", contractListed.length === 14,
     '实得 ' + contractListed.length + '：' + contractListed.sort().join(','))
-  check('E2 doctor 白名单 = 14 键（契约在册集的真子集）', doctorListed.length === 14,
-    '实得 ' + doctorListed.length + '：' + doctorListed.join(','))
-  check('E3 差集恰 {exports, healthCheck, registers}（H4 三条点名，多一名少一名即红）',
-    JSON.stringify(onlyContract) === JSON.stringify(['exports', 'healthCheck', 'registers']), '实得 ' + JSON.stringify(onlyContract))
-  check('E4 反向差集必空（doctor 不得认契约不认的根字段）', onlyDoctor.length === 0, '实得 ' + JSON.stringify(onlyDoctor))
-  check('E5 合并探针里 doctor 恰好只报这三名（探针自身无越界命中）',
-    illegal.filter((k) => allKeys.includes(k)).sort().join(',') === onlyContract.join(','),
+  check('E2 doctor 白名单 = 14 键（数量与契约在册集相等，但**不再是子集关系**——见 E3/E4 两侧各差一名）',
+    doctorListed.length === 14, '实得 ' + doctorListed.length + '：' + doctorListed.join(','))
+  check('E3 契约独有恰 {healthCheck}（doctor 仍认它是非法根字段，契约认它＝在册、值面另判）',
+    JSON.stringify(onlyContract) === JSON.stringify(['healthCheck']), '实得 ' + JSON.stringify(onlyContract))
+  // E4 原判据"反向差集必空"自 S3 甲'收紧起**作废**（错账不回改，此注为准）：error 面三名转 error 后，
+  // doctor 仍认 manifestVersion 这个键名 ⇒ 差集恰一名。这不是新缺陷，是"分层收紧只动契约一档"的必然投影，钉成可见断言。
+  check("E4 doctor 独有恰 {manifestVersion}（甲'收紧只推契约一档，冻结 CLI 仍认旧键名）",
+    JSON.stringify(onlyDoctor) === JSON.stringify(['manifestVersion']), '实得 ' + JSON.stringify(onlyDoctor))
+  check('E5 合并探针里 doctor 恰好只报三名 {exports, healthCheck, registers}（探针自身无越界命中）',
+    [...new Set(illegal.filter((k) => allKeys.includes(k)))].sort().join(',') === 'exports,healthCheck,registers',
     'doctor 非法名=' + JSON.stringify([...new Set(illegal)].sort()))
 }
 
