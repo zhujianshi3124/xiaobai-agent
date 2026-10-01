@@ -2698,7 +2698,7 @@ regression-all 失败时保留明细末 N 行，免"再振即查"无从查起。
 3. 笔C `a4bd5a3` feat(toolkit)——G8 vendor 转正（364 tracked 删＋cordis peer→dependencies＋
    .gitignore 豁免撤＋lock 全新重生成全 resolved＋npm ci 复装实证）＋"私有源"过时陈述改对（既裁）
    ＋守卫随形态同步（E2 断言位＋P8/P9 夹具自补键）。
-4. 笔D `164f8aa` chore(toolkit)——E-3 处置：p23-shadow-scan.mjs 删除。
+4. 笔D `164f8aa` chore(toolkit)——E-3 处置：p23-shadow-scan 工装删除。
 5. 本账面笔（§46＋debt A#60＋E-1/E-2 行推进＋CHANGELOG S2 节＋守卫 9 红清偿）。
 
 ### 46.2 执行实况（口径全录）
@@ -2727,7 +2727,7 @@ regression-all 失败时保留明细末 N 行，免"再振即查"无从查起。
   实证（46.4）。
 - **"私有源"过时陈述改对（既裁项）**：`scripts/ci-local.mjs` 头注＋`.github/workflows/ci.yml`
   头注两处（真理由改写为"无 git 远端＋doctor CLI 本机路径注入"；README 无此类陈述）。
-- **E-3 处置**：p23-shadow-scan.mjs 删除（笔D）。评估依据：P2.3 一次性只读取证工装、evidence 正本
+- **E-3 处置**：p23-shadow-scan 工装删除（笔D）。评估依据：P2.3 一次性只读取证工装、evidence 正本
   已落档（panel/docs/evidence/P23-SHADOW-SCAN*）、web-search-local settings 遮蔽半边随 S1 出包失效
   （debt E-3 在案成因）、不在任何门禁链零连锁；副本开源仓不保留引用本机 ~/.dsh 的私有取证脚本。
 - **守卫清偿**：笔D 删件引发 9 红（活 5／存档 4，全为该件路径引用失效）——活文档 5 处在位改写让
@@ -2740,15 +2740,16 @@ regression-all 失败时保留明细末 N 行，免"再振即查"无从查起。
    - 现状：`cordis.patch.yml` 两处机器绝对路径——agent-memory-runtime 行
      `dataRoot: C:\Users\LENOVO\.agent-memory`、toolkit-manager 行
      `name: 'file:///D:/dsh-plugins/dsh-toolkit/panel/index.js'`。
-   - **案① 模板附档**：仓根真 patch 维持部署实况（指在用仓）；另出 `cordis.patch.template.yml`
-     （占位符 `<AGENT_MEMORY_DATA_ROOT>`／`<PANEL_ENTRY_URL>`）随包发布＋README 部署节填空说明。
-     p2-smoke 既裁红（E-2）维持至 S5 真机窗副本部署演练。
+   - **案① 模板附档**：仓根真 patch 维持部署实况（指在用仓）；另出 patch 模板件（文件名候裁定，
+     拟 cordis.patch.template 形态；占位符 `<AGENT_MEMORY_DATA_ROOT>`／`<PANEL_ENTRY_URL>`）
+     随包发布＋README 部署节填空说明。p2-smoke 既裁红（E-2）维持至 S5 真机窗副本部署演练。
    - **案②（建议）仓根 patch 直接模板化**：两处绝对路径换占位符（同上形态）；p2-smoke 相对性断言
      重定义为"patch 无机器绝对路径"⇒ E-2 既裁红批后消除；patch 基准第 3 次滚存随施工笔；
      patch-config-check（YAML 语义校验）不受占位符影响（值位替换）。S5 真机窗按模板填空部署。
    - 两案共同点：模板形 patch 只在副本仓演进；本地在用 patch 基准 `b0f304c9` 零触碰红线不变。
-2. **D-15 偶然闸失效的防呆重建**：G4 去 scope 后 `panel/package.json#name="dsh-toolkit/panel"`
-   的 legacy 合成 id 合法 ⇒ resolveLocalSource 对 panel 入口**装载放行**（legacy:true，019 实证），
+2. **D-15 偶然闸失效的防呆重建**：G4 去 scope 后 panel/package.json 的 name 字段（现值
+   "dsh-toolkit/panel"）的 legacy 合成 id 合法 ⇒ resolveLocalSource 对 panel 入口**装载放行**
+   （legacy:true，019 实证），
    "面板不经 registry 通道自举"（REQ-8）原有偶然机制（@scope 的 `@` 非法）失效。重建候选：loader
    legacy 合成分支显式拒绝面板目录（判定面候选：目录名 panel／manifest 无 contract 且模块导出含
    webServer 面装配键——具体判据候裁后施工图另呈）；测试已如实记录现状行为（dual-channel-parity
