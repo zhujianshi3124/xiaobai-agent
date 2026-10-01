@@ -45,10 +45,10 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@deepseek-ai/cordis": "^4.0.2",
     "@deepseek-ai/schemastery": "^3.18.1"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "^4.0.2",
     "@deepseek-ai/dsh-compaction-basic": "0.1.5-rc.2",
     "@deepseek-ai/dsh-settings": "^0.1.5-rc.2",
     "@deepseek-ai/dsh-web": "^0.1.5-rc.2"

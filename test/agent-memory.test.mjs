@@ -1912,6 +1912,11 @@ test('P8: checkBundleMountResolvable —— bundle 合成 + 真实 import（正�
   const bundleDir = path.join(profileDir, 'node_modules', 'dsh-toolkit');
   copyRecursive(path.join(SUITE_ROOT, 'lib'), path.join(bundleDir, 'lib'));
   fs.copyFileSync(path.join(SUITE_ROOT, 'package.json'), path.join(bundleDir, 'package.json'));
+  // G6（S2 正名批）撤了仓根 package.json 的 dsh.bundle.patch 键（发布物不含 cordis.patch.yml）；
+  // 本格模拟"带 bundle patch 的安装形态"，夹具自补该键（doctor 的 bundle 挂载检查能力与 G6 无关）。
+  const bundlePkg = JSON.parse(fs.readFileSync(path.join(bundleDir, 'package.json'), 'utf8'));
+  bundlePkg.dsh = { bundle: { patch: './cordis.patch.yml' } };
+  fs.writeFileSync(path.join(bundleDir, 'package.json'), JSON.stringify(bundlePkg, null, 2), 'utf8');
   fs.copyFileSync(path.join(SUITE_ROOT, 'cordis.patch.yml'), path.join(bundleDir, 'cordis.patch.yml'));
   fs.writeFileSync(path.join(profileDir, 'package.json'), JSON.stringify({ name: 'p', private: true, dsh: { profile: { bundles: ['dsh-toolkit'] } } }), 'utf8');
   fs.writeFileSync(path.join(profileDir, 'cordis.yml'), '[]\n', 'utf8');
@@ -1942,6 +1947,10 @@ test('P9: checkBundleMountResolvable —— 错误引用反向 FAIL 且报错可
       fs.writeFileSync(path.join(bundleDir, 'lib', 'agent-memory', 'plugin.js'), overwritePlugin, 'utf8');
     }
     fs.copyFileSync(path.join(SUITE_ROOT, 'package.json'), path.join(bundleDir, 'package.json'));
+    // 同 P8：夹具自补 dsh.bundle.patch 键（G6 后仓根不再带），使反向格真正走到 name/import 检查。
+    const bundlePkg = JSON.parse(fs.readFileSync(path.join(bundleDir, 'package.json'), 'utf8'));
+    bundlePkg.dsh = { bundle: { patch: './cordis.patch.yml' } };
+    fs.writeFileSync(path.join(bundleDir, 'package.json'), JSON.stringify(bundlePkg, null, 2), 'utf8');
     fs.writeFileSync(path.join(bundleDir, 'cordis.patch.yml'), overwritePatch, 'utf8');
     fs.writeFileSync(path.join(profileDir, 'package.json'), JSON.stringify({ name: 'p', private: true, dsh: { profile: { bundles: ['dsh-toolkit'] } } }), 'utf8');
     fs.writeFileSync(path.join(profileDir, 'cordis.yml'), '[]\n', 'utf8');
