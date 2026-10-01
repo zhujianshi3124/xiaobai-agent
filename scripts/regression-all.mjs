@@ -58,6 +58,15 @@ for (const [name, rel] of scripts) {
   const ok = code === 0 && fail === "0";
   if (!ok) bad++;
   console.log((ok ? "  ✓ " : "  ✗ ") + "node --test".padEnd(22) + "pass=" + pass + " fail=" + fail);
+  // C1-007 S2 批裁定（2026-10-01）：失败时回传明细末 25 条相关行——此前摘要器只回传计数，
+  // flake"再振即查"时无从查起（S1 验收窗 §45.5 候裁项，候裁准后落码）。
+  if (!ok) {
+    const tail = out.split(/\r?\n/)
+      .filter(l => /✖|not ok|failing tests|AssertionError|Error\b|test at/i.test(l))
+      .slice(-25);
+    console.log("    ── node --test 失败明细（末 " + tail.length + " 条相关行）──");
+    for (const l of tail) console.log("    " + l.slice(0, 220));
+  }
 }
 
 console.log("══════════════════════════════════════════════════════════");
