@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": "@deepseek-ai/dsh host type definitions (installed under AppData\\Roaming\\npm\\node_modules\\@deepseek-ai\\dsh\\node_modules\\@deepseek-ai), read-only derivation from inject/provide declarations on 2026-09-15; 2026-09-29 补录 systemPrompt（EXE-BOOT-011 施工笔3：面真实在位而 9/15 派生遗漏，安装版 dsh-system-prompt lib/index.js:211 实证）.",
+  "providedFaces": [
+    {
+      "face": "llm",
+      "source": "dsh-llm/lib/types/index.js:232 super(ctx, \"llm\")"
+    },
+    {
+      "face": "tokenMeter",
+      "source": "dsh-token-meter/lib/types/index.js:43 super(ctx, 'tokenMeter')"
+    },
+    {
+      "face": "sessions",
+      "source": "dsh-session/lib/types/index.js:723 super(ctx, 'sessions')"
+    },
+    {
+      "face": "commands",
+      "source": "dsh-commands/lib/types/index.js:226 super(ctx, 'commands')"
+    },
+    {
+      "face": "web",
+      "source": "dsh-web/lib/index.js:56 super(ctx, \"web\")"
+    },
+    {
+      "face": "compaction",
+      "source": "dsh-compaction/lib/types/index.js:46 super(ctx, 'compaction')"
+    },
+    {
+      "face": "webServer",
+      "source": "host web server seam (used by @linxin666/dsh-client-ui-plugin-manager lib/index.js:2311)"
+    },
+    {
+      "face": "subprocess",
+      "source": "host subprocess seam (used by dsh-ops-console lib/index.js:458)"
+    },
+    {
+      "face": "systemPrompt",
+      "source": "dsh-system-prompt/lib/index.js:211 super(ctx, \"systemPrompt\")（EXE-BOOT-011 施工笔3 补录）"
+    }
+  ]
+}
