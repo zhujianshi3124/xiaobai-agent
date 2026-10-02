@@ -3126,3 +3126,91 @@ tmp/scratch）：
 **随施工批既定涟漪（候施工令预算）**：§4.1 全表 32→33 条（只读闸 10→11）＋p7-embed 32 条口径＋
 gate-route-classes 工装复跑实档＋p22 卡面数与对账网同步；`terminal-acceptance-report.mjs` 切桶内
 随 S4 批落笔（§53.2 裁定 2）。**呈报毕净节点停靠候令，S4 施工令随批准另发。**
+
+## 55. S4 检索半边施工账：索引器＋检索卡与路由＋切桶内 doctor＋F-37 翻正（2026-10-01/02 · EXE-BOOT-022 · 副本线）
+
+**令源**：S4 F-37 检索半边施工令（EXE-BOOT-022 启动包第八节第 1 条；批1-3／裁1-3 全已批）。
+**设计正本**：沙箱 `docs/f37-search-design-c1-007.md`（呈文入账＝§54）。
+
+### 55.1 笔序与读数（四笔，各自独立可 revert）
+
+| 笔 | 提交 | 内容 | 读数 |
+|---|---|---|---|
+| 1 | `4706eca` feat(agent-memory) | S4a 索引器：`search-index.js`＋`<dataRoot>/search/` 派生缓存（批2）＋`searchMemory` 导出＋组合层九写路径挂钩＋同源解析复用（ledger.js 导出 parseEntry、progress.js 导出 PROGRESS_FIELD_LINE_RE 并就地改用） | agent-memory 全家 128/128（含 SEARCH-1..12 新钉） |
+| 2 | `9cb4b58` feat(panel) | S4b 检索卡＋`GET /v2/memory/search`（裁1 只读闸）＋p4 守卫 LAZY_PROBE_EXEMPTIONS＋涟漪 32→33 全套＋MS-1..7／p22 F 节 18 格 | 门禁 6/6 一次过 129.7s；nt 526/526；守卫红 0（token 3274） |
+| 3 | `1a2d76d` fix(panel) | S4d terminal-acceptance-report.mjs 在用 doctor 硬调切桶内（候裁②落笔；冻结闸原样） | 静态复核：死代码段字面量切换、取证逻辑零改动 |
+| 4 | 本账面笔 | S4e F-37 翻正（feature-inventory《F-37 现状更新》）＋agent-memory README 三处＋CHANGELOG S4 节＋本节 | 末笔门禁见批末申报 |
+
+### 55.2 设计落位对表（设计 §A/§B/§C 逐条）
+
+- **A1 落位**＝`lib/agent-memory/lib/search-index.js`；`paths.js` 增 searchDir/searchManifestPath/searchSegmentPath。
+- **A2 形态**＝MANIFEST.json（version/updatedAt/sessions{sid:{gen,src,error?}}/totalBytes）＋`<sid>.json`
+  （gen/src/entries[{file,sec,no,status,text,ts,archived}]）；逐会话段整档原子写（tmp+rename，tmp 形状同族
+  ⇒ sweepTmpOrphans 天然覆盖）；**派生缓存不走 backupFileBeforeWrite**（备份面只保正本，可再生缓存
+  不入备份——atomicWrite 惯例的例外，随笔申报）。
+- **A3 更新三路**：①组合层挂钩（addEntry/addGeneralEntry/setPermanentInstructions/setEntryStatus/
+  removeEntry/addErratum/appendMilestone/updateLiveBlocks/setTaskSummary 九路，正本提交后
+  reindexSession，失败 emitWarning 段留旧值）；②读时漂移（mtime/size 比对，漂移先重建再查＝面板侧
+  唯一强依赖路径）；③无启动钩子。
+- **A4 体积**：条目文本 500 截断；>16MB 或 >2×正本 .md 总量整目录弃置（SEARCH-7 双判据格）；
+  排除面（checkpoint-evidence.jsonl／logs/）天然不在读取面（SEARCH-8 钉）。
+- **A5 searchMemory**：解析复用 parseLedger/parseProgress/parseEntry/ENTRY_LINE_RE 族（零二建解析器）；
+  裁3 v1 口径＝大小写不敏感子串＋limit 缺省 20 上限 50＋范围 registry 全量会话＋workspace 前缀过滤
+  （win32 大小写归一）；按 lastActiveAt 降序；返回行形状 {sid,status,workspace,file,sec,no,text,ts,snippet}。
+- **B1 路由**＝`GET {base}/v2/memory/search` 进 v2 表（change 缺省＝只读闸）；实现收在
+  `panel/manager/memory-search.mjs`——handler 内 try-catch **动态 import** 消费检索函数（红线 1 合规
+  通道），lib 缺席/装载失败 ⇒ 200+available:false 批准原文、数据根不可读 ⇒ 200+available:false reason
+  点名（裁2 第 2/3 行降级，不 5xx）；参数政策单一来源＝searchMemory。
+- **B4 卡**＝React 标签页独立卡（MemorySearchSection→纯呈现 MemorySearchCard 四态真跑）＋兜底页
+  同卡（memorySearch*Html 函数族）；批1 文案原文照抄；命中行四段＋命中词加粗；**卡底固定句**
+  「检索帮你找，接手新会话仍需走移交确认」两渲染器逐字钉＝移交制维持。
+- **C3 失败面**：段损坏/缺席重建（SEARCH-6，gen 防反复）、lib 缺席降级（MS-3）、数据根不可读降级
+  （MS-4）、单会话正本损坏跳过＋unreadable 如实计数（SEARCH-6）、查询非法空结果＋提示（SEARCH-3/MS-2）。
+
+### 55.3 p4 守卫登记制豁免（随批呈协调侧备案，**可否决**）
+
+**事实**：设计 §B2 批准的"handler 内 try-catch 动态 import"与 p4 守卫 module 规则（test ⑤ 钉死
+动态 import 字符串形照抓）机械相撞——B2 逐字落地必门禁红。设计涟漪清单未列 p4（呈文盲区，如实记）。
+**处置**：`scripts/p4-no-subplugin-import-check.mjs` 增 **LAZY_PROBE_EXEMPTIONS** 登记制豁免
+（★13"有意保留的例外必须显式列入并写清依据"同款）：登记文件整体豁免点名＋模块引用两规则
+（通道豁免不拆半），现恰一条＝`panel/manager/memory-search.mjs`（唯一通道收口）；死条目判红
+（test ⑬：文件必须真有动态 import）；exemptModule 不进点名豁免面（test ⑭）；⑤ module 规则三形态
+牙口原样；全仓真跑零命中（⑧）。**若协调侧否决，回退路径**＝撤销登记＋按 ⑬ 红线索回归
+（该格判红会挡住本通道，检索卡降级方案须另裁）。
+
+### 55.4 涟漪全清单（32→33）
+
+p7-embed FIXTURE_DEFAULT_ROUTES 33＋测试名；panel-sse-dispose 三处计数（220/236/255）；p1-smoke
+路由数＋expectedWhenAllowed 检索行（**探针环境设临时 AGENT_MEMORY_ROOT**——检索探针真调
+searchMemory 会写派生缓存，生产数据根只读红线不破，生产根 `~/.agent-memory/search` 复查不存在）；
+embed-toolkit.md §3（33 条路由表）／§4（注销计数）／§4.1（33＝只读闸 11＋写闸 22＋派生缓存写面
+说明）；gate-route-classes 工装副本（指向副本仓）复跑实档
+`var/scratch/exe-boot-022-20261001/gate-route-classes-s4.txt`（33＝11＋22，只读闸内带 POST 仍恰 1，
+015 原档照留）；agent-memory README 三处（现状/数据位置/测试与边界）。
+
+### 55.5 变异自检四发（实档 `boot022-s4-mutate.log`；工装 `s4-mutate.mjs`）
+
+- **M-T1 摘三正本零触碰**（重建时向台账正本追加标记行）⇒ SEARCH-10 恰红；还原 sha256 逐字节同。
+- **M-T2 摘降级形态**（lib 缺席改判 500）⇒ MS-3 恰红；还原同。
+- **M-T3 摘只读闸标注**（change:false→true）⇒ MS-1＋p1-smoke 守卫期望（tunneled paired-cookie
+  expected 200 got 403）恰红；还原同。
+- **M-T4 摘卡底固定句**（React 侧 footer 改串）⇒ p22 react 空态/结果态两格恰红；还原同。
+  首轮工装判据写错如实记：期望集误含 html 同串格（单侧变异本不该红），判据修正后 4/4——
+  变异被抓这一事实首轮已成立（p22 退出码 1、两格红），修的是工装的期望清单不是钉子。
+
+### 55.6 末笔读数与 flake
+
+- 末笔门禁全链 `--with-scan`：见本节批末申报（实档 `boot022-s4-gate-final.log`）；nt 独立复跑
+  526/526（505→526＝SEARCH 12＋MS 7＋p4 ⑬⑭ 2）；p22 147→165；守卫红 0。
+- **flake 第三振如实记**：install-confirm-gate 满载首跑两振（`boot022-s4b-nt.log`／`nt4.log` 各一，
+  文件级红约 2.3–2.5s）；单跑 6/6、与 panel 两件同跑 24/24 全绿。签名＝该文件自家的 010/017 在册族
+  （"满载首跑文件级红、独立 nt 同树绿"；装载预算已放宽 3000ms 在档），不动码不放宽，族史＋1 振。
+
+### 55.7 边界与不做（防扩面）
+
+不做跨机器检索/云端、分词/模糊/正则（v1 子串）、自动移交/自动注入、记忆写面、检索历史留痕
+（设计 §四全数维持）；R1 采集与台账/进度/档案格式零改动（三正本零触碰有逐字节钉）；生产数据根
+只读（检索验证一律临时根；生产根 search/ 复查不存在）；三冻结面（源仓 04816b8／在用 doctor
+ce31f83／在用 patch b0f304c9）零触碰；宿主停机态零接触（真机面预计零，无需用户动作）；
+dataRoot 解析按 resolveDataRoot 正典（显式>env>缺省），patch 行 config.dataRoot 偏离 env/缺省的
+部署形不在本批射程（本机部署两者一致，如实记）。对外发布零动作（S5 发布门候令）。
