@@ -3317,3 +3317,31 @@ dataRoot 解析按 resolveDataRoot 正典（显式>env>缺省），patch 行 con
   见批末申报）；文档守卫对新文本零新增引用 token（全文无路径引用形态）。
 - 改动后桶 README 全文＋rate-throttle 改动段随批末申报**再呈用户过目**，候终批"推"。
 - 发布动作维持终批前零自决（令牌验证上批在案：login=zhujianshi3124、scope=repo、零持久化）。
+
+## 58. 终批补句笔与发布执行案（2026-10-02 · EXE-BOOT-023 续用令 · 副本线）
+
+### 58.1 用户终批（原样照录——发布权威）
+
+> "文案基本上没问题，但可以加上一句提醒，全部任务均由ai完成。补充之后，不用再让我审批一遍。"
+
+协调侧解读：①终批＝通过（补一句后免再审批）；②补充句＝用户指定内容；③发布令自此生效。
+
+### 58.2 补句笔
+
+- 桶 README 定位句后、`本 README 是**桶总览**`行前补一句（独立成行加粗）：
+  **"本项目全部任务均由 AI 完成。"**
+- CHANGELOG《README 定位补笔》节追加一条随录。
+- 门禁照跑（文档笔预期零漂移；R1/install-confirm-gate 两 flake 族在册口径照旧）＋npm pack
+  干跑复验（129 文件口径不变）。
+
+### 58.3 发布执行（建仓→改指→首推→读回）
+
+- **建仓**：GitHub API `POST /user/repos`——name=xiaobai-agent、public、auto_init=false
+  （无自动初始化，不建 README/license/gitignore）；同名已存在即停报不覆盖。
+- **通道改指**：origin push URL `FROZEN-SOURCE-NO-PUSH-DISABLED` →
+  `https://github.com/zhujianshi3124/xiaobai-agent.git`（config 内干净无 token）；
+  **fetch 仍指冻结源祖锚 `D:\dsh-plugins\dsh-toolkit` 不动**；token 瞬态认证走单次
+  `-c http.extraHeader`（Basic），零持久化、不进 git config／日志／取证档。
+- **全量首推**：`git push -u origin master`——零 force、完整历史上 GitHub。
+- **读回验证**：远程 HEAD＝本地补句笔链尾；`GET /repos` 确认仓存在/可见性/默认分支。
+- 发布实况（仓址/推送 hash/读回）随终报账面笔回填本节。
