@@ -60,6 +60,11 @@
   collected＋wsRing:header＋kind 落行（自日志实证）、模型首请求即见【会话记忆】节并可复述
   （用户回报在案）。旧述原文照录于 CHANGELOG 2026-09-29 施工批节，以本注为准。
 - **R5 已兑现**：本 README。
+- **检索半边已兑现（S4 F-37，2026-10-01）**：面板新增「记忆检索」独立卡（`GET /v2/memory/search`，
+  只读闸）——跨全部会话（含已归档/已移交）子串检索台账/进度/档案，含「一般输入」栏；
+  只读（三正本零改动＝硬红线）、零外传（零 fetch 零遥测）、**移交制维持**（检索帮你找，
+  接手新会话仍需走移交确认，绝不自动注入）。R1（记下）＋R6（注入要点）＋检索（找得到）
+  ＝面板承诺"记住你说过的话…下次对话还能用上"的诚实闭环（feature-inventory ★172 随批翻正）。
 - 其余用户设计时要求：待用户补充后在此记账并实现（见下节）。
 
 ## 待补充要求
@@ -126,6 +131,7 @@
 | `sessions/<sid>/progress.md` | 任务进度/里程碑 |
 | `sessions/<sid>/archive.md` | 超限移出的历史条目 |
 | `sessions/<sid>/checkpoint-evidence.jsonl` | [永久] 在场证据（节流 JSONL） |
+| `search/` | **检索派生缓存**（S4 F-37：MANIFEST.json＋逐会话段；可再生，可整目录删除自愈，超限即弃；三正本永不写回） |
 | `logs/agent-memory.jsonl` | 插件自日志（五事件行；`.1` 为轮转前档） |
 | `.locks/` | 会话/注册表写锁（mkdir 原子锁，死锁自动清理） |
 
@@ -134,9 +140,12 @@
 - 测试：`test/agent-memory.test.mjs`（A/B/C/D/E/F/G/L/W/R/PERM/CAP/SIDNORM/RUNTIME/PLUGIN/
   WIRE/P/P8/RB/WH/HF 族）＋`test/agent-memory.lifecycle.test.mjs`（LC1/LC2 整轮钉）＋
   `test/agent-memory.selflog.test.mjs`（自日志 11 格）＋`test/agent-memory.tmp-sweep.test.mjs`
-  （.tmp 回收 5 格）＋`test/agent-memory.compact-router.integration.test.mjs`。
+  （.tmp 回收 5 格）＋`test/agent-memory.compact-router.integration.test.mjs`＋
+  `test/agent-memory.search.test.mjs`（SEARCH-1..12 检索索引：建/更/自愈/弃置/排除面/
+  三正本零触碰硬红线钉）。
 - 边界：跨工作区续写禁止；销毁后写拒；生产根 `~/.agent-memory` 的 `.tmp` 回收只清
-  `.tmp-<pid>-<hex>` 形状文件（目录不碰、60s 年龄闸防误扫在飞文件）。
+  `.tmp-<pid>-<hex>` 形状文件（目录不碰、60s 年龄闸防误扫在飞文件）；检索索引只读三正本
+  （ledger/progress/archive），checkpoint-evidence.jsonl 与 `logs/` 不入索引。
 
 ---
 *本 README 由 EXE-BOOT-010 续用批按用户基本要求令补齐（2026-09-28）；内容以仓内实况为据
