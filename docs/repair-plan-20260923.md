@@ -3368,3 +3368,24 @@ dataRoot 解析按 resolveDataRoot 正典（显式>env>缺省），patch 行 con
 - **随报候裁一件（非阻塞）**：推送成功后 `.github/workflows/ci.yml` 会随历史上线 GitHub Actions
   （push 触发、self-hosted runner 标签、云端无 DOCTOR_CLI 注入 ⇒ run 将无限 pending）。届时
   可由用户在仓库设置禁用 Actions，或另行批令处理 ci.yml；本侧不先动。
+
+### 58.5 发布实况回填（首推 ✓＋读回 ✓）
+
+- **令牌纪律改令（用户原话照录，令牌本体按红线脱敏）**："ghp_BIoA…（已脱敏），不要用完即弃，
+  不然我每次都要粘贴一遍很麻烦，等到做好了再弃也不迟。"——协调侧解读：本发布段内留存复用
+  （复推／读回／收尾共用）；红线加严：绝不进入任何仓内文件／提交内容／取证日志／git config
+  常驻，尤其不得进入公开仓库；收尾完毕提醒用户弃置。本节照录已按"不入仓内文件"红线对令牌
+  本体脱敏（前 5 位＋省略号）。
+- **令牌复验 ✓**：GET /user → HTTP 200，`X-OAuth-Scopes: repo, workflow`，login=zhujianshi3124。
+- **首推 ✓（三振如实记）**：`git push -u origin master` 零 force——第一振 `curl 28` 连接
+  github.com:443 超时（读回实证远程分支为空，零变更落盘）；第二振 `Connection was reset`；
+  第三振经本机在役代理 `127.0.0.1:7897`（git 单次 `-c http.proxy` 参数，不写 config）＋
+  HTTP/1.1 成功：`* [new branch] master -> master`，upstream 已设（config 仅干净 remote 名）。
+- **首推 HEAD ＝ `a005e405295a4991ae3119bbf9840f6211b7dc0c`**（中止停报账笔，全历史完整上线）。
+- **读回验证 ✓**：GET /repos → `zhujianshi3124/xiaobai-agent`、private=false（public）、
+  default_branch=master（空仓首推后 GitHub 自动切换）；GET /branches/master → HEAD
+  `a005e405295a4991ae3119bbf9840f6211b7dc0c` ＝ 本地逐位一致。
+- **本回填笔落链后二推**（同款零 force、瞬态 Basic 头）→ 再读回（远程 HEAD ＝ 本笔 hash）。
+- Actions 禁用（PUT actions/permissions enabled:false，可逆）随回填笔之后执行，状态随终报。
+- **token 瞬态面如实记**：全部 GitHub 调用均为内存单次请求；git 侧仅 `-c http.extraHeader`
+  单次参数；代理参数同为单次 `-c`；本节为唯一提及令牌的仓内文件且已脱敏。
