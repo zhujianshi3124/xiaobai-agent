@@ -15,8 +15,8 @@ import {
   FIBER_ACTIVE,
   FIBER_DISPOSED,
   FIBER_UNLOADING,
-} from 'dsh-toolkit/registry'
-import { contractEventName, contractServiceName } from 'dsh-toolkit/contract'
+} from 'xiaobai-agent/registry'
+import { contractEventName, contractServiceName } from 'xiaobai-agent/contract'
 
 const fixtureDir = (name) => join(import.meta.dirname, 'fixtures', 'registry', name)
 const contractPlugin = fixtureDir('contract-plugin')

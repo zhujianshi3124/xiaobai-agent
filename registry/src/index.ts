@@ -2,7 +2,7 @@
  * Registry 公共出口（P2）。宿主（P6 toolkit 根入口）用法：
  *
  *   import { Context } from '@deepseek-ai/cordis'
- *   import { createRegistry } from 'dsh-toolkit/registry'
+ *   import { createRegistry } from 'xiaobai-agent/registry'
  *   const { registry } = createRegistry(rootCtx, { servicePrefix: 'toolkit', statePath })
  *   // registry.list() / install / uninstall / setEnabled / reload
  *
@@ -29,7 +29,7 @@ export type {
 import { cordisHost } from './host.js'
 import { ToolkitRegistryCore } from './registry.js'
 import type { Context } from '@deepseek-ai/cordis'
-import type { ToolkitRegistry } from 'dsh-toolkit/contract'
+import type { ToolkitRegistry } from 'xiaobai-agent/contract'
 import type { RegistryOptions } from './types.js'
 
 export interface CreatedRegistry {

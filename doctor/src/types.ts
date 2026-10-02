@@ -2,7 +2,7 @@
  * Doctor 内部类型（P3，REQ-3/4）。对外契约类型从 contract 引用。
  */
 
-import type { DshSubPluginManifest, DoctorRule, HealthItem, HealthReport } from 'dsh-toolkit/contract'
+import type { DshSubPluginManifest, DoctorRule, HealthItem, HealthReport } from 'xiaobai-agent/contract'
 
 export interface DoctorLogger {
   info(message: string, meta?: Record<string, unknown>): void

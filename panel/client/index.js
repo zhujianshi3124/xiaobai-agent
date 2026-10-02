@@ -1,6 +1,6 @@
 if (typeof window !== "undefined" && window.__ModuleLoader__ && typeof window.__ModuleLoader__.load === "function") {
 window.__ModuleLoader__.load({
-	id: "dsh-toolkit/panel",
+	id: "xiaobai-agent/panel",
 	factory: (require) => {
 		var module = { exports: {} };
 		var exports = module.exports;
@@ -1858,7 +1858,7 @@ window.__ModuleLoader__.load({
 			}
 
 			return react.createElement("div", { style: styles.root },
-				react.createElement("h1", { style: styles.title }, "dsh-toolkit 面板（插件开关与体检）"),
+				react.createElement("h1", { style: styles.title }, "xiaobai-agent 面板（插件开关与体检）"),
 				react.createElement("div", { style: styles.muted }, meta),
 				react.createElement("div", { style: styles.toolbar },
 					react.createElement("button", { style: styles.button, onClick: loadSnapshot }, "重新读取状态"),
@@ -2338,7 +2338,7 @@ window.__ModuleLoader__.load({
 							name: "settings.plugins.tab",
 							id: "toolkit-panel",
 							order: 90,
-							label: function () { return "dsh-toolkit 面板（插件开关与体检）"; },
+							label: function () { return "xiaobai-agent 面板（插件开关与体检）"; },
 							inject: function () { return {}; }
 						}, ToolkitPanel);
 					} catch (e) {

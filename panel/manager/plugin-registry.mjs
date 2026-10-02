@@ -16,7 +16,7 @@ export const PANEL_ROW_ID = "toolkit-manager";
 export const PLUGINS = {
   "agent-memory": {
     rowId: "agent-memory-runtime",
-    pkg: "dsh-toolkit/agent-memory",
+    pkg: "xiaobai-agent/agent-memory",
     category: "linkage",
     defaultMode: "soft",
     hostKey: null,
@@ -25,7 +25,7 @@ export const PLUGINS = {
   },
   "compact-router": {
     rowId: null,
-    pkg: "dsh-toolkit/compact-router",
+    pkg: "xiaobai-agent/compact-router",
     category: "linkage",
     defaultMode: "soft",
     hostKey: null,
@@ -34,7 +34,7 @@ export const PLUGINS = {
   },
   "rate-throttle": {
     rowId: "rate-throttle",
-    pkg: "dsh-toolkit/rate-throttle",
+    pkg: "xiaobai-agent/rate-throttle",
     category: "linkage",
     defaultMode: "soft",
     hostKey: null,
@@ -43,7 +43,7 @@ export const PLUGINS = {
   },
   "search-router": {
     rowId: "web-search-router",
-    pkg: "dsh-toolkit/search-router",
+    pkg: "xiaobai-agent/search-router",
     category: "search",
     defaultMode: "true",
     hostKey: "searchProvider",

@@ -53,7 +53,7 @@ const PATCH_CONFIGS = {
 }
 
 test('S6-C1：4 插件 manifest configSchema 对 patch 真实配置值校验全部通过（validateConfigAgainstSchema）', async () => {
-  const { validateConfigAgainstSchema } = await import('dsh-toolkit/contract')
+  const { validateConfigAgainstSchema } = await import('xiaobai-agent/contract')
   for (const [name, patchConfig] of Object.entries(PATCH_CONFIGS)) {
     const manifest = JSON.parse(readFileSync(join(lib(name), 'dsh.plugin.json'), 'utf8'))
     assert.ok(manifest.configSchema, `${name} 必须声明 configSchema`)
@@ -72,7 +72,7 @@ test('S6-C2：patch 配置中的 unknown 键不被 schema 吞掉（rate-throttle
 })
 
 test('S6-C3：4 个 dsh.plugin.json 的契约字段通过 contract 校验（存量字段降级为 info）', async () => {
-  const { validateManifest } = await import('dsh-toolkit/contract')
+  const { validateManifest } = await import('xiaobai-agent/contract')
   for (const name of Object.keys(PATCH_CONFIGS)) {
     const manifest = JSON.parse(readFileSync(join(lib(name), 'dsh.plugin.json'), 'utf8'))
     const result = validateManifest(manifest)

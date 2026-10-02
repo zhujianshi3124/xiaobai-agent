@@ -1,6 +1,6 @@
 # compact-router（压缩路由）
 
-`dsh-toolkit/compact-router`（manifest id `dsh/compact-router`）——上下文压缩引擎：
+`xiaobai-agent/compact-router`（manifest id `dsh/compact-router`）——上下文压缩引擎：
 对话变长时自动压缩历史内容，省上下文又不断片；压缩方式有**自动、LLM 摘要、即时抽取**三种，
 可随时切换（权威卡面文案）。
 

@@ -1,9 +1,9 @@
 {
   "$note": "P2.4 doctor 信号声明（engine 零硬编码，事实由此文件驱动；p24-design.md §5.4）。缺席/缺依赖检查只产 info/warning，绝不 error。",
   "schemaVersion": 1,
-  "managedNamePrefix": "dsh-toolkit/",
+  "managedNamePrefix": "xiaobai-agent/",
   "presetManagedNames": [
-    "dsh-toolkit/compact-router"
+    "xiaobai-agent/compact-router"
   ],
   "hostProviderKeys": [
     { "rowId": "web", "key": "searchProvider", "note": "搜索 provider 宿主键（真/软卸载 search-router 时 unset）" }

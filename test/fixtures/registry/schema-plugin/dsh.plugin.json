@@ -1,5 +1,5 @@
 {
-  "name": "dsh-toolkit/schema-plugin",
+  "name": "xiaobai-agent/schema-plugin",
   "id": "dsh/schema-plugin",
   "displayName": "带必填配置的夹具",
   "version": "0.1.0",

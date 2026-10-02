@@ -29,12 +29,12 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const FIX_ISSUE = {
   id: 'ref.unresolvable-local', file: 'package.json', line: 12, severity: 'error',
   message: '旧包名引用已失效',
-  fix: { class: 'rewrite', plan: [{ op: 'replace', file: 'package.json', old: '@local/dsh-compact-router', new: 'dsh-toolkit/compact-router' }] },
+  fix: { class: 'rewrite', plan: [{ op: 'replace', file: 'package.json', old: '@local/dsh-compact-router', new: 'xiaobai-agent/compact-router' }] },
 }
 const APPLY_PLAN = {
   token: 'T-FIX', kind: 'doctor-apply', issueId: FIX_ISSUE.id, severity: 'error',
   message: FIX_ISSUE.message, file: 'package.json', line: 12,
-  steps: [{ op: 'replace', file: 'package.json', old: '@local/dsh-compact-router', new: 'dsh-toolkit/compact-router' }],
+  steps: [{ op: 'replace', file: 'package.json', old: '@local/dsh-compact-router', new: 'xiaobai-agent/compact-router' }],
   extra: null, summary: { error: 1 }, createdAt: '2026-09-23T03:00:00.000Z', expiresAt: '2026-09-23T03:05:00.000Z',
 }
 const ROLLBACK_PLAN = {
@@ -104,7 +104,7 @@ test('修正通路：确认后必须打 /doctor/apply/execute，且"将执行"�
 
     const shown = text(panel.tree)
     assert.ok(shown.includes('将执行'), '"将执行"清单屏必须渲染（缺 kind 时这屏恒不出现）')
-    assert.ok(shown.includes('replace') && shown.includes('dsh-toolkit/compact-router'), '步骤行含算子与新值')
+    assert.ok(shown.includes('replace') && shown.includes('xiaobai-agent/compact-router'), '步骤行含算子与新值')
 
     buttonOf(panel.tree, '确认修正').props.onClick()
     await panel.done()
@@ -154,7 +154,7 @@ test('修正弹窗的标题与正文必须取 steps[0] 的真值，屏上不得�
     await panel.done()
     const shown = text(panel.tree)
     assert.ok(shown.includes('修正失效的引用名「@local/dsh-compact-router」'), '标题取 steps[0].old')
-    assert.ok(shown.includes('改成新名字「dsh-toolkit/compact-router」'), '正文取 steps[0].new')
+    assert.ok(shown.includes('改成新名字「xiaobai-agent/compact-router」'), '正文取 steps[0].new')
     assert.ok(shown.includes('《package.json》'), '正文取 plan.file')
     assert.ok(!shown.includes('undefined'), '整块弹窗文本里不得出现 undefined（取错层级就是这个表征）')
   } finally { panel.dispose() }

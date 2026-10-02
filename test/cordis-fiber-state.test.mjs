@@ -21,8 +21,8 @@ import {
   FIBER_FAILED,
   FIBER_DISPOSED,
   FIBER_UNLOADING,
-} from 'dsh-toolkit/registry'
-import { versionSatisfies } from 'dsh-toolkit/contract'
+} from 'xiaobai-agent/registry'
+import { versionSatisfies } from 'xiaobai-agent/contract'
 
 const CORDIS_MIN_CALIBRATED = '4.0.2'
 

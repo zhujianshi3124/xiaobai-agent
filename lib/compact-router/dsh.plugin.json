@@ -1,5 +1,5 @@
 {
-  "name": "dsh-toolkit/compact-router",
+  "name": "xiaobai-agent/compact-router",
   "id": "dsh/compact-router",
   "displayName": "压缩路由",
   "version": "1.0.0",
@@ -39,6 +39,6 @@
     "exports": {}
   },
   "optionalDeps": [
-    "dsh-toolkit/agent-memory"
+    "xiaobai-agent/agent-memory"
   ]
 }

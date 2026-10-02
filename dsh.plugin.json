@@ -1,5 +1,5 @@
 {
-  "name": "dsh-toolkit",
+  "name": "xiaobai-agent",
   "id": "dsh/toolkit",
   "displayName": "DSH 工具箱（registry/doctor/面板总装）",
   "version": "1.0.0",
@@ -52,7 +52,7 @@
   "panels": [
     {
       "id": "toolkit-panel",
-      "title": "dsh-toolkit 面板（插件开关与体检）",
+      "title": "xiaobai-agent 面板（插件开关与体检）",
       "slot": "settings.plugins.tab",
       "order": 90,
       "httpBase": "/api/{servicePrefix}-panel",
@@ -62,10 +62,10 @@
     }
   ],
   "aliases": {
-    "@local/dsh-compact-router": "dsh-toolkit/compact-router",
-    "@local/agent-memory": "dsh-toolkit/agent-memory",
-    "dsh-rate-throttle": "dsh-toolkit/rate-throttle",
-    "dsh-search-router": "dsh-toolkit/search-router"
+    "@local/dsh-compact-router": "xiaobai-agent/compact-router",
+    "@local/agent-memory": "xiaobai-agent/agent-memory",
+    "dsh-rate-throttle": "xiaobai-agent/rate-throttle",
+    "dsh-search-router": "xiaobai-agent/search-router"
   },
   "requirements": {
     "runtime": {
@@ -85,6 +85,6 @@
     }
   },
   "requiredAliases": {
-    "@local/dsh-compact-router": "dsh-toolkit/compact-router"
+    "@local/dsh-compact-router": "xiaobai-agent/compact-router"
   }
 }

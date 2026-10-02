@@ -24,7 +24,7 @@ import { join, resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Context } from '@deepseek-ai/cordis'
 
-import { resolveLocalSource, ToolkitRegistryCore, cordisHost } from 'dsh-toolkit/registry'
+import { resolveLocalSource, ToolkitRegistryCore, cordisHost } from 'xiaobai-agent/registry'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const fixtureDir = (name) => join(ROOT, 'test', 'fixtures', 'registry', name)

@@ -1,6 +1,6 @@
-# doctor — DSH 宿主文件面体检器（dsh-toolkit 桶成员）
+# doctor — DSH 宿主文件面体检器（xiaobai-agent 桶成员）
 
-doctor 是 dsh-toolkit 桶内的质检工具：对任意 dsh 宿主插件仓/包做**文件面体检**（manifest 契约
+doctor 是 xiaobai-agent 桶内的质检工具：对任意 dsh 宿主插件仓/包做**文件面体检**（manifest 契约
 校验、依赖解析、跨目录链接、挂载/provider 检查、requirements 键集与 `./` 目标存在性、`$from`
 套件根专属规则等），支持 dry-run → `--apply`（修复）→ `--rollback`（回滚）闭环。
 
@@ -35,6 +35,6 @@ dsh-doctor [--json] [--apply [--only <issueId>] [--yes]] [--rollback [--to <stat
 - **host-faces.json**（CLI 自带，`doctor/cli/src/`）：宿主提供面清单（由宿主类型定义反查固化）。
 - **目标仓 `doctor-signals.json`**：被体检仓的信号声明（managedNamePrefix、presetManagedNames、
   hostProviderKeys、providerDependencies——缺席/缺依赖只产 info/warning，绝不 error）。体检
-  dsh-toolkit 时读取桶根的 `doctor-signals.json`。
-- 版本：doctor 成员无独立版本号，随桶（"一个版本号管全部"）；本成员随 dsh-toolkit 1.0.0 起版。
+  xiaobai-agent 时读取桶根的 `doctor-signals.json`。
+- 版本：doctor 成员无独立版本号，随桶（"一个版本号管全部"）；本成员随 xiaobai-agent 1.0.0 起版。
 - license：MIT（见仓根 LICENSE，署名覆盖全部桶成员含 doctor）。

@@ -22,7 +22,7 @@ import {
   validateConfigAgainstSchema,
   validateManifest,
   versionSatisfies,
-} from 'dsh-toolkit/contract'
+} from 'xiaobai-agent/contract'
 import type {
   DoctorRule,
   HealthItem,
@@ -31,8 +31,8 @@ import type {
   PluginSource,
   PrecheckReport,
   ToolkitDoctor,
-} from 'dsh-toolkit/contract'
-import { resolveLocalSource, sourceFixAdvice, SourceError } from 'dsh-toolkit/registry'
+} from 'xiaobai-agent/contract'
+import { resolveLocalSource, sourceFixAdvice, SourceError } from 'xiaobai-agent/registry'
 import { defaultProbes } from './probes.js'
 import { synthesizeRules } from './rules.js'
 import type { DoctorLogger, DoctorOptions, DoctorRule as DoctorRuleType, HealthItem as HealthItemType, Probes, RuleRuntime } from './types.js'
@@ -48,8 +48,8 @@ interface PluginHealthState {
 }
 
 export interface RegistryAccessor {
-  list(): Array<{ manifest: import('dsh-toolkit/contract').DshSubPluginManifest; status: string; config: unknown; legacy: boolean }>
-  get(id: string): { manifest: import('dsh-toolkit/contract').DshSubPluginManifest; status: string; config: unknown; legacy: boolean } | undefined
+  list(): Array<{ manifest: import('xiaobai-agent/contract').DshSubPluginManifest; status: string; config: unknown; legacy: boolean }>
+  get(id: string): { manifest: import('xiaobai-agent/contract').DshSubPluginManifest; status: string; config: unknown; legacy: boolean } | undefined
   /** 注册面查询（注册冲突检查用；可缺省——缺省时跳过 services 维度比对）。 */
   registersOf?(id: string): { services?: string[]; commands?: string[]; providers?: string[] } | undefined
 }

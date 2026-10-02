@@ -1,7 +1,7 @@
 // P4：toolkit 服务装配器——面板插件 apply() 时创建并接线 registry + doctor。
 //
 // 数据源纪律（REQ-5 / 用户要求 1）：本模块只 import 共享基础模块
-// （dsh-toolkit/registry 与 /doctor，含其依赖 /contract），
+// （xiaobai-agent/registry 与 /doctor，含其依赖 /contract），
 // 禁止 import 任何具体子插件模块（lib/*）——自适应的前提。
 // 配置全部来自插件 config（patch 行），无固定端口（D5）。toolkitRoot 的缺省值来自
 // **模块自身位置**（manager/toolkit-root.mjs），不再是进程 cwd——H1 / 债务 D-11。

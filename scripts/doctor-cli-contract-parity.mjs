@@ -71,7 +71,7 @@ function tmpScope(name, manifest) {
 const CONTRACT_BASE = { id: 'parity/unit', displayName: '对账夹具', version: '1.0.0', contract: '^1.0' }
 // S3 甲'收紧后本夹具**不再携带 manifestVersion**（带契约面＋manifestVersion＝双写 error＝契约拒；
 // 该名的新状态由 D22 单格钉住）。留下的 name/requirements 属 info 档，正是本仓五份带契约清单今天的真实形态。
-const LEGACY_TRIAD = { name: 'dsh-toolkit/parity', requirements: { runtime: {}, binaries: [], packages: {}, registers: {}, exports: { '.': './index.js' } } }
+const LEGACY_TRIAD = { name: 'xiaobai-agent/parity', requirements: { runtime: {}, binaries: [], packages: {}, registers: {}, exports: { '.': './index.js' } } }
 
 check('前置：DOCTOR_CLI 可解析', existsSync(DOCTOR_CLI), DOCTOR_CLI)
 check('前置：契约 dist 暴露 validateManifest 与 provides 面', typeof validateManifest === 'function' && typeof contract.PLUGIN_CONTRACT_VERSION === 'string')
@@ -286,7 +286,7 @@ for (const rel of builtinManifests) {
     { n: "D12 顶层 registers＝同向红（甲'收紧后契约也拒＝双写）", m: M({ registers: { services: ['a'] } }), c: ['red', /unknown-field@registers/], d: ['red', /清单根字段非法: registers/] },
     { n: "D13 顶层 exports＝同向红（甲'收紧后契约也拒＝双写）", m: M({ exports: { '.': './index.js' } }), c: ['red', /unknown-field@exports/], d: ['red', /清单根字段非法: exports/] },
     { n: 'D22 manifestVersion＝收紧本体（契约拒、doctor 仍认该键名）', m: M({ manifestVersion: 1 }), c: ['red', /unknown-field@manifestVersion/], d: ['green', /manifestVersion/] },
-    { n: "D23 纯宿主原生形态带顶层 exports＝契约容忍（零 unknown-field、exports 落 info）、doctor 冻结线照旧判非法", m: { manifestVersion: 1, name: 'dsh-toolkit/parity-native', requirements: { runtime: {}, binaries: [], packages: {}, registers: {}, exports: { '.': './index.js' } }, exports: { '.': './index.js' } }, c: ['required-only', 'exports'], d: ['red', /清单根字段非法: exports/] },
+    { n: "D23 纯宿主原生形态带顶层 exports＝契约容忍（零 unknown-field、exports 落 info）、doctor 冻结线照旧判非法", m: { manifestVersion: 1, name: 'xiaobai-agent/parity-native', requirements: { runtime: {}, binaries: [], packages: {}, registers: {}, exports: { '.': './index.js' } }, exports: { '.': './index.js' } }, c: ['required-only', 'exports'], d: ['red', /清单根字段非法: exports/] },
     { n: 'D14 顶层 healthCheck＝同向红、成因不同名', m: M({ healthCheck: 'x' }), c: ['red', /type@healthCheck/], d: ['red', /清单根字段非法: healthCheck/] },
     { n: 'D15 未知根字段 zzNote＝同向红', m: M({ zzNote: 1 }), c: ['red', /unknown-field@zzNote/], d: ['red', /清单根字段非法: zzNote/] },
     { n: 'D16 纯契约 manifest（无 legacy 三必填）＝根必填已撤', m: { ...CONTRACT_BASE }, c: ['ok', null], d: ['green', /缺少必填字段/] },
@@ -327,7 +327,7 @@ for (const rel of builtinManifests) {
     healthCheck: 'x',
     provides: { services: ['parity.svc'] },
     // legacy 侧 8 键
-    manifestVersion: 1, name: 'dsh-toolkit/parity-keyset',
+    manifestVersion: 1, name: 'xiaobai-agent/parity-keyset',
     requirements: { runtime: {}, binaries: [], packages: {}, registers: {}, exports: { '.': './index.js' } },
     registers: { services: ['parity-legacy'] }, exports: { '.': './index.js' },
     aliases: { 'old-parity': 'parity/unit' }, optionalDeps: ['@local/optional'], requiredAliases: { 'old-parity': 'parity/unit' },

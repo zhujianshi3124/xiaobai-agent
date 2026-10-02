@@ -11,7 +11,7 @@
   `{"$from":"package.json#exports"}`（**套件根的强制继承形式**），所以最终仍解析到 `./index.js`。
   四级顺位、legacy 顶层位的告警、`$from` 的两条硬规则、"显式声明不回退"红线与可观测面的**正本叙述**
   在 `docs/add-sub-plugin.md` §2 要点 1（行为口径归本仓契约 §4，必填性归独立 doctor ⇒ §7 D-7）。
-- 模块形态（`index.js`）：`name = 'dsh-toolkit'`、`inject = ['webServer']`（与面板同源）、
+- 模块形态（`index.js`）：`name = 'xiaobai-agent'`、`inject = ['webServer']`（与面板同源）、
   `apply(ctx, config)` **委派给** `panel/index.js`——面板一直是 registry + doctor 的装配现场，
   根入口不复制逻辑，避免出现第二个装配点。
 - 自描述：根入口 `export const manifest`，内容 = 读盘上 `dsh.plugin.json` 过
@@ -21,15 +21,15 @@
   当提供面比对 ⇒ 经面板装 toolkit 根之后再装任何需要 `webServer` 的插件，会被 `reg.name-collision`
   拒装。`docs/contract.md` §2.1 与 §7 D-10，批 2 纠正）、
   `panels` 只有一个描述符（宿主不读它，见 §5 第 1 条与 `docs/contract.md` §7 D-8）。
-- 装载本入口与装载 `dsh-toolkit/panel` 是同一个面板的两种入口写法，**同一进程内二选一**
+- 装载本入口与装载 `xiaobai-agent/panel` 是同一个面板的两种入口写法，**同一进程内二选一**
   （两个都装 = 同名路由注册两次；前缀不同则各管各的）。
-- 装载本入口与装载 `dsh-toolkit/panel` 是同一个面板的两种入口写法，**同一进程内二选一**
+- 装载本入口与装载 `xiaobai-agent/panel` 是同一个面板的两种入口写法，**同一进程内二选一**
   （两个都装 = 同名路由注册两次；前缀不同则各管各的）。
 
 ## 2. 宿主只需要做两件事
 
 ```js
-const toolkit = await import('dsh-toolkit')      // 或按宿主自己的插件装载机制
+const toolkit = await import('xiaobai-agent')      // 或按宿主自己的插件装载机制
 toolkit.apply(ctx, { servicePrefix: 'mybucket' })       // config 全部可选，缺省=历史行为
 ```
 

@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { resolveLocalSource } from 'dsh-toolkit/registry';
+import { resolveLocalSource } from 'xiaobai-agent/registry';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fx = (name) => join(here, 'fixtures', 'registry', name);

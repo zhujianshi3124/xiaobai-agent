@@ -121,7 +121,7 @@ test('面板入口不经 registry 通道自举（D-15 显式闸·G4 后重建）
       assert.equal(error.code, 'plugin-shape-invalid')
       assert.match(error.message, /缺非空 `contract` 字段/, '必须点名真实成因')
       assert.match(error.message, /panel[\\/]dsh\.plugin\.json/, '必须点名是哪份 manifest')
-      assert.match(error.message, /dsh-toolkit/, '必须点名被拿去当 id 的包名')
+      assert.match(error.message, /xiaobai-agent/, '必须点名被拿去当 id 的包名')
       assert.match(error.message, /修法/, '必须给下一步（不许只报 errno）')
       return true
     },

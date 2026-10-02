@@ -27,5 +27,5 @@
   "panels": [
     { "id": "main", "title": "限流概览" }
   ],
-  "name": "dsh-toolkit/rate-throttle"
+  "name": "xiaobai-agent/rate-throttle"
 }
