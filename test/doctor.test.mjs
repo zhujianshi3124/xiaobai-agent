@@ -4,7 +4,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import net from 'node:net'
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, readdirSync, writeFileSync, mkdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
@@ -494,4 +494,56 @@ test('批11·validate() 引用契约常量——contract \x22^1.1\x22 放行（�
   assert.equal(doctor.validate(manifest), true, '^1.1 自此放行（常量 1.1.0 满足该范围）')
   assert.equal(doctor.validate({ ...manifest, contract: '^2.0' }), false, '不兼容范围照旧拒绝')
   return stopAll()
+})
+
+
+// ─── 发布后审计修复钉（C1-007 候裁面②：doctor CLI 去机器硬编码＋YAML 缺席明示）───
+
+test('审计修复钉：YAML 解析器缺席 ⇒ report.yamlCheck 显著明示（available:false＋点名成因），绝不静默（修前＝静默跳过）', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'dsh-doctor-yaml-absent-'))
+  t.after(() => rmSync(root, { recursive: true, force: true }))
+  const scopeRoot = join(root, 'scope')
+  for (const d of [scopeRoot, join(root, 'config'), join(root, 'profile')]) mkdirSync(d, { recursive: true })
+  writeFileSync(join(scopeRoot, 'cordis.patch.yml'), '- id: web\n  config:\n    searchProvider: auto-search\n', 'utf8')
+  // engine 顶层 await 装载 YAML ⇒ env 必须先于模块加载就位（动态 import 独占控制权）
+  const prev = process.env.DSH_DOCTOR_YAML_URL
+  process.env.DSH_DOCTOR_YAML_URL = 'file:///' + join(root, 'no-such-yaml.mjs').replace(/\\/g, '/')
+  try {
+    const { runDoctor } = await import('../doctor/cli/src/engine.mjs')
+    const report = await runDoctor({ scopeRoot, configRoot: join(root, 'config'), profileRoot: join(root, 'profile') })
+    assert.ok(report.yamlCheck, 'report 顶层 yamlCheck 字段在场（缺席明示通道）')
+    assert.equal(report.yamlCheck.available, false, '缺席如实申报')
+    assert.match(report.yamlCheck.reason, /DSH_DOCTOR_YAML_URL 装载失败/, '点名缺席成因')
+    // 缺席不产 issue（体检器能力面不污染被检仓干净度读数）——负向一面：
+    assert.equal((report.issues || []).filter((i) => String(i.id).startsWith('schema.yaml-check')).length, 0, '缺席零 issue（明示走 yamlCheck 字段与 CLI stderr 注记）')
+  } finally {
+    if (prev === undefined) delete process.env.DSH_DOCTOR_YAML_URL
+    else process.env.DSH_DOCTOR_YAML_URL = prev
+  }
+})
+
+test('审计修复负向钉：doctor/ 全树零 C:\\Users 机器路径残留（修复面：engine YAML／cli scope／selftest 真机根）', () => {
+  const doctorDir = join(import.meta.dirname, '..', 'doctor')
+  const files = []
+  const walk = (d) => {
+    for (const e of readdirSync(d, { withFileTypes: true })) {
+      const f = join(d, e.name)
+      if (e.isDirectory()) { if (e.name !== 'node_modules') walk(f) }
+      else if (/\.(mjs|js|ts|json|md)$/.test(e.name)) files.push(f)
+    }
+  }
+  walk(doctorDir)
+  assert.ok(files.length > 10, '扫描面非空: ' + files.length)
+  const hits = files.filter((f) => /C:[\\/]+Users[\\/]/i.test(readFileSync(f, 'utf8')))
+  assert.deepEqual(hits, [], '零残留')
+})
+
+test('审计修复钉：doctor CLI 缺省 scope＝cwd 形（零机器路径字面量；env 优先级不变）', () => {
+  const base = join(import.meta.dirname, '..')
+  for (const rel of ['doctor/cli/src/cli.mjs', 'doctor/cli/src/engine.mjs']) {
+    const src = readFileSync(join(base, rel), 'utf8')
+    assert.doesNotMatch(src, /dsh-plugins/, rel + ' 零在用仓路径字面量')
+    assert.match(src, /DSH_DOCTOR_SCOPE_ROOT/, rel + ' env 显式通道在场')
+    assert.match(src, /process\.cwd\(\)/, rel + ' cwd 兜底在场')
+  }
 })

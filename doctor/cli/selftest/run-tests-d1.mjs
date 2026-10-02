@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 const doctorRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cliAbs = path.join(doctorRoot, 'src', 'cli.mjs');
-const realConfigRoot = 'C:/Users/LENOVO/.dsh';
+const realConfigRoot = path.join(os.homedir(), '.dsh');
 
 function mkFixture(name) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-doctor-d1-' + name + '-'));
