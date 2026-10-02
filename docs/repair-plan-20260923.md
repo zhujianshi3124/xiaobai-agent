@@ -3231,8 +3231,8 @@ dataRoot 解析按 resolveDataRoot 正典（显式>env>缺省），patch 行 con
   （contract/registry/doctor src）；测试 import/断言/夹具面（agent-memory 11 处含 node_modules/
   bundle 装载夹具、p7-embed resolve 面、dual-channel-parity 错误文案断言、helpers harness 等）；
   工装断言面（p2-smoke/p21-verify 正则/p22-verify alsoMatch·pkg/pluggable-lint 三正则/p24-ui-matrix
-  D1·D5 夹具新名/parity 夹具/uninstall 文案/apply-preset-patch mount 行名）；活文档称呼（README/
-  doctor·lib×4 README/embed-toolkit/add-sub-plugin/AGENTS.md 标题）。
+  D1·D5 夹具新名/parity 夹具/uninstall 文案/apply-preset-patch mount 行名）；活文档称呼（README、
+  doctor 与 lib×4 README、embed-toolkit、add-sub-plugin、AGENTS.md 标题）。
 - **不动清单**：六成员名与 bin（dsh-doctor 等）；manifest 内部 id（dsh/toolkit）与 servicePrefix
   'toolkit'；版本 1.0.0；LICENSE（MIT·zhujianshi3124）；协议语义；doctor/cli 默认 scope（在用仓
   冻结路径，守卫保护）；doctor/cli selftest 夹具名（@local 任意夹具面，语义自洽）；历史账面
