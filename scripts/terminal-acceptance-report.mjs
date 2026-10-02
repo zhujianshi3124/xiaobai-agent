@@ -9,6 +9,9 @@
 //   4 行）自 P2.4 把那 4 行提交进 HEAD 起就不再自洽。
 // 不在 regression-all / ci-local 清单内；历史产物读 panel/docs/evidence/TERMINAL-ACCEPTANCE-ROUND10.txt。
 // 原实现见提交 41ad40c。
+// S4 批随批注（2026-10-01，候裁②落笔）：【e】段的在用沙箱 doctor 绝对路径硬调切换为桶内
+// doctor CLI（doctor/cli/src/cli.mjs，DOCTOR_CLI 可覆盖）＝自包含补全；冻结硬闸与全部取证
+// 逻辑、历史结论文本一字未动，本脚本仍永不执行（重跑拦截语义不变）。
 // ── 以下为当时的原始内容（只读取证 + 落报告文本，不改动任何被取证文件）──
 // 终验取证报告生成器（只读取证 + 落报告文本，不改动任何被取证文件）
 import { readFileSync, readdirSync, existsSync, statSync, writeFileSync, mkdirSync } from "node:fs";
@@ -161,8 +164,13 @@ L("");
 // ---------- e ----------
 L("【e】doctor dry-run");
 try {
+  // S4 批切换（候裁②落笔，2026-10-01；原句＝在用沙箱 doctor 绝对路径，E-5 分歧账同族）：
+  // 本脚本现役依赖只有桶内 doctor CLI（doctor/cli/src/cli.mjs，S2.5 起零依赖自包含）。
+  // 本文件头部的冻结硬闸原样保留——下方取证逻辑仍是历史冻结代码，永不执行；此处仅把
+  // 「在用 doctor 硬调」字面量切到桶内成员，完成自包含补全（与 p24-ui-matrix.mjs 同款）。
+  const cliPath = process.env.DOCTOR_CLI || join(ROOT, "doctor", "cli", "src", "cli.mjs");
   const r = await import("file:///D:/dsh-plugins/dsh-toolkit/panel/manager/doctor-runner.mjs").then((m) =>
-    m.runDoctorDryRun({ cliPath: "D:/dsh-test-sandbox/projects/doctor/src/cli.mjs", scopeRoot: ROOT }));
+    m.runDoctorDryRun({ cliPath, scopeRoot: ROOT }));
   L("    ok=" + r.ok + "  exit=" + r.exitCode + "  summary=" + JSON.stringify(r.report && r.report.summary));
   const s = r.report && r.report.summary;
   L("  ▸ 判定：" + (s && s.error === 0 && s.warning === 0 && s.info === 0 ? "0/0/0 ✓" : "非 0/0/0 ✗"));
