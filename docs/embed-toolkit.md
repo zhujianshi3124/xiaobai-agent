@@ -56,11 +56,12 @@ toolkit.apply(ctx, { servicePrefix: 'mybucket' })       // config 全部可选�
 | 服务 | `toolkit/registry`、`toolkit/doctor` | `tk2/registry`、`tk2/doctor` |
 | 事件（契约枚举内 5 个） | `toolkit/registry:plugin-added`、`…plugin-removed`、`…status-changed`、`…health-changed`、`toolkit/doctor:issue-found` | `tk2/…` 同名一套 |
 | 事件（审计 8 个，**当前不经 `contractEventName`**） | `toolkit/audit:{installed,removed,enabled,disabled,reloaded,quarantined,config-changed,state-save-failed}` | `tk2/audit:…` 同名一套 |
-| HTTP（32 条） | `/api/toolkit-panel/{ui,snapshot,plan,execute,plan/status,toggle/plan,config/plan,uninstall/plan,uninstall/execute,custody,restore/plan,restore/execute,mount/plan,mount/execute,doctor/dry-run,doctor/states,doctor/apply/plan,doctor/apply/execute,doctor/rollback/plan,doctor/rollback/execute,snapshot-restore/plan,snapshot-restore/execute}` + `/v2/{snapshot,health,install/precheck,install/confirm,uninstall,enabled,reload,config,events}` + `/v2/connector.js` | 同样 32 条，整体前缀换成 `/api/tk2-panel/…` |
+| HTTP（33 条） | `/api/toolkit-panel/{ui,snapshot,plan,execute,plan/status,toggle/plan,config/plan,uninstall/plan,uninstall/execute,custody,restore/plan,restore/execute,mount/plan,mount/execute,doctor/dry-run,doctor/states,doctor/apply/plan,doctor/apply/execute,doctor/rollback/plan,doctor/rollback/execute,snapshot-restore/plan,snapshot-restore/execute}` + `/v2/{snapshot,health,memory/search,install/precheck,install/confirm,uninstall,enabled,reload,config,events}` + `/v2/connector.js` | 同样 33 条，整体前缀换成 `/api/tk2-panel/…` |
 
 验收证据：`test/p7-embed.test.mjs`（双实例路由零冲突、A 装的插件不进 B、B 的 SSE 收不到 A 的事件、
-缺省实例 32 条路由与 p1-smoke 逐条一致）；`panel/docs/evidence/P7-MOCK-BUCKET-LOOP.md` 第 8 步
+缺省实例 33 条路由与 p1-smoke 逐条一致）；`panel/docs/evidence/P7-MOCK-BUCKET-LOOP.md` 第 8 步
 （真浏览器打开 `/api/tk2-panel/ui`，页内 `PANEL_API` 已随前缀改写，交叉访问两侧互 404）。
+（S4 F-37 批随批：`GET /v2/memory/search` 入表 ⇒ 32→33，只读闸 10→11；见 §4.1。）
 
 同进程双实例的表行由 `test/toolkit-services.test.mjs` 锁死：两个实例挂在**同一个**根
 ctx 上，`toolkit/*` 与 `tk2/*` 两组服务名各自可查、互不撞名（cordis 对同名重复注册直接
@@ -81,7 +82,7 @@ ctx 上，`toolkit/*` 与 `tk2/*` 两组服务名各自可查、互不撞名（c
 ## 4. 面板 guard 的前提（P7.4）
 
 面板**不假设自己拥有根 webServer**：它只用被注入的 `ctx.webServer.register(route)`，
-卸出时逐条注销（`test/p7-embed.test.mjs` 断言 32 条全部注销、活动句柄不增一个）。安全判定：
+卸出时逐条注销（`test/p7-embed.test.mjs` 断言 33 条全部注销、活动句柄不增一个）。安全判定：
 
 - 只读：loopback socket **AND**（Host 是 loopback **OR** 宿主 `remoteWebUiPairing` 服务判定已配对
   **OR** 该服务缺席时退到 `devicesFile` hasOwn 兜底）。
@@ -115,19 +116,21 @@ ctx 上，`toolkit/*` 与 `tk2/*` 两组服务名各自可查、互不撞名（c
   ⇒ CSRF 这一重**只加压在写闸上**；两闸都要求 socket 对端是 loopback 字面量（`127.0.0.1`/`::1`，
   `localhost` 判非本机——取值域见上 §4 第三条，★5 定稿）。
 
-**三、现行全表（32 条，实数取自代码；复跑口径见本节末）**
-- **只读闸 10 条**：`GET {base}/ui`、`GET {base}/snapshot`、`GET {base}/custody`、`GET {base}/plan/status`、
+**三、现行全表（33 条，实数取自代码；复跑口径见本节末）**
+- **只读闸 11 条**：`GET {base}/ui`、`GET {base}/snapshot`、`GET {base}/custody`、`GET {base}/plan/status`、
   `GET {base}/doctor/states`、`GET {base}/v2/connector`（下发连接件的 route），以及 v2 的
-  `GET {base}/v2/snapshot`、`GET {base}/v2/health`、`GET {base}/v2/events` ＋ 下条第四项例外。
+  `GET {base}/v2/snapshot`、`GET {base}/v2/health`、`GET {base}/v2/memory/search`（S4 F-37 检索路由，
+  GET 形态自然归只读闸）、`GET {base}/v2/events` ＋ 下条第四项例外。
 - **写闸 22 条**：v1 域 17 条＝`POST` 的 `doctor/dry-run`、`plan`、`toggle/plan`、`config/plan`、
   `uninstall/plan`、`uninstall/execute`、`restore/plan`、`restore/execute`、`mount/plan`、`mount/execute`、
   `execute`、`doctor/apply/plan`、`doctor/apply/execute`、`doctor/rollback/plan`、`doctor/rollback/execute`、
   `snapshot-restore/plan`、`snapshot-restore/execute`；v2 域 5 条＝`POST` 的 `install/confirm`、`uninstall`、
   `enabled`、`reload`、`config`。
-- 两条对账：**10＋22＝32**（与 §3 前缀化表、`test/p7-embed.test.mjs` 的 32 条同口径）；写闸 22 条的组成＝
+- 两条对账：**11＋22＝33**（S4 F-37 检索路由入表前为 10＋22＝32，随批更新）；写闸 22 条的组成＝
   v1 域 **plan 族 9 条＋execute 族 7 条＋dry-run 1 条**（＝17）＋ **v2 写面 5 条**。plan 族自身零落盘，
   但它签发 5 分钟内可被对应 `execute` 消费的 token（`apply-engine` 的 `DEFAULT_PLAN_TTL_MS`，重启即空）
-  ⇒ 属写链一环，与 execute 同闸顺理成章。
+  ⇒ 属写链一环，与 execute 同闸顺理成章。检索路由虽会写 `<dataRoot>/search/` **派生缓存**
+  （批2 批准的独立写面，读时自愈），正本零触碰、不签任何写凭据，与只读闸的 HTTP 语义（无 CSRF 加压必要）一致。
 - **一条反直觉的现行标注，如实登记而不补理由**：`POST {base}/doctor/dry-run` 名带 dry-run、实现只是经
   `panel/manager/doctor-runner.mjs` 起一次 CLI 子进程做只读体检（不落盘、不签 token），却标 `change: true`
   走写闸。本节按"判据在注册标注"这条**实况**成文，**不替它发明一个代码里没有的归类理由**——
@@ -150,7 +153,9 @@ ctx 上，`toolkit/*` 与 `tk2/*` 两组服务名各自可查、互不撞名（c
 **五、本节的取证（可复跑）**
 分级表由只读工装从现行实现抽取：`var/scratch/exe-boot-015-20260929/fn-gate-route-classes.mjs`
 ⇒ 实档 `var/scratch/exe-boot-015-20260929/gate-route-classes-baseline.txt`（32＝只读闸 10＋写闸 22；
-只读闸内带 POST 的条数＝1）。日后路由增删，本节数字与实档须随批更新（README 基本要求令同口径）。
+只读闸内带 POST 的条数＝1）。S4 F-37 检索路由入表后同式复跑（工装副本指向副本仓，原 015 实档
+照留不覆写）⇒ 实档 `var/scratch/exe-boot-022-20261001/gate-route-classes-s4.txt`
+（**33**＝只读闸 **11**＋写闸 22；只读闸内带 POST 的条数仍＝1）。日后路由增删，本节数字与实档须随批更新（README 基本要求令同口径）。
 
 ## 5. 边界如实陈述（这几条是"没做到的"，别当已交付）
 

@@ -154,7 +154,8 @@ function loadHtmlClient() {
   const fakeDoc = { getElementById: (id) => node(id), createElement: (t) => node(t) };
   const fn = new Function(
     "document", "fetch",
-    m[1] + "\nreturn { toggleHtml, stateOf, renderConfirm, setPatch: (t) => { PATCH_TEXT = t; }, dualSwitchNotice, effectNoteHtml, techDetails };",
+    m[1] + "\nreturn { toggleHtml, stateOf, renderConfirm, setPatch: (t) => { PATCH_TEXT = t; }, dualSwitchNotice, effectNoteHtml, techDetails"
+      + ", SEARCH_COPY, memorySearchUnavailableHtml, memorySearchNoResultHtml, memorySearchRowHtml };",
   );
   return fn(fakeDoc, () => new Promise(() => {}));
 }
@@ -591,6 +592,68 @@ htmlR.setPatch(PATCH_TEXT);
       check("[" + dir + "] html: hint 点出重启边界", hhtml.includes("重启 DSH 才生效"));
     }
   }
+}
+
+// ============================================================
+// F. S4 F-37 记忆检索卡：两渲染器真跑钉（批1 文案原文；卡底固定句＝移交制维持明示）
+//    MemorySearchCard 是纯呈现组件（props 进树出），四种状态逐个真渲染。
+// ============================================================
+const SEARCH_TITLE = "记忆检索";
+const SEARCH_DESC = "在你的本机记忆台账里查找历史会话的指令、进度与归档。结果只在本机显示，不外传。";
+const SEARCH_EMPTY = "输入关键词，回车检索。范围：全部会话（含已归档）。";
+const SEARCH_NO_RESULT = "没有命中。试试更短的关键词；一般输入栏的对话记录也在检索范围内。";
+const SEARCH_FOOTER = "检索帮你找，接手新会话仍需走移交确认。";
+const SEARCH_LIB_ABSENT = "agent-memory 不在位，检索暂不可用。记忆台账功能本身不受影响。";
+const SEARCH_ROOT_UNREADABLE_PREFIX = "记忆数据根不可读（";
+const SEARCH_ROOT_UNREADABLE_SUFFIX = "）。检索暂不可用，记忆正本不受影响。";
+
+{
+  // react：页面树里有独立卡（不是 agent-memory 插件卡内分区——批1 卡位裁决）
+  const pageTree = reactR.render(snap);
+  const searchEls = findAll(pageTree, (n) => typeof n.type === "function" && n.type.name === "MemorySearchSection");
+  check("[memory-search] react: 独立卡 MemorySearchSection 在页面树中", searchEls.length === 1, "count=" + searchEls.length);
+  const h2s = textOf(pageTree).join(" ").includes(SEARCH_TITLE);
+  check("[memory-search] react: h2「记忆检索」在页面中", h2s);
+  const sectionEl = searchEls[0];
+  const sectionTree = sectionEl ? sectionEl.type(sectionEl.props) : null;
+  const cardEl = sectionTree ? findAll(sectionTree, (n) => typeof n.type === "function" && n.type.name === "MemorySearchCard")[0] : null;
+  check("[memory-search] react: MemorySearchCard 元素在 Section 内", !!cardEl);
+  if (cardEl) {
+    const call = (res) => textOf(cardEl.type({ query: "", setQuery: () => {}, busy: false, res, onSearch: () => {} })).join(" ");
+    check("[memory-search] react: 空态＝卡说明＋空态＋卡底固定句逐字",
+      call(null).includes(SEARCH_DESC) && call(null).includes(SEARCH_EMPTY) && call(null).includes(SEARCH_FOOTER));
+    check("[memory-search] react: 降级态＝服务端 reason 如实展示（不 5xx、卡面说明）",
+      call({ phase: "unavailable", reason: SEARCH_LIB_ABSENT }).includes(SEARCH_LIB_ABSENT));
+    check("[memory-search] react: 无结果态文案逐字",
+      call({ phase: "done", q: "x", data: { results: [], sessions: 3, elapsedMs: 1, unreadable: 0, notices: [] } }).includes(SEARCH_NO_RESULT));
+    const hitTree = cardEl.type({
+      query: "琥珀", setQuery: () => {}, busy: false, onSearch: () => {},
+      res: { phase: "done", q: "琥珀", data: { sessions: 7, elapsedMs: 9, unreadable: 1, notices: [], results: [
+        { sid: "20260928-aabbccdd1122", status: "已归档", workspace: "D:\\proj\\demo", file: "ledger", sec: "待办", no: "L-012", text: "琥珀任务描述", ts: "2026-09-28T10:00:00+00:00", snippet: "…琥珀任务描述…" },
+      ] } },
+    });
+    const hitTxt = textOf(hitTree).join(" ");
+    check("[memory-search] react: 命中行＝sid 短码·状态·工作区尾段｜来源·栏位·编号｜日期｜片段",
+      hitTxt.includes("20260928") && hitTxt.includes("已归档") && hitTxt.includes("demo") && hitTxt.includes("ledger·待办 L-012") && hitTxt.includes("2026-09-28"));
+    check("[memory-search] react: 不可读会话如实计数", hitTxt.includes("1 个会话无法读取"));
+    const bolds = findAll(hitTree, (n) => n.type === "b");
+    check("[memory-search] react: 命中词加粗（<b> 元素在树中）", bolds.length > 0 && textOf(bolds[0]).join("") === "琥珀");
+    check("[memory-search] react: 卡底固定句在结果态仍在（移交制维持不因有结果而隐去）", hitTxt.includes(SEARCH_FOOTER));
+  }
+
+  // html：兜底页同文案同形态
+  check("[memory-search] html: 卡说明逐字（页面骨架）", readFileSync(join(root, "panel", "client", "panel.html"), "utf8").includes(SEARCH_DESC));
+  check("[memory-search] html: 卡底固定句逐字（页面骨架）", readFileSync(join(root, "panel", "client", "panel.html"), "utf8").includes(SEARCH_FOOTER));
+  check("[memory-search] html: 降级函数 reason 直出", htmlR.memorySearchUnavailableHtml(SEARCH_LIB_ABSENT).includes(SEARCH_LIB_ABSENT));
+  check("[memory-search] html: 无结果函数文案逐字", htmlR.memorySearchNoResultHtml().includes(SEARCH_NO_RESULT));
+  const rowHtml = htmlR.memorySearchRowHtml(
+    { sid: "20260928-aabbccdd1122", status: "已归档", workspace: "D:\\proj\\demo", file: "ledger", sec: "待办", no: "L-012", ts: "2026-09-28T10:00:00+00:00", snippet: "…琥珀任务…" },
+    "琥珀",
+  );
+  check("[memory-search] html: 命中行四段齐备", rowHtml.includes("20260928") && rowHtml.includes("已归档") && rowHtml.includes("demo") && rowHtml.includes("ledger·待办 L-012") && rowHtml.includes("2026-09-28"));
+  check("[memory-search] html: 命中词加粗", rowHtml.includes("<b>琥珀</b>"));
+  check("[memory-search] html: 两渲染器卡底固定句同串", htmlR.SEARCH_COPY.footer === SEARCH_FOOTER);
+  check("[memory-search] html: 两渲染器无结果文案同串", htmlR.SEARCH_COPY.noResult === SEARCH_NO_RESULT);
 }
 
 console.log("\n" + passed + "/" + (passed + failed) + " PASS");

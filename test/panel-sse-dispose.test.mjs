@@ -217,7 +217,7 @@ test('Pack D 单元：多条并发流全部收尾，计数与实际连接数一�
 
 test('Pack D：SSE 流存活期间真 fiber.dispose → 流被 end、心跳句柄归零、路由与订阅同批清', async (t) => {
   const { fiber, sink } = await mountPanel(t)
-  assert.equal(sink.routes.length, 32, '面板装载的是完整 32 条路由')
+  assert.equal(sink.routes.length, 33, '面板装载的是完整 33 条路由（S4 F-37 起含 GET /v2/memory/search）')
 
   const baseline = timeouts()
   const events = sink.byPath.get(EVENTS_PATH)
@@ -233,7 +233,7 @@ test('Pack D：SSE 流存活期间真 fiber.dispose → 流被 end、心跳句�
   await fiber.dispose()
   await tick(80) // 让 teardown 期间派生的瞬时定时器退场
 
-  assert.equal(sink.unregistered.length, 32, '32 条路由全部注销')
+  assert.equal(sink.unregistered.length, 33, '33 条路由全部注销（S4 F-37 起含 GET /v2/memory/search）')
   assert.equal(sink.byPath.has(EVENTS_PATH), false, 'SSE 路由从活表中摘除，之后不可能再来新连接')
   assert.equal(stream.ended, 1, '已打开的流必须被服务端 end()（旧实现：永不调用）')
   const after = timeouts()
@@ -252,7 +252,7 @@ test('Pack D：SSE 收尾抛错不外溢——面板卸载链继续走完 servic
     throw new Error('simulated end failure')
   }
   await fiber.dispose() // 不应抛出
-  assert.equal(sink.unregistered.length, 32, '路由注销仍完成')
+  assert.equal(sink.unregistered.length, 33, '路由注销仍完成（S4 F-37 起 33 条同批注销）')
   assert.equal(ctx['toolkit/registry'], undefined, 'registry 服务仍被摘除 ⇒ services.stop() 确实跑到了')
   assert.equal(ctx['toolkit/doctor'], undefined, 'doctor 服务同上（Pack C 注册面在异常路径下也生效）')
 })
