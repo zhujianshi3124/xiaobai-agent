@@ -4,8 +4,8 @@
  * 全部只读、幂等；envVar 只出存在性结论，绝不出现值。
  */
 
-import { versionSatisfies } from 'dsh-toolkit/contract'
-import type { DshSubPluginManifest, DoctorRule, HealthItem } from 'dsh-toolkit/contract'
+import { versionSatisfies } from 'xiaobai-agent/contract'
+import type { DshSubPluginManifest, DoctorRule, HealthItem } from 'xiaobai-agent/contract'
 import type { Probes } from './types.js'
 
 function fix(summary: string, steps?: string[]) {

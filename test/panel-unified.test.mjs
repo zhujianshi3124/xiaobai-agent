@@ -17,8 +17,8 @@ import { join, resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Context } from '@deepseek-ai/cordis'
 
-import { ToolkitRegistryCore, cordisHost } from 'dsh-toolkit/registry'
-import { createDoctor } from 'dsh-toolkit/doctor'
+import { ToolkitRegistryCore, cordisHost } from 'xiaobai-agent/registry'
+import { createDoctor } from 'xiaobai-agent/doctor'
 import { createV2Api, toPanelRoutes } from '../panel/manager/v2-api.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')

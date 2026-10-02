@@ -33,8 +33,8 @@ import {
   FIBER_FAILED,
   FIBER_DISPOSED,
   FIBER_UNLOADING,
-} from 'dsh-toolkit/registry'
-import { contractEventName } from 'dsh-toolkit/contract'
+} from 'xiaobai-agent/registry'
+import { contractEventName } from 'xiaobai-agent/contract'
 
 const fixtureDir = (name) => join(import.meta.dirname, 'fixtures', 'registry', name)
 const consumerFixture = fixtureDir('inject-consumer-plugin')

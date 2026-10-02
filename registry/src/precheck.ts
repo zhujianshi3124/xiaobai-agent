@@ -9,7 +9,7 @@
  *   4. contract 范围兼容当前契约版本（manifest 校验已含；这里显式出具 blocking/warning 结论）
  */
 
-import type { HealthItem, PrecheckReport } from 'dsh-toolkit/contract'
+import type { HealthItem, PrecheckReport } from 'xiaobai-agent/contract'
 import type { ResolvedPlugin, HostContext } from './types.js'
 
 export interface PrecheckInput {

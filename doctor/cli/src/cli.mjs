@@ -6,7 +6,7 @@ import { runDoctor, DoctorRootError } from './engine.mjs';
 import { executeApply, executeRollback, readPatchState, DoctorApplyError } from './executor.mjs';
 
 function printUsage() {
-  process.stdout.write('用法: dsh-toolkit doctor [--json] [--apply [--only <issueId>] [--yes]] [--rollback [--to <stateId>]] [--states] [--scope <dir>] [--config-root <dir>] [--profile <name>] [--registry <file>] [--now <ISO>] [--host-version <v>]\n');
+  process.stdout.write('用法: xiaobai-agent doctor [--json] [--apply [--only <issueId>] [--yes]] [--rollback [--to <stateId>]] [--states] [--scope <dir>] [--config-root <dir>] [--profile <name>] [--registry <file>] [--now <ISO>] [--host-version <v>]\n');
   process.stdout.write('默认 dry-run（只读不写）。\n');
   process.stdout.write('--states：只读输出 doctor-patch-state.json 的回滚链摘要（不写盘）。\n');
   process.stdout.write('--only <issueId>：--apply 时只执行该 issue 的 fix plan（单条语义；id 仅允许字母/数字/._-）。\n');
@@ -102,7 +102,7 @@ function buildDoctorOptionsFromReport(report, args) {
 }
 
 function printReportHuman(report) {
-  process.stdout.write('dsh-toolkit doctor (dry-run, read-only)\n');
+  process.stdout.write('xiaobai-agent doctor (dry-run, read-only)\n');
   process.stdout.write('scope: ' + report.scope.root + '\n');
   process.stdout.write('config: ' + report.environment.configRoot + '\n');
   process.stdout.write('profile: ' + report.scope.profile + '\n');

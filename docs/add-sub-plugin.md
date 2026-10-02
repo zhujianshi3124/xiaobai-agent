@@ -110,7 +110,7 @@ manifest 自此在 doctor 侧零 schema issue。但 **`requirements` 一旦写�
      与 `entryWarnings`。
    - ⚠️ **`.` 是"包主导出"，不必然是插件入口。** 本仓 `lib/agent-memory` 即此形态：
      `"." → lib/agent-memory/lib/index.js` 是指令台账数据库（非插件形状），插件在 `"./plugin" → plugin.js`
-     （宿主 `cordis.patch.yml` 挂的也是 `dsh-toolkit/agent-memory/plugin`）。
+     （宿主 `cordis.patch.yml` 挂的也是 `xiaobai-agent/agent-memory/plugin`）。
      因此**按目录路径装它会得到 `plugin-shape-invalid`**，报错文案会点名同表可改装的文件；
      这不是缺陷（装载器不代为挑选），要装请按文件路径装。
    - monorepo 根没有入口时，预检报错会直接列出**可改装的插件子包候选**

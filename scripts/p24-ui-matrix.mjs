@@ -26,9 +26,11 @@ const patchPath = join(root, "cordis.patch.yml");
 // 基准滚存（第 6 次＝副本线第 2 次，2026-10-01 C1-007 开源 S2 正名批：三处 insert name 随包名去 scope 同步，G4 既裁）：693cfcd7… → a186a710…。
 // 与 scripts/p24-verify.mjs 同步；五次都是**数据**变更，守卫机制未放宽。
 // 第 7 次（副本线第 3 次，S2.e 案② patch 模板化）：693cfcd7 → a186a710 → 5c4e6980（占位符替代两处机器绝对路径）。
+// 第 8 次（副本线第 4 次，2026-10-02 C1-007 定名批：包名 dsh-toolkit → xiaobai-agent，用户终裁——
+// 三处 insert name 与头注随包名同步，模板形占位符机制原样）：5c4e6980 → 534e22e3。
 // 成因全文与该文件内注释、
 // panel/docs/evidence/H-REAL-HOST-REVERIFY.md、docs/debt.md A#24 / A#25 / 计划 §29 / §44。
-const BASE_SHA_EXPECT = "5c4e69801d8d6e851bc8549f469da683312641e853e340f26e563cb632d2242d";
+const BASE_SHA_EXPECT = "534e22e30b1e7f9bad4695e2c49ac183688d5b118b41d4ce445dc48e808d6bf5";
 const BASE_SHA = createHash("sha256").update(readFileSync(patchPath, "utf8")).digest("hex");
 if (BASE_SHA !== BASE_SHA_EXPECT) {
   console.error("ABORT: 真实 cordis.patch.yml 基线漂移（" + BASE_SHA.slice(0, 12) + "）——拒绝在非基准态跑矩阵");
@@ -1092,7 +1094,7 @@ section("批2 操作台/双回滚（D 段）");
   const apiD1 = makeApi(dirD1);
   // 造 fixable：套件 manifest 加 aliases 表（旧名→新名），把旧名写进 doctor-signals.json（scope 扫描面）
   const suiteManifest = JSON.parse(readFileSync(join(dirD1, "dsh.plugin.json"), "utf8"));
-  suiteManifest.aliases = Object.assign({}, suiteManifest.aliases, { "@local/dsh-compact-router": "dsh-toolkit/compact-router" });
+  suiteManifest.aliases = Object.assign({}, suiteManifest.aliases, { "@local/dsh-compact-router": "xiaobai-agent/compact-router" });
   writeFileSync(join(dirD1, "dsh.plugin.json"), JSON.stringify(suiteManifest, null, 2) + "\n", "utf8");
   const signalsPath = join(dirD1, "doctor-signals.json");
   const signalsOriginal = readFileSync(signalsPath, "utf8");
@@ -1170,7 +1172,7 @@ section("批2 操作台/双回滚（D 段）");
   const dirD5 = makeCopy("doc-d5");
   const apiD5 = makeApi(dirD5);
   const suiteM5 = JSON.parse(readFileSync(join(dirD5, "dsh.plugin.json"), "utf8"));
-  suiteM5.aliases = Object.assign({}, suiteM5.aliases, { "@local/dsh-compact-router": "dsh-toolkit/compact-router" });
+  suiteM5.aliases = Object.assign({}, suiteM5.aliases, { "@local/dsh-compact-router": "xiaobai-agent/compact-router" });
   writeFileSync(join(dirD5, "dsh.plugin.json"), JSON.stringify(suiteM5, null, 2) + "\n", "utf8");
   const sig5 = join(dirD5, "doctor-signals.json");
   writeFileSync(sig5, readFileSync(sig5, "utf8").replace(/\}\s*$/, "  ,\"_legacyNote\": \"stale @local/dsh-compact-router\"\n}\n"), "utf8");

@@ -1,6 +1,6 @@
 # agent-memory（智能体内存台账）
 
-`dsh-toolkit/agent-memory`（manifest id `dsh/agent-memory`）——跨会话的记忆台账：
+`xiaobai-agent/agent-memory`（manifest id `dsh/agent-memory`）——跨会话的记忆台账：
 新对话自动注册，指令逐消息入账，任务进度与里程碑落盘，任何模型接手时以文件为准恢复现场。
 
 ## 它做什么（代码实况）

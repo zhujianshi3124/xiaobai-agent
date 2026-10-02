@@ -1,5 +1,5 @@
 {
-  "name": "dsh-toolkit",
+  "name": "xiaobai-agent",
   "version": "1.0.0",
   "scripts": {
     "build:contract": "tsc -p contract/tsconfig.json",

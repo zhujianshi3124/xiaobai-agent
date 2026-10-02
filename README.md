@@ -1,8 +1,11 @@
-# dsh-toolkit（DSH 工具箱）
+# xiaobai-agent（DSH 工具箱）
 
-`dsh-toolkit`（manifest id `dsh/toolkit`）——DSH 宿主的插件桶：一个 bundle 层总装
-registry／doctor／管理面板，并携带五个子插件。本 README 是**桶总览**（用户基本要求令，
-2026-09-28 补齐）；各子插件细节见 `lib/<插件名>/README.md`。
+`xiaobai-agent`（manifest id `dsh/toolkit`）——DSH 宿主的插件桶：一个 bundle 层总装
+registry／doctor／管理面板，并携带四个子插件。
+
+**定位**：为新手小白提供更低成本的 agent 体验——面向免费 API 优化，适合轻量任务。
+
+本 README 是**桶总览**（用户基本要求令，2026-09-28 补齐）；各子插件细节见 `lib/<插件名>/README.md`。
 
 ## 子插件清单（四个；web-search-local 已随开源 S1 剔除批出包）
 
@@ -33,9 +36,10 @@ test/           测试（node --test）
 
 ## 挂载与部署实况
 
-- 部署行在 `cordis.patch.yml`（基准 sha256 `693cfcd7…`/3084B，C1-007 开源 S1 剔除批滚存
-  （副本线第 1 次：删 web-search-local 行与 web.fetchProvider）；前值 `b0f304c9…`/3190B 系
-  EXE-BOOT-018 收官时基准）：
+- 部署行在 `cordis.patch.yml`（模板形，基准 sha256 `534e22e3…`/3336B，C1-007 定名批滚存
+  （副本线第 4 次：包名定名 xiaobai-agent）；滚存链 `b0f304c9`→`693cfcd7`→`a186a710`→
+  `5c4e6980`→`534e22e3`，逐次成因见 `scripts/p24-verify.mjs` 头注；前值 `5c4e6980…`/3328B 系
+  S2.e 模板化时基准）：
   `web`／`web-search-deepseek`
   既有行 config，`rate-throttle`／`web-search-router`／
   `agent-memory-runtime`／`toolkit-manager` 四行为 insert；**compact-router 不在 patch**——

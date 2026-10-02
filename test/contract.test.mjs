@@ -22,7 +22,7 @@ import {
   contractServiceName,
   contractEventName,
   isValidServicePrefix,
-} from 'dsh-toolkit/contract';
+} from 'xiaobai-agent/contract';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixture = (name) => JSON.parse(readFileSync(join(here, 'fixtures', 'contract', name), 'utf8'));
@@ -206,7 +206,7 @@ test("v1.2 前置④·S3 拆档后逐名 info：无替代的五名（带契约�
   // 值取各名字的现实形态，防"值形状碰巧触发别的校验"混进这一格的判据里
   const values = {
     aliases: { 'old-name': 'dsh/parity-legacy' },
-    name: 'dsh-toolkit/parity-legacy',
+    name: 'xiaobai-agent/parity-legacy',
     optionalDeps: ['@local/optional'],
     requiredAliases: { 'old-name': 'dsh/parity-legacy' },
     requirements: { runtime: { node: '>=22' }, binaries: [], packages: [], registers: {}, exports: {} },

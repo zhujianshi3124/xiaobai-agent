@@ -31,7 +31,7 @@ import {
   contractEventName,
   contractServiceName,
   validateConfigAgainstSchema,
-} from 'dsh-toolkit/contract'
+} from 'xiaobai-agent/contract'
 import type {
   AuditEvent,
   FiberLoadErrorCode,
@@ -42,7 +42,7 @@ import type {
   PluginStatus,
   PrecheckReport,
   ToolkitRegistry,
-} from 'dsh-toolkit/contract'
+} from 'xiaobai-agent/contract'
 import { resolveLocalSource, SourceError } from './loader.js'
 import { contractPrecheck } from './precheck.js'
 import { emptyState, loadState, saveState } from './state.js'

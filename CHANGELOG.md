@@ -1,10 +1,23 @@
 # Changelog
 
-本文件记录 dsh-toolkit 的对外可见变更。格式遵循 Keep a Changelog；
+本文件记录 xiaobai-agent 的对外可见变更。格式遵循 Keep a Changelog；
 版本号 semver。工具箱泛化改造的阶段产出按 P0–P8 记录（规格见判定台账，阶段号
 P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`）。
 
 ## [Unreleased]
+
+### 定名批：包名 dsh-toolkit → xiaobai-agent（2026-10-02，C1-007 阶段二·副本线；用户终裁名随批落码）
+
+- **包名定名**：`dsh-toolkit` → **`xiaobai-agent`**（npm 名双通道核查可用后落笔）。**版本仍为
+  1.0.0 无跳变**（发布前定名，对外首版即 xiaobai-agent 1.0.0）；六成员名与 bin（`dsh-doctor` 等）、
+  manifest 内部 id（`dsh/toolkit`）、LICENSE（MIT·zhujianshi3124）、协议语义全部不变。
+- **同步面**：package.json/package-lock、六份 manifest name 面（宿主旧插件别名键不动、别名值随
+  新名）、doctor-signals、patch 模板三处 insert name（基准滚存 `5c4e6980…`/3328B →
+  `534e22e3…`/3336B，副本线第 4 次，占位符模板机制与守卫未放宽）、根入口 name、面板 id 与
+  标题文案、TS/测试自引用 import 面、工装断言面；历史账面（本文件历史条目／debt／plan／
+  evidence／存档件）按"错账不回改"保留旧名。
+- **README 首段定位文案**（用户定位原文要义）：为新手小白提供更低成本的 agent 体验——面向
+  免费 API 优化，适合轻量任务。
 
 ### S4 检索半边：本机记忆检索上线（2026-10-01，C1-007 阶段二·副本线；批1-3／裁1-3 用户终批照施工）
 

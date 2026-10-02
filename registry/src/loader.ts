@@ -35,8 +35,8 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { manifestHasContract, validateManifest, validateModuleExports } from 'dsh-toolkit/contract'
-import type { DshSubPluginManifest, ManifestIssue, PluginSource } from 'dsh-toolkit/contract'
+import { manifestHasContract, validateManifest, validateModuleExports } from 'xiaobai-agent/contract'
+import type { DshSubPluginManifest, ManifestIssue, PluginSource } from 'xiaobai-agent/contract'
 import type { EntrySource, PluginRegisters, ResolvedPlugin } from './types.js'
 
 /**

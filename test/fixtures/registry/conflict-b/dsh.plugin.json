@@ -1,6 +1,6 @@
 {
   "manifestVersion": 1,
-  "name": "dsh-toolkit/conflict-b",
+  "name": "xiaobai-agent/conflict-b",
   "requirements": {
     "runtime": { "node": ">=20" },
     "binaries": [],

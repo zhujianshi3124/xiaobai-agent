@@ -1,5 +1,5 @@
 {
-  "name": "dsh-toolkit/rate-throttle",
+  "name": "xiaobai-agent/rate-throttle",
   "id": "dsh/rate-throttle",
   "displayName": "速率限制与换源路由",
   "version": "1.0.0",

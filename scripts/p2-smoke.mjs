@@ -55,7 +55,7 @@ const panelPkgPath = join(panelDir, "package.json");
 const panelPkg = JSON.parse(readFileSync(panelPkgPath, "utf8"));
 check("panel package.json exists (template form: direct read)", existsSync(panelPkgPath), panelPkgPath);
 check("nearest package is panel/package.json", existsSync(join(panelDir, "index.js")), panelPkg.name);
-check("package name dsh-toolkit/panel", panelPkg.name === "dsh-toolkit/panel", panelPkg.name);
+check("package name xiaobai-agent/panel", panelPkg.name === "xiaobai-agent/panel", panelPkg.name);
 
 const dsh = panelPkg.dsh || {};
 const clientDecl = dsh.client;

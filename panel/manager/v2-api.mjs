@@ -8,7 +8,7 @@
 // 路由经 panel/index.js 的 guard（loopback+配对+CSRF）包一层后注册到 webServer；
 // 测试可直接用返回的 handler 挂到裸 http server 上。
 
-// 注意：panel/ 是嵌套包（dsh-toolkit/panel），对父包名的自引用不可用，
+// 注意：panel/ 是嵌套包（xiaobai-agent/panel），对父包名的自引用不可用，
 // 共享模块（contract/registry/doctor）一律相对路径引用其构建产物。
 import { AUDIT_EVENTS, contractHttpBase, normalizeServicePrefix } from '../../contract/dist/index.js'
 // S4 F-37 检索路由（批1-3 批准）：handler 实现收在 memory-search.mjs——全仓唯一的

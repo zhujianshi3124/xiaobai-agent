@@ -9,7 +9,7 @@ import type {
   PluginSource,
   PluginStatus,
   PrecheckReport,
-} from 'dsh-toolkit/contract'
+} from 'xiaobai-agent/contract'
 
 /** cordis fiber 句柄（ctx.plugin() 的返回值，spike 已验证：thenable + dispose + state）。 */
 export interface FiberLike {

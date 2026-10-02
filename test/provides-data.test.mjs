@@ -19,7 +19,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { validateManifest } from 'dsh-toolkit/contract';
+import { validateManifest } from 'xiaobai-agent/contract';
 import { extractRegisters } from '../registry/dist/loader.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
