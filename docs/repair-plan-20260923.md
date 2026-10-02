@@ -3365,9 +3365,9 @@ dataRoot 解析按 resolveDataRoot 正典（显式>env>缺省），patch 行 con
 - **停靠候**：用户重新生成令牌（classic PAT 勾 `repo`＋`workflow` 两 scope，或 fine-grained
   PAT 勾 Contents: Read and write ＋ Workflows: Read and write）——协调侧转呈。新令牌到达后
   按同款瞬态纪律复推（其余各步已就绪，仅剩推送与读回验证）。
-- **随报候裁一件（非阻塞）**：推送成功后 `.github/workflows/ci.yml` 会随历史上线 GitHub Actions
+- **随报候裁一件（非阻塞）**：推送成功后仓内 GitHub Actions 工作流配置会随历史上线
   （push 触发、self-hosted runner 标签、云端无 DOCTOR_CLI 注入 ⇒ run 将无限 pending）。届时
-  可由用户在仓库设置禁用 Actions，或另行批令处理 ci.yml；本侧不先动。
+  可由用户在仓库设置禁用 Actions，或另行批令处理工作流配置；本侧不先动。
 
 ### 58.5 发布实况回填（首推 ✓＋读回 ✓）
 
@@ -3389,3 +3389,64 @@ dataRoot 解析按 resolveDataRoot 正典（显式>env>缺省），patch 行 con
 - Actions 禁用（PUT actions/permissions enabled:false，可逆）随回填笔之后执行，状态随终报。
 - **token 瞬态面如实记**：全部 GitHub 调用均为内存单次请求；git 侧仅 `-c http.extraHeader`
   单次参数；代理参数同为单次 `-c`；本节为唯一提及令牌的仓内文件且已脱敏。
+
+## 59. 发布后安全审计与 PII 清理施工账（2026-10-02 · EXE-BOOT-023 续用令 · 副本线）
+
+**令源**：C1-007 发布后安全审计令＋预留清理笔（用户答"查"＝审计批准；清理按预留条款）。
+
+### 59.1 密钥特征全历史扫描（纯读）——预期达成，零停报
+
+- **范围**：全历史 312 commits、**1828 个 blob** 逐件扫描（`rev-list --objects --all`＋cat-file）。
+- **强模式（明确凭据形态）＝0 命中**：ghp_/gho_/ghu_/ghs_/ghr_、npm_、AKIA（AWS）、
+  sk-（OpenAI/DeepSeek 形）、xox[bpars]-（Slack）、BEGIN PRIVATE KEY、AIza（Google）、
+  pypi-、stripe sk_live/pk_live——**两枚 GitHub 令牌从未进入任何历史对象**（凭据红线全程
+  在案），预期达成。
+- **弱模式 292 条逐类判读全良性**：`credentials:'same-origin'`（fetch 标准选项）、
+  `token:"deadbeef…"`（p1-smoke 测试夹具）、`'SECRET-DO-NOT-LOG'`（audit-sink 反日志夹具）、
+  `pass=" + pass + "`（regression-all 输出拼接切片）、sha512 integrity 串（package-lock 公开物）、
+  备份目录时间戳名、typert 参数标识符——零真凭据。
+- **报告正本**：沙箱 `var/scratch/exe-boot-023-20261002/secret-scan-report.txt`（工装
+  secret-scan.mjs 同目录）。
+
+### 59.2 PII 面盘点（纯读）
+
+`C:\Users\LENOVO` 形（Windows 用户名暴露）现行 HEAD 共 69 处／约 20 文件，分类：
+
+- **预期清理面（令面 3 明示授权，径行清理，见 59.3）**：①`cordis.patch.yml` rate-throttle
+  静态组真实账号编排（sensenova-gateway(-2)/nvidia/modelscope-gateway(-2)/amd-gateway×
+  模型名组合——真实部署的账号编排名单）；②`lib/agent-memory/README.md`《配置与挂载》节部署行
+  `dataRoot: C:\Users\LENOVO\.agent-memory`（真实家目录路径）；③`lib/rate-throttle/README.md`
+  《部署实况》节（同名单叙述）。
+- **候裁面（非明示授权面，只盘点不动，候协调侧裁决）**：
+  - **工装脚本硬编码**：`scripts/apply-preset-patch.mjs` 的 `ROW_NEW`／`OLD_ROW_V2` 值（`agentMemoryRoot` 硬编码作者
+    家目录——该值会写进宿主预设，改动牵 `test/preset-patch-escape.test.mjs` 静态断言，属
+    功能面修正）；`scripts/p24-ui-matrix.mjs` 的 D9 检查、`scripts/q2-shipped-*.mjs`、
+    `scripts/restart-*.ps1`、`scripts/master-merge-fidelity.mjs`、`scripts/migrate-ads-backups.mjs`。
+  - **生产代码硬编码（已在档缺陷）**：`doctor/cli/src/engine.mjs` 的 `YAML_DEFAULT_URL` 常量指向
+    作者机器绝对路径（缺席时 YAML 语法检查静默跳过——contract-matrix §6.3 在案）；
+    `doctor/cli/src/cli.mjs` 与 `engine.mjs` 的缺省 scope 表达式（在用仓冻结路径）。**属
+    功能修正候选，建议另行批令**（改 env 缺省形/占位形），本审计笔不动。
+  - **测试候选路径/夹具**：`test/dual-channel-parity.test.mjs` 的 `HOST_LOADER_CANDIDATES`（本机真 loader 探测候选，
+    存在性门控语义）、`test/s6-contract-migration.test.mjs` 的 dataRoot 夹具、`test/preset-patch-escape.test.mjs`、
+    `test/fixtures/contract/valid-manifest.json`（example 域名＋authEnv 变量名，无凭据）。
+  - **机器台账**：`preset-patch-state.json`、`junction-backup.csv`。
+  - **历史账面与存档（G7"账目透明"既定保留，2c 口径）**：docs/debt、repair-plan、
+    feature-inventory、contract-v1.1-matrix-*、panel/docs/** 全部原样。
+- 真实账号标识面（provider 名）另见测试夹具（rate-throttle/search-router 自构夹具——测试
+  自洽输入，非部署配置）。
+
+### 59.3 清理清单（已落笔）
+
+| # | 文件 | 清理内容 |
+|---|---|---|
+| 1 | `cordis.patch.yml` | 静态组 `v4-pro`/`v4-flash`（真实账号编排 11 行 provider）→ **示例组** `example-group-a`/`example-group-b`（example-provider-*／example-model-*）；**行数 16 保持不变＝零行号涟漪**（p1-smoke CARD_LINES 17/62/73 对位复核）；`excludeProviders: [llm-deepseek, deepseek-official]` 为宿主内置名保留 |
+| 2 | `lib/agent-memory/README.md` | 部署行 dataRoot → 占位符形 `<AGENT_MEMORY_DATA_ROOT>`（不填缺省 `~/.agent-memory`，与 patch 模板占位符口径同源） |
+| 3 | `lib/rate-throttle/README.md` | 《部署实况》节 → 《部署示例配置》口径（"换成你自己在模型配置页里的账号与模型"） |
+| 4 | `scripts/p24-verify.mjs` | 滚存第 9 次：`534e22e3…`/3336B → **`60484b76…`/3265B**（BASELINE_SHA_EXPECTED＋注释） |
+| 5 | `scripts/p24-ui-matrix.mjs` | 滚存第 9 次同步（BASE_SHA_EXPECT＋注释） |
+| 6 | `README.md`（桶） | patch 基准行滚存链五点→六点 |
+| 7 | `scripts/q2-layer-scan.mjs` | :125 输出文案组 id 同步实况（v4-pro/v4-flash → example-group-a/b（示例配置）） |
+
+- 历史滚存叙述链原文不回改（第 9 次行只追加）。
+- **门禁**：ci-local --with-scan 全绿（读数随批末申报）；**pack 干跑 129 文件口径不变**。
+- **推送**：清理笔落链 → 推（零 force、瞬态 Basic 头）→ 读回（远程 HEAD＝清理笔）。

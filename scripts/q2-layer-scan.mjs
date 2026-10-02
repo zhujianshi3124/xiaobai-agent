@@ -122,7 +122,7 @@ console.log("  四个 toolkit id 在本层命中：" + TOOLKIT_IDS.map((id) => i
 check("① 四个 toolkit id 中仅 compact-router 无对应行（toolkit 侧预期如此）",
   missing.length === 0 && nestedRows.filter((r) => r.id === "toolkit-manager").length === 1,
   "缺行: " + (missing.length ? missing.join(",") : "无"));
-console.log("  注：嵌套 id 中 v4-pro/v4-flash 是 rate-throttle.routing.staticGroups 的组 id，不是插件挂载行；");
+console.log("  注：嵌套 id 中 example-group-a/example-group-b 是 rate-throttle.routing.staticGroups 的组 id（示例配置），不是插件挂载行；");
 console.log("      真正的 4 个插件挂载行 = rate-throttle / web-search-router / agent-memory-runtime / toolkit-manager（S1 剔除批 5→4）。");
 
 const OVERRIDE_PAT = /(^|\s)(override|overrides|replace|replaces|shadow|shadowing|覆盖|遮蔽|取代)(\s|:|$)/i;

@@ -51,10 +51,10 @@ test/           测试（node --test）
 
 ## 挂载与部署实况
 
-- 部署行在 `cordis.patch.yml`（模板形，基准 sha256 `534e22e3…`/3336B，C1-007 定名批滚存
-  （副本线第 4 次：包名定名 xiaobai-agent）；滚存链 `b0f304c9`→`693cfcd7`→`a186a710`→
-  `5c4e6980`→`534e22e3`，逐次成因见 `scripts/p24-verify.mjs` 头注；前值 `5c4e6980…`/3328B 系
-  S2.e 模板化时基准）：
+- 部署行在 `cordis.patch.yml`（模板形，基准 sha256 `60484b76…`/3265B，C1-007 发布后安全审计
+  清理批滚存（副本线第 5 次：patch 模板静态组真实账号编排→示例组）；滚存链 `b0f304c9`→
+  `693cfcd7`→`a186a710`→`5c4e6980`→`534e22e3`→`60484b76`，逐次成因见 `scripts/p24-verify.mjs`
+  头注；前值 `534e22e3…`/3336B 系定名批基准）：
   `web`／`web-search-deepseek`
   既有行 config，`rate-throttle`／`web-search-router`／
   `agent-memory-runtime`／`toolkit-manager` 四行为 insert；**compact-router 不在 patch**——

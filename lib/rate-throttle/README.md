@@ -38,10 +38,12 @@ downgradeContextMargin, maxDowngradeCompactsPerTurn, metricsWindowMs, metricsLog
 clearCooldownOnUserSwitch, syncSelectionOnFailover}`（另有 `staticGroups`/`excludeProviders`
 等仅部署面键，patch 行配置）。
 
-## 部署实况（cordis.patch.yml）
+## 部署示例配置（cordis.patch.yml 模板）
 
-`enabled: false`（限速层关）、路由层开＋自动分组，`excludeProviders: [llm-deepseek,
-deepseek-official]`，静态组 `v4-pro`／`v4-flash` 各若干账号；`inject: [llm, tokenMeter]`。
+以下为**示例配置**（真实值以仓内 `cordis.patch.yml` 模板为准，部署时换成你自己在模型配置页
+里的账号与模型）：`enabled: false`（限速层关）、路由层开＋自动分组，
+`excludeProviders: [llm-deepseek, deepseek-official]`（宿主内置 provider 名），
+静态组 `example-group-a`／`example-group-b` 各若干示例账号；`inject: [llm, tokenMeter]`。
 
 ---
 *本 README 由 EXE-BOOT-010 续用批按用户基本要求令补齐（2026-09-28）；内容以仓内实况为据
