@@ -68,7 +68,8 @@ function parseArgs(argv) {
 const ISSUE_ID_RE = /^[A-Za-z0-9._-]+$/;
 
 function buildDoctorOptions(args) {
-  const scopeRoot = path.resolve(args.scopeRoot || process.env.DSH_DOCTOR_SCOPE_ROOT || 'D:\\dsh-plugins\\dsh-toolkit');
+  // 缺省 scope＝cwd 形（零机器路径；C1-007 审计候裁面②修复）：`cd 仓根 && dsh-doctor` 即体检当前仓。
+  const scopeRoot = path.resolve(args.scopeRoot || process.env.DSH_DOCTOR_SCOPE_ROOT || process.cwd());
   const configRoot = path.resolve(args.configRoot || process.env.DSH_HOME || path.join(os.homedir(), '.dsh'));
   return {
     scopeRoot,
@@ -85,7 +86,7 @@ function buildDoctorOptionsFromReport(report, args) {
   const roots = report && report.environment && report.environment.roots || {};
   const scopeRoot = report && report.scope && report.scope.root
     ? report.scope.root
-    : (roots.scope || (args && args.scopeRoot ? path.resolve(args.scopeRoot) : 'D:\\dsh-plugins\\dsh-toolkit'));
+    : (roots.scope || (args && args.scopeRoot ? path.resolve(args.scopeRoot) : process.cwd()));
   const configRoot = report && report.environment && report.environment.configRoot
     ? report.environment.configRoot
     : (args && args.configRoot ? path.resolve(args.configRoot) : path.join(os.homedir(), '.dsh'));
@@ -106,6 +107,10 @@ function printReportHuman(report) {
   process.stdout.write('scope: ' + report.scope.root + '\n');
   process.stdout.write('config: ' + report.environment.configRoot + '\n');
   process.stdout.write('profile: ' + report.scope.profile + '\n');
+  // 缺席明示（绝不静默）：解析器能力缺席走 stderr 显著注记＋report.yamlCheck 字段。
+  if (report.yamlCheck && report.yamlCheck.available === false) {
+    process.stderr.write('⚠ YAML 语法检查未执行: ' + report.yamlCheck.reason + '\n');
+  }
   process.stdout.write('issues: ' + report.issues.length + ' (error ' + report.summary.error + ', warning ' + report.summary.warning + ', info ' + report.summary.info + ', fixable ' + report.summary.fixable + ')\n');
   for (const issue of report.issues) {
     process.stdout.write('---\n');

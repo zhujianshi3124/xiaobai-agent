@@ -10,7 +10,7 @@ import { executeApply, executeRollback, readPatchState } from '../src/executor.m
 
 const doctorRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cliAbs = path.join(doctorRoot, 'src', 'cli.mjs');
-const realConfigRoot = 'C:/Users/LENOVO/.dsh';
+const realConfigRoot = path.join(os.homedir(), '.dsh');
 const realScopeRoot = 'D:/dsh-plugins/dsh-toolkit';
 
 function mkFixture(name) {

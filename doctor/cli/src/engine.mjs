@@ -6,12 +6,20 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 
-const YAML_DEFAULT_URL = 'file:///C:/Users/LENOVO/AppData/Roaming/npm/node_modules/@deepseek-ai/dsh/node_modules/yaml/dist/index.js';
+// YAML 解析器装载（三级）：① DSH_DOCTOR_YAML_URL env 显式指定；② 未设 env 时惰性探测运行环境
+// 的 'yaml' 包（可选增强，不声明依赖——本 CLI 保持零 npm 依赖自包含）；③ 都缺席 ⇒ YAML=null，
+// yaml 语法检查跳过时**逐清单产 schema.yaml-check-unavailable（info）**——检查没跑必须看得见，绝不静默。
+// 零机器路径缺省（C1-007 发布后审计候裁面②修复，用户终批"按建议"）。
 let YAML = null;
+let YAML_ABSENT_REASON = '未设置 DSH_DOCTOR_YAML_URL，且运行环境无可探测的 yaml 包';
 try {
-  YAML = await import(process.env.DSH_DOCTOR_YAML_URL || YAML_DEFAULT_URL);
-} catch {
+  YAML = await import(process.env.DSH_DOCTOR_YAML_URL || 'yaml');
+  YAML_ABSENT_REASON = null;
+} catch (e) {
   YAML = null;
+  YAML_ABSENT_REASON = process.env.DSH_DOCTOR_YAML_URL
+    ? 'DSH_DOCTOR_YAML_URL 装载失败: ' + String((e && e.message) || e)
+    : '未设置 DSH_DOCTOR_YAML_URL，且运行环境无可探测的 yaml 包';
 }
 
 export class DoctorRootError extends Error {
@@ -491,6 +499,7 @@ function buildSchemaIssues(records) {
         issues.push(manifestIssue(rec, 'schema.yaml-syntax', 'YAML 语法错误: ' + err.message, 'error'));
       }
     }
+    // 解析器缺席时不产 issue：report.yamlCheck 字段＋CLI stderr 注记承载缺席明示（见返回体注释）。
   }
   return issues;
 }
@@ -1605,7 +1614,7 @@ function sha256Text(text) {
 
 export async function runDoctor(options) {
   const opts = options || {};
-  const scopeRoot = path.resolve(opts.scopeRoot || process.env.DSH_DOCTOR_SCOPE_ROOT || 'D:\\dsh-plugins\\dsh-toolkit');
+  const scopeRoot = path.resolve(opts.scopeRoot || process.env.DSH_DOCTOR_SCOPE_ROOT || process.cwd());
   const configRoot = path.resolve(opts.configRoot || process.env.DSH_DOCTOR_CONFIG_ROOT || path.join(os.homedir(), '.dsh'));
   const profileName = opts.profile || 'web';
   const profileRoot = path.resolve(opts.profileRoot || path.join(configRoot, 'profiles', profileName));
@@ -1726,6 +1735,10 @@ export async function runDoctor(options) {
     },
     summary,
     issues,
+    // YAML 解析器能力自报（缺席明示，绝不静默；C1-007 审计候裁面②）：缺席是体检器自身
+    // 能力面而非被检仓的发现 ⇒ 归 report 面（不产 issue，不污染 0/0/0 干净度读数）；
+    // CLI 层对缺席另有 stderr 显著注记。
+    yamlCheck: YAML ? { available: true } : { available: false, reason: YAML_ABSENT_REASON },
     dryRun: true,
   };
 }
