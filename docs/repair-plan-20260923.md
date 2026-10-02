@@ -3214,3 +3214,73 @@ embed-toolkit.md §3（33 条路由表）／§4（注销计数）／§4.1（33�
 ce31f83／在用 patch b0f304c9）零触碰；宿主停机态零接触（真机面预计零，无需用户动作）；
 dataRoot 解析按 resolveDataRoot 正典（显式>env>缺省），patch 行 config.dataRoot 偏离 env/缺省的
 部署形不在本批射程（本机部署两者一致，如实记）。对外发布零动作（S5 发布门候令）。
+
+## 56. S6 定名批施工账：包名 dsh-toolkit → xiaobai-agent（2026-10-02 · EXE-BOOT-023 · 副本线）
+
+**令源**：EXE-BOOT-023 启动包第八节（0 对账→1 名字可用性→2 定名笔→3 复验→4 停靠）；包名 xiaobai-agent
+＝**用户终裁**（022 终验停靠时已定）。npm 名核查＝双通道纯读（npm view＋registry API）：主选
+**xiaobai-agent 404 未占用可用**；备选 xiaobai 已被占（qingyun_baichenxing，2025 前发布）——主选落定。
+
+### 56.1 定名案（S2-A 先例套路全仓同步）
+
+- **改**：包名面全套——package.json/package-lock name；六份 manifest name 面（桶根 dsh.plugin.json
+  name/title/aliases 值/requiredAliases 值＋panel＋lib×4）；doctor-signals（managedNamePrefix/
+  presetManagedNames）；patch 模板头注＋三处 insert name；根入口 index.js name；面板 id（client
+  bundle "xiaobai-agent/panel"）与标题文案（panel.html title/h1＋client bundle 两渲染器＋manifest
+  title）；panel manager 包名表（plugin-registry pkg×4）与 snapshot 兜底名；TS 自引用 import 面
+  （contract/registry/doctor src）；测试 import/断言/夹具面（agent-memory 11 处含 node_modules/
+  bundle 装载夹具、p7-embed resolve 面、dual-channel-parity 错误文案断言、helpers harness 等）；
+  工装断言面（p2-smoke/p21-verify 正则/p22-verify alsoMatch·pkg/pluggable-lint 三正则/p24-ui-matrix
+  D1·D5 夹具新名/parity 夹具/uninstall 文案/apply-preset-patch mount 行名）；活文档称呼（README/
+  doctor·lib×4 README/embed-toolkit/add-sub-plugin/AGENTS.md 标题）。
+- **不动清单**：六成员名与 bin（dsh-doctor 等）；manifest 内部 id（dsh/toolkit）与 servicePrefix
+  'toolkit'；版本 1.0.0；LICENSE（MIT·zhujianshi3124）；协议语义；doctor/cli 默认 scope（在用仓
+  冻结路径，守卫保护）；doctor/cli selftest 夹具名（@local 任意夹具面，语义自洽）；历史账面
+  （CHANGELOG 历史条目/debt/plan/evidence/存档件/p24 滚存注释链）照错账不回改保留旧名；q2-* 历史
+  对账工装原样（扫描对象即历史宿主痕迹）。
+- **实施形态**：受控替换工装（白名单 78 文件＋保护形态——file:///D:/dsh-plugins/dsh-toolkit、
+  D:\dsh-plugins\dsh-toolkit 两斜向、dsh-toolkit-doctor、dsh-toolkit-opensource 先挖占位后回填），
+  逐文件自证替换后除保护形态外零裸 dsh-toolkit；替换 163 处全绿。复扫（改动后）：剩余 327 处
+  （58 文件）逐组核对全部落在不动清单。变体补扫（S2 先例同款）：DSH Toolkit（存档 HANDOFF-MASTER
+  历史称呼照留）/dsh_toolkit/拼接形态零命中；转义形态随白名单命中（p21 正则/pluggable-lint）。
+
+### 56.2 patch 基准滚存（第 8 次＝副本线第 4 次）
+
+`5c4e6980`/3328B → **`534e22e3`/3336B**（三处 insert name 与头注随包名；占位符模板机制原样，
+守卫机制未放宽）。滚存同步两硬闸＝p24-verify BASELINE_SHA_EXPECTED＋p24-ui-matrix BASE_SHA_EXPECT，
+滚存注释链各追加第 8 次行（原文不回改）。README patch 基准行同步滚存链五点（原记 693c 滞后两滚
+如实补记）。
+
+### 56.3 复验读数（开工令 3 全项）
+
+- **门禁**：npm test 6/6＋nt 526/526 一次过（fail 0 skipped 0）。
+- **p24-ui-matrix**：608/608——首跑 607/608 红 1（D1 execute rescan 2 error），**如实记**：D1/D5
+  夹具 aliases "新名"值（dsh-toolkit/compact-router）初版漏同步（该文件走手工滚存，aliases 面
+  漏刀），复验红抓出随批即修为 xiaobai-agent/compact-router 后满绿。
+- **q2-layer-scan**：12/13——④ "磁盘==HEAD" 守卫未提交态在册红（d19 笔先例：提交后自愈），
+  提交后复跑见 56.4。
+- **npm pack 干跑**：**xiaobai-agent-1.0.0.tgz**，129 文件/442.2 kB（022 终验 129 口径一致，
+  文件数零增减）；scripts/、test/、cordis.patch.yml、docs/、panel/docs 零泄漏（S2 files 白名单口径）。
+- **变异自检 2/2**（工装 mutate-name.mjs）：M-N1 package.json name 回退 ⇒ p7-embed 包自引用解析
+  红（Cannot find package 'xiaobai-agent'，可观测）；M-N2 index.js 根入口 name 回退 ⇒ rootEntry.name
+  断言红；两发还原后 sha256 逐字节同。
+- **开局基线对表**（023 开工 0）：链尾 304ed34 树净；三冻结面复核（在用仓 04816b8 树净／在用
+  doctor ce31f83／patch 基准符 5c4e6980/3328B）；基线全绿（门禁 6/6、nt 526/526、parity 56/56、
+  doctor 0/0/0、守卫红 0 token 3293）。
+
+### 56.4 终验（提交后）与停靠
+
+终验＝ci-local --with-scan 全绿（含 q2-layer-scan ④ 自愈、doctor 0/0/0、parity 56/56、文档守卫
+新 token 读数），读数见批末申报（实档沙箱 var/scratch/exe-boot-023-20261002/）。**本批发布动作
+零自决**：通道解封/推送/npm publish 候用户建仓与终批——停靠候用户仓址到达。
+
+### 56.5 用户定位原文照录（README 首段定位文案依据）
+
+> 定位（用户定位原文要义，2026-10-02 随定名批落 README 首段）：为新手小白提供更低成本的 agent
+> 体验——面向免费 API 优化，适合轻量任务。
+
+文案全文（随批末呈协调侧过目）：README 标题 "# xiaobai-agent（DSH 工具箱）"＋首段
+"`xiaobai-agent`（manifest id `dsh/toolkit`）——DSH 宿主的插件桶：一个 bundle 层总装 registry／doctor／
+管理面板，并携带四个子插件。**定位**：为新手小白提供更低成本的 agent 体验——面向免费 API 优化，
+适合轻量任务。"（副题 "DSH 工具箱"＝宿主生态称呼照留；首段 "五个子插件"→"四个"＝S1 剔除后
+实况滞后顺手对齐，如实记）。
