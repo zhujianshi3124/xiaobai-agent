@@ -41,21 +41,21 @@
           clearCooldownOnUserSwitch: true
           syncSelectionOnFailover: true
           staticGroups:
-            - id: v4-pro
+            - id: example-group-a
               providers:
-                - { provider: sensenova-gateway, model: deepseek-v4-pro }
-                - { provider: sensenova-gateway-2, model: deepseek-v4-pro }
-                - { provider: nvidia, model: deepseek-ai/deepseek-v4-pro-0813 }
-                - { provider: modelscope-gateway, model: deepseek-ai/DeepSeek-V4-Pro-0813 }
-                - { provider: modelscope-gateway-2, model: deepseek-ai/DeepSeek-V4-Pro-0813 }
-            - id: v4-flash
+                - { provider: example-provider-a, model: example-model-a }
+                - { provider: example-provider-b, model: example-model-a }
+                - { provider: example-provider-c, model: example-model-a }
+                - { provider: example-provider-d, model: example-model-a }
+                - { provider: example-provider-e, model: example-model-a }
+            - id: example-group-b
               providers:
-                - { provider: sensenova-gateway, model: deepseek-v4-flash }
-                - { provider: sensenova-gateway-2, model: deepseek-v4-flash }
-                - { provider: amd-gateway, model: DeepSeek-V4-Flash }
-                - { provider: nvidia, model: deepseek-ai/deepseek-v4-flash-0731 }
-                - { provider: modelscope-gateway, model: deepseek-ai/DeepSeek-V4-Flash-0731 }
-                - { provider: modelscope-gateway-2, model: deepseek-ai/DeepSeek-V4-Flash-0731 }
+                - { provider: example-provider-f, model: example-model-b }
+                - { provider: example-provider-g, model: example-model-b }
+                - { provider: example-provider-h, model: example-model-b }
+                - { provider: example-provider-i, model: example-model-b }
+                - { provider: example-provider-j, model: example-model-b }
+                - { provider: example-provider-k, model: example-model-b }
       inject: [llm, tokenMeter]
 
 - insert:

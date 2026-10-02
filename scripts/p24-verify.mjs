@@ -31,7 +31,9 @@ const BASE_SHA = createHash("sha256").update(readFileSync(patchPath, "utf8")).di
 // 绝对路径改占位符（dataRoot/panel 入口），E-2 既裁红随之消除）：a186a710… → 5c4e6980…。
 // 基准滚存（第 8 次＝副本线第 4 次，2026-10-02 C1-007 定名批：包名 dsh-toolkit → xiaobai-agent
 //（用户终裁），三处 insert name 与头注随包名同步；模板形占位符机制原样）：5c4e6980… → 534e22e3…。
-const BASELINE_SHA_EXPECTED = "534e22e30b1e7f9bad4695e2c49ac183688d5b118b41d4ce445dc48e808d6bf5";
+// 基准滚存（第 9 次＝副本线第 5 次，2026-10-02 C1-007 发布后安全审计清理批：patch 模板静态组
+// 真实账号编排→示例组（example-provider-*／example-model-*，行数 16 不变零行号涟漪））：534e22e3… → 60484b76…。
+const BASELINE_SHA_EXPECTED = "60484b76fcf8776bb41e302c9553ee3018bf7be2fbec05e21aa266a4a248af7b";
 if (BASE_SHA !== BASELINE_SHA_EXPECTED) {
   console.error("ABORT: 真实 cordis.patch.yml 基线漂移（" + BASE_SHA.slice(0, 12) + "）——拒绝在非基准态跑验证");
   process.exit(1);
