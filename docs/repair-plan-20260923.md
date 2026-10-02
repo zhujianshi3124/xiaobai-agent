@@ -3450,3 +3450,58 @@ dataRoot 解析按 resolveDataRoot 正典（显式>env>缺省），patch 行 con
 - 历史滚存叙述链原文不回改（第 9 次行只追加）。
 - **门禁**：ci-local --with-scan 全绿（读数随批末申报）；**pack 干跑 129 文件口径不变**。
 - **推送**：清理笔落链 → 推（零 force、瞬态 Basic 头）→ 读回（远程 HEAD＝清理笔）。
+
+## 60. doctor 硬编码缺陷修复施工账（候裁面②闭账）（2026-10-02 · EXE-BOOT-023 续用令 · 副本线）
+
+**令源**：C1-007 doctor 硬编码缺陷修复令（用户终批"按建议"＝修：去硬编码＋缺席明示）。
+**缺陷面**（plan §59.2 候裁面②在案）：`doctor/cli/src/engine.mjs` `YAML_DEFAULT_URL`＝作者机器
+绝对路径、缺席时 YAML 检查静默跳过；doctor CLI 默认 scope 同族硬编码（cli.mjs×2／engine.mjs×1）。
+
+### 60.1 同族排查（两实现线）
+
+- **API 库 `doctor/src/*.ts` 零同患**（grep 证：scopeRoot 全由调用方传入，无缺省硬编码、零机器
+  路径）——无需修。
+- CLI 线修复面：engine.mjs YAML 链＋yaml 检查点；cli.mjs/engine.mjs 默认 scope 三处；
+  selftest 真机根两处（`C:/Users/LENOVO/.dsh` → `path.join(os.homedir(), '.dsh')`，语义等价）。
+
+### 60.2 修复案（形态与理由）
+
+- **YAML 解析器三级装载**：① `DSH_DOCTOR_YAML_URL` env 显式指定；② 未设 env 时惰性探测运行
+  环境的 `'yaml'` 包（可选增强，**不声明依赖**——零 npm 依赖自包含终裁不变）；③ 都缺席 ⇒
+  `YAML=null`＋`YAML_ABSENT_REASON` 点名成因。**机器绝对路径缺省清零**。
+- **缺席明示形态＝report 字段＋stderr 注记（非 info issue）**：report 顶层新增
+  `yamlCheck: {available, reason?}`；CLI human 输出对缺席打 stderr 显著注记
+  `⚠ YAML 语法检查未执行: …`。**理由**：缺席是**体检器自身能力面**而非被检仓的发现——逐清单
+  产 info 会把同一原因重复 N 次并污染"被检仓干净度"读数（0/0/0 的语义＝被检仓没问题）。
+  **首版 info issue 形态实跑即被门禁抓出两破**（selftest run-tests:153 `provides 不得产生任何
+  schema issue` 1!==0；ci-local dry-run i4＝作者机器 ~/.dsh 的 4 条 yaml 记录）——如实记，
+  随批改形（令面"info 级 issue 或显著日志注记，形态自定并给理由"授权内）。
+- **默认 scope＝cwd 形（三处）**：`args.scopeRoot || DSH_DOCTOR_SCOPE_ROOT || process.cwd()`——
+  零机器路径；开源语义＝`cd 仓根 && dsh-doctor` 即体检当前仓。实测零涟漪：ci-local:27 显式
+  传 `--scope ROOT`（副本仓根），三处默认值零调用方依赖；configRoot 缺省本就是 homedir 形（既有先例）。
+
+### 60.3 钉与证据
+
+- **三钉**（test/doctor.test.mjs，nt 526→**529/529**）：①缺席明示行为钉（env 指不存在路径＋
+  动态 import 独占装载控制权 ⇒ `yamlCheck.available===false`＋reason 点名 env 装载失败＋缺席
+  零 issue 负向一面）；②负向钉（doctor/ 全树零 `C:\Users` 残留——修复面四文件＋selftest 全覆盖）；
+  ③cwd 静态钉（cli.mjs/engine.mjs 零 `dsh-plugins` 字面量＋env 通道在场＋cwd 兜底在场）。
+- **变异自检 2/2**（还原 sha 逐字节同）：M-D1 `yamlCheck` 恒真化 ⇒ 钉①红（"缺席如实申报"）；
+  M-D2 scope 兜底回机器路径 ⇒ 钉③红（"零在用仓路径字面量"）。
+- **门禁**：ci-local --with-scan **6/6 全绿（104.8s）**——dry-run 归 **0/0/0**（缺席明示归 report
+  面后零 issue 污染）、selftest 四件套复绿、parity 56/56 无感（夹具无 yaml）；pack 干跑
+  **129 文件**口径不变。
+
+### 60.4 候裁面②闭账注
+
+plan §59.2 候裁面②（生产代码硬编码）本批**闭账**；候裁面①（工装脚本硬编码）与机器台账/
+测试候选路径维持盘点在册，G7 历史账面照旧保留。
+
+### 60.5 令牌最终弃置（用户改令原文照录）
+
+> "ghp_BIoA…（已脱敏），不要用完即弃，不然我每次都要粘贴一遍很麻烦，等到做好了再弃也不迟。"
+
+本批推送＝GitHub 令牌**最后一用**（复验/首推/二推/Actions 禁用/审计清理笔推/本批推毕）。
+推毕读回后即达"做好了"——**最终弃置提醒**：请到 GitHub → Settings → Developer settings →
+Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删）；npm 发布另用独立 token，
+与本枚无关。

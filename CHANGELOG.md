@@ -6,6 +6,16 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### doctor CLI 去机器硬编码＋YAML 检查缺席明示化（2026-10-02，C1-007 阶段二·副本线；用户终批"按建议"）
+
+- **YAML 解析器三级装载**：`DSH_DOCTOR_YAML_URL` env 显式指定 → 运行环境 `yaml` 包惰性探测
+  （可选增强，零 npm 依赖自包含不变）→ 都缺席＝`report.yamlCheck: {available:false, reason}`
+  **显著明示＋CLI stderr 注记**（`⚠ YAML 语法检查未执行: …`）——检查没跑必须看得见，绝不静默；
+  作者机器绝对路径缺省清零。缺席属体检器能力面，归 report 面不产 issue（不污染被检仓干净度读数）。
+- **缺省 scope＝cwd 形**：`dsh-doctor` 无 `--scope`／env 时体检当前工作目录（`cd 仓根 && dsh-doctor`），
+  零机器路径。
+- doctor 成员（API 库＋CLI＋selftest）全树零机器用户路径（负向钉在案）。
+
 ### 发布后安全审计：全历史密钥扫描＋patch 模板 PII 清理（2026-10-02，C1-007 阶段二·副本线；用户批准"查"）
 
 - **全历史密钥扫描（纯读）**：312 commits／1828 blob 逐件扫描——**明确凭据形态（GitHub/npm/AWS/
