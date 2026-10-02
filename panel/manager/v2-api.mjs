@@ -11,6 +11,10 @@
 // 注意：panel/ 是嵌套包（dsh-toolkit/panel），对父包名的自引用不可用，
 // 共享模块（contract/registry/doctor）一律相对路径引用其构建产物。
 import { AUDIT_EVENTS, contractHttpBase, normalizeServicePrefix } from '../../contract/dist/index.js'
+// S4 F-37 检索路由（批1-3 批准）：handler 实现收在 memory-search.mjs——全仓唯一的
+// 惰性探测通道（红线 1 合规动态 import，登记豁免见 p4-no-subplugin-import-check.mjs
+// LAZY_PROBE_EXEMPTIONS）；本文件自身的「零具体子插件模块 import」纪律保持不变。
+import { createMemorySearchHandler } from './memory-search.mjs'
 
 const ERROR_STATUS = {
   'plugin-unknown': 400,
@@ -406,9 +410,12 @@ export function createV2Api(deps) {
     }),
   )
 
+  const memorySearchHandler = createMemorySearchHandler(V2).handler
+
   const routes = [
     { method: 'GET', path: `${V2}/snapshot`, handler: snapshot, change: false },
     { method: 'GET', path: `${V2}/health`, handler: health, change: false },
+    { method: 'GET', path: `${V2}/memory/search`, handler: memorySearchHandler, change: false },
     { method: 'POST', path: `${V2}/install/precheck`, handler: installPrecheck, change: false },
     { method: 'POST', path: `${V2}/install/confirm`, handler: installConfirm, change: true },
     { method: 'POST', path: `${V2}/uninstall`, handler: uninstall, change: true },

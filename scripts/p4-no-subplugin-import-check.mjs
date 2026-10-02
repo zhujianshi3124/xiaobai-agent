@@ -18,6 +18,10 @@
 //      新增文件自动进面，不再靠手写清单。
 //   ③ 豁免只免"点名"（name/identity），**从不免 `lib/` import**。P2.4/P2.3 的生命周期资产
 //      可以在面板里点插件名，但一样不许 import 兄弟插件模块。
+//   ④ 唯一例外（S4 F-37 起）：LAZY_PROBE_EXEMPTIONS 登记的文件整体豁免（点名＋模块引用
+//      两规则）——那是 AGENTS.md 红线 1 明文的合规通道（运行时惰性探测＝try-catch＋动态
+//      import），按 ★13"有意保留的例外必须显式列入并写清依据"登记；死条目由测试判红，
+//      新增通道须随批呈协调侧（test/p4-panel-guard.test.mjs ⑬⑭）。
 //
 // 用法：node scripts/p4-no-subplugin-import-check.mjs [文件...]（缺省扫 listScannedFiles()）
 import fs from 'node:fs'
@@ -91,10 +95,28 @@ function exemptSet() {
 }
 
 /**
- * 扫一段文本。names=派生名字集；exemptNames=true 时跳过点名两条（module 照查）。
+ * 惰性探测通道豁免（S4 F-37，C1-007 批1-3 批准／随批呈协调侧备案可否决）。
+ * 登记文件**整体**豁免 name/identity/module 三规则（通道豁免，不拆半）：文件里的动态
+ * import 是红线 1 明文合规通道（运行时惰性探测），路径字面量天然含 lib/ 与兄弟目录名。
+ * 死条目判红：文件里必须真有 `import(` 调用（test/p4-panel-guard.test.mjs ⑬）。
+ */
+export const LAZY_PROBE_EXEMPTIONS = [
+  {
+    file: 'panel/manager/memory-search.mjs',
+    reason: 'S4 F-37 检索路由（批1-3 批准）：GET /v2/memory/search handler 经 try-catch 动态 import 消费 agent-memory 库 searchMemory——红线 1 合规通道，lib 缺席降级 available:false（设计正本 docs/f37-search-design-c1-007.md §B2）。',
+  },
+]
+
+function lazyProbeSet() {
+  return new Set(LAZY_PROBE_EXEMPTIONS.map((e) => e.file.replace(/\\/g, '/')))
+}
+
+/**
+ * 扫一段文本。names=派生名字集；exemptNames=true 时跳过点名两条（module 照查）；
+ * exemptModule=true 时连 module 规则一并跳过（仅 LAZY_PROBE_EXEMPTIONS 登记文件，口径 ④）。
  * 返回 [{line, rule, text}]。
  */
-export function scanText({ text, names, exemptNames = false }) {
+export function scanText({ text, names, exemptNames = false, exemptModule = false }) {
   const hits = []
   // 整词形：kebab 名里的 `-` 算名字的一部分，否则 `web-search-local-extra` 会被误判成点名
   // （同族先例见 panel/manager/apply-engine.mjs 的"避免 rate-throttle 命中 rate-throttle-x"）。
@@ -112,8 +134,10 @@ export function scanText({ text, names, exemptNames = false }) {
         if (!isFrameworkDependency(nm)) hits.push({ line: i + 1, rule: 'identity', matched: nm, text: line.slice(0, 160) })
       }
     }
-    for (const re of MODULE_PATTERNS) {
-      if (re.test(line)) hits.push({ line: i + 1, rule: 'module', matched: 'lib/ 引用', text: line.slice(0, 160) })
+    if (!exemptModule) {
+      for (const re of MODULE_PATTERNS) {
+        if (re.test(line)) hits.push({ line: i + 1, rule: 'module', matched: 'lib/ 引用', text: line.slice(0, 160) })
+      }
     }
   })
   return hits
@@ -140,6 +164,7 @@ export function listScannedFiles() {
 export function runCheck(argvFiles = []) {
   const names = collectSubPluginNames()
   const ex = exemptSet()
+  const lazy = lazyProbeSet()
   const files = argvFiles.length
     ? argvFiles.map((f) => {
         const rel = path.relative(root, path.resolve(root, f)).replace(/\\/g, '/')
@@ -149,17 +174,22 @@ export function runCheck(argvFiles = []) {
   const hits = []
   for (const f of files) {
     if (!fs.existsSync(f.abs)) { hits.push({ rel: f.rel, line: 0, rule: 'missing', matched: 'file', text: '文件不存在' }); continue }
-    for (const h of scanText({ text: fs.readFileSync(f.abs, 'utf8'), names, exemptNames: f.mode === 'module' || ex.has(f.rel) })) {
+    for (const h of scanText({
+      text: fs.readFileSync(f.abs, 'utf8'),
+      names,
+      exemptNames: f.mode === 'module' || ex.has(f.rel) || lazy.has(f.rel),
+      exemptModule: lazy.has(f.rel),
+    })) {
       hits.push({ ...h, rel: f.rel })
     }
   }
-  return { files, hits, names, exempted: [...ex] }
+  return { files, hits, names, exempted: [...ex], lazyProbe: [...lazy] }
 }
 
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
 if (isMain) {
   const r = runCheck(process.argv.slice(2))
   for (const h of r.hits) console.log(`命中 ${h.rel}:${h.line} [${h.rule}${h.matched ? ` ${h.matched}` : ''}]  ${h.text}`)
-  console.log(`[no-subplugin-import-check] 扫描 ${r.files.length} 个文件（判据名字集 ${r.names.length} 个、点名豁免登记 ${r.exempted.length} 个），命中 ${r.hits.length} 处。`)
+  console.log(`[no-subplugin-import-check] 扫描 ${r.files.length} 个文件（判据名字集 ${r.names.length} 个、点名豁免登记 ${r.exempted.length} 个、惰性探测通道豁免 ${r.lazyProbe.length} 个），命中 ${r.hits.length} 处。`)
   process.exit(r.hits.length === 0 ? 0 : 1)
 }

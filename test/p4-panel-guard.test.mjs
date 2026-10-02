@@ -16,6 +16,7 @@ import {
   scanText,
   listScannedFiles,
   NAME_EXEMPTIONS,
+  LAZY_PROBE_EXEMPTIONS,
   runCheck,
 } from '../scripts/p4-no-subplugin-import-check.mjs'
 
@@ -115,4 +116,30 @@ test('⑧ 真跑全仓：当前零命中（门禁等价物）', () => {
   const r = runCheck()
   assert.equal(r.hits.length, 0, `命中清单：\n${r.hits.map((h) => `${h.rel}:${h.line} [${h.rule}] ${h.text}`).join('\n')}`)
   assert.ok(r.files.length >= 16, `扫描文件数异常（扩面后应覆盖 panel/manager 全部）：${r.files.length}`)
+})
+
+test('⑬ 惰性探测通道豁免（S4 F-37，口径 ④）：登记文件必活、依据必写清、通道收口在登记面内', () => {
+  assert.ok(Array.isArray(LAZY_PROBE_EXEMPTIONS))
+  for (const ex of LAZY_PROBE_EXEMPTIONS) {
+    const file = join(ROOT, ex.file)
+    assert.ok(existsSync(file), `豁免指向的文件不存在：${ex.file}`)
+    assert.ok(typeof ex.reason === 'string' && ex.reason.length >= 12, `${ex.file} 的豁免必须写清依据`)
+    const src = readFileSync(file, 'utf8')
+    assert.ok(/import\s*\(\s*['"`]/.test(src), `${ex.file} 挂着惰性探测豁免却没有任何动态 import ＝ 死条目，请删（防豁免腐烂）`)
+    assert.ok(/\blib\//.test(src), `${ex.file} 的动态 import 应指向 lib/ 模块（豁免判据面）`)
+  }
+  // 通道收口：豁免登记只许指向 panel/（面板数据面之外不得借通道进来）
+  for (const ex of LAZY_PROBE_EXEMPTIONS) {
+    assert.ok(ex.file.startsWith('panel/'), `惰性探测豁免只许登记 panel/ 下文件：${ex.file}`)
+  }
+})
+
+test('⑭ 豁免不外溢：登记文件之外，module 规则照旧有牙（exemptModule 不进 name 豁免面）', () => {
+  const names = collectSubPluginNames()
+  const hit = scanText({ text: "const m = await import('../lib/agent-memory/lib/index.js')\n", names, exemptNames: true, exemptModule: false })
+  assert.ok(hit.some((h) => h.rule === 'module'), '未豁免文本的动态 import 必须照抓')
+  const quiet = scanText({ text: "const m = await import('../lib/agent-memory/lib/index.js')\n", names, exemptNames: true, exemptModule: true })
+  assert.equal(quiet.filter((h) => h.rule === 'module').length, 0, 'exemptModule=true 才豁免 module 规则')
+  const r = runCheck()
+  assert.deepEqual(r.lazyProbe, LAZY_PROBE_EXEMPTIONS.map((e) => e.file), '真跑登记面与清单一致')
 })

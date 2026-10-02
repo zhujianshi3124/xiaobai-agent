@@ -100,6 +100,11 @@
   .warning { color: #e8c36c; }
   .info { color: #9aa0a6; }
   .allGood { padding: 12px 10px; font-size: 13px; color: #67c48b; }
+  /* ---- S4 F-37 记忆检索卡（与 React 通道同文案同语义） ---- */
+  .searchRow { display: flex; gap: 8px; margin: 0 0 10px; align-items: center; }
+  .searchInput { flex: 1; padding: 6px 10px; border-radius: 6px; border: 1px solid #3a3f47; background: #101413; color: #e6e6e6; font-size: 13px; }
+  .searchLine { border-bottom: 1px solid #23272d; padding: 7px 2px; font-size: 12.5px; line-height: 1.7; word-break: break-all; }
+  .searchFooter { margin-top: 10px; padding-top: 8px; border-top: 1px solid #23272d; font-size: 12px; color: #8fa89e; }
 </style>
 </head>
 <body>
@@ -112,6 +117,16 @@
   </div>
   <div id="banner"></div>
   <div id="cards" class="cards"></div>
+  <h2>记忆检索</h2>
+  <div id="memorySearch" class="card">
+    <div class="desc">在你的本机记忆台账里查找历史会话的指令、进度与归档。结果只在本机显示，不外传。</div>
+    <div class="searchRow">
+      <input id="searchQ" class="searchInput" placeholder="输入关键词，回车检索。范围：全部会话（含已归档）。" />
+      <button id="searchGo">检索</button>
+    </div>
+    <div id="searchOut" class="muted">输入关键词，回车检索。范围：全部会话（含已归档）。</div>
+    <div class="searchFooter">检索帮你找，接手新会话仍需走移交确认。</div>
+  </div>
   <h2>配置文件原文（cordis.patch.yml · 插件开关所在）</h2>
   <pre id="patch"></pre>
 <h2>体检与操作台（doctor dry-run · 只查不改＋逐条确认后才执行）</h2>
@@ -1219,8 +1234,76 @@ function alertOpen(text) {
   if (box) box.innerHTML = '<div class="dlgBox"><div class="dlgLine">' + esc(text) + '</div><div class="uninRow"><button class="uninNo" onclick="this.closest(\'#consoleDlg\').innerHTML=\'\'">关闭</button></div></div>';
 }
 
+// ---- S4 F-37 记忆检索卡（批1 文案原文照抄；与 React 通道 SEARCH_COPY 逐字同步，p22 钉） ----
+var SEARCH_COPY = {
+  title: "记忆检索",
+  desc: "在你的本机记忆台账里查找历史会话的指令、进度与归档。结果只在本机显示，不外传。",
+  empty: "输入关键词，回车检索。范围：全部会话（含已归档）。",
+  noResult: "没有命中。试试更短的关键词；一般输入栏的对话记录也在检索范围内。",
+  footer: "检索帮你找，接手新会话仍需走移交确认。"
+};
+function memorySearchUnavailableHtml(reason) {
+  return '<div class="desc">' + esc(String(reason == null ? "" : reason)) + "</div>";
+}
+function memorySearchNoResultHtml() {
+  return '<div class="desc">' + esc(SEARCH_COPY.noResult) + "</div>";
+}
+function boldQueryHtml(snippet, q) {
+  var text = String(snippet == null ? "" : snippet);
+  var needle = String(q || "").toLowerCase();
+  if (!needle) return esc(text);
+  var lower = text.toLowerCase(), out = "", i = 0;
+  for (;;) {
+    var idx = lower.indexOf(needle, i);
+    if (idx < 0) { out += esc(text.slice(i)); break; }
+    if (idx > i) out += esc(text.slice(i, idx));
+    out += "<b>" + esc(text.slice(idx, idx + needle.length)) + "</b>";
+    i = idx + needle.length;
+  }
+  return out;
+}
+function workspaceTail(workspace) {
+  var raw = String(workspace || "").trim();
+  if (!raw) return "";
+  var seg = raw.replace(/[\\/]+$/, "").split(/[\\/]/);
+  return seg[seg.length - 1] || raw;
+}
+function memorySearchRowHtml(row, q) {
+  var where = (row.file || "") + "·" + (row.sec || "");
+  if (row.no) where += " " + row.no;
+  var when = row.ts ? String(row.ts).slice(0, 10) : "";
+  var head = esc(String(row.sid || "").slice(0, 8) + "·" + (row.status || "") + "·" + workspaceTail(row.workspace) + "｜" + where + (when ? "｜" + when : "") + "｜");
+  return '<div class="searchLine"><span class="techRow">' + head + "</span>" + boldQueryHtml(row.snippet, q) + "</div>";
+}
+async function runMemorySearch() {
+  var q = el("searchQ").value.trim();
+  if (!q) { el("searchOut").innerHTML = '<span class="muted">' + esc(SEARCH_COPY.empty) + "</span>"; return; }
+  el("searchGo").disabled = true;
+  try {
+    var res = await fetch(PANEL_API + "/v2/memory/search?q=" + encodeURIComponent(q), { cache: "no-store" });
+    var body = await res.json();
+    if (!body || body.ok !== true) { el("searchOut").innerHTML = '<div class="desc">检索没能完成：' + esc((body && body.error) || res.status) + "</div>"; return; }
+    if (body.available === false) { el("searchOut").innerHTML = memorySearchUnavailableHtml(body.reason); return; }
+    var rows = body.results || [];
+    if (rows.length === 0) { el("searchOut").innerHTML = memorySearchNoResultHtml(); return; }
+    var head = "检索完成：" + rows.length + " 条命中（范围 " + body.sessions + " 个会话，用时 " + body.elapsedMs + " ms）";
+    if (body.unreadable > 0) head += "；" + body.unreadable + " 个会话无法读取，已如实跳过";
+    var html = '<div class="muted">' + esc(head) + "</div>";
+    for (var i = 0; i < rows.length; i++) html += memorySearchRowHtml(rows[i], q);
+    var notices = (body.notices || []).filter(Boolean);
+    if (notices.length) html += '<div class="muted">' + esc(notices.join(" ")) + "</div>";
+    el("searchOut").innerHTML = html;
+  } catch (e) {
+    el("searchOut").innerHTML = '<div class="desc">检索没能完成：' + esc(e && e.message || e) + "</div>";
+  } finally {
+    el("searchGo").disabled = false;
+  }
+}
+
 el("refresh").addEventListener("click", loadSnapshot);
 el("doctor").addEventListener("click", runDoctor);
+el("searchGo").addEventListener("click", runMemorySearch);
+el("searchQ").addEventListener("keydown", function (e) { if (e && e.key === "Enter") runMemorySearch(); });
 loadSnapshot();
 loadStates();
 </script>

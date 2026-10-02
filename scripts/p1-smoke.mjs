@@ -14,6 +14,10 @@ const TUNNEL_HOST = "95c04a90ca73e397.dsh-market.com";
 const FIXTURE_DEVICE = "0123456789abcdef0123456789abcdef";
 const fixtureFile = join(tmpdir(), "toolkit-panel-smoke-" + process.pid + "-" + Date.now() + ".json");
 writeFileSync(fixtureFile, JSON.stringify({ [FIXTURE_DEVICE]: { createdAt: Date.now() - 60e3, lastSeenAt: Date.now() - 1e3 } }), "utf8");
+// S4 F-37：检索路由探针（desktop loopback 直达 handler）会真调 searchMemory——读时自愈会写
+// 派生缓存 <dataRoot>/search/。探针环境一律指临时根：生产数据根只读（启动包纪律），
+// 真检索行为与降级面由 test/panel-memory-search.test.mjs 在临时根上覆盖。
+process.env.AGENT_MEMORY_ROOT = join(tmpdir(), "toolkit-panel-smoke-amroot-" + process.pid);
 
 let passed = 0;
 let failed = 0;
@@ -45,7 +49,7 @@ const panelMod = await import(pathToFileURL(join(panelDir, "index.js")).href);
 panelMod.apply(fakeCtx, { toolkitRoot: root, doctorCli, devicesFile: fixtureFile });
 // P6 退役：/v2/ui 独立页删除（UI 过渡面退役，管理区并入唯一 toolkit-panel 标签页），
 // /v2/connector.js 保留（归一面板客户端动态 import realtime-connector 的引擎 HTTP 面）。
-check("routes count == 32 (P6 退役后: P2.4 22 条 + P4 v2 管理 API 9 条 + connector 1 条)", routes.length === 32, String(routes.length));
+check("routes count == 33 (S4 F-37 检索路由入表: P2.4 22 条 + P4 v2 管理 API 10 条 + connector 1 条)", routes.length === 33, String(routes.length));
 check("P2.1 plan route registered", routes.some((r) => r.path === "/api/toolkit-panel/plan"));
 check("P2.1 execute route registered", routes.some((r) => r.path === "/api/toolkit-panel/execute"));
 check("P2.1 plan/status route registered", routes.some((r) => r.path === "/api/toolkit-panel/plan/status"));
@@ -84,6 +88,8 @@ const expectedWhenAllowed = {
   // P4/P5 泛化线：v2 管理 API（写路由非 GET → 405；读路由 200/400）
   "/api/toolkit-panel/v2/snapshot": ["GET", 200],
   "/api/toolkit-panel/v2/health": ["GET", 400],
+  // S4 F-37（批1/裁1）：GET 形态自然归只读闸；无 q 探针＝空结果＋参数提示，200
+  "/api/toolkit-panel/v2/memory/search": ["GET", 200],
   "/api/toolkit-panel/v2/install/precheck": ["GET", 405],
   "/api/toolkit-panel/v2/install/confirm": ["GET", 405],
   "/api/toolkit-panel/v2/uninstall": ["GET", 405],

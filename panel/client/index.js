@@ -117,6 +117,11 @@ window.__ModuleLoader__.load({
 			issueInfo: { color: "#9aa0a6" },
 			allGood: { padding: "12px 10px", fontSize: 13, color: "#67c48b" },
 			h2: { fontSize: 16, margin: "16px 0 8px" },
+			// ---- S4 F-37 记忆检索卡 ----
+			searchRow: { display: "flex", gap: 8, margin: "0 0 10px", alignItems: "center" },
+			searchInput: { flex: 1, padding: "6px 10px", borderRadius: 6, border: "1px solid #3a3f47", background: "#101413", color: "#e6e6e6", fontSize: 13 },
+			searchRowLine: { borderBottom: "1px solid #23272d", padding: "7px 2px", fontSize: 12.5, lineHeight: 1.7, wordBreak: "break-all" },
+			searchFooter: { marginTop: 10, paddingTop: 8, borderTop: "1px solid #23272d", fontSize: 12, color: "#8fa89e" },
 			// ---- P2.2 启停开关（双层分立）----
 			toggleBox: { marginTop: 10, padding: "8px 10px", borderRadius: 6, background: "#151922", border: "1px solid #2a2f36" },
 			toggleHead: { fontSize: 12, fontWeight: 700, color: "#c8cdd4", marginBottom: 6 },
@@ -1611,6 +1616,145 @@ window.__ModuleLoader__.load({
 			);
 		}
 
+		// ════ S4 F-37 记忆检索卡（批1 文案原文照抄；卡底固定句＝移交制维持明示）════════
+		// 数据面＝GET /v2/memory/search（GET 形态自然归只读闸，裁1）；降级不 5xx，
+		// 卡面按服务端 reason 如实说明（裁2）。检索绝不自动注入新会话、不自动选候选
+		// （B3 既裁口径）；卡面文案与兜底页（panel.html memorySearch*Html）逐字同步，p22 钉。
+		var SEARCH_COPY = {
+			title: "记忆检索",
+			desc: "在你的本机记忆台账里查找历史会话的指令、进度与归档。结果只在本机显示，不外传。",
+			empty: "输入关键词，回车检索。范围：全部会话（含已归档）。",
+			noResult: "没有命中。试试更短的关键词；一般输入栏的对话记录也在检索范围内。",
+			footer: "检索帮你找，接手新会话仍需走移交确认。"
+		};
+
+		// snippet 里命中词加粗（大小写不敏感切分；假 react 下返回元素树，p22 文本收集兼容）
+		function boldQueryParts(snippet, q) {
+			var text = String(snippet == null ? "" : snippet);
+			var needle = String(q || "").toLowerCase();
+			if (!needle) return [text];
+			var lower = text.toLowerCase();
+			var parts = [];
+			var i = 0;
+			for (;;) {
+				var idx = lower.indexOf(needle, i);
+				if (idx < 0) { parts.push(text.slice(i)); break; }
+				if (idx > i) parts.push(text.slice(i, idx));
+				parts.push(react.createElement("b", { key: "hit-" + idx }, text.slice(idx, idx + needle.length)));
+				i = idx + needle.length;
+			}
+			return parts.filter(function (x) { return x !== ""; });
+		}
+
+		function workspaceTail(workspace) {
+			var raw = String(workspace || "").trim();
+			if (!raw) return "";
+			var seg = raw.replace(/[\\/]+$/, "").split(/[\\/]/);
+			return seg[seg.length - 1] || raw;
+		}
+
+		/**
+		 * 纯呈现卡（props 进、元素树出）：res=null 空态；res.phase=unavailable 降级；
+		 * res.phase=error 故障；res.phase=done 结果列。拆出纯函数层是为了 p22 能像
+		 * ToggleControls 一样对每个状态真跑（headless createElement 陷阱的同族对策）。
+		 */
+		function MemorySearchCard(props) {
+			var query = props.query;
+			var setQuery = props.setQuery;
+			var busy = props.busy;
+			var res = props.res;
+			var onSearch = props.onSearch;
+			var kids = [];
+			kids.push(react.createElement("div", { key: "desc", style: styles.desc }, SEARCH_COPY.desc));
+			kids.push(react.createElement("div", { key: "row", style: styles.searchRow },
+				react.createElement("input", {
+					key: "q", style: styles.searchInput, value: query,
+					placeholder: SEARCH_COPY.empty,
+					onChange: function (e) { setQuery(e && e.target ? e.target.value : ""); },
+					onKeyDown: function (e) { if (e && e.key === "Enter") onSearch(); }
+				}),
+				react.createElement("button", {
+					key: "go", style: busy ? Object.assign({}, styles.button, styles.buttonDisabled) : styles.button,
+					disabled: busy, onClick: onSearch
+				}, busy ? "检索中…" : "检索")
+			));
+
+			if (res === null) {
+				kids.push(react.createElement("div", { key: "empty", style: styles.muted }, SEARCH_COPY.empty));
+			} else if (res.phase === "unavailable") {
+				kids.push(react.createElement("div", { key: "unavail", style: styles.desc }, res.reason));
+			} else if (res.phase === "error") {
+				kids.push(react.createElement("div", { key: "err", style: styles.desc }, res.message));
+			} else {
+				var data = res.data;
+				var rows = data.results || [];
+				if (rows.length === 0) {
+					kids.push(react.createElement("div", { key: "none", style: styles.desc }, SEARCH_COPY.noResult));
+				} else {
+					var head = "检索完成：" + rows.length + " 条命中（范围 " + data.sessions + " 个会话，用时 " + data.elapsedMs + " ms）";
+					if (data.unreadable > 0) head += "；" + data.unreadable + " 个会话无法读取，已如实跳过";
+					kids.push(react.createElement("div", { key: "head", style: styles.muted }, head));
+					rows.forEach(function (row, i) {
+						var where = (row.file || "") + "·" + (row.sec || "");
+						if (row.no) where += " " + row.no;
+						var when = row.ts ? String(row.ts).slice(0, 10) : "";
+						kids.push(react.createElement("div", { key: "r" + i, style: styles.searchRowLine },
+							react.createElement("span", { key: "a", style: styles.techRow },
+								String(row.sid || "").slice(0, 8) + "·" + (row.status || "") + "·" + workspaceTail(row.workspace) + "｜" + where + (when ? "｜" + when : "") + "｜"),
+							boldQueryParts(row.snippet, res.q)
+						));
+					});
+				}
+				var notices = (data.notices || []).filter(Boolean);
+				if (notices.length) {
+					kids.push(react.createElement("div", { key: "notice", style: styles.muted }, notices.join(" ")));
+				}
+			}
+
+			kids.push(react.createElement("div", { key: "foot", style: styles.searchFooter }, SEARCH_COPY.footer));
+
+			return react.createElement("div", { style: styles.card }, kids);
+		}
+
+		function MemorySearchSection() {
+			var inputSt = react.useState("");
+			var query = inputSt[0];
+			var setQuery = inputSt[1];
+			var resSt = react.useState(null);   // null=尚未检索；{ phase, ... }
+			var res = resSt[0];
+			var setRes = resSt[1];
+			var busySt = react.useState(false);
+			var busy = busySt[0];
+			var setBusy = busySt[1];
+
+			var runSearch = react.useCallback(async function () {
+				var q = query.trim();
+				if (!q) { setRes(null); return; }
+				setBusy(true);
+				try {
+					var http = await fetch(V2_API + "/memory/search?q=" + encodeURIComponent(q), { cache: "no-store" });
+					var body = await http.json();
+					if (!body || body.ok !== true) {
+						setRes({ phase: "error", message: "检索没能完成：" + ((body && body.error) || ("HTTP " + http.status)) });
+						return;
+					}
+					if (body.available === false) {
+						setRes({ phase: "unavailable", reason: String(body.reason || "") });
+						return;
+					}
+					setRes({ phase: "done", q: q, data: body });
+				} catch (e) {
+					setRes({ phase: "error", message: "检索没能完成：" + (e && e.message || e) });
+				} finally {
+					setBusy(false);
+				}
+			}, [query]);
+
+			return react.createElement(MemorySearchCard, {
+				query: query, setQuery: setQuery, busy: busy, res: res, onSearch: runSearch
+			});
+		}
+
 		function ToolkitPanel() {
 			var state = react.useState(null);
 			var snapshot = state[0];
@@ -1724,6 +1868,9 @@ window.__ModuleLoader__.load({
 				react.createElement(RestoreBanner, { show: !!banner }),
 				// P6 归一：registry 通用管理区（自适应 · 新装插件免刷新自动出现）——原 v2 标签页整体并入
 				react.createElement(V2Section, { key: "v2-section" }),
+				// S4 F-37：记忆检索独立卡（批1）——全库行为的读卡，不是单插件配置
+				react.createElement("h2", { key: "search-h2", style: styles.h2 }, "记忆检索"),
+				react.createElement(MemorySearchSection, { key: "memory-search" }),
 				// P6 归一：旧 5 卡片区降级为「内置插件工具区」，插件特有入口（两层开关/参数编辑/
 				// 卸载恢复/技术详情）原样保留在本区，入口可达（P6 映射表见 P6 报告）
 				react.createElement("h2", { style: styles.h2 }, "内置插件工具区（patch 域 · 开关 / 参数 / 卸载恢复）"),
