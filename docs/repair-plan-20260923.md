@@ -3345,3 +3345,26 @@ dataRoot 解析按 resolveDataRoot 正典（显式>env>缺省），patch 行 con
 - **全量首推**：`git push -u origin master`——零 force、完整历史上 GitHub。
 - **读回验证**：远程 HEAD＝本地补句笔链尾；`GET /repos` 确认仓存在/可见性/默认分支。
 - 发布实况（仓址/推送 hash/读回）随终报账面笔回填本节。
+
+### 58.4 发布执行实况（中止停报，如实记）
+
+- **补句笔** `fa81ef9`：落链（README AI 提醒句＋CHANGELOG 随录）；门禁 ci-local --with-scan
+  **6/6 全绿一次过（122.6s，两 flake 族零振）**；pack 干跑 **xiaobai-agent@1.0.0 129 文件**口径不变。
+- **建仓 ✓**：`POST /user/repos` → **HTTP 201**，`zhujianshi3124/xiaobai-agent`，public，
+  auto_init=false（纯空仓）；仓址 https://github.com/zhujianshi3124/xiaobai-agent 。
+- **通道改指 ✓**：origin push URL `FROZEN-SOURCE-NO-PUSH-DISABLED` →
+  `https://github.com/zhujianshi3124/xiaobai-agent.git`（config 内干净无 token）；**fetch 仍指
+  冻结源祖锚 `D:\dsh-plugins\dsh-toolkit` 未动**；token 仅瞬态（Basic extraHeader 单次使用，
+  零持久化）。
+- **首推 ✗（停报）**：`git push -u origin master` 被远程拒绝——
+  `refusing to allow a Personal Access Token to create or update workflow .github/workflows/ci.yml
+  without workflow scope`。**成因**：仓历史含 `.github/workflows/ci.yml`（含其历史提交），GitHub
+  对推送含 workflow 文件的 ref 更新要求 classic PAT 具备 **`workflow` scope**；现令牌仅 `repo`。
+  全历史首推下该文件的历史提交必然在推程内，不可拆分绕行（改写历史违背"完整历史"硬约束，
+  不做）。**平台安全检查，不绕过，如实停报。**
+- **停靠候**：用户重新生成令牌（classic PAT 勾 `repo`＋`workflow` 两 scope，或 fine-grained
+  PAT 勾 Contents: Read and write ＋ Workflows: Read and write）——协调侧转呈。新令牌到达后
+  按同款瞬态纪律复推（其余各步已就绪，仅剩推送与读回验证）。
+- **随报候裁一件（非阻塞）**：推送成功后 `.github/workflows/ci.yml` 会随历史上线 GitHub Actions
+  （push 触发、self-hosted runner 标签、云端无 DOCTOR_CLI 注入 ⇒ run 将无限 pending）。届时
+  可由用户在仓库设置禁用 Actions，或另行批令处理 ci.yml；本侧不先动。
