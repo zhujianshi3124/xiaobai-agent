@@ -899,3 +899,8 @@ JS 侧 JSDoc 引用，公共类型仍统一从 contract 导出；typecheck 已�
 ### 契约版本 1.2.0 → 1.3.0（2026-10-03，EXE-BOOT-028；用户裁决②）
 
 - `PLUGIN_CONTRACT_VERSION` 升次版本（`contract/src/types.ts`）：0.2.0-rc.2 宿主适配（dshRuntime 双段范围，见上条 026 批）落地的契约面次版本。manifest `contract` 范围校验与错误提示串全经常量插值自动跟随，`^1.0`／`^1.1`／`^1.2` 既有清单零迁移；无 schema 变更、无校验行为收紧。
+
+### 预设通道 0.2.0 适配：compact 变体预设自动生成（2026-10-03，EXE-BOOT-031）
+
+- `scripts/apply-preset-patch.mjs` 新增 0.2.0 profile-patch 通道：宿主 0.2.x 下不再改写任何预设文件（旧机制的改写目标在新宿主已不存在），改为向 profile 的 cordis.patch.yml 追加 marker 包裹的变体预设块——按环境现场枚举全部含压缩成员的预设基底（官方 bundle 预设与用户层声明行，第三方 bundle 以同形态入包即自动覆盖），逐一生成「xiaobai compact」变体：压缩引擎同位替换、群组结构与兄弟成员原样保留、全新预设 id 不劫持官方、结构失配 REFUSE 不盲写、幂等、单块可回退（`--undo --only <id>`）；无压缩成员的基底（minimal）明示跳过。通道判定＝形态探测＋安装树版本交叉校验；显式 DSH_HOME 环境下绝不静默回退老通道。0.1.x 宿主老通道行为原样保留。
+- 回退：删除变体块即回退（手工或 `--undo`）；首次写入前 profile patch 整文件备份于 `preset-backups/`。
