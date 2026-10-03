@@ -3505,3 +3505,58 @@ plan §59.2 候裁面②（生产代码硬编码）本批**闭账**；候裁面�
 推毕读回后即达"做好了"——**最终弃置提醒**：请到 GitHub → Settings → Developer settings →
 Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删）；npm 发布另用独立 token，
 与本枚无关。
+
+## 61. 模型配置消失事件取证结案＋外部门禁缺席降级收尾批（2026-10-03 · EXE-BOOT-024 续用 · 副本线）
+
+**令源**：C1-007 事件追查第二令（用户三答照录在案）＋结案收尾批令（用户原话"全部已经恢复了。
+另外其他待办按建议"）。
+
+### 61.1 事件结案注（三证闭合）
+
+- **成因＝宿主/安装器自迁移**：9/29 09:34 settings 导入窗与 9/30 12:49 桌面版（DeepSeek
+  Harness 0.2.0-rc.2）安装窗先后把 settings 面 `llm-pi-ai` providers 迁往 desktop 侧；
+  10/2 11:59 web 宿主启动时 providers 无载（web profile patch 恒空——mtime 9/12 起铁证；
+  home patch 9/18 在案即不存在）⇒ 模型页只剩官方。
+- **key 与配置分文未失**：`.credentials.yaml` 9 ref 在位（9/30 12:58 后未触）；desktop patch
+  providers 与 `settings.yaml.imported` 逐名逐模型数同构（8 provider）。
+- **恢复＝家根补丁单笔** `~/.dsh/cordis.patch.yml`（sha `bdc8bbc7…`；llm-pi-ai 8 provider
+  逐字自 desktop patch＋agent-default-model 原值＝sensenova-gateway/deepseek-v4-flash；
+  零 key 原文；回退＝删该文件）。用户验证通过（网页版与桌面版 8 provider 全回显）。
+- **本项目零涉三证闭合**：时间线（两变异窗早于 024 最早动作 21:55:59）＋操作性质（024 对
+  `~/.dsh` 全只读）＋用户佐证（9/30 安装、10/2 21:39 启动桌面版自认）。
+
+### 61.2 收尾批三件
+
+- **修复笔 `4da4a59`（外部门禁缺席降级）**：024 干净克隆实跑 2/6 红四根全闭——
+  ①`p22b-retention-scope` E1e/E4、`q2-layer-scan` §4、doctor selftest stage3 影子段 e：
+  运行期目录（`.panel-backups` 等，.gitignore 声明不入库）缺席改 **skip() 明示通道**
+  （SKIP 行非 FAIL 形态、regression-all 兼容；本机在场照跑原断言，行为不变）；
+  ②`doc-ref-guard`：运行期面引用缺席免红改**显式 SKIP 计数**（判据＝.gitignore 运行期
+  目录名单单一来源＋`.doctor-link-backup` 前缀形态——后者系本批克隆复验抓出补齐；
+  目标在场照验，SKIP 不豁免内容错误）；③勘误登记命中 SKIP token ⇒ **合法存续**单列
+  计数（登记时确曾失效，非僵尸红）。
+- **勘正笔 `7b6584f`**：package.json 补 `author: zhujianshi3124`（与 LICENSE 版权行对齐）；
+  **pack 口径勘正**：022 在档"129 文件"＝npm notice 口径（文件＋36 目录条目）、024 实测
+  "93"＝`--json` files 数组（纯文件）——同包两口径并立、两读数皆对，勘 024 报告
+  "疑陈旧"假说为**口径差**（notice 口径 129 复测不变）。
+- **钉与证据**：新钉 `test/external-gate-degradation.test.mjs`（静态钉 4＋在场态行为钉 3；
+  guard 自证格两态案㉘a–e 随每轮门禁自跑）；变异自检 M1（p22b 去门控→钉红）／M2（guard
+  判据恒 false→自证格红 exit 2），还原 sha 逐字节同。
+
+### 61.3 读数
+
+- **本机**：npm test **536/0**（含新钉；一跑 install-confirm-gate flake 一轮，A#57 在案同族）；
+  ci-local --with-scan **6/6 全绿 106.4s**（首跑 agent-memory R1 并发写 flake 一轮，A#59
+  在案同族，复跑绿）；pack notice 口径 129 不变、author 在位。
+- **外部口径（干净克隆实跑，沙箱 clean-clone）**：p22b/q2/stage3/guard 四格 **exit 0**——
+  p22b SKIP×2 明示、q2 **13/13 PASS**＋SKIP 注记、guard **全绿 SKIP 31 条**、stage3 真实
+  环境在场照跑全 PASS（其缺席态属外部用户机器，静态钉在案）。克隆裸 nt=1（未 npm ci 无
+  dist，外部用户完整链＝npm ci → ci-local，024 已验）。
+- **边界如实注**：run-tests×2 的 `link:D:/dsh-plugins` fixture 字面属同族潜在外部敏感面
+  （engine 对 link 目标不触盘 resolve、断言过滤精确，024 无红证），本批不动。
+
+### 61.4 对 024 独立审计报告的勘误（如实记）
+
+- "home patch 9 月中旬曾在位"系误读 Q2-RELEASED-SCAN（原文结论＝**文件不存在**），更正；
+- pack"129 疑陈旧读数"更正为**口径差**（两读数皆对）；
+- 外部门禁修复由"候裁"转入本批施工（用户"按建议"授权）。

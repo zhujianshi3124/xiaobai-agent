@@ -6,6 +6,17 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### 外部克隆门禁自包含修复＋署名补齐（2026-10-03，C1-007 收尾批）
+
+- **外部克隆用户门禁自包含**：`ci-local` 链中依赖运行期目录（`.panel-backups`／`.panel-custody`／
+  `.registry` 等，按 .gitignore 声明不入库）的检查格——`scripts/p22b-retention-scope.mjs`、
+  `scripts/q2-layer-scan.mjs`、doctor selftest stage3 影子段、`scripts/doc-ref-guard.mjs`——
+  在目录缺席环境（新克隆）由崩溃／判红改为**显式 SKIP＋原因注记**（缺席明示、不静默）；
+  本机（目录在场）行为不变。外部克隆用户 `node scripts/ci-local.mjs --with-scan` 现可全绿。
+- **署名**：package.json 补 `author`（与 LICENSE 版权行一致）。
+- 模型配置事件（用户提供方列表消失）结案：成因＝宿主/安装器自迁移，key 与配置分文未失，
+  经家根补丁单笔恢复并经用户验证；账面详见 `docs/repair-plan-20260923.md` §61。
+
 ### doctor CLI 去机器硬编码＋YAML 检查缺席明示化（2026-10-02，C1-007 阶段二·副本线；用户终批"按建议"）
 
 - **YAML 解析器三级装载**：`DSH_DOCTOR_YAML_URL` env 显式指定 → 运行环境 `yaml` 包惰性探测
