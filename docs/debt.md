@@ -869,3 +869,16 @@ H5 轮的 `6900` 变成 `2624`，`Get-Process` 读得其 `StartTime = 2026/9/22 
 
 - 开源线 peer 钉与 dshRuntime 范围已演进为双段（本批）；冻结线 `@local/dsh-toolkit` 维持 1.1 系旧钉（`0.1.5-rc.2` 精确／`^0.1.5-rc.2`）＋ `">=0.1.2-rc.1 <0.2.0"`——两线在版本门禁面出现**有意分歧**：冻结线服务现役老宿主，开源线服务双宿主目标。合流条件＝用户裁决"是否回灌冻结线"（含 R1 修复与门禁重画两件）；合流前，冻结线在 0.2.0 宿主下将触发宿主版本豁免流程（025 D 表 D1 判定不变）。
 - 实装树差异补记：0.2.0 桌面 CLI 为 bundle 分发（约三十个 0.2.0-rc.2 精确钉包不在 npm registry，如 dsh-acp-app），npm 全装不可行——本批沙箱实装以 tarball 手工落装＋宿主树补齐达成（读数在案）。
+
+## 031 批新增（2026-10-03 · EXE-BOOT-031）
+
+### 新发现入账（先报后动）
+
+- **debt-031-a 子插件 manifest 运行时范围未随门禁重画**：lib/ 四子插件 dsh.plugin.json（agent-memory／compact-router／rate-throttle／search-router）＋panel/dsh.plugin.json 共 5 处 `requirements.runtime.dsh` 仍为单段 `">=0.1.2-rc.1 <0.2.0"`；根 manifest 已双段（9db3a58）。影响判定：0.2.0 宿主准入只读 package.json peerDependencies（已双段）→ 准入零影响；doctor 现行不交叉校验子插件 manifest → 零翻红；属仓内自述不一致（0.2.0 下子插件自述与根声明矛盾）。处置：挂账，建议下批对齐（5 处随根 manifest 同步双段）；031 批不扩面修。
+- **debt-031-b 029 §2 纪律误署更正未竟**：031 启动包裁决⑦要求本批落账 029 启动包 §2 的纪律误署更正；029 启动包原文不在可及证据区（029 证据区仅 t0 核实读数；全沙箱"误署"检索零命中），无法逐字更正、不臆造。处置：挂账待原文补齐——协调侧/用户提供 029 §2 原文后，随下一批记账笔落更正（plan §66.1⑦ 同源互引）。
+
+### 挂账新增（只记账不施工）
+
+- **runbook-1 补两笔（031 裁决③）**：⑥ liangshen 0.1.5→0.2.0 迁移步骤——预设以新形态（dsh-agent-preset 行）落位后，我方 compaction 行 name 须由旧称 `'@local/dsh-toolkit/compact-router'` 同步为新称 `'xiaobai-agent/compact-router'`（0.2.0 变体生成已按新称，迁移窗核对即可）；⑦ 用户网页宿主升级前 dsh-web-all 0.2.0 兼容预检（第三方作品只检不修；其 patch 行形态初判同款、未实测）。
+- **新增观察项（观察项非工单）**：dsh-web-all 作者发布 0.2.0 兼容更新（含梁神预设新形态）时，apply-preset-patch 0.2.0 通道按基底枚举自动适配生成变体——无需新工单。
+- **老通道现网实况注记**：用户侧第 4 预设现文件 sha 与 2026-09-18 台账 patchedSha 不匹配（文件其后被更新）；老工具现行＝unknown→REFUSED（拒绝不盲写、零写）——生产实况如实记，迁移窗按 runbook-1⑥ 处置。

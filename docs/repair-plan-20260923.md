@@ -3771,3 +3771,62 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 - 冻结仓零触碰；doctor 仓未触；家根零写入；用户侧两宿主零启停零升级零卸载零配置写；沙箱宿主实例未启动。
 - 网络：本轮零外联；凭据未读（裁决④仅状态入账，无任何凭据细节）。
 - 不 push、不 tag、不 publish；证据区 `D:\dsh-test-sandbox\var\scratch\exe-boot-028-recon\`；探针区 001-027 保留未动。
+
+## 66. EXE-BOOT-031 批（2026-10-03 · 开源线 · 预设通道 0.2.0 一般化施工〔A 案·候选二〕＋settings 面合流）
+
+**令源**：EXE-BOOT-031 启动包（预期链尾 ab24f69 树净——实况符合；冻结仓 04816b8 树净只读核验；本轮用户终裁七项生效、默认不重议；030 停报 A 案批复＝"按建议"，链引 030 申报 E 候选 A〔liangshen 迁移归 runbook＋工具对 profile patch 用户层行一般化枚举自动覆盖〕）。
+
+### 66.1 本轮裁决落账（①–⑦ 要义）
+
+- **① A 案施工＝候选二一般化**：枚举环境全部同构基底（官方 0.2.0 bundle 预设行＋profile patch 用户层 dsh-agent-preset 行），对含 compaction 成员的基底逐一生成我方变体（同位替换、保 group/isolate 结构、新 id 不劫持官方、结构失配 REFUSE 不盲写、幂等、单块可回退）；无 compaction 成员的基底（minimal）跳过且每次运行留可观测证据。本批实产官方 3 份变体（standard/ptc/cordis）。
+- **② liangshen 不在本批施工**：0.2.0 适配两路并行先到先用（dsh-web-all 作者更新以新形态入包／用户升级窗迁移）；工具来者不拒保证任一路到位自动生成变体（本批以合成件一手验证该承诺，66.6）。
+- **③ 升级 runbook 挂账补两笔**（liangshen 迁移步骤含 compaction 行 name 旧称→新称；dsh-web-all 0.2.0 兼容预检——第三方作品只检不修）→ 66.5 与 debt runbook-1。
+- **④ 分叉判定＝b 案**（形态探测＋版本号交叉校验，029 T0 结论）→ 66.3。
+- **⑤ settings 面原批不变**（配置行顺迁与 T1 合流；schema 校验；compact-router 包根直入）→ 66.4。
+- **⑥** 双形态实测（网页＋桌面真机）留后续包；对外发布前用户终批铁令不变。
+- **⑦ 029 §2 纪律误署更正——未竟如实记**：029 启动包原文不在可及证据区（029 证据区仅存 t0 核实读数；全沙箱"误署"检索零命中），无法逐字更正、不臆造；本节如实挂账（debt-031-b），原文补齐后随下一批落账（申报 D 项呈协调侧/用户）。
+
+### 66.2 T0 实勘（施工前核实；读数正本 `var/scratch/exe-boot-031-main/t0/t0-reading.md`）
+
+- **前置复核通过**：minimal 无 compaction 成员实读确认（§6② 不触发）；standard/ptc/cordis 三基底 compaction group 逐字同构；web-app 包 dsh.bundle.patch 显式列出 4 份预设文件（基底枚举通道成立）。
+- **选中语义代码级闭合（029 缺口收口）**：沙箱安装树 dsh-agent-preset-registry 源码实读——注册即挂载（register→activate→mountPreset 立即装载整棵 plugins 树）；选中＝retain→bind（agent scope 挂至已挂载 generation）；挂载失败→record.broken 可观测且启动不倒；重复 preset id 抛错；preset 内服务泄漏根 realm＝挂载失败（**"保 group/isolate 结构"为承重约束非风格**）。
+- **模块解析双锚定谳**（dsh-app-boot 逐字）：bundle 名先解析自安装树、后 profile 目录，profile node_modules（pnpm）优先——变体行声明于 profile patch 层，内部 @deepseek-ai/* 行由安装树供给解析、xiaobai-agent/compact-router 经 profile link 解析（026 agent-memory 挂载实测同通道互证）。
+- **考古新发现（先报后动，本批不修）**：四个子插件 manifest＋panel manifest 的 requirements.runtime.dsh 仍为旧单段 `">=0.1.2-rc.1 <0.2.0"`（9db3a58 门禁重画只改根 manifest 两处）——0.2.0 宿主准入只读 package.json peerDependencies（已双段）→ 准入面零影响；doctor 现行不交叉校验子插件 manifest → 零翻红；属仓内声明面不一致，入账 debt-031-a。
+
+### 66.3 T1 施工（实现笔 121b8f4，单笔可 revert）
+
+- **施工面**：`scripts/apply-preset-patch.mjs`（0.2.0 profile-patch 通道新增；git 计 871+/69−——69 行系老通道顶层流包入 runLegacyChannel 的**等价缩进搬运**，语义零改动；唯一行为面变更＝用户预设目录增 DSH_USER_PRESETS_DIR env 覆写、缺省路径不变，供沙箱副本回归零触碰真实家根）＋新增 `test/preset-patch-020.test.mjs` 16 用例（020 通道 12＋老通道回归 4）。
+- **通道分叉（裁决④ b 案）**：--presets-dir 旗标→老通道；--profile-patch／--profile 旗标→新通道；双候选并存按安装树版本裁决（0.2.x→新；0.1.x 且 DSH_HOME 未显式在设→老＝现网行为不变；0.1.x 且 DSH_HOME 显式在设→REFUSE——**沙箱安全铁则：显式家根下绝不静默回退老通道**）；仅一候选→该通道（新通道仍须版本 0.2.x 否则 REFUSE，与契约上界 <0.3.0 同口径）；双无→维持老工具原报错形态。
+- **变体命名清单（申报项）**：xiaobai-compact-standard／xiaobai-compact-ptc／xiaobai-compact-cordis（row id＝config.id 同值；显示名 xiaobai compact (<base>)；order＝基底 order＋20＝21/22/24；用户层基底 <id> → xiaobai-compact-<id>；基底 id 占用 xiaobai-compact 前缀者 REFUSE 防自吞）。
+- **写位与台账**：profile patch 尾部 BEGIN/END 注释包裹块（每变体一块，单块可回退）；首写前整文件备份 preset-backups/profile-cordis-patch.<profile>.bak；状态台账 preset-patch-state.json 增 "020" 顶层命名空间键（老通道四 id 键与面板 presetBridgePrecheck 读面零扰动）；空表（[]）档位整文件重建、undo 后无结构行回写 []（YAML 合法性守卫）。
+- **幂等语义**：无→写入；同→no-op（台账缺失自愈采纳）；台账内已写且基底变→再生（官方清单升级自动跟随）；台账外差异→REFUSE（Web 编辑器按 id 覆写的用户改动保护）。
+- **施工中两处实测修正（成因先于修法）**：①基底判定改"声明行邻接"单一判据——web patch 层文件含 dsh-agent-preset-registry 服务行（子串包含声明名）曾误触发 REFUSE，子串探针＋单行检查废除（真沙箱首跑读数 `var/scratch/exe-boot-031-main/t3/apply-run1.log` 在档）；②findMarkerBlocks 失衡返回形状补齐 blocks 空数组＋入口统一预检（失衡时 status/apply/undo 全命令 REFUSE exit 2）。
+- node --check 全程通过；escape 静态守卫三命题（含 agentMemoryRoot 双引号字面量恰 2 处）全绿未动。
+
+### 66.4 T2 settings 面合流（与 T1 同笔，裁决⑤）
+
+- 变体行 compact-router 成员 config 三键＝`mode: auto`／`fallbackOnRateLimit: true`／`archive: true`（老通道同值；数据根缺省走默认＝与老硬编码同实值、去硬编码）。
+- **dump-config 组装树**：三变体 row id＋config.id 各 2 命中、compact-router 成员名 3 命中、config 三键 3 命中、order 21/22/24 各恰 1、官方 preset-standard 原样、026 agent-memory 行原样（`t3/dump-config.log`）。
+- **dump-config-schema 对照实验**：基线（031 前态）本有 4 条 "unrecognized Loader tree carrier" 诊断（官方四预设行各一＝宿主 schema 收集器对一切 dsh-agent-preset 行的既有局限；exit 1 基线同有）；加变体后恰新增同款 3 条（/184–/186），全部 preset 行 status=schema、零新诊断类型——我方行与官方行在收集器行为逐字同构（`var/scratch/exe-boot-031-main/t3/schema-baseline.json`／`var/scratch/exe-boot-031-main/t3/schema-variants.json`）。
+
+### 66.5 挂账更新（只记账不施工）
+
+- **runbook-1 补两笔（裁决③）**：⑥ liangshen 0.1.5→0.2.0 迁移步骤（预设以新形态落位后，我方 compaction 行 name 由旧称同步为新称——旧称系 '@local/dsh-toolkit/compact-router'、新称 'xiaobai-agent/compact-router'，0.2.0 变体生成已按新称，迁移窗核对即可）；⑦ 用户网页宿主升级前 dsh-web-all 0.2.0 兼容预检（第三方作品只检不修；其 patch 行形态初判同款、未实测）。
+- **新增观察项（观察项非工单）**：dsh-web-all 作者发布 0.2.0 兼容更新（含梁神预设新形态）时，本批工具按基底枚举自动适配生成变体——无需新工单。
+- **老通道现网实况读数（T3-4 附带发现，如实记）**：用户侧第 4 预设现文件 sha 与 2026-09-18 台账 patchedSha 不匹配（文件其后被更新过）→ 老工具今日现行为＝unknown→REFUSED（拒绝不盲写、零写）；本批零触碰、行为未改；迁移窗按 runbook-1⑥ 处置。
+
+### 66.6 T3 验证读数（证据区 `var/scratch/exe-boot-031-main/t3/`）
+
+- **3 变体生效＋幂等**：apply-run1.log（3 WRITTEN＋minimal SKIPPED）→ apply-run2-idempotent.log（no-op×3，exit 0）；profile-patch-after-apply.yml 在档（群组壳/isolate 原样、成员同位替换、兄弟成员全保留）。**宿主实装**：启动 40 秒存活＋token URL；stderr 零 "agent preset" 警告、零 broken、零 incompatible/exemption（registry 急切挂载语义下＝三变体全清单装载成功；唯一 "did not activate"＝026 遗留 agent-memory 实验行的已知注入限制，非本批）。
+- **minimal 跳过可观测**：每次运行恒列 SKIPPED 行（minimal 无 compaction by design）。
+- **合成件自动适配（来者不拒）**：独立副本家根＋合成用户层基底行→synth-apply.log "xiaobai-compact-user-synth-demo: WRITTEN"（order 29＝9+20、成员替换、兄弟保留；台账自愈采纳路径同轮在真件走通）。
+- **0.1.5 老通道不回退（真件只读副本）**：shipped 三件 patched→no-op→RESTORED（备份字节级还原）；用户侧第 4 预设 unknown→REFUSED＝生产实况复现（66.5）；沙箱副本与真实侧 sha 前后全等双证（sha-before／sha-after-undo／real-sha-before 在档）；真实家根与 npm 全局零触碰。
+- **套件与门禁**：npm test **3 轮全绿 552/552**（536＋本批 16，数目闭合；fullsuite-run1/2/3.log）；doctor dry-run issues=0（0/0/0）exit 0（doctor-dryrun2.log；YAML 缺席注记＝§60 明示形态）；doc-ref-guard 全绿 exit 0（guard-pre-ledger.log）。
+- **如实记**：预设清单 HTTP 直读未成——/api 面每启动换 token＋流式鉴权，四轮时间盒探测未破（api-probe*/读数在档）；装载成功证据链由 dump-config 组装树＋急切挂载零 warning＋registry 源码级判据承担；roster UI 实证归 ⑥ 双形态实测批（真浏览器即产品面）。
+
+### 66.7 红线自证
+
+- 冻结仓零触碰（只读 log）；doctor 仓未触；**家根零写入**；用户侧两宿主零启停零升级零卸载零配置写（沙箱宿主实例 DSH_HOME 重定向授权形态；T3-4 真件只读副本＋真实侧 sha 前后全等自证；020 工具全部写入面在沙箱家根副本与仓内脚本副本）。
+- 开源仓改动两笔：实现笔 121b8f4（scripts＋test）＋记账笔（plan §66＋debt＋CHANGELOG，纯追加）；分笔提交、逐笔查暂存区、git 零删除自证；不 push、不 tag、不 publish。
+- 网络零外联；凭据未读（沙箱家根 .credentials.yaml 亦未读）。
+- 探针区 001–030 保留未动；本批证据区 `var/scratch/exe-boot-031-main/`（t0 考古／t1 设计与调试工装／t3 全部读数）。
