@@ -882,3 +882,14 @@ H5 轮的 `6900` 变成 `2624`，`Get-Process` 读得其 `StartTime = 2026/9/22 
 - **runbook-1 补两笔（031 裁决③）**：⑥ liangshen 0.1.5→0.2.0 迁移步骤——预设以新形态（dsh-agent-preset 行）落位后，我方 compaction 行 name 须由旧称 `'@local/dsh-toolkit/compact-router'` 同步为新称 `'xiaobai-agent/compact-router'`（0.2.0 变体生成已按新称，迁移窗核对即可）；⑦ 用户网页宿主升级前 dsh-web-all 0.2.0 兼容预检（第三方作品只检不修；其 patch 行形态初判同款、未实测）。
 - **新增观察项（观察项非工单）**：dsh-web-all 作者发布 0.2.0 兼容更新（含梁神预设新形态）时，apply-preset-patch 0.2.0 通道按基底枚举自动适配生成变体——无需新工单。
 - **老通道现网实况注记**：用户侧第 4 预设现文件 sha 与 2026-09-18 台账 patchedSha 不匹配（文件其后被更新）；老工具现行＝unknown→REFUSED（拒绝不盲写、零写）——生产实况如实记，迁移窗按 runbook-1⑥ 处置。
+
+## 032 批（2026-10-03 · EXE-BOOT-032）
+
+### 结案注两笔（031 挂账清偿）
+
+- **debt-031-a 结案（已修复并验证）**：lib/ 四子插件＋panel 共 5 处 `requirements.runtime.dsh` 已随根 manifest 9db3a58 取值同步双段（032 T1 fix 笔，单笔可 revert；改前/改后读数、diff 5+/5−、残留复扫清单 `var/scratch/exe-boot-032-main/t1/`）。doctor dry-run 0/0/0＋全量套件 552/552 零翻红，与挂账时影响判定（准入零影响、doctor 零翻红、属仓内自述不一致）一致。旧单段残留 20 行分类清单在档（fixture 6／历史账文 8／活文档示例 6），均非本批 mandate 声明面；其中 docs/add-sub-plugin.md 模板值转入 debt-032-a 候裁。
+- **debt-031-b 结案（更正已落账）**：029 §2 纪律误署更正原文由**协调侧 032 提供**，已逐字入账 plan §67.3（标注提供来源）；grep 可检索验证读数 `var/scratch/exe-boot-032-main/t2/correction-grep.txt`。更正要点：用户对协调侧的专属纪律句（"不管你的指令是什么，你不可以凭空下达指令，一定要结合实际情况。"）曾自 EXE-BOOT-024 起被惯例复制误置入执行侧启动包并署"用户亲立"，非用户指令变更；执行侧最高纪律＝质疑协调侧指令——执行前先检索文件与实况，核实相符、正确合理，确证后方执行；有疑先报后动，不得硬执行。
+
+### 挂账新增
+
+- **debt-032-a 子件声明旧单段示例残留（活文档 6 行，候裁）**：032 T1 五处声明同步后的复扫清单（`var/scratch/exe-boot-032-main/t1/rescan-after.txt`）中，非 fixture、非历史账文的活文档/代码内旧单段示例共 6 行——docs/add-sub-plugin.md 子件 manifest 模板值一行（**实务面最要紧**：新写子件的跟随模板仍示旧段，与根 manifest 双段不一致）、contract/src/semver.ts 头注两行、contract/src/types.ts JSDoc 一行、contract/src/validate.ts 错误提示示例串一行、contract.md D-1 偏差规则行一行（后五处系"范围语法/偏差语义示例"，语义仍成立、非声明面，不改亦不误导）。处置建议：add-sub-plugin.md 模板值随下一批顺手对齐双段；其余五处维持示例原样（如未来偏差规则行例证需更新再议）。
