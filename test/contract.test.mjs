@@ -29,8 +29,8 @@ const fixture = (name) => JSON.parse(readFileSync(join(here, 'fixtures', 'contra
 
 // ── 契约身份 ──────────────────────────────────────────────────────────────
 
-test('契约版本常量为 1.2.0 且 semver 合法（S3 收紧笔升次版本；钉的命题不变＝常量是当前生效契约版本且可解析）', () => {
-  assert.equal(PLUGIN_CONTRACT_VERSION, '1.2.0');
+test('契约版本常量为 1.3.0 且 semver 合法（EXE-BOOT-028 用户裁决②升次版本；钉的命题不变＝常量是当前生效契约版本且可解析）', () => {
+  assert.equal(PLUGIN_CONTRACT_VERSION, '1.3.0');
   assert.ok(parseSemver(PLUGIN_CONTRACT_VERSION));
 });
 
