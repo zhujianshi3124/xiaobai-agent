@@ -850,7 +850,7 @@ H5 轮的 `6900` 变成 `2624`，`Get-Process` 读得其 `StartTime = 2026/9/22 
 
 ### A#64 结案注（R1 全局 registry 并发写 flake）
 
-- **根因定谳**（插桩复现，trace 三振同签名）：mkdir 锁换手窗内，等锁方读到上一持有者 owner.json 的删除前影像（可解析、属主 pid 已死）→ 单读判陈 → cleanupLock 误删当前持有者活锁 → 双重进入 registry 临界区 → lost update。**定性＝生产竞态**（lock.js 陈锁清理路径；测试仅为放大器）。
+- **根因定谳**（插桩复现，trace 三振同签名）：mkdir 锁换手窗内，等锁方读到上一持有者属主记录文件（owner 记录）的删除前影像（可解析、属主 pid 已死）→ 单读判陈 → cleanupLock 误删当前持有者活锁 → 双重进入 registry 临界区 → lost update。**定性＝生产竞态**（lock.js 陈锁清理路径；测试仅为放大器）。
 - **修法**：`lib/agent-memory/lib/lock.js` owner 在场路径陈锁判定改双读确认（判陈后隔 50ms 复读，内容键一致且仍判陈才清；不一致=换手中→按活跃锁等待）。语义保形：LOCK_BUSY/超龄/脏锁/目录年龄闸（owner 缺席路径）全部不变；陈锁清理路径 +50ms。
 - **验证**：压力器 120 轮×6 子进程＋60 轮×12 子进程（带 CPU 负载）全绿（修复前 ~每 8 轮一振）；R1 文件 20 连跑全绿（94/94×20）；全套件 6 轮全绿；doctor dry-run 0/0/0。
 - **证据**：`var/scratch/exe-boot-026-main/t3/`（trace 三振、analysis、stress 工装、r1-loop-20x.log、fullsuite 日志）＋ plan §63.3。

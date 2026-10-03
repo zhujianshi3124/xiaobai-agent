@@ -3641,8 +3641,8 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 
 ### 63.2 T2 桌面自动更新暂停（唯一例外性写入，备份＋可回退）
 
-- **机制考古**（app.asar 0.2.0-rc.2 `lib/main.js` 逐字在档）：electron-updater ^6.8.9；`DesktopUpdateCoordinator` 构造器逐字设 `autoDownload=false`／`autoInstallOnAppQuit=false`／`channel="nightly"`／`allowPrerelease=true`／`allowDowngrade=false`——**下载安装出厂即需用户确认，"自动"仅剩元数据轮询**（`DSH_DESKTOP_UPDATE_CHECK_INTERVAL_MS` 缺省 6e5ms=10 分钟，周期/前台/恢复/手动四类检查共用一调度）。总闸门＝`enabled()`＝`app.isPackaged && existsSync(<resources>/app-update.yml)`；缺件时 `doCheck()` 抛被捕获错误（自动检查静默、手动检查显报）。
-- **实施**（本机两宿主零进程核实后）：`app-update.yml` → `app-update.yml.dsh026-paused`（同目录改名，306B 原字节零改动，sha 三处一致：现文件/备份/暂停前实读）。备份 `t2/app-update.yml.pre-pause-backup`。
+- **机制考古**（app.asar 0.2.0-rc.2 主进程打包脚本抽取件逐字在档）：electron-updater ^6.8.9；`DesktopUpdateCoordinator` 构造器逐字设 `autoDownload=false`／`autoInstallOnAppQuit=false`／`channel="nightly"`／`allowPrerelease=true`／`allowDowngrade=false`——**下载安装出厂即需用户确认，"自动"仅剩元数据轮询**（`DSH_DESKTOP_UPDATE_CHECK_INTERVAL_MS` 缺省 6e5ms=10 分钟，周期/前台/恢复/手动四类检查共用一调度）。总闸门＝`enabled()`＝应用已打包且安装目录 resources 下存在更新源配置文件；缺件时 `doCheck()` 抛被捕获错误（自动检查静默、手动检查显报）。
+- **实施**（本机两宿主零进程核实后）：安装目录 resources 下更新源配置文件改名为其暂停名（同目录改名，306B 原字节零改动，sha 三处一致：现文件/备份/暂停前实读）。备份 `t2/app-update.yml.pre-pause-backup`。
 - **回退法**：`ren "D:\DeepSeek Harness\resources\app-update.yml.dsh026-paused" "app-update.yml"`（回退后 sha 应为 `96c202ea…e95d85`）。
 - **边界如实记**：暂停生效路径为代码静态分支；未启动桌面应用实测（§3⑤ 禁启动），持久性未验明记入账。副作用：用户手动"检查更新…"会显报检查失败（预期形态）。
 - feed 现状（本批匿名只读经代理实取）：nightly 仍供 0.2.0-rc.2＝机上同版（暂停防的是窗口期内 0.2.1+ 落 nightly）。
@@ -3651,11 +3651,11 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 ### 63.3 T3 R1 全局 registry 并发写丢失：根因定谳＋修复＋验证（生产竞态）
 
 - **插桩复现**（沙箱插桩副本，仓零动）：R1 同形状 6 子进程压力器 25 轮内 3 振（发生率 ~12%），全部"六子进程 OK＋registry 丢 1 条"同型。三振 trace 在档（`t3/trace-r0008/r0017/r0025.jsonl`＋analysis）。
-- **竞态窗口（trace r0008 事件序逐字定谳）**：等锁方在上一持有者 release（rm owner.json＋rmdir）与新持有者 mkdir 重建的换手窗内，读到**上一持有者 owner.json 的删除前影像**（内容可解析、属主 pid 已死）→ `isLockStale` 判陈 → `cleanupLock` **删掉当前持有者的活锁**（trace：`lock_stale_cleanup removed=true`）→ 等锁方 mkdir 成功双重进入 registry 临界区 → 双方各写一份 3 条记录、后者覆盖前者 → 丢 1 条（r0008 丢 sid-206；r0017 同签名且两等锁者同时中招）。静态四排除（debt #64）与实况一致：单读判陈＋死 pid 判据被"旧影像"借道，目录年龄闸只护 owner 缺席路径。
+- **竞态窗口（trace r0008 事件序逐字定谳）**：等锁方在上一持有者 release（rm 属主记录文件＋rmdir）与新持有者 mkdir 重建的换手窗内，读到**上一持有者 属主记录文件的删除前影像**（内容可解析、属主 pid 已死）→ `isLockStale` 判陈 → `cleanupLock` **删掉当前持有者的活锁**（trace：`lock_stale_cleanup removed=true`）→ 等锁方 mkdir 成功双重进入 registry 临界区 → 双方各写一份 3 条记录、后者覆盖前者 → 丢 1 条（r0008 丢 sid-206；r0017 同签名且两等锁者同时中招）。静态四排除（debt #64）与实况一致：单读判陈＋死 pid 判据被"旧影像"借道，目录年龄闸只护 owner 缺席路径。
 - **根因定性＝生产竞态**（lock.js 陈锁清理路径；非测试工程问题）：锁实现为 agent-memory 生产全局注册表锁，任意并发写场景可触发，测试仅是放大器。**"是否回灌冻结线"列待裁问题**（冻结线本轮零改动）。
-- **修复**（本批唯一代码修复笔，`lib/agent-memory/lib/lock.js`）：owner 在场路径的陈锁判定改**双读确认**——判陈后隔 50ms 复读 owner.json，内容键（name/pid/createdAt/host）与首读一致且仍判陈才动手清理；不一致＝锁目录正在换手 → 按活跃锁等待。owner 缺席路径维持目录年龄闸（旧影像不影响现 dir 实 stat）。代价：陈锁清理路径 +50ms（罕见路径），活跃/新鲜锁零影响；LOCK_BUSY/超龄/脏锁语义不变（R2 各分格语义保形）。
+- **修复**（本批唯一代码修复笔，`lib/agent-memory/lib/lock.js`）：owner 在场路径的陈锁判定改**双读确认**——判陈后隔 50ms 复读属主记录文件，内容键（name/pid/createdAt/host）与首读一致且仍判陈才动手清理；不一致＝锁目录正在换手 → 按活跃锁等待。owner 缺席路径维持目录年龄闸（旧影像不影响现 dir 实 stat）。代价：陈锁清理路径 +50ms（罕见路径），活跃/新鲜锁零影响；LOCK_BUSY/超龄/脏锁语义不变（R2 各分格语义保形）。
 - **验证**（下限全超）：①修复后指向仓库正本的压力器 **120 轮×6 子进程全绿**＋放大器 **60 轮×12 子进程（带 2 路 CPU 负载）全绿**（修复前基线 ~每 8 轮一振）；②`test/agent-memory.test.mjs` **20 连跑全绿**（每轮 94/94，TAP 读数在档）；③全套件 **6 轮全绿**（536/536×6；详见 63.6）；④doctor dry-run 0/0/0。
-- **插桩脚手架去向**：插桩副本（lock/registry/atomic+trace.js）与压力器全部留在沙箱证据区 `t3/`，仓库零插桩残留；修复笔本体只含双读确认。
+- **插桩脚手架去向**：插桩副本（lock/registry/atomic＋打点模块）与压力器全部留在沙箱证据区 `t3/`，仓库零插桩残留；修复笔本体只含双读确认。
 - **再现处置**：修复后任何再现＝重开立案（两振即查纪律）——在案。
 
 ### 63.4 T4 版本门禁重画＋0.2.0 实装验收（零版本豁免）
@@ -3697,3 +3697,4 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 - 开源仓代码改动仅两笔＝T3 lock.js 修复＋T4 版本门禁（package.json/dsh.plugin.json），其余全文档纯追加（分笔提交、逐笔查暂存区、git 零删除自证）。
 - 网络匿名只读零令牌（npm registry 依赖装取均在沙箱；download.deepseek.com nightly 清单只读；经 7897 代理）。
 - 探针区 001-025 保留未动；本批证据区 `var/scratch/exe-boot-026-main/`。
+- （勘正笔补记：账文追加后终守卫读数＝token 3389／片段形 13／沙箱根 215，读数正本 `var/scratch/exe-boot-026-main/t6/guard-final.log`；勘正共 **8** 处裸名引用泛化——026 应用前 7 处后复跑剩 1 红（3654 行 rm-owner 残留，额度断点未及修，读数 `t6/guard-final2.log`），第 8 处由 027 收尾改泛化，复跑全绿读数正本 `var/scratch/exe-boot-027-recon/t6-guard-after-fix.log`。）
