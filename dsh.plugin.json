@@ -6,7 +6,7 @@
   "contract": "^1.0",
   "requires": {
     "node": ">=22",
-    "dshRuntime": ">=0.1.2-rc.1 <0.2.0",
+    "dshRuntime": ">=0.1.2-rc.1 <0.2.0 || >=0.2.0-rc.2 <0.3.0",
     "services": ["webServer"]
   },
   "provides": {
@@ -70,7 +70,7 @@
   "requirements": {
     "runtime": {
       "node": ">=22",
-      "dsh": ">=0.1.2-rc.1 <0.2.0"
+      "dsh": ">=0.1.2-rc.1 <0.2.0 || >=0.2.0-rc.2 <0.3.0"
     },
     "binaries": [],
     "packages": {},
