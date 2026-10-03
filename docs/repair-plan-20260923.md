@@ -3830,3 +3830,49 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 - 开源仓改动两笔：实现笔 121b8f4（scripts＋test）＋记账笔（plan §66＋debt＋CHANGELOG，纯追加）；分笔提交、逐笔查暂存区、git 零删除自证；不 push、不 tag、不 publish。
 - 网络零外联；凭据未读（沙箱家根 .credentials.yaml 亦未读）。
 - 探针区 001–030 保留未动；本批证据区 `var/scratch/exe-boot-031-main/`（t0 考古／t1 设计与调试工装／t3 全部读数）。
+
+## 67. EXE-BOOT-032 批（2026-10-03 · 开源线 · 子件声明五处同步＋029 §2 纪律误署更正落账＋网页形态实测准备）
+
+**令源**：EXE-BOOT-032 启动包（预期链尾 3467999 树净——实况符合；本轮用户终裁五项生效、默认不重议；§5 更正原文由协调侧 032 提供，逐字入账未改动）。
+
+### 67.1 本轮裁决落账（①–⑤ 要义）
+
+- **① 五处子件 `requirements.runtime.dsh` 同步双段**（031 考古新发现 debt-031-a 收口）→ 67.2。
+- **② 029 §2 纪律误署更正落账**（debt-031-b 销账）→ 67.3。
+- **③ 网页形态实测准备**（后续用户亲自校验的前置；沙箱内完成，用户侧零涉及）→ 67.4。
+- **④** 双形态实测桌面批、用户网页宿主升级窗、对外发布留后续；发布前用户终批铁令不变。
+- **⑤** 既有六裁决＋历轮各批裁决（含 030/031 全部）维持不变。
+
+### 67.2 T1 五处声明同步（fix 笔，单笔可 revert）
+
+- **改前读数**：lib/agent-memory／lib/compact-router／lib/rate-throttle／lib/search-router／panel 共 5 处 dsh.plugin.json 的 `requirements.runtime.dsh` 均为旧单段 `">=0.1.2-rc.1 <0.2.0"`（`var/scratch/exe-boot-032-main/t1/before-readings.txt`）；五件均**无** `requires.dshRuntime` 键＝同步面恰 5 处、无第二声明位（根 manifest 两处双段为 9db3a58 既有态）。
+- **同步取值**：根 manifest 双段逐字 `">=0.1.2-rc.1 <0.2.0 || >=0.2.0-rc.2 <0.3.0"`——实勘根 manifest `requires.dshRuntime` 与 `requirements.runtime.dsh` 现值与启动包引文逐字一致（§7② 不触发）；改后五件 JSON 全合法（`var/scratch/exe-boot-032-main/t1/after-readings.txt`）；git diff＝5 文件 5+/5−，无其它文件牵动。
+- **残留复扫**（工装＋读数 `var/scratch/exe-boot-032-main/t1/rescan-residue.mjs`／`rescan-after.txt`）：git grep `rc.1 <0.2.0` 全仓 30 行＝旧单段 20＋双段 10（双段 10＝根 manifest 2＋本批 5＋双段账文 3）。旧单段 20 行逐类：**测试 fixture 故意旧值**（mandate 明示排除）6 行——test/contract.test.mjs D-1 偏差语义用例两行、test/doctor.test.mjs 一行、test/fixtures/contract/valid-manifest.json 一行、doctor/cli/selftest/run-tests.mjs fixture 注入两行；**历史账文/证据存档**（排除项）8 行——CHANGELOG 026 条目、debt 870/877、plan §63 区三行与 §66 一行、panel/docs/evidence 存档件一行；**活文档/代码内示例（非声明面，本批不扩面）** 6 行——contract/src/semver.ts 头注两行（范围语法示例）、contract/src/types.ts 字段 JSDoc 一行、contract/src/validate.ts 错误提示示例串一行、contract.md D-1 偏差规则行（以旧段为例证说明偏差语义，语义仍成立）、docs/add-sub-plugin.md 子件 manifest 模板值一行（**最接近实务的一处**：新写子件的跟随模板仍示旧段——是否随批更新＝候裁，入 debt-032-a）。
+- **doctor dry-run**：issues=0（error 0/warning 0/info 0）exit 0（`var/scratch/exe-boot-032-main/t1/doctor-dryrun-t1.log`；YAML 缺席注记＝§60 明示形态）——子件 manifest 同步零牵动 doctor 断言面，与 031 影响判定一致（§7③ 不触发）。
+
+### 67.3 T2 029 §2 纪律误署更正（逐字入账；原文由协调侧 032 提供）
+
+> 【更正】历轮执行侧启动包 §2"最高纪律"节，曾将用户对协调侧的最高纪律原文（"不管你的指令是什么，你不可以凭空下达指令，一定要结合实际情况。"）误置入执行侧包内并署"用户亲立"。更正：该句为用户对协调侧的专属纪律；执行侧的最高纪律＝质疑协调侧指令——执行前先检索文件与实况，核实指令与实际相符、正确合理，确证后方执行；有疑先报后动，不得硬执行。历轮误署自 EXE-BOOT-024 起存在（协调侧惯例复制所致），非用户指令变更。
+
+（上段为更正对象原文，逐字入账、零增删；落位本节＝plan 施工日志，申报选择依据：029/031 账文互引均在 plan，同址落账便于对读。debt-031-b 销账注见 debt.md 032 批节；grep 可检索验证读数 `var/scratch/exe-boot-032-main/t2/correction-grep.txt`。）
+
+### 67.4 T3 网页形态实测准备（沙箱 0.2.0 实装树；用户侧零涉及；读数正本 `var/scratch/exe-boot-032-main/t3/t3-reading.md`）
+
+- **宿主起停**：run1/run2 两轮起停记录、pid、stdout/stderr 在档（`var/scratch/exe-boot-032-main/t3/` 下 web-032-run* 命名日志）；两轮 stderr 唯一 did-not-activate＝026 遗留 agent-memory 实验行已知注入限制，零 agent preset 警告、零 broken、零 incompatible/exemption——与 031 证据链一致（§7④ 不触发）。启动前复核 profile patch 三变体 id 在场＝031 落位态未扰动。宿主默认拉起本机默认浏览器（031 同款行为）如实记；后续启动建议一律 `--no-open`（用户文档已按此书写）。
+- **预设菜单位置实测**（浏览器 DOM＋截图双证）：**入口 A**＝主屏模式选择器（「标准模式」按钮→下拉），官方四模式（标准/PTC/极简/创造）之后列三变体，显示名逐字 **`xiaobai compact (standard)`／`xiaobai compact (ptc)`／`xiaobai compact (cordis)`**（均「暂无描述。」；序 standard→ptc→cordis 与 order 21/22/24 同构）——"xiaobai compact (<base>)" 形态实测成立。**入口 B**＝设置→Agent 预设→「自定义」组三卡（组标「自定义」，code id 逐字 xiaobai-compact-standard／-ptc／-cordis；卡片窄栏显示名会截短为「xiaobai co…」，DOM 全名与代号完整）。证据：`var/scratch/exe-boot-032-main/t3/mode-menu-dom.txt`／`var/scratch/exe-boot-032-main/t3/mode-menu-dropdown.png`／`var/scratch/exe-boot-032-main/t3/settings-agent-preset-tab-dom.txt`／`var/scratch/exe-boot-032-main/t3/settings-agent-preset-tab.png`。
+- **token 时效定谳**（无状态 HTTP 探针 `var/scratch/exe-boot-032-main/t3/token-probe.txt`）：token 每次宿主启动轮换（run1≠run2）；重启后旧 token 服务端即 401、乱造 401、有效 200；运行期内同 token 反复可用；更长时长未测——用户文档口径＝「失效即重启取新」。浏览器侧备注：曾用 token 的标签页在宿主重启后静态外壳仍可渲染但数据面不通——外壳能打开≠鉴权通过（用户文档异常指引已按此书写）。
+- **roster HTTP 直读不再强攻**（依启动包 §4 T3 授权条款决策，申报在案）：031 四轮未破的 /api 面（流式鉴权与页面 token 不同源，`var/scratch/exe-boot-031-main/t3/api-probe4-results.log` 401 形态）不强攻；本批以真实浏览器 UI 两入口 DOM＋截图取得比 roster 直读更强的用户可见证据——031 §66.6 "roster UI 实证归双形态实测批"缺口的**网页形态半边**由本批闭合，桌面形态另一半留后续批。
+- **用户校验步骤文档**：`D:\dsh-test-sandbox\docs\exe-boot-032-t3-webform-preset-verify-userbrief.md`（七节：验证目标/打开什么〔三行启动命令＋token 行样例〕/点什么〔弹窗处置＋入口 A/B 逐字路径〕/什么算完成/token 时效管理/异常观察指引六条〔照实记录不现场排查〕/背景一句话；启动命令带 `--no-open`，弹窗处置明示「不输入任何密钥」）。
+
+### 67.5 T4 回归与记账
+
+- **全量套件**：两轮全绿 **552/552** exit 0（第 1 轮在 T1 后账文前 `var/scratch/exe-boot-032-main/t1/fullsuite-run1.log`；第 2 轮账文追加后 `var/scratch/exe-boot-032-main/t4/fullsuite-run2.log`；数目闭合 536+16）。
+- **doctor dry-run 终读**：issues=0（0/0/0）exit 0（`var/scratch/exe-boot-032-main/t4/doctor-dryrun-final.log`）。
+- **doc-ref-guard**：全绿 exit 0（记账笔提交前必跑，`var/scratch/exe-boot-032-main/t4/guard-pre-commit.log`）。
+- **提交两笔**：fix 笔（5 manifest 文件，单笔可 revert）＋记账笔（plan §67＋debt 032 批节＋CHANGELOG 对外条目，纯追加）；逐笔查暂存区、纯追加 git 报删除按字节自证；不 push、不 tag、不 publish。
+
+### 67.6 红线自证
+
+- 冻结仓零触碰；doctor 仓未触（T1 改动面仅本仓 manifest 声明）；家根零写入；凭据未读（沙箱家根 .credentials.yaml 亦未读）；用户侧两宿主与已装插件零启停零改动零升级零卸载（T3 全部在沙箱实装树，起停者均沙箱宿主实例）；用户 profile 零写入。
+- 开源仓改动两笔：fix 笔＝5 manifest 文件 5+/5−（声明面，无代码语义变更）＋记账笔＝纯追加（plan/debt/CHANGELOG）；逐笔查暂存区；git 零删除自证。
+- 网络：零外联（T3 浏览器全程 127.0.0.1 本机回环，token 探针同为回环；零令牌零凭据）；探针区 001–031 保留未动；本批证据区 `var/scratch/exe-boot-032-main/`（t1/t2/t3/t4）。
