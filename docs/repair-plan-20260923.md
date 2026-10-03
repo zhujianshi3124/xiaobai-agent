@@ -3560,3 +3560,68 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 - "home patch 9 月中旬曾在位"系误读 Q2-RELEASED-SCAN（原文结论＝**文件不存在**），更正；
 - pack"129 疑陈旧读数"更正为**口径差**（两读数皆对）；
 - 外部门禁修复由"候裁"转入本批施工（用户"按建议"授权）。
+
+## 62. 新版宿主适配摸底批（2026-10-03 · EXE-BOOT-025 · 开源线 · 零改动）
+
+**令源**：EXE-BOOT-025 启动包（用户新令：xiaobai-agent 开源线适配新版本宿主，网页版＋桌面版两形态最新版都要兼容；本批＝摸底阶段，只查事实：零适配、零改码、零装卸更启，方案经协调侧呈报用户批准后才施工）。
+
+### 62.1 三点对照（T1 开发基线／T2 网页现状／T2 桌面现状）
+
+| 项 | 开发基线 | 网页宿主现状 | 桌面宿主现状 |
+|---|---|---|---|
+| 版本 | `@deepseek-ai/dsh@0.1.5-rc.1`（2026-09-10 发布）＋`@deepseek-ai/cordis@4.0.2` | `@deepseek-ai/dsh@0.1.5-rc.1`（npm 全局） | DeepSeek Harness **0.2.0-rc.2**（Electron 44.0.0） |
+| 证据 | `docs/p0-recon.md` §0（2026-09-19 侦察）＋本日 npm 全局 `package.json` version 实读 | 包目录 `C:\Users\LENOVO\AppData\Roaming\npm\node_modules\@deepseek-ai\dsh`（dir created 2026-09-14 00:08:31；version 实读 0.1.5-rc.1） | 注册表 Uninstall `DisplayName=DeepSeek Harness 0.2.0-rc.2`；`D:\DeepSeek Harness`（exe FileVersion 0.2.0-rc.2；装机 2026-09-30 12:47-49，与 024 时间线互证）；profile `~/.dsh/profiles/desktop`（bundles 最小＝dsh-base＋dsh-web-app） |
+| 契约声明 | `requires.dshRuntime = ">=0.1.2-rc.1 <0.2.0"`（七 manifest；contract.md D-1） | 同 | 同（声明面未随宿主改） |
+
+- **谁旧谁新**：网页宿主＝开发基线同版（旧）；桌面宿主＝0.2.0-rc.2（新，npm dist-tag latest）。两形态**不同版本**。
+- **运行态注记（与启动包表述的时点差）**：启动包记"网页宿主 pid 21896（10/2 11:59 起在跑）"——025 现查**两宿主均已停机**（零 node 进程、零 harness 进程）；web `cordis.yml` mtime=10/2 23:42:44、desktop `cordis.yml`/`cordis.patch.yml` mtime=10/2 23:45:14/17——即 §61 家根补丁恢复（10/2 23:39:57，sha `bdc8bbc7…` 本日只读复核一致）后两宿主各启动过一次（§61 用户验证窗），此后停机。desktop patch 今 8357B（024 读数 8096B，宿主 23:45 启动自写所致，如实记）。本批全程零启动零接触。
+
+### 62.2 上游最新与"新版本"判定（T3）
+
+- **发布渠道双轨**：①npm `@deepseek-ai/dsh`（dist-tag **latest=0.2.0-rc.2**（2026-09-29 发布）、next 同、alpha=**0.2.1-alpha.1**（2026-10-03 04:53Z 当日发布））；②桌面更新源 `https://download.deepseek.com/dsh-desk/feeds/win-x64/`（装机侧更新器配置原文存证据区 `var/scratch/exe-boot-025-recon/desktop-appupdate.txt`：provider generic、**channel=nightly**、发行方杭州深度求索；更新源 nightly 通道清单现供 0.2.0-rc.2＝机上已装同版，清单原文存证据区 `var/scratch/exe-boot-025-recon/feed-nightly-yml.txt`；latest／stable／beta／alpha 四个通道名清单均 404，nightly 为唯一在供通道）。
+- **上游公开**：`github.com/deepseek-ai/deepseek-harness`（README 自述 open-source agent harness、everything-is-a-plugin、developer preview 明示 "THERE WILL BE COMPATIBILITY-BREAKING CHANGES"）；Releases 说明 10 版全文＋剥 HTML 摘要存证据区（`rel-*.txt`、`releases-digest-cn.txt`）。
+- **判定**：用户所说"新版本"＝**0.2.0-rc.2**——npm latest＝nightly feed 供版＝机上桌面实装版，三口径一致；0.2.1-alpha.1 为在途下一 alpha（feed 未供）。非停报事项①（可定义）。
+
+### 62.3 依赖面盘点（T4）——正本 `var/scratch/exe-boot-025-recon/T4-dependency-face-table.md`
+
+- **事件面利好**：11 条声明事件（agent-memory 7＋rate-throttle 4）对 **0.2.0-rc.2 实装树**（证据区 npm 实装 dsh-base 依赖树 350 包）探针 **11/11 HIT**；0.1.5-rc.1 本机树复现 38 文件/94 事件、hit=11/11（与 debt 在案 09-29 读数一致）。`agent/session-start`→`agent/created` 明示变更未波及声明面（未声明未监听）。
+- **面板接口利好**：webServer（web-app 0.2.0 包内服务出口 ×7 命中，证据区实取件 `var/scratch/exe-boot-025-recon/webapp020/package/lib/index.js`）、`__ModuleLoader__`（桌面 app.asar ×89）、`settings.plugins.tab` 槽位（**asar ×22**）——0.2.0-rc.2 已装桌面客户端三接口全在场。
+- **头号断点**：根包 `peerDependencies` 钉 0.1.5-rc.2（dsh-compaction-basic **精确钉**、dsh-settings/dsh-web 范围钉）×**0.2.0 CLI README 官方明示**"安装和 profile 启动会按声明的 DSH peer 范围检查运行时版本，不兼容插件需用户明确确认精确版本豁免"（tarball 实取）＝适配必改点。
+- **高危面**：compact-router 预设改写通道（`~/.dsh/.agent-presets`＋宿主全局包内 standard/ptc/cordis 三预设，preset-patch-state.json 四记录在档）撞 0.1.7"Agent 预设改由插件组合包声明安装、旧目录预设需迁移"明示变更；settings 面语义已变（settings.yaml 仅导入一次——024 事件机制现场）。
+- **回归义务**：registry 装入判定依赖 cordis fiber 内部（D-5）；0.2.0 用 cordis ~4.0.4（在我方 peer ^4.0.2 域内），fiber 枚举漂移须实装回归 S1/S4。
+- **自检不自挡（推论有据）**：contract/src/semver.ts 显式偏差"范围任一比较器带 prerelease→全范围放行预发版"⇒ 现行 dshRuntime 范围**不拦 0.2.0-rc.2**；范围字面意图（0.1.x）适配时须重画。
+- **开放未知**：宿主侧版本兼容检查对 patch 挂载通道是否同样执行——定不了，需实装实验（下一阶段，须授权）。
+
+### 62.4 现时基线复核（T5）——逐项对照账面
+
+| 项 | 账面（启动包 §4） | 本日实测 | 判定 |
+|---|---|---|---|
+| ci-local --with-scan | 6/6 | 步 2-6 全绿；步 1 npm test＝536 格 535 绿 **1 红**（R1）→ 链报"存在 1 项异常" | **R1 两振立案（§62.5）** |
+| nt | 536/0 | 两振两红＋三连绿 536/536×3；单文件复跑 94/94 | R1 当日两振三连绿 |
+| p22-cards | 165 | 165/165 PASS | 一致 |
+| p24 | 720＋62 | **ui-matrix 608/608**＋**verify 62/62** | verify 62 一致；matrix **720 系 S1 剔除批前旧口径**（剔除 web-search-local 后 720→608，S6 定名批在档 608/608 一致）——**启动包账面滞后、实况无偏差** |
+| regression 18 项 | 绿 | 绿（含 doctor CLI 四套件 run-tests/stage3/stage4a/stage4b） | 一致 |
+| doctor dry-run | 0/0/0 | issues=0（e0/w0/i0） | 一致 |
+| pack 双口径 | 93／129 | 工作树 json/notice＝**129**（**93 源文件＋36 dist 构建产物**）；024 克隆在档 json＝**93** | **数字闭合、成因更正（§62.6）** |
+| 守卫红 0 | 0 | 全绿（token 3340；运行期面缺席 SKIP 2 条明示；勘误命中 SKIP 2 条合法存续） | 一致 |
+
+读数独立落盘：`t5-ci-local-with-scan.log`／`t5-npm-test-rerun.log`／`t5-loop-1..3.log`／`t5-agent-memory-rerun.log`／`t5-p22-cards.log`／`t5-p24-ui-matrix.log`／`t5-p24-verify.log`／`t5-pack-json.log`／`t5-pack-notice.log`／`t5-doc-ref-guard.log`（证据区 exe-boot-025-recon）。
+
+### 62.5 R1 两振立案（只读排查；修复属下一阶段须批准）
+
+- **症状**：六子进程并发 createSession（六不同 sid、同一临时根），断言 `registry.sessions.length===6` 得 **5**——并发写丢 1 条，六子进程全报 OK。签名＝全量负载下偶发、单文件复跑绿（A#57 同形态）。
+- **设计在案**：读改写全程持 `.locks/registry.lock`（`lib/agent-memory/lib/registry.js` 的 createSession——withRegistryLock 内单点读改写）＋原子写 tmp+rename（`lib/agent-memory/lib/atomic.js`）；锁＝mkdir 原子＋属主记录文件（`lib/agent-memory/lib/lock.js`）。
+- **静态排除**：①按龄接管不看属主存活（lock.js isLockStale 的超龄分支）需锁内工作>LOCK_MAX_AGE_MS=5min（实测全程 500ms）不成立；②属主记录文件撕裂读有"目录年龄"闸兜住（lock.js 的目录年龄分支）；③等锁 3s 超时若击穿应报 LOCK_BUSY 使子进程失败——与"全员 OK"症状不符；④mkdir 原子性（Windows CreateDirectory）可信。
+- **结论**：确定竞态窗口**静态定不了**（需下一阶段带插桩复现定位——属代码改动，须用户批准）。同族先例 A#57（两振立案→安全裕度修法 `1f04390`）。
+- **影响**：T5"钉现在全绿"目的受扰——R1 为既有抖动源（§61 一振在案、本日两振），适配施工前建议优先处置，使将来"新版弄坏"可归因。debt #64 在案。
+
+### 62.6 pack 口径勘误之勘误（如实记）
+
+7b6584f 勘正笔谓"129＝notice 口径（文件＋36 **目录条目**）、93＝json 口径（纯文件）"——本日一手数据更正**成因**：129−93=**36＝`contract/dist`/`doctor/dist`/`registry/dist` 构建产物条目数**（今日 json 129 条逐条无目录形态、与 024 克隆 json 93 条同形状同 npm；024 pack 实跑位＝`exe-boot-024-audit/clone` 在档 pack-dry-run.sh 自证）；变量是**仓态**（构建产物在场与否），非计数口径。读数本身皆对（022/024/本日三处数字互洽）；解释更正，后续以此为准。
+
+### 62.7 记账与红线自证
+
+- 本批**零代码改动**：开源仓仅本节追加＋debt #64/#65 追加（纯追加、分笔前查暂存区、git 删除零报自证）；冻结仓全然未碰（只读 log）；doctor 仓未触。
+- 零装/卸/更/启任何宿主；家根零写入（`~/.dsh/cordis.patch.yml` 只读 sha256 复核＝`bdc8bbc7…` 与 §61 一致；`.credentials.yaml` 未读；masked 凭据类存档亦未读）。
+- 网络仅匿名只读走 7897 代理零令牌（npm 元数据/tarball 至证据区、download.deepseek.com 的 nightly 通道清单、raw.githubusercontent README、Releases atom、空 userconfig 防 token 外带）。
+- 证据区：`D:\dsh-test-sandbox\var\scratch\exe-boot-025-recon\`（探针区 001-024 保留未动；本轮新增 host020-tree 等仅入证据区）。
