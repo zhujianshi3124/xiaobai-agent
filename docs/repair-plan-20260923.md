@@ -3698,3 +3698,35 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 - 网络匿名只读零令牌（npm registry 依赖装取均在沙箱；download.deepseek.com nightly 清单只读；经 7897 代理）。
 - 探针区 001-025 保留未动；本批证据区 `var/scratch/exe-boot-026-main/`。
 - （勘正笔补记：账文追加后终守卫读数＝token 3389／片段形 13／沙箱根 215，读数正本 `var/scratch/exe-boot-026-main/t6/guard-final.log`；勘正共 **8** 处裸名引用泛化——026 应用前 7 处后复跑剩 1 红（3654 行 rm-owner 残留，额度断点未及修，读数 `t6/guard-final2.log`），第 8 处由 027 收尾改泛化，复跑全绿读数正本 `var/scratch/exe-boot-027-recon/t6-guard-after-fix.log`。）
+
+## 64. EXE-BOOT-027 接续批（2026-10-03 · 开源线 · 026 断点勘察重建＋勘正笔收尾）
+
+**令源**：EXE-BOOT-027 启动包（026 额度耗尽中断未交停靠申报，027 接续；T0 勘察重建为第一动作；026 启动包六项裁决原文继承、默认不重议）。
+
+### 64.1 T0 状态重建（断点定谳）
+
+- 链尾实况：026 实停 **16a06d7**（082ac13 之后共三笔＝c3c758d T3 lock.js 修复＋9db3a58 T4 版本门禁＋16a06d7 026 记账笔），工作树遗留**未提交勘正笔半成品**（docs/debt.md 2 行＋docs/repair-plan-20260923.md 11 行），暂存区空、无 stash。
+- 遗留物定性（逐字可归因，非异常）：026 记账提交后账文守卫（`scripts/doc-ref-guard.mjs`）报 **7 红**（本批新增账文 7 处宿主侧/仓外裸名引用：debt:853 owner.json、plan:3644 lib/main.js、3645 app-update.yml、3654 owner.json×2、3656 owner.json、3658 trace.js；读数 `exe-boot-026-main/t6/guard-final.log`）；026 以 `t6/fix-refs.ps1/.cjs` 应用 7 处泛化替换（与工作树 diff 逐字对应）后复跑**剩 1 红**（plan:3654 行含两处 owner.json，脚本只盖"删除前影像"处，rm-owner 处漏网；读数 `t6/guard-final2.log`，token 3389→3383）；随后额度断点——第 8 处未修、勘正笔未提交、§63.8 补记以"复跑应全绿"预期态留在工作树。
+- 分级判定：**清晰可续**（改动逐字归因于在案工装、证据链闭合），按"可续用则续用"处置；异常分支未触发（无不可归因改动、无半截代码、无红线冲突迹象）。
+
+### 64.2 026 主体核验（核验依据，非仅信提交信息）
+
+- **T2 特别项（用户侧唯一授权写入点）亲自核验**：`D:\DeepSeek Harness\resources\` 现态仅 `app-update.yml.dsh026-paused`（306B）在场、`app-update.yml` 缺席（与 §63.2 暂停形态一致）；备份 `exe-boot-026-main/t2/app-update.yml.pre-pause-backup` sha256＝`96c202ea3c06458f37646aba93512ba634edd4ab110b24de0eb44f5582e95d85`，与 §63.2 回退法所记 `96c202ea…e95d85` **逐字一致**，回退可用性核实。核验仅 dir＋certutil 只读，零启动零写。
+- **T3**：c3c758d diff 亲验＝`lib/agent-memory/lib/lock.js` 单文件 +21/−2（sleepMs(50) 复读＋ownerKey 比对＋复判 isLockStale），与 §63.3 语义一致；t3 证据在案（trace-r0008/r0017/r0025.jsonl＋analysis 三份＋r1-loop-20x.log＋fullsuite-run-1..3.log＋stress-repo-12x60-load2.log）。
+- **T4**：9db3a58 diff 亲验＝dsh.plugin.json `requires.dshRuntime` 与 `requirements.runtime.dsh` 双段 `>=0.1.2-rc.1 <0.2.0 || >=0.2.0-rc.2 <0.3.0`＋package.json 三 peer `^0.1.5-rc.2 || ^0.2.0-rc.2`，与 §63.4 逐字一致；t4 证据区在案。
+- **T5**：双设计稿在案（`D:\dsh-test-sandbox\docs\t5-compact-router-preset-020-design.md` 8,303B／`t5-settings-face-020-design.md` 6,605B，mtime 10/3 16:56/17:05）。
+- **T6**：plan §63＋debt（A#64 结案注、obs-1/obs-2 入账、runbook 挂账、分歧账补记）＋CHANGELOG 对外节均在 16a06d7 在案。debt 本批**不再动**（#64 已结案、无新发现）。
+
+### 64.3 勘正笔收尾（027 续完 026 半成品）
+
+- 第 8 处泛化：plan 3654 行 `release（rm owner.json＋rmdir）` → `release（rm 属主记录文件＋rmdir）`（沿 fix-refs.ps1 同一口径）；§63.8 补记由预期态改完成态（勘正总数记 8 处、断点如实记、读数正本改指 027 落盘）。
+- 复跑守卫：**全绿**（自证格 59/59、token 3382、活/存档红集皆空、exit 0；读数正本 `var/scratch/exe-boot-027-recon/t6-guard-after-fix.log`）。token 读数链 3389（勘正前）→3383（7 处后）→3382（8 处后）。
+- doctor dry-run：issues=0（e0/w0/i0/fixable 0）exit 0（读数 `exe-boot-027-recon/doctor-dryrun-027.log`；YAML 缺席注记＝§60 明示形态预期）。
+- 提交 **51388d9**（单笔 2 文件 7+/6−，提交后工作树净；不 push、不 tag、不 publish）。
+
+### 64.4 红线自证
+
+- 本批开源仓**零代码改动**：仅 docs/debt.md＋docs/repair-plan-20260923.md 账面勘正（026 半成品续完，属同批勘正非历史账回改；勘前 diff 取证 `exe-boot-027-recon/t0-worktree-diff.txt` 在档）。
+- 冻结仓零触碰；doctor 仓未触；家根零写入；用户侧两宿主零启停零升级零卸载零配置写（T2 核验仅只读）；沙箱 0.2.0 实装树未启动未动；npm 全局 0.1.5-rc.1 未动。
+- 网络：本轮零外联。
+- 证据区 `D:\dsh-test-sandbox\var\scratch\exe-boot-027-recon\`（勘前 diff、026 目录清单、守卫三读数、doctor dry-run 读数、提交信息文件）；探针区 001-026 保留未动（含 exe-boot-026-main 全量）。
