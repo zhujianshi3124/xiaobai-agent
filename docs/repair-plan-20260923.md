@@ -3625,3 +3625,75 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 - 零装/卸/更/启任何宿主；家根零写入（`~/.dsh/cordis.patch.yml` 只读 sha256 复核＝`bdc8bbc7…` 与 §61 一致；`.credentials.yaml` 未读；masked 凭据类存档亦未读）。
 - 网络仅匿名只读走 7897 代理零令牌（npm 元数据/tarball 至证据区、download.deepseek.com 的 nightly 通道清单、raw.githubusercontent README、Releases atom、空 userconfig 防 token 外带）。
 - 证据区：`D:\dsh-test-sandbox\var\scratch\exe-boot-025-recon\`（探针区 001-024 保留未动；本轮新增 host020-tree 等仅入证据区）。
+
+## 63. 新版宿主适配施工批（2026-10-03 · EXE-BOOT-026 · 开源线 · R1 修复＋版本门禁重画＋双设计稿）
+
+**令源**：EXE-BOOT-026 启动包（用户裁决六项生效：①双保 0.1.5-rc.1＋0.2.0-rc.2、0.2.1-alpha.1 不入目标；②施工顺序照 025 E2；③桌面本轮不挂载；④用户网页宿主升级另行开窗、本批严禁；⑤桌面自动更新窗口期暂停、机制自定；⑥桌面 patch +261B 只读比对）。本批覆盖至③④设计稿；③④代码实施与⑤双形态实测留后续包。
+
+### 63.1 T1 桌面 patch 只读比对（+261B 定谳）
+
+- 对比件：024 时点原件＝`var/scratch/exe-boot-024-audit/incident-024/restore-backup/desktop-cordis.patch.yml`（8096B，sha `84867fb9…` 与 024 档案 sha256-before 台账互证）×当前实况（8357B，sha `02e5cc3a…`，mtime 10/2 23:45:17）。delta＝+261B。
+- 逐字比对三证：git diff 单 hunk（`@@ -225,7 +225,16 @@`）＋字节核算（删 1 行 29B→增 10 行 290B＝净 +261）＋尾部 shift-9 全等（0 错配）。除该 11 行外零差异。
+- 内容：`llm-deepseek`（官方 api-key provider）`config.models` 首条目 `deepseek-flash` 更名 `DeepSeek-V4.1-Flash` 并补元数据（contextWindow/inputModalities/imagePixelBudget/imageMaxBytes/systemPromptUpdate），另插 `deepseek-v4-flash` 新条目。
+- **写入者语义**＝桌面宿主 0.2.0-rc.2 启动自写（mtime 与 024 记录的桌面启动写面序列吻合、内容与 0.2.0 pi-ai 目录同族、无手工编辑时窗）。凭据零涉及（apiKeyEnv 引用原样）。
+- **对我方影响判定**：零直接影响（ confined 于 llm-deepseek 段，我方 patch 面不在该文件；装载四层序不变）。运维提示：desktop profile patch 是宿主启动自写面（024＋本批双证）——后续批如把 toolkit 挂入 desktop profile 须预期宿主重写行为。
+- 读数正本：`var/scratch/exe-boot-026-main/t1/t1-reading.md`（diff-unified.txt／section-context.txt 两副本在档）。
+
+### 63.2 T2 桌面自动更新暂停（唯一例外性写入，备份＋可回退）
+
+- **机制考古**（app.asar 0.2.0-rc.2 `lib/main.js` 逐字在档）：electron-updater ^6.8.9；`DesktopUpdateCoordinator` 构造器逐字设 `autoDownload=false`／`autoInstallOnAppQuit=false`／`channel="nightly"`／`allowPrerelease=true`／`allowDowngrade=false`——**下载安装出厂即需用户确认，"自动"仅剩元数据轮询**（`DSH_DESKTOP_UPDATE_CHECK_INTERVAL_MS` 缺省 6e5ms=10 分钟，周期/前台/恢复/手动四类检查共用一调度）。总闸门＝`enabled()`＝`app.isPackaged && existsSync(<resources>/app-update.yml)`；缺件时 `doCheck()` 抛被捕获错误（自动检查静默、手动检查显报）。
+- **实施**（本机两宿主零进程核实后）：`app-update.yml` → `app-update.yml.dsh026-paused`（同目录改名，306B 原字节零改动，sha 三处一致：现文件/备份/暂停前实读）。备份 `t2/app-update.yml.pre-pause-backup`。
+- **回退法**：`ren "D:\DeepSeek Harness\resources\app-update.yml.dsh026-paused" "app-update.yml"`（回退后 sha 应为 `96c202ea…e95d85`）。
+- **边界如实记**：暂停生效路径为代码静态分支；未启动桌面应用实测（§3⑤ 禁启动），持久性未验明记入账。副作用：用户手动"检查更新…"会显报检查失败（预期形态）。
+- feed 现状（本批匿名只读经代理实取）：nightly 仍供 0.2.0-rc.2＝机上同版（暂停防的是窗口期内 0.2.1+ 落 nightly）。
+- 读数正本：`var/scratch/exe-boot-026-main/t2/t2-reading.md`。
+
+### 63.3 T3 R1 全局 registry 并发写丢失：根因定谳＋修复＋验证（生产竞态）
+
+- **插桩复现**（沙箱插桩副本，仓零动）：R1 同形状 6 子进程压力器 25 轮内 3 振（发生率 ~12%），全部"六子进程 OK＋registry 丢 1 条"同型。三振 trace 在档（`t3/trace-r0008/r0017/r0025.jsonl`＋analysis）。
+- **竞态窗口（trace r0008 事件序逐字定谳）**：等锁方在上一持有者 release（rm owner.json＋rmdir）与新持有者 mkdir 重建的换手窗内，读到**上一持有者 owner.json 的删除前影像**（内容可解析、属主 pid 已死）→ `isLockStale` 判陈 → `cleanupLock` **删掉当前持有者的活锁**（trace：`lock_stale_cleanup removed=true`）→ 等锁方 mkdir 成功双重进入 registry 临界区 → 双方各写一份 3 条记录、后者覆盖前者 → 丢 1 条（r0008 丢 sid-206；r0017 同签名且两等锁者同时中招）。静态四排除（debt #64）与实况一致：单读判陈＋死 pid 判据被"旧影像"借道，目录年龄闸只护 owner 缺席路径。
+- **根因定性＝生产竞态**（lock.js 陈锁清理路径；非测试工程问题）：锁实现为 agent-memory 生产全局注册表锁，任意并发写场景可触发，测试仅是放大器。**"是否回灌冻结线"列待裁问题**（冻结线本轮零改动）。
+- **修复**（本批唯一代码修复笔，`lib/agent-memory/lib/lock.js`）：owner 在场路径的陈锁判定改**双读确认**——判陈后隔 50ms 复读 owner.json，内容键（name/pid/createdAt/host）与首读一致且仍判陈才动手清理；不一致＝锁目录正在换手 → 按活跃锁等待。owner 缺席路径维持目录年龄闸（旧影像不影响现 dir 实 stat）。代价：陈锁清理路径 +50ms（罕见路径），活跃/新鲜锁零影响；LOCK_BUSY/超龄/脏锁语义不变（R2 各分格语义保形）。
+- **验证**（下限全超）：①修复后指向仓库正本的压力器 **120 轮×6 子进程全绿**＋放大器 **60 轮×12 子进程（带 2 路 CPU 负载）全绿**（修复前基线 ~每 8 轮一振）；②`test/agent-memory.test.mjs` **20 连跑全绿**（每轮 94/94，TAP 读数在档）；③全套件 **6 轮全绿**（536/536×6；详见 63.6）；④doctor dry-run 0/0/0。
+- **插桩脚手架去向**：插桩副本（lock/registry/atomic+trace.js）与压力器全部留在沙箱证据区 `t3/`，仓库零插桩残留；修复笔本体只含双读确认。
+- **再现处置**：修复后任何再现＝重开立案（两振即查纪律）——在案。
+
+### 63.4 T4 版本门禁重画＋0.2.0 实装验收（零版本豁免）
+
+- **宿主检查机制代码级定谳**（0.2.0-rc.2 实装树逐字件在档 `t4/ctx-*.txt`）：`dsh-app-boot` 的 `evaluatePluginCompatibility` 只检查插件 manifest peerDependencies 中 `@deepseek-ai/dsh`／`@deepseek-ai/dsh-*` 名，以 `semver.satisfies(runtimeVersion, range, {includePrerelease:true})` 判定（semver 7.8.5 实测矩阵在档 `t4/semver-matrix.log`）；三个调用面＝①bundle 层装载（不兼容→跳过该 bundle）②loader preflight（对 patch 通道 entries 逐行检查，不兼容→disable 该行，**025 F1 在此代码级闭合：patch 挂载通道受检**）③安装面 preflight（`pnpm view` 读声明→同评估器→未豁免拒装）。
+- **关键实测**：宿主 `includePrerelease:true` 下 `^0.1.5-rc.2` **也不满足** 0.2.0-rc.2（caret 对预发下界把上界收紧为 `<0.2.0-0`）——025 "三钉全断点"判定实证成立；且凡 admit 0.2.0-rc.2 的带界范围必同 admit 0.2.1 系预发（宿主面结构性不可分），仅精确钉可防（代价＝每个宿主版都要重钉）。
+- **重画实施**（范围上限政策按令呈选项、工作取值见 63.7）：package.json peerDependencies 三包 `0.1.5-rc.2`／`^0.1.5-rc.2` → 统一 **`"^0.1.5-rc.2 || ^0.2.0-rc.2"`**（devDeps 维持 0.1.5-rc.2 精确钉不动＝开发基线）；dsh.plugin.json `requires.dshRuntime` 与 `requirements.runtime.dsh` 两处 → **`">=0.1.2-rc.1 <0.2.0 || >=0.2.0-rc.2 <0.3.0"`**（本仓契约引擎 isValidRange=true；引擎评估矩阵在档：0.1.2-rc.1/0.1.5-rc.1/0.2.0-rc.2/0.2.0 均 true，0.3.0 false；0.2.1 系预发按 D-1 显式偏差放行＝与宿主面同语义）。
+- **验收实测（沙箱实装，DSH_HOME 重定向沙箱、用户家根零写入）**：
+  - 评估器矩阵：新 peers × 0.2.0-rc.2 → `undefined(通过)`＝**零版本豁免提示**；0.3.0 → INCOMPATIBLE（上界生效）；`t4/acceptance-gate.log`。
+  - **0.2.0-rc.2 沙箱 CLI 实装启动**：tarball 手工落装＋web-app 树补齐后 `dsh --version`＝0.2.0-rc.2、`dsh web` 完整启动（token URL 输出、stderr 零豁免零拒装）。
+  - **安装面**：`dsh plugin --profile web add <本仓路径>` 通过（零拒装；提示"declares no dsh.bundle——按普通依赖安装"＝预期形态）。
+  - **patch 挂载面**：profile patch 注入 agent-memory 行后启动——模块解析/装载/实例化链全通（败点已深入插件构造函数）；两发现入账：①子路径形态须用 `xiaobai-agent/agent-memory/plugin`（构造期注入依赖须显式带齐，详见 T5 设计稿④）；②全程 stderr 零 incompatible/exemption 字样。
+  - **0.1.5-rc.1 老宿主面**：8667 个 JS 只读 grep——兼容检查器四关键词零命中（检查器在 0.1.7-rc.1 才引入；老 dsh-app-boot 的 peerDependencies 仅用于模块回退图）＝老宿主零影响实证。
+- **回归**：全套件 536/536 绿（63.6）＋doctor dry-run 0/0/0＋doc-ref-guard 全绿。025 D 表"需实装"项复验：D5/D6/D7 属 ⑤双形态实测范围留后续包（本批完成其装配面/装载链前置）；D13 随 agent-memory 套件回归在案。
+
+### 63.5 T5 双设计稿（纸面，零代码）
+
+- `D:\dsh-test-sandbox\docs\t5-compact-router-preset-020-design.md`（③预设通道：`.agent-presets` 机制 0.2.0 零存在＝代码级定谳；新形态＝bundle `presets/*.patch.yml`＋`@deepseek-ai/dsh-agent-preset` 插件行；两案候裁＋F4 闭合）。
+- `D:\dsh-test-sandbox\docs\t5-settings-face-020-design.md`（④settings 面：三分类判定＝配置行顺迁/热 JSON 不波及/settings.yaml 一次性导入为宿主语义变化归 runbook；V1-V5 验证计划）。
+- 用户可见行为变化判定、风险与回退、F1/F3/F4 依赖假说验证法均含（F1/F4 本批已代码级/实装级闭合，F3 留实装冒烟）。
+
+### 63.6 回归读数与两笔环境级观察（如实记）
+
+- **全套件**：T3 修复后首批 3 轮（1 红＋2 绿）＋续跑 3 轮全绿＋T4 改型后 2 轮全绿＝**全程 6 连绿（536/536）**。唯一一红＝`test/install-confirm-gate.test.mjs` 文件级 **libuv 原生断言崩溃**（`Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), file src\win\async.c`）——该文件 imports 与 agent-memory/lock 零关联（registry/doctor/panel/cordis），Node/Windows 原生 teardown 抖动，非本批改动所致；单文件复跑绿、全套件 5 连绿后续无再现。**新发现入账 debt（环境级、低频、不可稳定复现）**。
+- **`requires` 0 字节残件**：T4 期间仓根曾现 0 字节未跟踪文件 `requires`（一次观测），逐文件隔离/前置步隔离/带观察窗的整套件复跑均未再现，成因未定位；残件已清。**同批入账 debt（未决观察）**。
+- **doc-ref-guard token 数偏移查因**：025 守卫读数 3340（06:27Z）早于其自家记账提交（14:35-37Z 写入 §62/debt），本批读数 3363（+23 token＝§62/A#64/#65 新引用；沙箱根命中 199→209 同源）——偏差成因=读数时点差，非账实不符（勘误入档，后续以 3363 系为基线）。
+- doctor dry-run：issues=0（e0/w0/i0）✓；YAML 缺席注记＝§60 修复的明示形态（预期）。
+
+### 63.7 呈选项（按令不自行定，协调侧呈用户）
+
+- **范围上限政策**：甲·放开（现工作取值）：peer `^0.1.5-rc.2 || ^0.2.0-rc.2`＋契约 `… <0.3.0` 双段——0.2.x 线免重钉，代价＝0.2.1+ 预发被宿主面结构性放行（includePrerelease 所致，无法在 peer 层防，仅精确钉可防）；乙·钉已验：peer `^0.1.5-rc.2 || 0.2.0-rc.2`（精确段）＋契约同构——只认已验版，代价＝每个宿主版（含 0.2.0 正式版）都须重钉发布。两案均含 0.1.x 线保持。
+- **契约版本影响**：dshRuntime 属 manifest **值**变更非 schema 变更——PLUGIN_CONTRACT_VERSION 可不升（1.2.0 维持）；如按"语义面变更升次版本"惯例升则 1.3.0。两案代价均低，候裁。
+- **是否回灌冻结线**（R1 修复＋门禁重画）→ 见 63.3/申报 E 清单。
+
+### 63.8 红线自证
+
+- 冻结仓全然未碰（只读 log/manifest 读数）；doctor 仓未触；家根零写入（沙箱宿主实例 DSH_HOME 重定向在案；用户侧宿主零启停零升级零卸载零配置写——唯一例外 T2 桌面更新暂停已按 §3⑤ 备份＋可回退＋申报）。
+- 用户网页/桌面 profile 零改动；桌面 bundles 未动（裁决③）；npm 全局 0.1.5-rc.1 只读。
+- 开源仓代码改动仅两笔＝T3 lock.js 修复＋T4 版本门禁（package.json/dsh.plugin.json），其余全文档纯追加（分笔提交、逐笔查暂存区、git 零删除自证）。
+- 网络匿名只读零令牌（npm registry 依赖装取均在沙箱；download.deepseek.com nightly 清单只读；经 7897 代理）。
+- 探针区 001-025 保留未动；本批证据区 `var/scratch/exe-boot-026-main/`。

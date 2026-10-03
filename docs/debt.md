@@ -843,3 +843,29 @@ H5 轮的 `6900` 变成 `2624`，`Get-Process` 读得其 `StartTime = 2026/9/22 
 | E-3 | 工装失效遗留 | p23 遮蔽补扫工装（源件 p23-shadow-scan；链外历史工装）web-search-local settings 遮蔽半边随出包失效 | 本仓笔D `164f8aa` 删除／本地 04816b8（原样在役） | 不回流 | **闭账**（S2 批随令评估处置＝删除，evidence 正本已落档） |
 | E-4 | 共线缺陷通道 | 规矩立此：本地日常使用发现共线缺陷 ⇒ 本地单独令修复，副本按同法回放并在此登记回放笔；副本发现共患 ⇒ 只登记不触本地、报协调侧 | — | 本地→副本（知识回流）／副本→本地（只报不改） | 常设规矩（无当前在案条目） |
 | E-5 | doctor 线独立分歧（正式） | doctor 在用仓（沙箱 projects/doctor，冻结点链尾 `ce31f83`）↔ **桶内 doctor/cli 成员**（dsh-toolkit 副本；单包合一终裁——`D:\dsh-doctor-opensource` 线不建） | 本仓 `7392e3c`/`be4082d`（S2.5 合并批，用户终裁原文照录 plan §49）／在用 ce31f83 | 本地→副本单独令回放（E-4 同式）／副本→本地只登记不触 | **正式**（在用 doctor 自笔B `be4082d` 落链起冻结零改动，只服务本地冻结线） |
+
+---
+
+## 026 批记账（2026-10-03 · EXE-BOOT-026 · 纯追加，不回改以上任何一行）
+
+### A#64 结案注（R1 全局 registry 并发写 flake）
+
+- **根因定谳**（插桩复现，trace 三振同签名）：mkdir 锁换手窗内，等锁方读到上一持有者 owner.json 的删除前影像（可解析、属主 pid 已死）→ 单读判陈 → cleanupLock 误删当前持有者活锁 → 双重进入 registry 临界区 → lost update。**定性＝生产竞态**（lock.js 陈锁清理路径；测试仅为放大器）。
+- **修法**：`lib/agent-memory/lib/lock.js` owner 在场路径陈锁判定改双读确认（判陈后隔 50ms 复读，内容键一致且仍判陈才清；不一致=换手中→按活跃锁等待）。语义保形：LOCK_BUSY/超龄/脏锁/目录年龄闸（owner 缺席路径）全部不变；陈锁清理路径 +50ms。
+- **验证**：压力器 120 轮×6 子进程＋60 轮×12 子进程（带 CPU 负载）全绿（修复前 ~每 8 轮一振）；R1 文件 20 连跑全绿（94/94×20）；全套件 6 轮全绿；doctor dry-run 0/0/0。
+- **证据**：`var/scratch/exe-boot-026-main/t3/`（trace 三振、analysis、stress 工装、r1-loop-20x.log、fullsuite 日志）＋ plan §63.3。
+- **状态**：**结案（修复候裁→已修复并验证）**。冻结线是否回灌修复＝待裁（冻结线本轮零改动）。修复后任何再现＝重开立案。
+
+### 新发现入账（环境级两笔，均一次性观测、不可稳定复现）
+
+- **obs-1 install-confirm-gate libuv 原生断言崩溃（一次性）**：全套件一轮 `test/install-confirm-gate.test.mjs` 文件级 `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), file src\win\async.c, line 94`（Node/Windows teardown 抖动）；该文件 imports 与 agent-memory/lock 零关联；单文件复跑绿、其后全套件 5 连绿无再现。处置：观察项，再现两振即查。
+- **obs-2 仓根 0 字节 `requires` 残件（未决）**：一次观测（0 字节、未跟踪）；逐文件隔离＋前置步隔离＋带观察窗整套件复跑均未再现，写入者未定位；残件已清。处置：观察项，再现两振即查（可加文件系统审计定位）。
+
+### 挂账新增（只记账不施工，后续批交付）
+
+- **runbook-1 网页宿主升级 runbook**（0.1.5-rc.1 → 0.2.0-rc.2，配合用户裁决④另行开窗）：①升级前备份清单（`~/.dsh/settings.yaml`＋`settings.yaml.imported`＋`~/.dsh/cordis.patch.yml`＋`profiles/web/` 全目录＋`~/.agent-memory/`）；②settings.yaml 一次性导入语义承接（0.1.7 起宿主仅首启导入——升级后首次启动前对照 imported 快照，用户历史手工值须迁 profile patch 层）；③冻结线插件在 0.2.0 门禁下的豁免路径（`dsh plugin allow-version` 精确豁免／或对冻结线执行与本批同构的 peer 重钉——两案候裁）；④回退法（npm 全局包回装 0.1.5-rc.1＋备份还原＋宿主重启）；⑤升级窗与桌面更新暂停（EXE-BOOT-026 T2）联动时序。
+
+### 分歧账补记（开源线契约/范围演进 vs 冻结线 1.1）
+
+- 开源线 peer 钉与 dshRuntime 范围已演进为双段（本批）；冻结线 `@local/dsh-toolkit` 维持 1.1 系旧钉（`0.1.5-rc.2` 精确／`^0.1.5-rc.2`）＋ `">=0.1.2-rc.1 <0.2.0"`——两线在版本门禁面出现**有意分歧**：冻结线服务现役老宿主，开源线服务双宿主目标。合流条件＝用户裁决"是否回灌冻结线"（含 R1 修复与门禁重画两件）；合流前，冻结线在 0.2.0 宿主下将触发宿主版本豁免流程（025 D 表 D1 判定不变）。
+- 实装树差异补记：0.2.0 桌面 CLI 为 bundle 分发（约三十个 0.2.0-rc.2 精确钉包不在 npm registry，如 dsh-acp-app），npm 全装不可行——本批沙箱实装以 tarball 手工落装＋宿主树补齐达成（读数在案）。
