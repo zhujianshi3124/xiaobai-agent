@@ -241,6 +241,11 @@ if (existsSync(trapPath)) {
 
 console.log("\n  .panel-backups/ 内各 cordis.patch.yml 快照对该行的记录：");
 const bkRoot = join(root, ".panel-backups");
+// 2026-10-02 修订（外部门禁缺席降级）：运行期目录缺席（外部克隆环境——运行期产物不入库，
+// .gitignore 声明）时明示 SKIP 注记，不再 readdirSync 崩红；本机在场时照常枚举，行为不变。
+if (!existsSync(bkRoot)) {
+  console.log("      SKIP：.panel-backups/ 缺席＝外部克隆环境正常形态（运行期产物不入库，.gitignore 声明）；本机在场时照常枚举");
+} else {
 for (const name of readdirSync(bkRoot).sort()) {
   const p = join(bkRoot, name, "cordis.patch.yml");
   if (!existsSync(p)) continue;
@@ -249,6 +254,7 @@ for (const name of readdirSync(bkRoot).sort()) {
   const nm = (t.match(/id:\s*toolkit-manager[\s\S]{0,160}?name:\s*'([^']*)'/) || [])[1] || "";
   console.log("      " + name.padEnd(46) + " size=" + String(statSync(p).size).padStart(5)
     + "  toolkit-manager=" + (has ? "有" : "无 ") + (nm ? "  name=" + nm : ""));
+}
 }
 console.log("\n  结论：该行的**首次创建时刻未留档**；可归因的最早证据是 10:59 arm-manifest 快照（已含该行、旧名 dsh-toolkit/panel），");
 console.log("        19:55:50 被改写为 path-like（ledger 逐版对账表 :72）。");

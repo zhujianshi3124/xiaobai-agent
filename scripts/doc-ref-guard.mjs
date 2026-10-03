@@ -61,6 +61,12 @@ const TOOLKIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const SANDBOX = 'D:/dsh-test-sandbox';
 const DOCTOR_REPO = path.join(SANDBOX, 'projects', 'doctor');
 const HOME = os.homedir();
+// 运行期/产物面目录名单（单一来源）：.gitignore 声明的"运行期产物，不入库"族＋构建产物/依赖树。
+// 用途：①bareSkip（裸名索引不进这些目录）；②运行期面缺席 SKIP 判据（2026-10-02 外部门禁缺席
+// 降级批——此类目标缺席＝外部克隆环境正常形态，MISS 不判红、显式 SKIP 计数；在场照验）。
+const RUNTIME_DIRS = new Set(['node_modules', '.git', 'dist', '.panel-backups', '.panel-custody', '.panel-write-backups', 'preset-backups', '.registry', 'sessions']);
+// 前缀形态（.gitignore `.doctor-link-backup*/`——目录名带时间戳后缀，精确名匹配漏网，024 克隆复验抓出）。
+const RUNTIME_DIR_PREFIXES = ['.doctor-link-backup'];
 const EXT = '(?:json|cjs|mjs|yaml|yml|html|md|js|ts|txt|ps1)';
 // 路径体：可选「盘符+分隔符」前缀（D:\ 或 D:/）＋正反斜杠分段；锚：行号（含区间）或 #符号。
 // 扩展名最长优先＋尾部边界（ext 后不得紧跟路径字符）：防 "dsh.plugin.json" 被 "js"
@@ -139,10 +145,18 @@ function makeRealRoots() {
     relRoots: [TOOLKIT, SANDBOX, DOCTOR_REPO, HOME],
     home: HOME,
     bareDirs: [TOOLKIT, SANDBOX],
-    bareSkip: new Set(['node_modules', '.git', 'dist', '.panel-backups', '.panel-custody', '.panel-write-backups', 'preset-backups', '.registry', 'sessions']),
+    bareSkip: new Set(RUNTIME_DIRS),
     repoDirs: { toolkit: TOOLKIT, doctor: DOCTOR_REPO, sandbox: SANDBOX },
   };
 }
+// 运行期/产物面引用判定：路径体任一段命中 RUNTIME_DIRS（`.panel-backups/x/f.mjs`、
+// `.registry/state.json`，含绝对路径形态同判）。SKIP 不豁免内容错误：目标在场时照常验
+// 存在性与 #符号，仅"缺席"这一环境形态降级为显式注记。
+function isRuntimeRef(body) {
+  return body.replace(/\\/g, '/').split('/').some((s) => RUNTIME_DIRS.has(s)
+    || (s.startsWith('.') && RUNTIME_DIR_PREFIXES.some((p) => s.startsWith(p))));
+}
+
 function resolveTarget(rawBody, roots, bareIdx) {
   const rel = rawBody.replace(/\\/g, '/');
   const tried = [];
@@ -233,6 +247,11 @@ function checkBody(body, suffix, anchors, ctx, writtenPrefix) {
   }
   const resolved = resolveTarget(body, roots, bareIdx);
   if (!resolved.ok) {
+    if (isRuntimeRef(body)) {
+      stat.runtimeAbsent++;
+      ctx.skips.push({ cite, token, reason: '运行期/产物面缺席＝外部克隆环境正常形态（.gitignore 运行期目录不入库）；本机在场时照验' });
+      return;
+    }
     const hint = /(^|\/)(engine\.mjs|doctor\.ts)$/.test(body.replace(/\\/g, '/')) || /(^|\/)src\//.test(body.replace(/\\/g, '/'))
       ? '（若指独立 doctor 仓：按 recon §10.3 加 doctor仓: 前缀）' : '';
     reds.push({ cite, token, kind: 'MISS', reason: `目标不存在（试过 ${resolved.tried.join(' ; ')}）${hint}` });
@@ -257,9 +276,10 @@ function checkBody(body, suffix, anchors, ctx, writtenPrefix) {
 // ---- 单文件扫描（archive 由调用方按 isArchiveRel 注入，自证格用合成值） ----
 function scanLines(lines, citePrefix, archive, roots, bareIdx) {
   const reds = [];
-  const stat = { tokens: 0, archiveLineTolerated: 0, fragments: 0, sandboxOnlyUnprefixed: 0, errataCovered: 0, errataStale: 0 };
+  const skips = [];
+  const stat = { tokens: 0, archiveLineTolerated: 0, fragments: 0, sandboxOnlyUnprefixed: 0, errataCovered: 0, errataStale: 0, runtimeAbsent: 0, errataOnSkipped: 0 };
   let fences = 0;
-  const ctx = { cite: '', archive, roots, bareIdx, reds, stat };
+  const ctx = { cite: '', archive, roots, bareIdx, reds, stat, skips };
   let inFence = false;
   for (let i = 0; i < lines.length; i++) {
     let text = lines[i];
@@ -294,13 +314,17 @@ function scanLines(lines, citePrefix, archive, roots, bareIdx) {
   // 按 token 原文逐字覆盖（归组＝同一 token 一条登记覆盖它的全部出现）。三道边界写死：
   //   不跨文件（只读本文件节内条目）、不作用于活文档（archive 为假即不解析）、不作用于行号形态
   //   （kind==='LINE' 永不减免）；未命中任何失效引用的条目＝账实不符，判红防僵尸更正。
+  //   缺席降级批（2026-10-02）补一档：登记条目命中"SKIP token"（该 token 因运行期面缺席降级
+  //   不再翻红）⇒ 合法存续——登记时它确曾失效，现无红可清非登记之过，单列计数不判僵尸。
   if (archive) {
     const entryTokens = new Map(); // token → 首见条目行号（同 token 重复条目按同一登记处理）
     for (const e of parseErrata(lines)) if (!entryTokens.has(e.token)) entryTokens.set(e.token, e.line);
-    const fixableTokens = new Set(reds.filter((r) => r.kind !== 'LINE').map((r) => r.token));
+    const redTokens = new Set(reds.filter((r) => r.kind !== 'LINE').map((r) => r.token));
+    const skippedTokens = new Set(ctx.skips.map((s) => s.token));
     const covered = new Set();
     for (const [tok, line] of entryTokens) {
-      if (fixableTokens.has(tok)) { covered.add(tok); continue; }
+      if (redTokens.has(tok)) { covered.add(tok); continue; }
+      if (skippedTokens.has(tok)) { stat.errataOnSkipped++; continue; }
       stat.errataStale++;
       reds.push({ cite: `${citePrefix}:${line}`, token: tok, kind: 'ERRATA', reason: '勘误条目未命中任何失效引用（token 写错／登记已陈旧／行号形态不该走勘误）' });
     }
@@ -310,7 +334,7 @@ function scanLines(lines, citePrefix, archive, roots, bareIdx) {
       }
     }
   }
-  return { reds, fences, ...stat };
+  return { reds, skips, fences, ...stat };
 }
 
 function scanFile(absFile, rel, roots, bareIdx) {
@@ -454,6 +478,23 @@ function selfcheckCases() {
     eq('㉗ 裁②×③ 交叉：存档件的缺前缀红同样走勘误清偿（真位须自带可定位前缀）',
       [scan('`src/engine.mjs`。' + errataSec('- "src/engine.mjs" — 当时未带前缀，真位 doctor仓:src/engine.mjs。\n'), true).reds.length,
        scan('`src/engine.mjs`。' + errataSec('- "src/engine.mjs" — 当时未带前缀，真位 doctor仓:src/engine.mjs。\n'), true).errataCovered], [0, 1]);
+    // ㉘ 缺席降级（2026-10-02 外部门禁修复批）：运行期/产物面引用缺席 ⇒ SKIP 计数不判红
+    //    （外部克隆环境可辨识）；目标在场照验（零红、不进 SKIP 计数）；在场但 #符号缺 ⇒ 照红
+    //    （SKIP 只豁免"缺席"这一环境形态，不豁免内容错误）。
+    const rtAbsent = scan('见 `.panel-backups/g1/f.mjs` 与 `.registry/state.json`。', false);
+    eq('㉘ 运行期面缺席＝SKIP 计数不判红（缺席≠账实不符）',
+      [rtAbsent.reds.length, rtAbsent.runtimeAbsent], [0, 2]);
+    write('.panel-backups/g1/f.mjs', 'runtime artifact\n');
+    eq('㉘b 运行期面在场照验（零红、不计 SKIP）',
+      [scan('见 `.panel-backups/g1/f.mjs`。', false).reds.length,
+       scan('见 `.panel-backups/g1/f.mjs`。', false).runtimeAbsent], [0, 0]);
+    eq('㉘c 在场但 #符号缺 ⇒ 照红（SKIP 不豁免内容错误）',
+      scan('见 `.panel-backups/g1/f.mjs#ghost`。', false).reds.length, 1);
+    const rtErrata = scan('见 `.registry/state.json`。' + errataSec('- ".registry/state.json" — 运行期面，外部克隆缺席；登记时确曾失效。\n'), true);
+    eq('㉘d 存档件勘误登记命中 SKIP token ⇒ 合法存续（非僵尸红、单列计数）',
+      [rtErrata.reds.length, rtErrata.errataOnSkipped], [0, 1]);
+    eq('㉘e 前缀形态运行期目录（.doctor-link-backup-<时间戳>）缺席同 SKIP',
+      scan('见 `.doctor-link-backup-20260916-074750/link-backup.json`。', false).reds.length, 0);
 
     const bad = cases.filter(c => !c.ok);
     if (bad.length) {
@@ -486,8 +527,9 @@ function main() {
   }
 
   const reds = [];
+  const skips = [];
   let totalTokens = 0, totalTolerated = 0, totalFragments = 0, archiveCount = 0;
-  let totalSandboxOnly = 0, totalCovered = 0, totalStale = 0;
+  let totalSandboxOnly = 0, totalCovered = 0, totalStale = 0, totalRuntimeAbsent = 0, totalErrataOnSkipped = 0;
   for (const t of targets) {
     const r = scanFile(t.abs, t.rel, roots, bareIdx);
     totalTokens += r.tokens;
@@ -496,6 +538,9 @@ function main() {
     totalSandboxOnly += r.sandboxOnlyUnprefixed;
     totalCovered += r.errataCovered;
     totalStale += r.errataStale;
+    totalRuntimeAbsent += r.runtimeAbsent;
+    totalErrataOnSkipped += r.errataOnSkipped;
+    for (const s of r.skips) skips.push({ file: t.rel, ...s });
     if (r.archive) archiveCount++;
     // 裁②：存档件的红不再分流为警示——与活文档同价、同阻断（行号形态是唯一容忍面，裁①）
     for (const red of r.reds) reds.push({ file: t.rel, archive: r.archive, ...red });
@@ -509,7 +554,12 @@ function main() {
   console.log('文档引用守卫（D-20 / 收口批 C-1）  ' + new Date().toISOString());
   console.log('════════════════════════════════════════════════════════');
   console.log(`  扫描 ${targets.length} 份（活文档 ${targets.length - archiveCount}＋存档件 ${archiveCount}）；引用 token ${totalTokens}；存档件行号容忍 ${totalTolerated}；片段形（⑧不抓，如 \`index.mjs\` 惯例名）${totalFragments}`);
-  console.log(`  勘误登记：覆盖 ${totalCovered} 条（裁② 清偿，只增不改）；冗余勘误 ${totalStale} 条；沙箱根命中未带前缀 ${totalSandboxOnly} 处（只计数不判红：recon §10.3 只定义 toolkit:/doctor仓: 两前缀，判红即发明判据）`);
+  console.log(`  勘误登记：覆盖 ${totalCovered} 条（裁② 清偿，只增不改）；冗余勘误 ${totalStale} 条；勘误命中 SKIP token ${totalErrataOnSkipped} 条（登记时确曾失效，合法存续）；沙箱根命中未带前缀 ${totalSandboxOnly} 处（只计数不判红：recon §10.3 只定义 toolkit:/doctor仓: 两前缀，判红即发明判据）`);
+  console.log(`  运行期面缺席 SKIP ${totalRuntimeAbsent} 条（2026-10-02 外部门禁缺席降级：.gitignore 运行期目录不入库，缺席＝外部克隆环境正常形态、缺席≠账实不符；本机在场时照验）：`);
+  for (const s of skips) {
+    const ln = s.cite.split(':')[1];
+    console.log(`      [SKIP] ${s.file}:${ln}  ${s.token}`);
+  }
   if (reds.length) {
     console.log(`  ✗ 红集 ${reds.length} 条（活文档 ${livingCount}／存档件 ${reds.length - livingCount}；行号 ${kindCount.LINE || 0}、缺文件 ${kindCount.MISS || 0}、缺符号 ${kindCount.SYM || 0}、缺前缀 ${kindCount.PREFIX || 0}、错账勘误 ${kindCount.ERRATA || 0}）：`);
     for (const r of reds) {

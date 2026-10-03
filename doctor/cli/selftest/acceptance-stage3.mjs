@@ -208,6 +208,16 @@ async function main() {
 
   console.log('=== e) 真实影子验证：复制真实 configRoot 扫描相关子集到临时目录 ===');
   {
+    const realProfilePkg = path.join(realConfigRoot, 'profiles', 'web', 'package.json');
+    const realProfilePatch = path.join(realConfigRoot, 'profiles', 'web', 'cordis.patch.yml');
+    const realPreset = path.join(realConfigRoot, '.agent-presets', 'liangshen', 'agent.cordis.yml');
+    // 2026-10-02 修订（外部门禁缺席降级）：真实环境缺席（~/.dsh 配置面或在用仓 scope
+    // 不在场＝外部克隆环境正常形态）时明示 SKIP，不再 copyFileSync 崩红；本机在场时照跑，行为不变。
+    if (!fs.existsSync(realProfilePkg) || !fs.existsSync(realProfilePatch) || !fs.existsSync(realPreset) || !fs.existsSync(realScopeRoot)) {
+      console.log('  SKIP e) 真实影子验证：真实环境缺席（exists: profilePkg=' + fs.existsSync(realProfilePkg)
+        + ' profilePatch=' + fs.existsSync(realProfilePatch) + ' preset=' + fs.existsSync(realPreset)
+        + ' scope=' + fs.existsSync(realScopeRoot) + '）＝外部克隆环境正常形态；本机在场时照跑');
+    } else {
     const hashBefore = hashRealScanSurface();
     console.log('real configRoot scan-surface hash before=' + hashBefore.hash + ' (' + hashBefore.fileCount + ' files)');
     const shadowRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-doctor-shadow-'));
@@ -215,9 +225,6 @@ async function main() {
     fs.mkdirSync(path.join(shadowConfig, 'profiles', 'web'), { recursive: true });
     fs.mkdirSync(path.join(shadowConfig, '.agent-presets', 'liangshen'), { recursive: true });
 
-    const realProfilePkg = path.join(realConfigRoot, 'profiles', 'web', 'package.json');
-    const realProfilePatch = path.join(realConfigRoot, 'profiles', 'web', 'cordis.patch.yml');
-    const realPreset = path.join(realConfigRoot, '.agent-presets', 'liangshen', 'agent.cordis.yml');
     fs.copyFileSync(realProfilePkg, path.join(shadowConfig, 'profiles', 'web', 'package.json'));
     fs.copyFileSync(realProfilePatch, path.join(shadowConfig, 'profiles', 'web', 'cordis.patch.yml'));
     const shadowPreset = path.join(shadowConfig, '.agent-presets', 'liangshen', 'agent.cordis.yml');
@@ -240,6 +247,7 @@ async function main() {
     console.log('real configRoot scan-surface hash after =' + hashAfter.hash + ' (' + hashAfter.fileCount + ' files)');
     assert.equal(hashAfter.hash, hashBefore.hash, '真实 configRoot 医生扫描面 hash 必须一致');
     console.log('PASS e\n');
+    }
   }
 
   console.log('=== f) rollback → 目标文件与修复前逐字节一致 ===');
