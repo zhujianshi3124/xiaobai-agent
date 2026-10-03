@@ -48,7 +48,7 @@ registry 的 legacy 适配器会合成 manifest（id 落 `legacy/<包名>`，无
   "contract": "^1.0",
   "requires": {
     "node": ">=22",
-    "dshRuntime": ">=0.1.2-rc.1 <0.2.0",
+    "dshRuntime": ">=0.1.2-rc.1 <0.2.0 || >=0.2.0-rc.2 <0.3.0",
     "services": ["webServer"],
     "binaries": [{ "name": "git", "minVersion": "2.30.0" }],
     "envVars": [{ "key": "MY_TOKEN", "required": true, "describe": "只声明存在性，绝不打印值" }]
