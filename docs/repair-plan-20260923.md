@@ -3876,3 +3876,46 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 - 冻结仓零触碰；doctor 仓未触（T1 改动面仅本仓 manifest 声明）；家根零写入；凭据未读（沙箱家根 .credentials.yaml 亦未读）；用户侧两宿主与已装插件零启停零改动零升级零卸载（T3 全部在沙箱实装树，起停者均沙箱宿主实例）；用户 profile 零写入。
 - 开源仓改动两笔：fix 笔＝5 manifest 文件 5+/5−（声明面，无代码语义变更）＋记账笔＝纯追加（plan/debt/CHANGELOG）；逐笔查暂存区；git 零删除自证。
 - 网络：零外联（T3 浏览器全程 127.0.0.1 本机回环，token 探针同为回环；零令牌零凭据）；探针区 001–031 保留未动；本批证据区 `var/scratch/exe-boot-032-main/`（t1/t2/t3/t4）。
+
+## 68. EXE-BOOT-033 批（2026-10-03 · 开源线 · 网页校验备场常驻实例＋debt-032-a 模板对齐清偿＋桌面形态实测纸面方案）
+
+**令源**：EXE-BOOT-033 启动包（预期链尾 694b2c6 树净——实况符合；本轮协调侧四裁决生效、默认不重议；包文自注 UI 细节以实勘为准——本批 DOM 复核实勘与 032 证据一致）。
+
+### 68.1 本轮裁决落账（①–④ 要义）
+
+- **① 用户网页校验模式＝执行侧启动并维护宿主、用户只开浏览器**：032 的 t3 userbrief（用户自跑命令版）存档不改；用户步骤由协调侧依本批 T1 报告另拟 → 68.2。
+- **② debt-032-a 处置＝模板对齐＋其余五处活文档示例维持原样**（协调侧已批、透明呈报用户、可否决撤回）→ 68.3。
+- **③ T1 实例生命周期＝启动→存活确认→DOM 复核→常驻运行**，本批不得停止；后续批于用户校验完结后处置 → 68.2 与 debt-033-a。
+- **④ 桌面形态实测＝纸面设计**；用户侧桌面 profile 零写入；实施须待方案呈报用户明示批准后另开令 → 68.4。
+
+### 68.2 T1 常驻沙箱网页宿主（用户校验备场；读数正本 `var/scratch/exe-boot-033-main/t1/t1-reading.md`）
+
+- **台账**：启动 2026-10-03 23:13:04 +08:00；pid **11112**；端口 **2642**（032 同端口复用，启动前 netstat 空闲确认；启动时全机零 node 监听＝用户两真实宿主均停机、其惯用端口只读探不明——依包文"探不明不强求"用 2642）；URL（token 逐字）＝`http://127.0.0.1:2642/?token=XIPqui5g6uI9VcZ4jodfbyaUIKjt9LrkXYVZ5c8SrSM`——**沙箱回环临时访问物、非凭据**，依启动包 §4 T4 明示授权入账；token 实证＝无状态 HTTP GET **200**（len 34782）；两次存活确认全 True（40s＝23:13:44／2.6min＝23:15:40）；`--no-open` 生效（stdout 无 "opening the default browser" 行，032 两轮均有）＝零本机浏览器弹窗。启动脚本 `var/scratch/exe-boot-033-main/t1/web-start033.ps1`；日志 `web-033-stdout.log`／`web-033-stderr.log`。
+- **DOM 复核（§6② 判定点，实测通过未触发停报）**：入口 A（主屏模式选择器下拉）三变体逐字在列——`xiaobai compact (standard)`／`xiaobai compact (ptc)`／`xiaobai compact (cordis)`；入口 B（设置→Agent 预设→自定义组）三卡全在、code id 逐字命中。证据四件 `var/scratch/exe-boot-033-main/t1/entryA-mode-menu-dom.txt`／`entryA-mode-menu.png`／`entryB-agent-preset-dom.txt`／`entryB-agent-preset.png`。stderr 唯一 did-not-activate＝026 遗留 agent-memory 实验行已知注入限制（031/032 同款）＝零 agent preset 警告、零 broken。
+- **时效与遗存**：token 与实例进程同生命——实例不停则持续有效；进程死亡或机器重启即失效且不可恢复（须重起实例取新 token，每次启动轮换）。实例**保持运行**、本批零停止动作；浏览器标签复核后关闭（宿主进程未触）；跨批处置义务挂 debt-033-a。
+
+### 68.3 T2 debt-032-a 清偿（模板对齐）
+
+- **实勘**：docs/add-sub-plugin.md 全文 `dshRuntime` 恰 1 处（51 行模板值）、旧单段恰 1 处、无配套说明段需连带——**§6③ 不触发**（单值改动成立）；根 manifest 双段现值实勘与 032 fix 笔取值逐字一致（§6② 类同判定不触发）。
+- **实施**：51 行模板值 `">=0.1.2-rc.1 <0.2.0"` → `">=0.1.2-rc.1 <0.2.0 || >=0.2.0-rc.2 <0.3.0"`（git 1 文件 1+/1−）；改前/改后读数 `var/scratch/exe-boot-033-main/t2/before-reading.txt`／`after-reading.txt`。
+- **残留复扫**（工装沿 `var/scratch/exe-boot-032-main/t1/rescan-residue.mjs`，读数 `var/scratch/exe-boot-033-main/t2/rescan-after-t2.txt`）：全仓旧单段 20 行与 032 分类闭合——add-sub-plugin.md **出列**；plan §67.2 改前读数引文入列（历史账文自然新增 1 行）＝总数守恒；另 5 处活文档示例（semver.ts×2／types.ts／validate.ts／contract.md D-1 行）**原样未动**（裁决②）。
+- **doctor dry-run**：issues=0（0/0/0）exit 0（`var/scratch/exe-boot-033-main/t4/doctor-dryrun-final.log`；YAML 缺席注记＝§60 明示形态）——纯文档零牵动。
+
+### 68.4 T3 桌面形态实测方案（纸面，零用户侧写入；实施须用户明示批准）
+
+- **设计稿**：`D:\dsh-test-sandbox\docs\exe-boot-033-t3-desktop-form-livetest-design.md`——六要素齐备：a 预备份（四件 sha 台账＋自写监控点＋字节级回退法）；b 挂载机制（沙箱三批已证三件套形态＝profile link 依赖＋patch 行＋020 通道变体块；宿主重写四道防线〔备份／启动前 sha＋marker 副本／启动后 grep＋sha 对照／UI 活体判据〕；执行载体两案〔A 沙箱 CLI 以 DSH_HOME 指真实家根＝建议案／B 桌面自带 CLI 待探明〕；M0 沙箱预演步先行）；c 用户步骤草案（启动→两入口三名字→「检查更新」失败类预期＝026 T2 静态推定的实测落点→重启共存核验→关停）；d 去留两案（保留 vs 完整还原＋执行侧建议＝通过即保留至发布批）；e 风险清单 R1–R5＋验证判据五条；f 用户裁决点四项（含**桌面 profile 临时写入授权请求**）。
+- **实勘基线**（只读；读数 `var/scratch/exe-boot-033-main/t3/desktop-profile-inventory.txt`）：desktop profile 四件（cordis.patch.yml 8357B sha `02e5cc3a…` mtime 10/2 23:45:17 +08——**与 026 T1 读数逐字一致＝其后桌面宿主未再启动、干净基线**）；package.json deps 空＝未装任何插件；更新暂停件现态在位（暂停名在场、原名缺席）。
+- **如实记**：桌面宿主自写行为＝026 T1 一次定谳＋024 前科的观测推断、非宿主代码级承诺——方案以 M0 预演＋四道防线兜底，marker 块若被冲＝结构性发现停报不对抗；案 A 执行载体触既往红线边际（沙箱二进制触真实家根），已列为用户裁决点①明示项。
+
+### 68.5 T4 回归与记账
+
+- **全量套件**：两轮闭合全绿（第 1 轮 `var/scratch/exe-boot-033-main/t4/fullsuite-run1.log`＝552 pass＋**1 文件级红**——`test/install-confirm-gate.test.mjs` libuv 原生断言 `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), file src\win\async.c, line 94`，**与 debt obs-1／§63.6 逐字同签名**＝Node/Windows teardown 抖动、该文件 imports 与本批纯文档改动零关联；处置沿在案法＝单文件复跑 **6/6 绿**（`t4/install-confirm-gate-rerun.log`）＋全套件第 2 轮 **552/552 绿**（`t4/fullsuite-run2.log`）＝一振闭合、两振即查纪律未触发、如实记）；**doctor dry-run** 0/0/0（68.3 所引）；**doc-ref-guard** 全绿（`var/scratch/exe-boot-033-main/t4/guard-pre-commit.log`，自证 59/59 红集空）。
+- **提交两笔**：模板对齐笔（add-sub-plugin.md 1+/1−，单笔可 revert）＋记账笔（plan §68＋debt 033 批节，纯追加）；逐笔查暂存区、纯追加 git 报删除按字节自证；不 push、不 tag、不 publish。
+- **CHANGELOG 不加条目（自定申报）**：本批仓内改动＝文档示例值对齐与账文，无行为面、无对外产物变化——按"对外条目＝用户可见行为/产物变化"惯例不加；声明面对齐条目 032 已立在案。
+
+### 68.6 红线自证
+
+- 冻结仓零触碰；doctor 仓未触（T2 纯文档）；**家根零写入**（用户 desktop/web profile 全程只读：desktop profile 四件盘点＋更新暂停件目录名读取；.credentials.yaml 未读）；用户侧两宿主与已装插件零启停零改动零升级零卸载（T1 实例为沙箱宿主，非用户资产）。
+- **T1 实例保持运行**＝本批唯一非常态遗存物（依裁决①③授权并要求；跨批处置挂 debt-033-a）。
+- 开源仓改动两笔：模板对齐笔 1+/1−（纯文档示例值）＋记账笔纯追加（plan/debt）；逐笔查暂存区；git 零删除自证。
+- 网络：零外联；凭据零读（T1 token 为沙箱回环临时访问物、非凭据，备案入账依包文 §4 T4 明示授权）；探针区 001–032 保留未动；本批证据区 `var/scratch/exe-boot-033-main/`（t1/t2/t3/t4）。

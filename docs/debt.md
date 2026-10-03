@@ -893,3 +893,13 @@ H5 轮的 `6900` 变成 `2624`，`Get-Process` 读得其 `StartTime = 2026/9/22 
 ### 挂账新增
 
 - **debt-032-a 子件声明旧单段示例残留（活文档 6 行，候裁）**：032 T1 五处声明同步后的复扫清单（`var/scratch/exe-boot-032-main/t1/rescan-after.txt`）中，非 fixture、非历史账文的活文档/代码内旧单段示例共 6 行——docs/add-sub-plugin.md 子件 manifest 模板值一行（**实务面最要紧**：新写子件的跟随模板仍示旧段，与根 manifest 双段不一致）、contract/src/semver.ts 头注两行、contract/src/types.ts JSDoc 一行、contract/src/validate.ts 错误提示示例串一行、contract.md D-1 偏差规则行一行（后五处系"范围语法/偏差语义示例"，语义仍成立、非声明面，不改亦不误导）。处置建议：add-sub-plugin.md 模板值随下一批顺手对齐双段；其余五处维持示例原样（如未来偏差规则行例证需更新再议）。
+
+## 033 批（2026-10-03 · EXE-BOOT-033）
+
+### 结案注
+
+- **debt-032-a 结案（模板清偿＋余项"维持"定谳闭账）**：docs/add-sub-plugin.md 子件模板 `dshRuntime` 示例值已对齐双段（033 T2；单值改动、实勘无连带——§6③ 不触发；改前/改后读数与全仓复扫 `var/scratch/exe-boot-033-main/t2/`）；其余 5 处活文档示例（contract/src/semver.ts×2、types.ts JSDoc、validate.ts 提示串、contract.md D-1 行）经协调侧 033 裁决②**维持原样**（示例语义仍成立、非声明面）——挂账本体（模板值不一致）已消，余项以"维持"定谳闭账、不再挂。
+
+### 挂账新增
+
+- **debt-033-a 常驻沙箱网页实例跨批处置义务**：EXE-BOOT-033 T1 常驻实例（pid 11112、端口 2642、token 备案 plan §68.2）依 033 裁决③**保持运行至用户网页校验完结**；后续批须承接处置——校验完结后停机并登记结案；实例死亡或机器重启则 token 失效、须重起实例取新 token（每次启动轮换，032 定谳）。属交接义务挂账，非缺陷。
