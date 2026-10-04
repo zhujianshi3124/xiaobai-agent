@@ -4069,3 +4069,53 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 - **授权面**：写入＝设计稿 b 节清单＋.plugin-manager（用户裁②）；profile 递归 diff 逐项核对无面外新增（V9）；~/.dsh 顶层零差异（V10）；.credentials.yaml 永未读（仅列名）；家根 cordis.patch.yml（6696B 件）零触及。
 - 冻结仓 D:\dsh-plugins\dsh-toolkit、doctor 仓、用户 web profile、npm 全局 0.1.5-rc.1 零触碰；网络零外联（link 本地完成 "Already up to date"）；零发布动作。
 - CHANGELOG 不加（无对外行为面变化，申报在案）；debt 不动（71.5 为先记后裁候裁项、非债务）。
+
+## 72. EXE-BOOT-037 批（2026-10-04 · 开源线 · 接线批：apply 覆盖块落位桌面 profile＋静态自验全绿，停靠候用户校验窗开启）
+
+**令源**：EXE-BOOT-037 启动包（预期链尾 99e5696 树净——实况符合；承接 036 停靠申报对账通过）。用户两裁随批落账：①**pnpm store projects 副产物收编入册**（`%LOCALAPPDATA%\pnpm\store\v11\projects\43eff13fec1df30fd9048341a3271e91`；后续同通道操作复用属已知面，册外新增另报）；②**apply 覆盖块步放行**（本批任务）。接线后形态保留至发布批（用户保留字节还原＋验后再裁权）。本批为用户校验窗前最后执行批：不开常驻实例、不跑 dump、不启动桌面 GUI App；**唯一授权写入件＝桌面 profile 目录内 cordis.patch.yml**，家根 024 件（024 恢复件）禁动为红线最高优先。
+
+### 72.1 T0 前置核实（全绿；读数 `var/scratch/exe-boot-037-desktop/t0/t0-reading.txt`）
+
+- 链尾 99e5696＋树净；全机 node／DeepSeek／dsh／harness／electron 进程逐一归属＝空集。
+- 桌面 profile 对 036 终态台账逐项符合：cordis.patch.yml 8357B `02e5cc3a…`／cordis.yml 223B `c300dcf2…`／package.json 268B（sha `e821f001…`，036 后形首次录 sha）／pnpm-lock.yaml 249B（sha `9f4ff580…`）／pnpm-workspace.yaml 61B `ae7c5b68…`；Junction→仓、node_modules\.bin 三件、.plugin-manager pnpm.log 0B 在场。
+- **家根 024 件基线**：6696B sha `bdc8bbc7…1f7b9ed`（与 025 参考值同）；暂停件 `96c202ea…e95d85` 原样；~/.dsh 顶层与 pnpm store projects 前快照落档。
+- 工具锚：仓内 `scripts/apply-preset-patch.mjs` sha `55f64648…`＝035 M0 隔离副本 sha（脚本自 034 返工后零改动）。
+
+### 72.2 T1 接线前备份（全绿；读数 `var/scratch/exe-boot-037-desktop/t1/t1-reading.txt`）
+
+- cordis.patch.yml 字节复制至 037 `backup/`，src=dst sha 全等；五件 sha 台账（pre-apply）；Junction 可达抽验（dsh.plugin.json 经 junction sha 与仓原件全等）；profile 递归快照（pre-apply-state.txt）；**036 backup 代（装前态四件）验 intact 未动，两代备份并存**。
+
+### 72.3 T2 apply 覆盖块（全绿；读数 `var/scratch/exe-boot-037-desktop/t2/t2-apply-reading.txt`，apply 原始 stdout/stderr 逐字落档 apply1/apply2/status 三件）
+
+- **隔离副本法**（沿 035 M0）：脚本副本 sha `55f64648…`＝仓内原件（锚纪律）；台账与备份落隔离区（preset-patch-state.json 2311B "020" 键三块＋preset-backups/profile-cordis-patch.desktop.bak 8357B）。
+- **目标路径逐字核验（红线 2）**："C:\Users\LENOVO\.dsh\profiles\desktop\cordis.patch.yml"（≠家根 "C:\Users\LENOVO\.dsh\cordis.patch.yml"，对照列报）；apply stdout `profile: desktop (…)` 行即逐字证据。
+- **apply run 1**＝exit 0：standard／ptc／cordis **WRITTEN**（override of bundle `@deepseek-ai/dsh-web-app` presets，基底枚举自 0.2.0 沙箱安装树）＋minimal **SKIPPED**（no compaction member，跳过可观测）＋pre-write backup 落隔离区。
+- **幂等复跑**＝no-op×3＋`Done. 3 override block(s) on file.`（零重复块）；**--status**＝applied×3。
+- **sha 台账**：目标件 `02e5cc3a…`（8357B）→`e8ee7814…`（30204B）；**家根 024 件前后全等（`bdc8bbc7…`，禁动红线达成）**。
+- **进程监控**：pre/post 采样 DeepSeek Harness.exe＝0、零 GUI 特征；本批宿主进程零出现（shim 未调用，node 仅我方脚本自身）。
+- **块计数**：恰 3 BEGIN＋3 END（standard/ptc/cordis），无重复无失衡；文件 268 行→737 行（30204B）。
+
+### 72.4 T3 静态自验（全绿；读数 `var/scratch/exe-boot-037-desktop/t3/block-verify-reading.txt`＋`var/scratch/exe-boot-037-desktop/t3/t3-verify-reading.txt`）
+
+- **块形态对 034 终态规范件逐字节比对**（锚＝`D:\dsh-test-sandbox\var\scratch\exe-boot-026-main\t4\dsh-home\profiles\web\cordis.patch.yml` 034 终态）：standard 7049B／ptc 7201B／cordis 7591B——**三块 identical=true 逐字节全等**（同基底源、同脚本版本）。
+- **官方原行原样**：新文件去块头部 276 行与 pre-apply 原件逐行比对＝**零错配**（同 id 覆盖＝追加覆盖行、原行原样未动实证）；minimal 无我方块；块内成员行实态＝`- id: compact-router`＋`name: 'xiaobai-agent/compact-router'`（YAML 单引号形，3 块×2 行＝6 行在位；块内 dsh-compaction-basic 零残留）。
+- **面外零写入**：cordis.yml／package.json／pnpm-lock.yaml／pnpm-workspace.yaml sha 前后全等；profile 递归 diff＝**恰一文件变化（patch 件 8357→30204B），零新增零删除**；Junction 可达（sha 抽验等仓）；.plugin-manager 原样；~/.dsh 顶层零差异；家根 024 件全等；暂停件 `96c202ea…` 全等；pnpm store projects 前后零差异（红线 7）。
+- 残留进程 node.exe=0／DeepSeek Harness.exe=0。
+- 如实记（工装笔误非文件问题）：T3.a 首版探针串以 dump 渲染形 `name: xiaobai-agent/compact-router`（无引号）检索零命中，patch 内实态为单引号形——权威判据（与 034 终态件逐字节比对）不受影响。
+
+### 72.5 T4 收尾
+
+- 证据区 `var/scratch/exe-boot-037-desktop/`（t0–t4＋backup）归档 28 件在案（`var/scratch/exe-boot-037-desktop/t4/archive-listing.txt`）。
+
+### 72.6 停靠状态（用户校验窗开启）
+
+- **真件现态**＝desktop profile：toolkit link 已挂（036）＋三官方同 id 覆盖块已落（本批）＋patch 原行原样——**033 设计稿 §5 五判据至此全可验**（①App 正常启动零报错弹窗；②两入口零新增条目＝菜单官方四原样；③重启一次后仍在列＝自写共存；④「检查更新」呈失败类提示＝暂停生效；⑤全程零版本豁免类提示）；正面判据＝官方模式「查看配置」内 compaction 组首成员＝compact-router（xiaobai-agent/compact-router）。
+- UI 事实沿 035 申报 C 节（两入口路径与预期呈现、配置查看路径、更新菜单预期、无 key 弹层形态注记），无新发现。
+- 回退法汇总（候验后裁）：patch 件字节还原（037 backup/）＋四件字节还原（036 backup/）＋node_modules 与 .plugin-manager 移除（036 b 节回退法）；或工具自帢单块回退 `--undo --only <id>`。
+
+### 72.7 红线自证
+
+- **唯一授权写入件达成**：本批写入面＝桌面 profile 内 cordis.patch.yml 一件（apply 覆盖块）；递归 diff 零新增零删除、其余全部 sha/清单前后全等；**家根 024 件前后全等（最高优先红线）**；执行前目标路径逐字核验在案。
+- GUI 进程特征零出现（T2 采样 harness=0、零窗口标题）；桌面 GUI App 未启动、shim 未调用；常驻实例未开、dump 未跑。
+- 暂停件不触碰（sha 复核全等）；.credentials.yaml 永未读（仅列名）；冻结仓／doctor 仓／npm 全局／用户 web profile／沙箱网页家根零触碰；pnpm store 册内目录零变动、册外零新增。
+- CHANGELOG 不加（部署动作、非包对外行为面变化，申报在案）；debt 不动（无新发现）。
