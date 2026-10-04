@@ -903,3 +903,18 @@ H5 轮的 `6900` 变成 `2624`，`Get-Process` 读得其 `StartTime = 2026/9/22 
 ### 挂账新增
 
 - **debt-033-a 常驻沙箱网页实例跨批处置义务**：EXE-BOOT-033 T1 常驻实例（pid 11112、端口 2642、token 备案 plan §68.2）依 033 裁决③**保持运行至用户网页校验完结**；后续批须承接处置——校验完结后停机并登记结案；实例死亡或机器重启则 token 失效、须重起实例取新 token（每次启动轮换，032 定谳）。属交接义务挂账，非缺陷。
+
+## 034 批（2026-10-04 · EXE-BOOT-034）
+
+### 结案注
+
+- **debt-033-a 结案（实例已亡）**：033 常驻实例 pid 11112 在 034 启动前已死亡（会话间机器重启；Stop-Process `ProcessNotFound` 实证，读数 `var/scratch/exe-boot-034-main/t3/instance-disposal.txt`）——处置义务标的消失、以"实例已亡"结案；token 随进程消亡、端口释放、零安全面残留。034 已按裁决另起新常驻实例（pid 29284，处置义务由债务转随批台账，见 plan §69.5）。
+
+### 挂账新增
+
+- **debt-034-a 基底漂移的 doctor 周期检查（设计在案、施工待批）**：宿主升级致官方基底行内容漂移（行 id 不变）时，我方同 id 覆盖行会**静默遮蔽宿主更新**（结构性风险；行 id/name 变更类漂移已有宿主侧 warn+skip 自然观测）。工具侧已落地可观测面：`apply-preset-patch --status` 的 `baseDriftNote`（台账 baseFileSha 对照现行基底源文件 sha→"base source changed since apply"）＋apply 的 REGENERATED 通道（重跑自动跟随上游）。**doctor 集成**（引擎规则周期读 preset-patch-state.json 台账＋基底源文件 sha 对账）涉 doctor 仓断言面——按本包停报边界本批不施工，挂账待专批（含声明文件写入与 engine 零硬编码红线对齐设计）。
+- **debt-034-b T0d「编辑器回退剥 config」分支未实测**：dsh-config-editor 代码级判读指出 `next` 深等于 `inherited` 时其清理循环会剥掉**所有**同 id 非 insert 行的 config（含我方块内行→我方行变惰性、marker 壳留存、我方工具 --status 报 drift）。该分支需真实编辑器会话触发（沙箱无 API key 不可达）——代码级推演在案（plan §69.2d）、未实测如实挂账；触发后我方工具行为（drift→REFUSE 不盲写）已有测试钉覆盖，风险面有限。
+
+### 环境级注记（成因已定位，非未决）
+
+- **仓根 0 字节残件一次（已清、成因归因于执行侧自身）**：034 T3 时点仓根现 0 字节未跟踪文件（文件名含内联脚本碎片）；成因＝执行侧一条被 cmd 引号绞碎的内联 `node -e`（DOM 核对步）其重定向残片建文件，mtime 与该命令时点吻合——与 026 obs-2（writer 未定位）同族但**本次成因闭合**；残件当场查验（0 字节）并清除、未入提交。教训：仓内操作弃用多行内联 node -e、一律走脚本文件。

@@ -908,3 +908,8 @@ JS 侧 JSDoc 引用，公共类型仍统一从 contract 导出；typecheck 已�
 ### 子插件 manifest 运行时范围与根 manifest 对齐（2026-10-03，EXE-BOOT-032）
 
 - lib/ 四子插件（agent-memory／compact-router／rate-throttle／search-router）与 panel 共 5 处 `dsh.plugin.json` 的 `requirements.runtime.dsh` 由旧单段 `">=0.1.2-rc.1 <0.2.0"` 同步为根 manifest 同款双段 `">=0.1.2-rc.1 <0.2.0 || >=0.2.0-rc.2 <0.3.0"`（9db3a58 版本门禁重画的声明面一致性收口）。安装准入本就读根 package.json peerDependencies（早已双段），本次纯声明面对齐、行为面无变化。
+
+### 预设通道呈现形态返工：官方预设内嵌压缩引擎（2026-10-04，EXE-BOOT-034；用户方向性终裁）
+
+- **用户可见行为变化**：0.2.0 宿主上 `apply-preset-patch` 的产出由「菜单新增三个 xiaobai compact 平行条目」（031 形态）返工为「**菜单与原生宿主完全一致（仅官方预设原样），官方模式选中时压缩引擎为 xiaobai-agent/compact-router**」——对官方基底预设行写**同 id 覆盖行**（profile patch 层；宿主 patch 语义：按 entry id 替换所供字段、config 整体替换），显示名/序/描述全量继承官方原值、零新增菜单条目、零劫持官方 id 之外的命名空间占用。minimal（无压缩成员）维持明示跳过。
+- 机制保留：现场读基底、compaction 同位替换、群组结构/兄弟成员保留、结构失配 REFUSE 不盲写、幂等、单块可回退（`--undo --only <基底id>`）；新增保护＝profile patch 已有同 id 覆盖行（网页编辑器或手改）时 REFUSE 拒遮蔽＋状态命令遮蔽/上游漂移告警。031 形态的平行变体块可用 031 版工具 undo 或手工删块清除。
