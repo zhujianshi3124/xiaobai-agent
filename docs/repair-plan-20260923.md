@@ -3971,3 +3971,47 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 - **宿主自身包文件零改动**（0.2.0 实装树 webapp 包内 presets 等只读——T0 基底行全部读自安装树原件）；覆盖只落 profile patch 层（沙箱家根副本）；冻结仓零触碰；doctor 仓未触（漂移检查仅工具侧＋挂账）；家根零写入；用户侧两宿主与已装插件零启停零改动（真件只读 sha 双证）；用户 web/desktop profile 零写入。
 - 沙箱实例启停属授权（033 实例已亡如实记、本批实例保持运行）；沙箱家根 patch 写入属授权面。
 - 网络：零外联；凭据零读（.credentials.yaml 未读；token 为回环临时访问物）；探针区 001–033 保留未动；本批证据区 `var/scratch/exe-boot-034-main/`（t0–t4）。
+
+## 70. EXE-BOOT-035 批（2026-10-04 · 开源线 · 桌面形态实测实施批：M0 装载链六步全绿＋案 A 载体官方护栏红灯停靠候裁）
+
+**令源**：EXE-BOOT-035 启动包（预期链尾 ec3bfef 树净——实况符合；本包为桌面形态实测·实施批）。方案依据＝033 设计稿 `D:\dsh-test-sandbox\docs\exe-boot-033-t3-desktop-form-livetest-design.md` 全文＋其 034 返工更新节（§8），本批开工逐字重读。§3 四裁决①–④生效落账：①桌面 profile 临时写入授权（范围＝设计稿 b 节清单）——**载体案 A 第一步即遇官方护栏拒斥，停靠候裁（见 70.3）**；②时间窗＝装时桌面 App 关闭＋本批只申报 UI 事实不出用户操作件——App 确认零进程、本批未启动；③验后去留预选＝保留挂载至发布批——随安装停靠待继；④更新暂停维持——本批零触碰该件、现态复核原样（70.1）。用户校验待办状态＝**候安装**（安装未成，校验清单随停靠申报 C 节呈 UI 事实供协调侧拟步）。T2/T3 零执行，真实侧全程只读（70.5 自证）。
+
+### 70.1 T0 前置核实（全绿；读数正本 `var/scratch/exe-boot-035-desktop/t0/t0-reading.txt`）
+
+- 链尾 ec3bfef＋树净；桌面 App 零进程（无 DeepSeek/harness/dsh/electron）；全机唯一 node＝034 沙箱常驻 pid 29284（端口 2642，T4 标的）＝用户 web 宿主停机照旧记录。
+- 桌面 profile 四件对 033 t3 基线（`var/scratch/exe-boot-033-main/t3/desktop-profile-inventory.txt`）：cordis.patch.yml 8357B sha `02e5cc3a…` 逐字同（mtime 显示 033 为 15:45:17.791Z、本批 .790Z——PS/Node 计时精度差，sha 字节级全等为准）；cordis.yml 223B／package.json 211B／pnpm-workspace.yaml 61B 尺寸同，sha 本批首录（`c300dcf2…`／`eafc5b4e…`／`ae7c5b68…`）；顶层恰四件、零 node_modules 零 .plugin-manager ⇒ **干净基线承续**。
+- 更新暂停件："app-update.yml" 原名缺席＋"app-update.yml.dsh026-paused" 306B sha `96c202ea…e95d85`（＝026 T2 备份台账逐字）——暂停态原样。
+
+### 70.2 T1 M0 沙箱彩排——装载链六步全绿（读数正本 `var/scratch/exe-boot-035-desktop/t1/m0-reading.md`）
+
+- ①合成副本：真实 desktop profile 四件字节复制至本批新沙箱家根（不动 026/032/033 网页沙箱家根），src=dst sha 全等。
+- ②apply 覆盖块（隔离脚本副本 `t1/m0-plugin`，副本 sha＝仓内原件 sha＝`55f64648…`）：fresh apply＝standard/ptc/cordis **WRITTEN**（override of bundle `@deepseek-ai/dsh-web-app` presets）＋minimal **SKIPPED**（no compaction member）＋pre-write backup 落隔离区；幂等 apply＝no-op×3；`--status`＝applied×3；隔离台账 "020" 键三块（blockSha/targetRowId/presetId/baseFileSha）备案。
+- ③dump-config：exit 0、stderr 全空；顶层 preset 行恰四、各恰一次（preset-standard／-ptc／-minimal／-cordis）；三基底 compaction 组＝`compact-router（xiaobai-agent/compact-router，config mode:auto/fallbackOnRateLimit:true/archive:true）＋command-compact＋tool-result-pruner`（逐字上下文在档 `var/scratch/exe-boot-035-desktop/t1/m0-dump-config.txt`）；minimal 块零 compaction 匹配；`xiaobai-compact` 全文零出现；顶层 `compaction-basic` 条目（dsh-web-app patch 层）`disabled: true` 原样未动。
+- ④web 启动：`--profile desktop035 --port 2643 --no-open` 40s 存活＋stdout URL 在场＋**stderr 全空**（零 broken／零 duplicate preset／零 patch warning）。
+- ⑤DOM 双入口（IAB 浏览器实测）：入口 A 模式下拉＝`标准模式／PTC 模式／极简模式／创造模式` 官方四原样、零 xiaobai、零新增零重复；入口 B 设置→Agent 预设＝内置四卡（code: standard/ptc/minimal/cordis）＋自定义组空（仅「让 Agent 帮我创建预设模式」）。
+- ⑥查看配置 · 标准模式：compaction 组（cordis:group、isolate compaction:true toolResultPruner:true）首成员＝`compact-router (xiaobai-agent/compact-router)`——**§8 修订正面判据在 UI 层闭合**。
+- 彩排注记：载体系因案 A 红灯（70.3）以改名副本 `desktop035` 续验装载链（护栏按 profile 名硬编码、与装载机制无关）；M0 两弹层（预览版说明「继续」、API Key 引导「稍后配置」）为无 key 沙箱预期形态，照实记。
+
+### 70.3 红灯：案 A 第一步被宿主官方护栏拒斥（实测＋代码级双证；停报依据）
+
+- **实测**：`dsh plugin --profile desktop add <仓路径>`（沙箱 0.2.0 CLI、DSH_HOME 指沙箱家根）→ `error: profile "desktop" is managed exclusively by the Electron application`——拒装、零写入（package.json 原样；读数 `var/scratch/exe-boot-035-desktop/t1/m0-link-log.txt`）。
+- **代码级**（沙箱 0.2.0 安装树 bin.js 逐字件）：`rejectElectronProfile` 对 `profile.toLowerCase() === "desktop"` 按名硬编码拒斥；主 action（boot/dump 路径）**无条件**调用该护栏；plugin 子命令仅在 `!manageDesktopProfile` 时拒，`parseDshArgs(argv, version, manageDesktopProfile = false)` 第三参由 `runCli(options)` 供给、注释逐字 "Package runtime and Desktop profile access supplied by the installation"——普通 CLI 恒 false。即：**desktop profile 的 plugin 管理为安装体专管，终端 CLI 官方不可达**。
+- **改名彩排 link 步全绿**（desktop035）：`+ xiaobai-agent link:D:/dsh-toolkit-opensource`＋`declares no dsh.bundle——按普通依赖安装` 警告＝026 T4 网页侧逐字同形态；写入面实测＝package.json 211→268B（dependencies 增 link 行）＋pnpm-lock.yaml 新建 270B＋node_modules（Junction→仓）＋**.plugin-manager 目录新增**；cordis.patch.yml sha 前后全等（plugin add 不触 patch，实证）。`.plugin-manager` 系 CLI plugin 运行器 `runProfilePnpm` 所建日志面（logRoot 常量）——**设计稿 b 节清单未列项，呈裁**（注：app 自身 service 模式装插件同函数亦建，非沙箱特有）。
+- **案 B 在场性定谳（纯只读取证，未执行 shim）**：shim "D:\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd" 在场→ 经 DeepSeek Harness.exe --expose-internals 以 node 模式（ELECTRON_RUN_AS_NODE=1）跑安装 asar 内件 "D:\DeepSeek Harness\resources\app.asar\dsh\node_modules\@deepseek-ai\dsh-desktop-host\lib\cli.js"；该件经 026 纯读 asar 抽取工装取件在档 `var/scratch/exe-boot-035-desktop/t1/dsh-desktop-host-cli.js`（5275B）——`runDesktopCli` 逐字 `runCli({ manageDesktopProfile: true, packageManager: { … } })`（args 终段＝安装自带 pnpm 入口件）、注释逐字 "Run the ordinary CLI with Desktop's bundled package manager and reserved-profile plugin access"；安装自带 pnpm 入口件＝"D:\DeepSeek Harness\resources\runtime\pnpm\bin\pnpm.mjs"（versions 读数 "D:\DeepSeek Harness\resources\runtime\versions.json"：node 24.18.1／pnpm 11.7.0）。**案 B 前提（CLI 在场性，设计稿 3.3 明列未探项）成立**。
+- **停靠依据**：§6⑤「实况推翻设计稿假设（写入点/机制不符）」触发＋M0「全绿才准动真件」未满足（装载链绿、载体红）；换载体涉三件用户裁量——①载体变更（§3① 用户裁决点名案 A）②`.plugin-manager` 面入册与否③案 B shim 执行（DeepSeek Harness.exe 以 ELECTRON_RUN_AS_NODE node 模式跑）与红线「桌面 App 不启动」字面的关系定性。未获裁前 T2/T3 零执行。
+
+### 70.4 T4 034 常驻实例处置（读数 `var/scratch/exe-boot-035-desktop/t4/instance-disposal.txt`）
+
+- pid 29284（034 T3 常驻，端口 2642）于本批 2026-10-04 14:50:25 +08 停止：alive before=True→after=False；端口 2642 监听释放；token HTTP 探测连接拒绝＝**token 随进程消亡**（沙箱回环临时访问物、非凭据）。M0 彩排实例（pid 23692、端口 2643）同批停讫。
+
+### 70.5 真实侧零触碰自证（收尾复验，与 70.4 同读数件）
+
+- 桌面 profile 收尾复验：顶层恰四件、cordis.patch.yml sha `02e5cc3a…` 与开工全等；家根其余（cordis.patch.yml 家根件／.credentials.yaml／web profile）零触及零读；credentials 全批永未读。
+- 桌面 App 安装目录零改动：`app-update.yml.dsh026-paused` 在场＋原名缺席复验原样；未启动桌面 App（shim 仅读件）；冻结仓、doctor 仓零触碰。
+- 用户 web 宿主零启停零改动；沙箱实例启停属授权（034 常驻依 T4 停讫＋M0 彩排实例停讫）；网络零外联（M0 pnpm link 本地完成 "Already up to date"，零远端取件）；零发布动作。
+
+### 70.6 停靠状态（候裁三选项＋未决面；候令续批）
+
+- **载体候裁**：①**案 B 接棒**（安装自带 shim＋`manageDesktopProfile:true`＋安装自带 pnpm 11.7.0＝官方 desktop profile 管理入口；沙箱二进制零触真实家根，且较案 A 更贴近领地本意；需用户对「shim 执行＝ELECTRON_RUN_AS_NODE node 模式、非启动 GUI App」定性点头）；②**手工 pnpm 直跑 profile 目录**（CLI 转发目标的机械等价；本机 pnpm 11.22.0；写入面最小＝package.json＋pnpm-lock＋node_modules，无 .plugin-manager）；③其他用户指定。
+- `.plugin-manager` 面随载体联动：采①必建（runProfilePnpm logRoot）、采②不建；若采①须把该项明示纳入授权面。
+- M0 其余结论不候裁：装载链（patch 解析／同 id 覆盖／注册／菜单／查看配置呈现）六步全绿；**T2 预备份、T3 真件安装、安装后静态自验、用户校验窗全部待载体裁定后续批执行**；验后去留（§3③ 保留预选）与更新暂停维持（§3④）随批顺延。
