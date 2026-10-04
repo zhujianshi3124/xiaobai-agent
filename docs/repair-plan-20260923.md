@@ -4119,3 +4119,51 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 - GUI 进程特征零出现（T2 采样 harness=0、零窗口标题）；桌面 GUI App 未启动、shim 未调用；常驻实例未开、dump 未跑。
 - 暂停件不触碰（sha 复核全等）；.credentials.yaml 永未读（仅列名）；冻结仓／doctor 仓／npm 全局／用户 web profile／沙箱网页家根零触碰；pnpm store 册内目录零变动、册外零新增。
 - CHANGELOG 不加（部署动作、非包对外行为面变化，申报在案）；debt 不动（无新发现）。
+
+## 73. EXE-BOOT-038 批（2026-10-04 · 开源线 · 桌面收口复核＋网页宿主升级窗 runbook 设计稿起草批）
+
+**令源**：EXE-BOOT-038 启动包（预期链尾 8abb384 树净——实况符合；承接 037 停靠申报对账通过）。**桌面校验窗全过入账（用户实测）**：五判据＋正面判据全过——两入口官方四原样零新增、标准模式 compaction 首成员＝compact-router、「检查更新」失败类提示＝暂停生效、重启后复查一致、零版本豁免提示——**桌面形态兼容正式成立**，验后保留预选确认（保留至发布批，用户保留字节还原＋验后再裁权）。本批两任务：①桌面 profile 用户启动后只读指纹复核；②网页宿主升级窗 runbook 设计稿起草（纸面、只读勘察、零执行）。真实侧预期零写入（唯一例外＝开源仓记账提交＋沙箱自家地盘）。
+
+### 73.1 T0 前置核实（全绿；读数 `var/scratch/exe-boot-038-desktop/t0/t0-reading.txt`）
+
+- 链尾 8abb384＋树净；全机 node／DeepSeek／dsh／harness／electron 进程逐一归属＝空集（用户校验毕已正常关闭 App）。
+- 家根 024 件 6696B `bdc8bbc7…1f7b9ed` 原样；暂停件 306B `96c202ea…e95d85` 原样、原名缺席。
+
+### 73.2 T1 桌面启动后指纹复核（全绿、零停报触发；读数 `var/scratch/exe-boot-038-desktop/t1/`）
+
+- **patch 件现 sha＝037 终态 `e8ee7814…` 逐字全等**——用户两次启动宿主**零触碰该件**（本轮 llm 段元数据刷新亦未发生，与 026 T1 观测的写面条件性一致）；归因框架（备份头部＋规范块重建期望态）备而未用，重建算法本身经与 037 终态 sha 闭合自证。
+- 三覆盖块逐块在场核验：恰三对 BEGIN/END（standard/ptc/cordis）、逐块与 034 终态规范件 identical、成员行 `name: 'xiaobai-agent/compact-router'` 单引号形原样、minimal 无块。
+- 其余四件 sha 对 037 终态台账逐字全等；Junction 可达（dsh.plugin.json 经 junction 与仓原件 sha 全等）；.plugin-manager 原样。
+- **宿主自写足迹（可归因）**：profile 递归 diff 恰一条＝cordis.yml mtime 触碰（2026-10-02T15:45:14Z→2026-10-04T09:08:14Z＝用户启动窗内），**内容 sha 不变**（223B 同形重写，026 T1 启动写序先例归因）；patch 零涉。
+- 暂停件复核：`app-update.yml.dsh026-paused` sha 全等＋**原名未复活**（红线 3 停报点未触发——App 两启两闭零重建，暂停策略运行中与退出后均生效实证）。
+
+### 73.3 T2 只读勘察（六组；读数 `var/scratch/exe-boot-038-desktop/t2/` 内 recon1 至 recon5 六件 reading）
+
+- **web profile 现态**：七 bundles（dsh-base、dsh-web-app、dshmarket、@linxin666/dsh-web-all、dsh-ops-console、@local/dsh-toolkit、dsh-repo-spec）；@local/dsh-toolkit＝符号链接→冻结仓 04816b8（树净）；**profile patch＝空 `[]`**（217B）；node_modules 百余件、**官方 bundle 不在 profile 内**（@deepseek-ai 仅 cosmokit+schemastery＝从宿主安装树解析、升级无版本冲突面）；三件用户自建符号链（injector/route/route-suite）避碰面；allowBuilds 四项（node-pty/cloudflared/cpu-features/ssh2）。
+- **宿主与标的**：npm 全局 0.1.5-rc.1；registry 实勘 dist-tags **latest＝next＝0.2.0-rc.2**（`npm i -g @deepseek-ai/dsh` 即落靶版）、alpha＝0.2.1-alpha.1（超靶不采、附注候裁）。
+- **旧称行实态钉死**：npm 全局官方预设三件（sha 与冻结期台账逐字同、2026-09-14 后未动）内 compaction 组成员行＝`name: '@local/dsh-toolkit/compact-router'`（三件同形）；**该三件位于 npm 全局包树内、宿主升级即整树替换＝旧称行随旧宿主消亡**。
+- **梁神件无锚定谳**：现 21804B sha `63a31c0c…`（mtime 2026-09-29）与冻结期台账两值均不合、030 未录 sha；030 三出路承前，本稿按 A 案设计（034 返工后工具 T0f 用户层基底枚举＝A 案技术前提已备）。
+- **settings 导入语义代码级**（0.2.0 安装树 dsh-settings `importLegacyDocument` 逐字件）：home settings.yaml 在⇒**先改名 `.imported` 再逐节导入活跃 profile**（一次性幂等；节映射 ui-developer-tools→ui-settings 等三条）；本机实态＝桌面 profile 已于 2026-10-02 消费（.imported 在场、无活文件）⇒ **web 升级后首启零导入**（web 侧设置自默认态起）——手改值迁移双案入稿。
+- **兼容门对照表**（evaluatePluginCompatibility 面实勘）：冻结线 toolkit（dsh-compaction-basic 精确 0.1.5-rc.2）**不过门**；开源线（双段 peer）**过门**；dshmarket（dsh-settings 无 0.2.0 段）**不过**；dsh-repo-spec（dsh-tools 无 0.2.0 段）**不过**；dsh-ops-console／dsh-web-all（无 peer）过。
+- **R1 落点**：修复笔＝开源线 `c3c758d`（026 T3）；028 已裁冻结线 B 案不回灌——两路实质差异写实入稿（甲＝豁免过门＋R1 缺位＋compaction 通道需定制；乙＝零豁免＋R1 到位＋桌面同款形态）。
+
+### 73.4 T2 runbook 设计稿成文（纸面、零执行）
+
+- 新文件：`D:\dsh-test-sandbox\docs\exe-boot-038-t2-web-host-upgrade-runbook-design.md`（要素＝备份清单／冻结线豁免路径／回退法／R1 修复落点 B 案／梁神迁移 A 案／dsh-web-all 0.2.0 预检只检不修／settings 双快照与手改值迁移两案；升级分步草案八步；风险 W1–W6；验证判据六条对齐桌面已验形态）。
+- **候裁点六项**：①挂载两路（执行侧推荐乙＝开源线）；②npm 升级动作执行者与授权（用户领地，代做须明示点头）；③时间窗与首启验证执窗人；④第三方 bundle 过门失败三选（豁免/暂出/候更）；⑤梁神迁移样形＋settings 手改值迁移两案；⑥升级标的版本附注（0.2.1-alpha.1 已现、本稿锁定 0.2.0-rc.2）。
+
+### 73.5 T3 收尾
+
+- 证据区 `var/scratch/exe-boot-038-desktop/`（t0–t3）归档 18 件（`var/scratch/exe-boot-038-desktop/t3/archive-listing.txt`）；残留进程 node=0／harness=0。
+
+### 73.6 停靠状态（候呈批）
+
+- 桌面侧：**收口完毕**（校验窗全过＋启动后指纹复核零异常），形态保留至发布批。
+- 网页侧：升级窗执行候批——本稿候裁点六项经协调侧转呈用户裁决后另开令施工。
+
+### 73.7 红线自证
+
+- 真实侧零写入：桌面 profile／web profile／家根全部内容（含梁神件、settings.yaml.imported）/桌面安装目录/npm 全局/冻结仓/doctor 仓全批只读；024 件与暂停件 sha 前后全等；.credentials.yaml 永未读（仅列名）。
+- 桌面 App 未启动；web 宿主保持停机；零 GUI 进程。
+- 网络：`npm view` 匿名只读一次（零令牌）＝registry 版本面实勘；零发布动作。
+- CHANGELOG 不加（设计稿属沙箱 docs、非包对外行为面）；debt 不动（无新发现）。
