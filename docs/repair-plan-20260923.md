@@ -4224,3 +4224,39 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 - 证据区 `D:\dsh-test-sandbox\var\scratch\exe-boot-039-web\`（t0–t6＋backup＋logs）归档在案；候用户首启校验窗（协调侧拟步；首启期望面＝stderr 零跳过警告、预设菜单官方四原样、查看配置 compaction 首成员＝新称、梁神 UI 入口在位、设置默认态起点）。
 - CHANGELOG 不加（部署动作、非包对外行为面变化，申报在案）；debt 挂账 **debt-039-a**（debt.md 039 批节：0.2.0 bundle 语义下开源包无 dsh.bundle 声明＝bundles 通道不可挂载，挂回窗需补声明＋模板填空机制）；沙箱设计稿 §11 执行差异更正节随批。
 - 提交前固定步：暂存区 numstat 复核＋守卫（doc-ref-guard）全绿＋树净自证；不 push／不 tag／不 publish。
+
+## 75. 网页首启收口复核＋梁神 0.2.0 可用路径勘察批（EXE-BOOT-040 · 2026-10-04 · 全只读）
+
+### 75.0 令源与首启结果入账
+
+- 令源 EXE-BOOT-040（预期链尾 4a1a3b4 树净——实况符合）。用户首启校验窗回报：官方四原样零新增、标准模式 compaction 首成员＝xiaobai-agent/compact-router、设置默认态、暂出插件缺席、重启后复查一致、零意外报错——**网页形态兼容主体成立**；梁神入口未找到＝039 C 节保留条件（"运行态是否消费以首启实测为准"）的实测落点，本批 T2 定谳。
+
+### 75.1 T0 前置核实（全绿＋一处前提冲突的归属）
+
+- 链尾 4a1a3b4 树净；024 件 `bdc8bbc7…`／暂停件 `96c202ea…` 基线全等。
+- **前提冲突（已归属、非阻塞、头条如实记）**：进程非空集——node PID 2216（父 powershell←explorer＝用户自启、创建 11:45:42Z、监听 127.0.0.1:3080、2 条浏览器活跃连接）＝**用户校验窗的 web 宿主进程仍在运行**（"用户校验毕已停"前提不符；创建时刻与 web profile cordis.yml mtime 触碰 11:45:42.757Z 秒级吻合＝归属闭合）。本批零触碰（不 boot 不停不写），关键 sha 末次复读防并发撕裂（75.4）。
+
+### 75.2 T1 首启后指纹复核（全绿；读数 `D:\dsh-test-sandbox\var\scratch\exe-boot-040-web\t1\`）
+
+- patch 件 sha `f1dde798…` 对 039 终态**全等＝宿主两启零触碰**；三 marker 对在场、三块对 034 规范件逐字节 identical、minimal 无块（重验）。
+- cordis.yml sha `c300dcf2…` 不变、mtime 11:45:42Z＝宿主足迹（039 T6 同款先例）；package.json／pnpm-lock／workspace／三 .bak 全等；Junction 经链三件 sha 全等（036 S4 法）；三自建链原样；.bin 48 目不变。
+- 梁神件 sha `12ca00a6…`／mtime 10:45:23.925Z 全等＝**用户两启未触**（本批禁动红线达成）。
+- settings 乙案现态：home/web 双缺席、.imported 全等＝零导入；024＋暂停件收尾全等；桌面五件对 038 终态全等（e8ee7814/c300dcf2/e821f001/9f4ff580/ae7c5b68）＝零触碰。
+- 用户两启足迹归因：~/.dsh 顶层 dsh-session-archive（11:45:47Z）／dsh-usage（11:57:58Z）／task-board（11:57:47Z）mtime 变化＝校验会话运行数据（归属用户两启）；其余顶层与 039 T6.C1 零差异（.credentials.yaml 仅列名永未读）；web profile node_modules 顶层对 039 终态零增删（@linxin666 scope 子目为本批首次枚举＝清点口径差、非新文件）；.dsh-module-fallback 未复活。
+
+### 75.3 T2 梁神 0.2.0 可用路径勘察（全只读＋纸面；读数 `t2\`＋t2-digest.md）
+
+- **入口缺席定谳（三层证据闭合）**：①web-all bundle patch 自注（L144-155）＝ssh/describe-image/liangshen/skill-explorer/doctor 五行**出厂默认禁用 opt-in**（`disabled: true`），启用＝插件管理器 UI 逐行开启、其启用写 user 层 `disabled: false` 覆盖行（行序后者胜）；②039 dump 五行带 disabled 佐证；③运行宿主自证——`GET /api/dsh-web-all/rows`＝13 行活跃、liangshen 不在册＋`GET /api/dsh-web-all/degraded`＝空（本批唯二对运行实例的接触、均纯读 GET 零状态变更）；拉杆状态机＝名册无 liangshen→missing→不渲染（0.3.21 浏览器半区源件实勘，读数 `D:\dsh-test-sandbox\var\scratch\exe-boot-040-web\t2\t2b2-ui-recon.txt`）。**协调侧拟步失真更正（错账不回改）：行在场但 disabled，非用户可见入口。**
+- **0.2.0 预设机制（代码级）**：名册三源＝①shipped（dsh-web-app bundle 内四 preset patch）；②**插件声明**（0.4.4 dsh-liangshen 形态：host half 激活时向 agent-preset registry declare＝声明即启用、零写盘）；③**自定义**（用户层 dsh-agent-preset 行经配置编辑器持久化进 profile patch——registry 源码 L62"only the profile configuration editor persists definitions"）。预设选单＝内置/自定义两组＋自定义组内"让 Agent 帮我创建预设模式"creator 按钮；0.1.5 的 `.agent-presets` 文件通道 0.2.0 代码级零存在（030 承前）——0.3.21 的 sync 目标即此死通道。
+- **0.3.21 现件断链与风险面**：宿主半区 sync 的幂等语义＝**内容差异即整树覆写**（syncOnePreset→pruneExtras＋copyTreeSync）；若启用 0.3.21 行＝每次启动覆写用户 21799B 定制版＋删两个 .bak 备份与一份孤儿工具自举附件（明细读数 `D:\dsh-test-sandbox\var\scratch\exe-boot-039-web\t0\t0-reading.txt` T0.F 段），且写入死通道在 0.2.0 不进名册＝**有害且无效**；用户两启未触发＝行 disabled 未挂载（T1 sha/mtime 未动实证）。**警戒：0.4.4 升级前切勿在插件管理器启用该行。**
+- **A 路（作者更新线）就绪度＝已适配**：registry 匿名实勘 @linxin666/dsh-liangshen 与 @linxin666/dsh-web-all 均已发 **0.4.4**（本机 0.3.21）：`dsh.engines.dsh＝">=0.2.0-rc.1"`、declare 机制（声明即名册在册、零写盘）、依赖 switched @deepseek-ai/schemastery。施工面预估＝pnpm 升级全家 0.3.21→0.4.4（pnpm 操作＝授权面＋W3 链快照纪律）→用户插件管理器启用该行（一次点击）→重启→拉杆复原。开放项＝0.4.4 自带预设的 compaction 行引擎对表（包内未装不可读、候升级批验证）。
+- **用户定制增量（A 路丢失面；diff 实测对包内版恰 3 处）**：①persona 段加 `{{agent_memory}}` 行；②compaction 组首成员＝compact-router（含 config：mode auto／fallbackOnRateLimit／archive／**agentMemoryRoot: C:\Users\LENOVO\.agent-memory**）——包内版该位＝官方 compaction-basic、**无 compact-router 行**（该行系用户 09-29 自加＝T5 迁移行）；③tool-web `fetch: true`。
+- **B 路（自定义预设）纸面差距四项**：①三相对脚本引用重锚（预设目录内最小提示词／工具目录／自定义 bash 三份 mjs；0.2.0 用户层行解析锚点变更；逐行明细读数 `D:\dsh-test-sandbox\var\scratch\exe-boot-040-web\t2\t2c-liangshen-names.txt`）；②`@deepseek-ai/dsh-workflow-worker-thread` 悬空（0.2.0 树实测无此包、workflow 栈重构为 dsh-workflow/dsh-workflow-ptc）——照 shipped preset 重构或裁撤；③形态转换（0.1.5 全树文件→用户层 dsh-agent-preset insert 行＋id 择定避让四内置＋自发布 display 元数据→入"自定义"组）；④我方 apply 工具按 034 T0f 列其为第四基底（id 不冲突、净效果同其自带 compaction 行、已知面无害）。
+- **共存互动律（T2d）**：我方三块目标 id＝preset-standard/ptc/cordis，梁神 id 不同＝无同 id 冲突；A 路 declared 预设不在 patch 内＝我方工具不可见、零第四块（最净）；两路 compaction 引擎同源（xiaobai-agent/compact-router 经 junction 可达）＝行为一致。
+- **候裁点（T2e，纸面零执行）**：推荐 **A 路为主**（作者已适配、机制正路、拉杆复原、零文件写、维护随作者）＋三处定制增量去向候裁（①③可 A 路后经配置编辑器/后续批重放、②视 0.4.4 自带 compaction 行对表）；B 路留备选/混合（A=拉杆作者版＋B=自定义组定制版，id 不同可共存）；随附警戒＝0.3.21 行禁启用。
+
+### 75.4 T3 收尾
+
+- 关键 sha 末次复读全等（patch/cordis.yml/package.json/梁神件/024/桌面 patch）＝并发撕裂零发生；进程＝用户宿主 PID 2216 归属在案、零新残留、零 GUI 新增；证据区 `D:\dsh-test-sandbox\var\scratch\exe-boot-040-web\`（t0–t3）归档。
+- CHANGELOG 不加（勘察批复核动作、非包对外行为面）；debt 不动（无新发现——0.3.21 覆写风险属作者包行为面，已入 §75.3 警戒与候裁）。
+- 提交前固定步：暂存区 numstat 纯追加复核＋守卫（doc-ref-guard）全绿＋树净自证；不 push／不 tag／不 publish。
