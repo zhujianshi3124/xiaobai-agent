@@ -4260,3 +4260,40 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 - 关键 sha 末次复读全等（patch/cordis.yml/package.json/梁神件/024/桌面 patch）＝并发撕裂零发生；进程＝用户宿主 PID 2216 归属在案、零新残留、零 GUI 新增；证据区 `D:\dsh-test-sandbox\var\scratch\exe-boot-040-web\`（t0–t3）归档。
 - CHANGELOG 不加（勘察批复核动作、非包对外行为面）；debt 不动（无新发现——0.3.21 覆写风险属作者包行为面，已入 §75.3 警戒与候裁）。
 - 提交前固定步：暂存区 numstat 纯追加复核＋守卫（doc-ref-guard）全绿＋树净自证；不 push／不 tag／不 publish。
+
+## 76. 网页梁神 A 路升级＋在用插件随窗更新批（EXE-BOOT-041 · 2026-10-04 · 施工批）
+
+### 76.0 令源与裁决入账
+- 令源 EXE-BOOT-041 启动包（预期链尾 abb204a 树净——实况符合；承接 040 停靠对账通过）。四裁决入账：①梁神回归走 **A 路**（作者全家升 0.4.4＋用户 UI 启用；040 E 预告授权面＝pnpm 操作＋W3 三自建链快照纪律，本次点头生效）；②**在用插件随窗一并更新**至与宿主 0.2.0-rc.2 兼容的最新版（逐包钉显式版本）；③**宿主版本网页与桌面同步长期政策入账**（现态两侧均 0.2.0-rc.2、本批宿主零动作 T0 如实报；0.2.1+ 桌面升级时网页跟随，与"盯宿主发版"观察项合并届时另议；0.2.1-alpha.1 不入既裁不变）；④dshmarket／dsh-repo-spec 沿 038 裁③预选＝匿名只读查作者新版，过兼容门（peer 对 0.2.0-rc.2）即挂回，不过门或无新版继续暂出。用户自报停 web 宿主，T0 实勘归零成立。
+
+### 76.1 T0 前置核实（全绿；读数 `var/scratch/exe-boot-041-web/t0/`）
+- 链尾 abb204a 树净；进程清点**空集**（node／DeepSeek／dsh／harness／electron 全零、3080 无监听；040 归因的宿主父壳 powershell 27160 仍在而其 node 子进程已消＝用户"已停"自报实勘吻合）。
+- web profile 基线 18 项 sha 全 MATCH（patch `f1dde798…`／cordis.yml `c300dcf2…`／package.json `b602e3f6…`／pnpm-lock `5cefdfa5…`／workspace `9e9aa630…`／.npmrc 0B＋三 .bak）；梁神件 `12ca00a6…`／024 件 `bdc8bbc7…1f7b9ed`／暂停件 `96c202ea…e95d85` 原名缺席／桌面五件对 038 终态全等／.imported 全等。
+- 形态定谳（令 T0.d）：dsh-base／dsh-web-app 不在 profile 内、宿主安装树版本 0.2.0-rc.2＝**随宿主零动作**；xiaobai-agent Junction 经链三件 sha 与仓原件全等；三自建链原样；.bin 48 目含 dsh-doctor 三 shim（040 观察项照录）。
+- registry 匿名只读（`var/scratch/exe-boot-041-web/t0/t0-registry.txt`，npm view 直连零代理零令牌）：宿主 dist-tags latest＝next＝0.2.0-rc.2（alpha 0.2.1-alpha.1 在架不入）；@linxin666/dsh-web-all latest **0.4.4 过门**（dsh engine ≥0.2.0-rc.1；0.4.4 依赖清单 18 件——现装 dsh-doctor／dsh-tool-describe-image 不在其列、新增 dsh-update，修剪面预告在案）；dsh-liangshen 0.4.4 过门（peer @deepseek-ai/dsh ≥0.2.0-rc.1、node ^22.19.0||≥24）；**dshmarket latest 1.66.8 过门**（peer dsh-settings 新增 ^0.2.0-rc.1 段）；**dsh-repo-spec npm E404＝无作者发布**；**dsh-ops-console 无可达新版**（npm 线停在 0.7.1 旧于现装 1.1.0；github.com 双试连接失败＝本机网络面注记）。
+- 前态版本台账：@linxin666 全家 20 目均 0.3.21；dshmarket 1.45.1；dsh-ops-console 1.1.0；dsh-repo-spec 0.1.0（peer dsh-tools 旧段＝与暂出一致）。
+- 脚本瑕疵两笔如实记（零文件问题）：主脚本默认编码（GBK）读 UTF-8 manifest 致三处 READ-ERR，probe2 显式 UTF8 解码全数解析成功（040"清点口径差"同款先例）；t3 首版脚本两处字面 BOM 字符正则遭 ANSI 解析吞闭引号致级联 parse error＝**零执行零副作用**，纯 ASCII 重写后全绿。
+
+### 76.2 T1 备份（全绿；`t1/`＋`backup/`）
+- web profile 九件字节备份 src=dst 全等（六管理件＋三用户 .bak）；三自建链 LinkType/Target 快照（injector→`..\suite\dsh-routing-suite\injector` 相对形／route→`D:\route`／route-suite→`D:\route-suite`）＋复建法在案；梁神件防御性快照 21799B `12ca00a6…` 全等；回退五层自证（R1 profile 九件字节还原／R2 逐包降版或 lock 字节还原＋重装／R3 junction 由 pnpm 自复建＋手工等价法／R4 梁神件字节还原／R5 bundles 摘除＋dshmarket 降版）。
+- pnpm 通道定谳：全局 **11.22.0**（node 24.19.0／npm 11.17.0）；web profile cwd 下 `pnpm store path`＝**C: 册**（%LOCALAPPDATA%\pnpm\store\v11＝已知册面）；lockfileVersion '9.0' 兼容；C: 册前态快照（顶层 6 目、projects 7 目、files 顶层 256 目）；D:\.pnpm-store 属 D 盘项目册、与 web 无涉。
+
+### 76.3 T2 施工（全绿含执行差异一笔；`t2/`）
+- package.json 守卫改写（写前 sha 基线断言＋三 pattern 唯一匹配断言＋写后 JSON 语义校验）：`'@linxin666/dsh-web-all': '^0.3.21'→'0.4.4'`、`'dshmarket': '^1.45.1'→'1.66.8'`、**bundles 挂回 dshmarket**（置于 dsh-web-app 之后＝038 记载的原相对序）；xiaobai-agent link／dsh-ops-console github／dsh-repo-spec file 三行原样。546→564B、sha `b602e3f6→0853a872`。
+- **执行差异一笔（如实记）**：首跑 `pnpm install`（CI=true）exit 1／0.6s＝ERR_PNPM_OUTDATED_LOCKFILE——CI 环境默认 frozen-lockfile，而 lockfile 对 package.json 滞后两笔（039 换行后从未跑过 pnpm＋本批两钉版），pnpm 于锁校验阶段拒绝＝**node_modules 零触碰零损伤**。沿标准路径改 `pnpm install --no-frozen-lockfile` 重跑：exit 0／24.2s／stderr 空。
+- 二跑结果：Packages **+26 −173**；@linxin666 全家 18 目 0.4.4（web-all／liangshen／update 等）＋**dsh-doctor／dsh-tool-describe-image 修剪**（0.4.4 不再依赖＝作者包面变化预告兑现）；dshmarket 1.66.8；pnpm-lock 63475→20973B sha `d13cd2cd`（dshmarket 1.45.1 大型 UI 依赖树退出为大头）；进程监控（2s 采样 job）全程 node 单名、窗口标题空＝零 GUI；三自建链与 xiaobai-agent Junction 安然原样（W3 达成）；零 Ignored-build-scripts 面。
+- `pnpm peers check` 留档（`t2/pnpm-peers-check.log`）：全部为 **missing-peer 类**（@deepseek-ai/dsh 全家 ≥0.2.0-rc.1／react／react-dom／cordis／dsh-tools），零版本冲突类——宿主运行树供给面（宿主 0.2.0-rc.2 满足之）；dsh-repo-spec 两笔与其暂出 bundles 一致；无新债务。
+- pnpm store 册面（令 T2.c）：projects 7→7 零增删零 mtime 变化、顶层集不变、files 顶层 256 目不变（内容级增量＝下载 26 包在既知册面内）；D:\.pnpm-store 顶层 mtime 仍 2026-09-10＝零触碰；**册外零新增**。
+
+### 76.4 T3 静态总验（全绿；`t3/`）
+- dump-config（零写括包法）：exit 0／stderr 空／112518B；五关键件 sha 前后全等、唯 cordis.yml mtime 触碰（内容 `c300dcf2` 不变＝039/038 同款宿主足迹）；官方四 preset 行在册；三基底 compaction 首成员＝`xiaobai-agent/compact-router`（dump 无引号渲染形 L934/L1120/L1390＋随行 command-compact/tool-result-pruner；首版探针带引号零命中＝037 同款笔误、复检全中）；minimal 零 compaction；旧称 '@local/dsh-toolkit' 零出现。
+- 梁神行现态（0.4.4 后照实录）：web-ui-liangshen 在册且 `disabled: true`（dump L1521–L1525）；0.4.4 opt-in 行**三行**＝ssh/liangshen/skill-explorer（0.3.21 之五行的 describe-image／doctor 随包修剪消亡；web-ui-update 新行在册）；dshmarket 插入行（id dsh-market）在册＝挂回生效可验证。
+- 红线自证全绿：patch `f1dde798…` 前后全等（pnpm 未触＝红线 4）；梁神件 `12ca00a6…`（红线 1）；024 件 `bdc8bbc7…`（红线 2）；三自建链原样（红线 3）；Junction 经链三件与仓原件全等（红线 8）；pnpm-workspace/.npmrc sha 不变（allowBuilds 四项原形）；家根 ~/.dsh 顶层 22→22 零增删、.dsh-module-fallback 仍缺席；桌面五件对 038 终态全等＝桌面侧零触碰；暂停件原名仍缺席；.credentials.yaml 永未读。
+- **040 开放项落定（对表，供用户知情）**：作者 0.4.4 梁神预设（包内 presets\liangshen\ 主件 447 行 25812B＋其展示元数据件＝名"梁神模式"、order 4；三相对脚本已随包自锚）compaction 组＝**官方 '@deepseek-ai/dsh-compaction-basic'**（＋command-compact；compact-router 零出现）——A 路启用后拉杆预设用官方压缩引擎，与用户定制版（compact-router 首成员＋agentMemoryRoot）**不同源**；用户三处定制增量（persona agent_memory 行／compact-router 成员行／tool-web fetch）去向仍属候裁（040 ⑧沿承）。
+- web-all 0.4.4 bundle patch 预检（4116B 144 行全文存档 `t3/`）：insert 行 web-ui-* 28 处；opt-in 注记逐字在案（'…enabled per row in the plugin manager, whose enable writes a user-layer disabled-false override that wins'）；dshmarket 1.66.8 patch 125B＝单条 insert（dsh-market）干净形。
+- .bin 48 目、dsh-doctor 三 shim 仍在（包已修剪而 shim 未随 pnpm 清理＝040 观察项延续、零运行态影响、候后续批裁）；进程收尾空集＋3080 无监听。
+
+### 76.5 收尾停靠（候用户启用＋验证窗）
+- 证据区 `var/scratch/exe-boot-041-web/`（t0–t4＋backup＋logs）归档；CHANGELOG 不加（部署动作、非包对外行为面，申报在案）；debt 不动（无新发现——peers missing 类属宿主供给面结构性提示、.bin shim 延续 040 观察项、github 不可达属环境注记，均非债务）。
+- 停靠条件**零触发**（升级报错已归因重跑全绿／写入恰授权面／三链原样／patch·梁神件·024 件全等／宿主全程停机零 GUI／挂回包过门）。
+- 用户窗拟步素材见停靠申报 C 节：插件管理器到达路径、web-ui-liangshen 行启用即写 user 层 disabled: false 覆盖行、重启生效＝declare 进名册、拉杆渲染于新会话屏；作者版 compaction 引擎告知；dshmarket 挂回后市集入口回归；各插件前后版本对照表。
