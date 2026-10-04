@@ -918,3 +918,9 @@ H5 轮的 `6900` 变成 `2624`，`Get-Process` 读得其 `StartTime = 2026/9/22 
 ### 环境级注记（成因已定位，非未决）
 
 - **仓根 0 字节残件一次（已清、成因归因于执行侧自身）**：034 T3 时点仓根现 0 字节未跟踪文件（文件名含内联脚本碎片）；成因＝执行侧一条被 cmd 引号绞碎的内联 `node -e`（DOM 核对步）其重定向残片建文件，mtime 与该命令时点吻合——与 026 obs-2（writer 未定位）同族但**本次成因闭合**；残件当场查验（0 字节）并清除、未入提交。教训：仓内操作弃用多行内联 node -e、一律走脚本文件。
+
+## 039 批（2026-10-04 · EXE-BOOT-039）
+
+### 挂账新增
+
+- **debt-039-a 0.2.0 bundle 语义下开源包无 dsh.bundle 声明＝bundles 通道不可挂载（挂回窗前置缺口）**：开源线 package.json 无 dsh 字段，而 0.2.0 装载器（dsh-app-boot 包装载段实勘，读数 `D:\dsh-test-sandbox\var\scratch\exe-boot-039-web\t6\host-boot-code-excerpt.txt`）对 bundles 列表内无 dsh.bundle 声明的包硬 throw→逐包 catch 转 skippedBundles→每启 stderr 跳过警告——故 xiaobai-agent 不能以 bundle 形态入列（039 已按桌面已验同款形态走 dependencies＋Junction＋profile patch 覆盖块，plan §74.4）。连带：bundle patch 为模板形（S2.e 两占位符，面板位无缺省回落）。挂回窗（dshmarket/dsh-repo-spec 作者更新）或 toolkit 全功能上 web 窗（面板/registry/doctor/search-router/agent-memory/rate-throttle）须先补：①package.json 增 dsh.bundle.patch 声明；②模板填空机制（部署期填空或占位符缺省语义扩展）。属 packaging 缺口挂账，非缺陷回归。

@@ -4167,3 +4167,60 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 - 桌面 App 未启动；web 宿主保持停机；零 GUI 进程。
 - 网络：`npm view` 匿名只读一次（零令牌）＝registry 版本面实勘；零发布动作。
 - CHANGELOG 不加（设计稿属沙箱 docs、非包对外行为面）；debt 不动（无新发现）。
+
+## 74. 网页宿主升级窗施工批（EXE-BOOT-039 · 2026-10-04）：六裁决入账＋runbook 八步之 1–7 施工全绿停靠候用户首启校验窗
+
+### 74.0 令源与六裁决入账
+
+- 令源：EXE-BOOT-039 启动包（预期链尾 91adfd4 树净——实况符合）。用户六裁：①挂载＝**乙案**（切开源线；冻结仓原样留档零改动）；②npm 全局升级执行侧代做（本批授权）、首启执窗人＝用户；③dshmarket／dsh-repo-spec **暂出 bundles**（候作者更新挂回，其余 bundles 原样）；④梁神预设件窗内迁移（**仅 compaction 行旧称→新称一处改动**＋迁前字节快照锚）；⑤settings＝**乙案**（零迁移、默认态起步）；⑥标的锁 **0.2.0-rc.2**（0.2.1-alpha.1 不入）。runbook 八步之 1–7 施工，第 8 步首启验证归用户窗；执行侧不 boot web 宿主、不启动桌面 App。设计稿：`D:\dsh-test-sandbox\docs\exe-boot-038-t2-web-host-upgrade-runbook-design.md`（施工前逐项核对，执行差异见 74.4 走新增节更正、错账不回改）。
+
+### 74.1 T0 前置核实（全绿；读数 `D:\dsh-test-sandbox\var\scratch\exe-boot-039-web\t0\`）
+
+- 链尾 91adfd4d5bdc 树净；进程清点＝dsh web 宿主／桌面 App／dsh CLI 服务**空集**（ZCode 执行会话自身工具链除外、归属在案）。
+- web profile 基线：七 bundles；@local/dsh-toolkit＝符号链接→冻结仓 04816b8（经链 package.json/dsh.plugin.json sha 抽验全等＝036 S4 法）；patch＝空 `[]`（217B `ef189a8c…`）；六件 sha＋三自建链（injector→..\suite、route→D:\route、route-suite→D:\route-suite）＋allowBuilds 四项＋pnpm-lock `5cefdfa5…` 全录。
+- 官方预设三件钉死（npm 全局树 `…\@deepseek-ai\dsh\node_modules\@deepseek-ai\dsh-agent-presets\presets\`）：standard 13070B `a5e4d87112…`／ptc 14145B `7d9aff861c…`／cordis 14152B `9525c9a6ca…`（各恰 1 行旧称行，行位 L146/L153/L134）——与 038 勘察前缀逐字同；minimal 3119B 零 compact-router 引用。
+- registry 匿名只读（`npm view` 三条零令牌）：dist-tags latest＝next＝0.2.0-rc.2、alpha＝0.2.1-alpha.1；**0.2.0-rc.2 与 0.1.5-rc.1 均可得**（回退件在场）；npm prefix＝`C:\Users\LENOVO\AppData\Roaming\npm`、proxy＝null。
+- 家根 024 件 6696B `bdc8bbc7…1f7b9ed`＋暂停件 306B `96c202ea…e95d85`（原名缺席）；梁神件 21804B `63a31c0c…34728f1`（现态无锚、T1 快照即锚）；settings 面＝home 无活 settings.yaml、`.imported` 1136B 在场、web profile 无 settings.yaml（乙案零迁移基线成立）。
+- 设计稿 vs 实况核对：小差异一笔＝设计稿 §1.3 称"旁有 liangshen.bak-20260914"实况无此件（在场两 bak 均 20260929、同 sha `acf18889…`）——不阻塞、如实记账。
+
+### 74.2 T1 备份（回退四层就绪；读数 `D:\dsh-test-sandbox\var\scratch\exe-boot-039-web\t1\`）
+
+- 12 件字节备份 **src=dst sha 全等**：官方预设三件＋web profile 六件（package.json/pnpm-lock/cordis.patch.yml/cordis.yml/pnpm-workspace.yaml/.npmrc）＋家根 024 件＋settings.yaml.imported＋梁神件（快照锚）＋宿主 package.json 指纹（0.1.5-rc.1 `8da881a5…`）；另隔离工具副本（sha `55f64648…`＝仓内原件全等）＋node_modules 顶层 126 目清单快照。
+- 回退四层自证：R1 宿主回退＝registry 0.1.5-rc.1 可得；R2 profile 还原＝六件字节备份＋链接复原法（三自建链零涉）；R3 覆盖块＝工具 `--undo [--only]`（源码 7/28/44 行＋marker 常量 206–207 行在案）或 cordis.patch.yml 字节还原；R4 梁神件＝T1 锚字节还原。
+
+### 74.3 T2 npm 全局升级（全绿；读数 `D:\dsh-test-sandbox\var\scratch\exe-boot-039-web\t2\`＋`logs\t2-npm-install.log`）
+
+- `npm i -g @deepseek-ai/dsh@0.2.0-rc.2`（显式钉版防漂移）exit 0／98.5s／added 118−removed 100−changed 418；registry 直连零代理零令牌。
+- 复核：`dsh --version`＝0.2.0-rc.2；新树 `@local/dsh-toolkit` **ZERO HITS**＝旧称行随旧树消亡实证；旧树关键件（package.json `8da881a5…`、预设三件旧 sha）消亡记录在案。
+- 0.2.0 预设载荷定位：独立包 dsh-agent-presets 消亡，预设改形为 **dsh-web-app bundle 内四 preset patch**（standard 7511B `6cd2f197…`／ptc 7697B `8fcf6b04…`／minimal 3184B `71ef887f…`／cordis 8089B `b74d7190…`；其 package.json dsh.bundle.patch 五件声明在案）——全部干净官方形态（零 compact-router 引用）＝"官方预设三件干净官方形态＋新树零残留"判据在新形态下成立。
+
+### 74.4 T3 挂载调整（乙案全绿；读数 `D:\dsh-test-sandbox\var\scratch\exe-boot-039-web\t3\`）＋执行差异更正（错账不回改）
+
+- package.json（628B `b9601174…`→546B `b602e3f6…`）：dependencies `'@local/dsh-toolkit': 'link:D:/dsh-plugins/dsh-toolkit'` 行→`'xiaobai-agent': 'link:D:/dsh-toolkit-opensource'`；bundles 调整＝dshmarket/dsh-repo-spec 暂出（裁③）＋@local/dsh-toolkit 移出；写前基线 sha 守卫＋逐 pattern 唯一匹配守卫＋写后 JSON 语义校验（deps 五键/bundles 四项＝官方两件＋web-all＋ops-console）。
+- node_modules：@local 符号链 rmdir（**冻结仓本体零触碰**）＋@local 空壳清除＋`xiaobai-agent` **Junction→D:\dsh-toolkit-opensource**（026/036 同款形态）；经链三件 sha 抽验全等（package.json／dsh.plugin.json／lib\compact-router\index.js）；三自建链前后全等；pnpm-lock sha 前后全等＝**零 pnpm 操作**实证（W3 处置达标）。
+- **执行差异更正①（对设计稿 §3.4"bundles 列表同步更名"——xiaobai-agent 不入 bundles）**：0.2.0 装载器代码级定谳（dsh-app-boot 包装载段实勘，读数 `D:\dsh-test-sandbox\var\scratch\exe-boot-039-web\t6\host-boot-code-excerpt.txt`）：bundle 项无 `dsh.bundle` 声明→硬 throw→逐包 catch 转 skippedBundles→**每启 stderr 跳过警告**；开源仓 package.json **无 dsh 字段**＝改名入列即每启报错的死条目。设计稿自身依据支持本形态：§1.6 乙＝"034 返工 apply 形态原样适用（**桌面已端到端验证的同款**）"、§0 目标＝"与桌面已验形态一致"——桌面同款即不入列（桌面 bundles＝官方两件）。连带事实：toolkit 全功能（面板/registry/doctor/search-router/agent-memory/rate-throttle）0.2.0 bundles 通道**暂不可达**（无 dsh.bundle 声明＋bundle patch 为模板形两占位符未填空；agent-memory 占位符有缺省回落 ~/.agent-memory 自愈面、面板占位符无缺省）——归挂回窗/S5 真机窗候裁（**debt-039-a**）。
+- dsh-web-all 0.2.0 预检（只检不修零写入）：manifest 无 peer＝过门；bundle patch 4384B＝**22 insert 行全枚举**（web-ui-* 十九件＋web-ui-compat／i18n／better-sidebar），判读＝insert 行照注、运行态行为留首启 stderr 实测（W2）；dsh-ops-console 无 peer 过门且 dsh.bundle 声明在场（两件均正常装载面）。
+- R1 修复随线实证：`c3c758d` 在开源线 log（fix(agent-memory) 全局 registry 锁陷阱并发写丢失）。
+
+### 74.5 T4 覆盖块 apply（全绿；读数 `D:\dsh-test-sandbox\var\scratch\exe-boot-039-web\t4\`）
+
+- 执行前 `--status` **只读**核验目标路径逐字＝web profile cordis.patch.yml（verbatim 见 t4/status-pre.log；红线 1 达成、绝不指向家根）；apply exit 0／122ms：standard/ptc/cordis **WRITTEN**＋minimal **SKIPPED**（no compaction member）＝桌面 037 同款；幂等复跑 **no-op×3**；`--status`＝**applied×3**。
+- pre-write backup（沙箱隔离区 `backup\preset-backups\profile-cordis-patch.web.bak`）217B＝pre-apply `ef189a8c…` 全等；marker 台账三块（blockSha/baseFileSha/targetRowId=preset-*，baseFileSha 与 T2 新树四 preset patch sha 互证全等）。
+- 三块对 034 终态规范件（exe-boot-026-main t4 沙箱 web patch `6aa30b86…`）**逐字节 identical＝True**；成员行 `name: 'xiaobai-agent/compact-router'` 单引号形在位＋command-compact/tool-result-pruner 随行（三块同形）。
+- 红线复核：家根 024 件 sha 前后全等（`bdc8bbc7…`）；cordis.yml/其余四件＋三 .bak sha 全等。
+
+### 74.6 T5 梁神迁移（全绿恰一行；读数 `D:\dsh-test-sandbox\var\scratch\exe-boot-039-web\t5\`）
+
+- 迁前双守卫＝T1 锚 sha（`63a31c0c…`）＋旧称行恰 1 处（405 行中 L289）；单行替换 `'@local/dsh-toolkit/compact-router'`→`'xiaobai-agent/compact-router'`——行数等（405/405）、**恰一行 diff**、size 21804→21799B（−5 与替换差预期相符）、迁后 sha `12ca00a6…`；T1 锚＝字节级回退层。
+
+### 74.7 T6 静态总验（全绿＋宿主迁移足迹两笔归因闭合；读数 `D:\dsh-test-sandbox\var\scratch\exe-boot-039-web\t6\`）
+
+- dump-config（`dsh --profile web --dump-config`，exit 0／0.3s，stdout 113364B／**stderr 空**＝bundles 零跳过警告；dump 前后 web profile 五关键件 sha 夹证全等）：①官方四 preset 行在场（preset-standard/ptc/minimal/cordis，L829/1015/1208/1289）；②三基底 compaction 组首成员＝`xiaobai-agent/compact-router`（L935/1121/1391）＋command-compact/tool-result-pruner 随行；③minimal 零 compaction；④**梁神预设行不在册（照实录）**——030 定谳 0.2.0 `.agent-presets` 机制代码级零存在，文件式预设不入 roster；梁神 **UI 入口**＝web-all `@linxin666/dsh-liangshen` 插件行在场（L1527）；⑤`'@local/dsh-toolkit'` 全 dump 零出现。
+- **宿主迁移足迹两笔（dump 路径触发＝0.2.0 编码内迁移行为、首启必现、非意外写入、归因闭合）**：⑴web cordis.yml mtime 触碰（11:08:57Z＝dump 时刻）内容 sha `c300dcf2…` 不变＝桌面 038 同款先例（宿主自写足迹恰一条）；⑵.dsh-module-fallback 目录移除＝0.2.0 dsh-app-boot 清理段 removeLinkProjections 对 0.1.5 link-projection 遗留的显式清理（只 unlink 指入该目录的链、其余符号链原样保留——三自建链与 xiaobai-agent Junction 实测在场；实勘读数 `D:\dsh-test-sandbox\var\scratch\exe-boot-039-web\t6\host-boot-code-excerpt.txt`）。
+- 写入面**恰授权面四项**：npm 全局树（T2 整树替换）／web profile（T3 package.json＋T4 patch 件＋宿主迁移足迹两笔）／梁神件（T5 恰一行）／沙箱证据区＋记账提交。~/.dsh 顶层清单前后**零差异**（.credentials.yaml 仅列名、内容永未读）；settings 乙案自证（home/web settings.yaml 双缺席、.imported sha 前后全等＝零导入动作）；allowBuilds/pnpm-lock/workspace 原样；pnpm store projects 册七目零变动零新增（红线 7）；桌面 profile 五件 sha 全等（红线 3 零触碰）；冻结仓 04816b8 树净；暂停件 `96c202ea…` 原样原名缺席；024 件 `bdc8bbc7…` 全等；收尾进程空集（dsh web 宿主/桌面 App 零残留、零 GUI 特征）。观察项：web node_modules\.bin 48 目中 dsh-doctor 三 shim 属冻结线遗物（指向已移除 @local 路径、零运行态影响）——候后续批清理候裁，本批零触碰。
+
+### 74.8 T7 收尾停靠（候用户首启校验窗）
+
+- 证据区 `D:\dsh-test-sandbox\var\scratch\exe-boot-039-web\`（t0–t6＋backup＋logs）归档在案；候用户首启校验窗（协调侧拟步；首启期望面＝stderr 零跳过警告、预设菜单官方四原样、查看配置 compaction 首成员＝新称、梁神 UI 入口在位、设置默认态起点）。
+- CHANGELOG 不加（部署动作、非包对外行为面变化，申报在案）；debt 挂账 **debt-039-a**（debt.md 039 批节：0.2.0 bundle 语义下开源包无 dsh.bundle 声明＝bundles 通道不可挂载，挂回窗需补声明＋模板填空机制）；沙箱设计稿 §11 执行差异更正节随批。
+- 提交前固定步：暂存区 numstat 复核＋守卫（doc-ref-guard）全绿＋树净自证；不 push／不 tag／不 publish。
