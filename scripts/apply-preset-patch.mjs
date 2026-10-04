@@ -7,18 +7,25 @@
 //   node scripts/apply-preset-patch.mjs --undo     # restore all patched presets
 //   node scripts/apply-preset-patch.mjs --status   # show current state
 //
-// 0.2.0 profile-patch channel (EXE-BOOT-031, design v2 §七): on a 0.2.x host the
-// legacy agent.cordis.yml files no longer exist. The tool instead appends ONE
-// marker-delimited variant preset block PER isomorphic base to the profile's
-// cordis.patch.yml. Bases are enumerated live from the environment: the
-// dsh-agent-preset rows declared by the profile's bundles (official bundle
-// presets, third-party bundles alike) plus user-layer dsh-agent-preset rows
-// already present in the profile patch. Each base carrying a compaction-basic
-// member gets a same-position replacement variant (group/isolate structure and
-// sibling members preserved, brand-new preset id); a base without one (minimal)
+// 0.2.0 profile-patch channel (EXE-BOOT-031; output form re-judged in
+// EXE-BOOT-034 after user acceptance rejected the parallel-variant UX): on a
+// 0.2.x host the legacy agent.cordis.yml files no longer exist. The tool
+// instead appends ONE marker-delimited SAME-ID OVERRIDE ROW PER isomorphic
+// base to the profile's cordis.patch.yml. Bases are enumerated live from the
+// environment: the dsh-agent-preset rows declared by the profile's bundles
+// (official bundle presets, third-party bundles alike) plus user-layer
+// dsh-agent-preset INSERT rows already present in the profile patch. Each base
+// carrying a compaction-basic member gets an override row targeting the base
+// row's own entry id — `{ id: <row-id>, name: <same>, config: <base config
+// copied wholesale, only the compaction member swapped> }` — so the menu keeps
+// showing ONLY the official preset (host patch semantics: a non-insert patch
+// replaces supplied fields on the entry with the same id; config is replaced
+// wholesale, never deep-merged). A base without a compaction member (minimal)
 // is skipped with a visible line; a base whose shape does not match the anchor
-// is REFUSED — never blind-written. Rollback: --undo --only <variant-id> (or
-// delete the block).
+// is REFUSED — never blind-written. A profile patch that already carries a
+// config override row for the same entry id outside our marker blocks (web
+// editor or manual edit) is REFUSED for that base — we never shadow user
+// edits. Rollback: --undo --only <base-id> (or delete the block).
 //
 // Safety rails (legacy channel):
 //   * The ORIGINAL file is backed up to preset-backups/<id>.agent.cordis.yml.bak
@@ -196,9 +203,8 @@ function undoOne(entry, marker) {
 const PRESET_PLUGIN_NAME = "@deepseek-ai/dsh-agent-preset";
 const PROFILE_PATCH_FILENAME = "cordis.patch.yml";
 const VARIANT_STATE_NS = "020";
-const VARIANT_PREFIX = "xiaobai-compact-";
-const MARKER_BEGIN = "# >>> xiaobai-agent preset variant BEGIN ";
-const MARKER_END_PREFIX = "# <<< xiaobai-agent preset variant END ";
+const MARKER_BEGIN = "# >>> xiaobai-agent preset override BEGIN ";
+const MARKER_END_PREFIX = "# <<< xiaobai-agent preset override END ";
 const GROUP_NAME_PATTERN = /^[ \t]*name: (?:cordis:group|['"]@deepseek-ai\/cordis-plugin-group['"])[ \t]*$/;
 
 function shaOf(text) {
@@ -438,53 +444,69 @@ function compactMemberReplacementLines(indent) {
 }
 
 /**
- * Shared row analysis: locate the single dsh-agent-preset declaration, its
- * config.id/order and the plugins block. Returns meta or { refuse }.
+ * Candidate preset-row indices: a `- id: X` line immediately followed by the
+ * preset plugin name line. Both insert-form bases and override-form rows match;
+ * callers classify by row indent (0 = root-level override row, >0 = entry
+ * nested under an insert).
  */
-function analyzePresetRow(lines, sourceLabel) {
-  let rowIdx = -1;
-  let rowCount = 0;
+function findPresetRowIndices(lines) {
+  const out = [];
   for (let i = 0; i < lines.length - 1; i++) {
     if (!/^([ \t]*)- id: (\S+)[ \t]*$/.test(lines[i])) continue;
     if (!/^[ \t]*name: ['"]@deepseek-ai\/dsh-agent-preset['"][ \t]*$/.test(lines[i + 1])) continue;
-    rowCount++;
-    rowIdx = i;
+    out.push(i);
   }
-  if (rowCount === 0) return { notPreset: true };
-  if (rowCount > 1) return { refuse: "more than one " + PRESET_PLUGIN_NAME + " declaration row" };
+  return out;
+}
+
+/**
+ * Analyze one preset declaration row (rowIdx = index of its `- id:` line):
+ * row id/indent/name line, the WHOLESALE config block extent, config.id/order
+ * and the plugins sub-block. The override output copies the config block
+ * verbatim (dedented to root-row geometry) with only the compaction member
+ * swapped, so every field the official base carries survives untouched.
+ */
+function analyzePresetRow(lines, rowIdx) {
+  const rowIndent = indentOf(lines[rowIdx]);
   const rowId = (/^([ \t]*)- id: (\S+)[ \t]*$/.exec(lines[rowIdx]))[2];
-  let configIndent = -1;
-  let configIdx = -1;
-  for (let i = rowIdx + 1; i < Math.min(rowIdx + 10, lines.length); i++) {
+  const nameLine = lines[rowIdx + 1].trim();
+  let cfgIdx = -1;
+  let cfgIndent = -1;
+  for (let i = rowIdx + 2; i < Math.min(rowIdx + 12, lines.length); i++) {
     if (/^[ \t]*config:[ \t]*$/.test(lines[i])) {
-      configIndent = indentOf(lines[i]);
-      configIdx = i;
+      cfgIndent = indentOf(lines[i]);
+      cfgIdx = i;
       break;
     }
   }
-  if (configIndent < 0) return { refuse: "preset row has no config: block" };
+  if (cfgIdx < 0) return { refuse: "preset row has no config: block" };
+  const cfgEnd = pluginsExtent(lines, cfgIdx, cfgIndent);
+  const cfgLines = stripTrailingBlankAndComment(lines.slice(cfgIdx, cfgEnd));
   let configId = null;
   let order = null;
-  let pluginsIdx = -1;
-  for (let i = configIdx + 1; i < Math.min(configIdx + 20, lines.length); i++) {
-    const line = lines[i];
+  let plIdx = -1;
+  const cfgFieldIndent = cfgIndent + 2;
+  for (let i = 1; i < cfgLines.length; i++) {
+    const line = cfgLines[i];
     if (isBlankOrComment(line)) continue;
     const at = indentOf(line);
-    if (at <= configIndent) break;
-    if (at === configIndent + 2) {
+    if (at <= cfgIndent) break;
+    if (at === cfgFieldIndent) {
       const im = /^[ \t]*id: (\S+)[ \t]*$/.exec(line);
       if (im && configId === null) configId = im[1];
       const om = /^[ \t]*order: (\d+)[ \t]*$/.exec(line);
       if (om && order === null) order = Number(om[1]);
       if (/^[ \t]*plugins:[ \t]*$/.test(line)) {
-        pluginsIdx = i;
+        plIdx = i;
         break;
       }
     }
   }
   if (configId === null) return { refuse: "preset row config has no id" };
-  if (pluginsIdx < 0) return { refuse: "preset row config has no plugins list" };
-  return { rowId, configId, order: typeof order === "number" ? order : 0, pluginsIdx, configIndent };
+  if (plIdx < 0) return { refuse: "preset row config has no plugins list" };
+  const plEnd = pluginsExtent(cfgLines, plIdx, cfgFieldIndent);
+  const pluginsLines = stripTrailingBlankAndComment(cfgLines.slice(plIdx + 1, plEnd));
+  return { rowId, rowIndent, nameLine, cfgIndent, cfgLines, configId, order: typeof order === "number" ? order : 0, plIdx, plEnd, pluginsLines };
 }
 
 /** Transform one base's plugins lines into variant plugins lines (member swapped). */
@@ -509,23 +531,29 @@ function transformPlugins(pluginsLines) {
   return { plugins, groupId };
 }
 
-function variantIdFor(baseId) {
-  return VARIANT_PREFIX + baseId;
+/**
+ * Build the override row's config block: the base config copied wholesale with
+ * only the compaction member swapped, dedented from the source geometry
+ * (bundle rows nest config at indent 6; root-level override rows need it at 2).
+ */
+function buildOverrideConfig(meta) {
+  const t = transformPlugins(meta.pluginsLines);
+  if (t.refuse) return { refuse: t.refuse };
+  if (t.skip) return { skip: t.skip };
+  const rebuilt = meta.cfgLines.slice(0, meta.plIdx + 1).concat(t.plugins, meta.cfgLines.slice(meta.plEnd));
+  const shift = meta.cfgIndent - 2;
+  const configLines = rebuilt.map((l) => (l.length >= shift && /^[ \t]/.test(l) ? l.slice(shift) : l));
+  return { configLines, groupId: t.groupId };
 }
 
-function variantBlock(variantId, displayName, order, pluginsLines) {
+/** Marker-wrapped same-id override row for one base. */
+function overrideBlock(base) {
   return [
-    MARKER_BEGIN + variantId + " (generated by apply-preset-patch.mjs; rollback: run --undo --only " + variantId + " or delete this block)",
-    "- insert:",
-    "    - id: " + variantId,
-    "      name: '" + PRESET_PLUGIN_NAME + "'",
-    "      config:",
-    "        id: " + variantId,
-    "        name: " + displayName,
-    "        order: " + order,
-    "        plugins:",
-    ...pluginsLines,
-    MARKER_END_PREFIX + variantId,
+    MARKER_BEGIN + base.blockId + " (generated by apply-preset-patch.mjs; rollback: run --undo --only " + base.blockId + " or delete this block)",
+    "- id: " + base.rowId,
+    "  " + base.nameLine,
+    ...base.configLines,
+    MARKER_END_PREFIX + base.blockId,
   ].join("\n");
 }
 
@@ -603,16 +631,8 @@ function removeBlocks(patchText, targets) {
 
 function enumerateBases({ profileDir, installDir, patchText }) {
   const bases = [];
-  const seenVariant = new Map();
-
-  const pushBase = (base) => {
-    if (base.variantId && seenVariant.has(base.variantId)) {
-      base.refuse = "duplicate base preset id '" + base.baseId + "' (already enumerated from " + seenVariant.get(base.variantId) + ")";
-      base.variantId = null;
-    }
-    if (base.variantId) seenVariant.set(base.variantId, base.baseSource);
-    bases.push(base);
-  };
+  const foreignOverrides = [];
+  const seenBaseId = new Map();
 
   // --- bundle-layer bases (profile bundles × dsh.bundle.patch files)
   const pkg = readJsonFile(join(profileDir, "package.json"));
@@ -621,8 +641,8 @@ function enumerateBases({ profileDir, installDir, patchText }) {
     const dir = locateBundleDir(name, profileDir, installDir);
     if (!dir) {
       // The host itself skips missing bundles (skippedBundles); mirror that as
-      // a visible skip instead of blocking unrelated variants.
-      pushBase({ reportKey: "bundle:" + name, variantId: null, skip: "bundle package not found (the host skips it too)" });
+      // a visible skip instead of blocking unrelated bases.
+      bases.push({ reportKey: "bundle:" + name, blockId: null, skip: "bundle package not found (the host skips it too)" });
       continue;
     }
     const files = bundlePatchFilesFor(dir);
@@ -634,79 +654,104 @@ function enumerateBases({ profileDir, installDir, patchText }) {
       const label = "bundle " + name + " (" + f + ")";
       // Declaration-row adjacency is the sole preset-file test: a bare mention
       // (e.g. the dsh-agent-preset-registry service row) is not a base.
-      const meta = analyzePresetRow(lines, label);
-      if (meta.notPreset) continue;
+      const rowIdxs = findPresetRowIndices(lines);
+      if (rowIdxs.length === 0) continue;
+      if (rowIdxs.length > 1) {
+        bases.push({ reportKey: label, blockId: null, refuse: "more than one " + PRESET_PLUGIN_NAME + " declaration row" });
+        continue;
+      }
+      const meta = analyzePresetRow(lines, rowIdxs[0]);
       if (meta.refuse) {
-        pushBase({ reportKey: label, variantId: null, refuse: meta.refuse });
+        bases.push({ reportKey: label, blockId: null, refuse: meta.refuse });
         continue;
       }
       const baseId = meta.configId;
-      if (baseId.startsWith("xiaobai-compact")) {
-        pushBase({ reportKey: label, variantId: null, baseId, refuse: "base preset id '" + baseId + "' sits in the xiaobai-compact namespace; refusing to self-shadow" });
-        continue;
-      }
-      const extent = pluginsExtent(lines, meta.pluginsIdx, meta.configIndent + 2);
-      const pluginsLines = stripTrailingBlankAndComment(lines.slice(meta.pluginsIdx + 1, extent));
-      const t = transformPlugins(pluginsLines);
+      const built = buildOverrideConfig(meta);
       const base = {
         reportKey: label,
-        variantId: variantIdFor(baseId),
+        blockId: baseId,
         baseId,
+        rowId: meta.rowId,
+        nameLine: meta.nameLine,
         baseKind: "bundle",
         baseSource: label,
         baseFileSha: sha256(text),
-        displayName: "xiaobai compact (" + baseId + ")",
-        order: meta.order + 20,
       };
-      if (t.refuse) base.refuse = t.refuse;
-      if (t.skip) base.skip = t.skip;
-      if (t.plugins) base.pluginsLines = t.plugins;
-      pushBase(base);
+      if (baseId.startsWith("xiaobai-compact")) {
+        base.skip = "legacy pre-034 parallel-variant id '" + baseId + "'; not a base for the override form (delete the row manually if unwanted)";
+      } else if (built.refuse) base.refuse = built.refuse;
+      else if (built.skip) base.skip = built.skip;
+      else base.configLines = built.configLines;
+      const dup = seenBaseId.get(baseId);
+      if (base.blockId && !base.refuse && !base.skip && dup) {
+        base.refuse = "duplicate base preset id '" + baseId + "' (already enumerated from " + dup + ")";
+      }
+      if (base.blockId && !base.refuse && !base.skip) seenBaseId.set(baseId, base.baseSource);
+      bases.push(base);
     }
   }
 
-  // --- user-layer bases (dsh-agent-preset rows in the profile patch itself,
-  //     outside our marker blocks; unbalanced markers are refused by the
-  //     caller's pre-scan before enumeration)
+  // --- user-layer rows in the profile patch itself, outside our marker blocks
+  //     (unbalanced markers are refused by the caller's pre-scan before
+  //     enumeration). Row indent classifies the form: >0 = insert-form entry
+  //     (a base), 0 = root-level override row (never a base — a foreign one
+  //     shadows our target and must refuse the write).
   const lines = patchText.split(/\r?\n/);
   const markerScan = findMarkerBlocks(lines);
   const masked = lines.map((l, i) => (markerScan.blocks.some((b) => i >= b.begin && i <= b.end) ? "" : l));
-  for (let i = 0; i < masked.length - 1; i++) {
-    const idm = /^([ \t]*)- id: (\S+)[ \t]*$/.exec(masked[i]);
-    if (!idm) continue;
-    if (!/^[ \t]*name: ['"]@deepseek-ai\/dsh-agent-preset['"][ \t]*$/.test(masked[i + 1])) continue;
-    const label = "profile patch row '" + idm[2] + "'";
-    const rowLines = lines.slice(i);
-    const meta = analyzePresetRow(rowLines, label);
-    if (meta.notPreset) continue;
+  for (const idx of findPresetRowIndices(masked)) {
+    const rowIndent = indentOf(masked[idx]);
+    const rowId = (/^([ \t]*)- id: (\S+)[ \t]*$/.exec(masked[idx]))[2];
+    if (rowIndent === 0) {
+      // Root-level override row: foreign when it carries a config block (a
+      // config-less `{id, name}` leftover is inert and ignored).
+      let hasConfig = false;
+      for (let k = idx + 2; k < masked.length; k++) {
+        if (/^- /.test(masked[k])) break;
+        if (/^ {2}config:[ \t]*$/.test(masked[k])) {
+          hasConfig = true;
+          break;
+        }
+      }
+      if (hasConfig) foreignOverrides.push({ rowId, at: "profile patch row '" + rowId + "'" });
+      continue;
+    }
+    const label = "profile patch row '" + rowId + "'";
+    const meta = analyzePresetRow(masked, idx);
     if (meta.refuse) {
-      pushBase({ reportKey: label, variantId: null, refuse: meta.refuse });
+      bases.push({ reportKey: label, blockId: null, refuse: meta.refuse });
       continue;
     }
     const baseId = meta.configId;
-    if (baseId.startsWith("xiaobai-compact")) {
-      pushBase({ reportKey: label, variantId: null, baseId, refuse: "base preset id '" + baseId + "' sits in the xiaobai-compact namespace; refusing to self-shadow" });
-      continue;
-    }
-    const extent = pluginsExtent(rowLines, meta.pluginsIdx, meta.configIndent + 2);
-    const pluginsLines = stripTrailingBlankAndComment(rowLines.slice(meta.pluginsIdx + 1, extent));
-    const t = transformPlugins(pluginsLines);
+    const built = buildOverrideConfig(meta);
     const base = {
       reportKey: label,
-      variantId: variantIdFor(baseId),
+      blockId: baseId,
       baseId,
+      rowId: meta.rowId,
+      nameLine: meta.nameLine,
       baseKind: "profile-row",
       baseSource: label,
       baseFileSha: shaOf(patchText),
-      displayName: "xiaobai compact (" + baseId + ")",
-      order: meta.order + 20,
     };
-    if (t.refuse) base.refuse = t.refuse;
-    if (t.skip) base.skip = t.skip;
-    if (t.plugins) base.pluginsLines = t.plugins;
-    pushBase(base);
+    if (baseId.startsWith("xiaobai-compact")) {
+      base.skip = "legacy pre-034 parallel-variant id '" + baseId + "'; not a base for the override form (delete the row manually if unwanted)";
+    } else if (built.refuse) base.refuse = built.refuse;
+    else if (built.skip) base.skip = built.skip;
+    else base.configLines = built.configLines;
+    const dup = seenBaseId.get(baseId);
+    if (base.blockId && !base.refuse && !base.skip && dup) {
+      base.refuse = "duplicate base preset id '" + baseId + "' (already enumerated from " + dup + ")";
+    }
+    if (base.blockId && !base.refuse && !base.skip) seenBaseId.set(baseId, base.baseSource);
+    bases.push(base);
   }
-  return bases;
+  for (const base of bases) {
+    if (!base.blockId || base.refuse || base.skip) continue;
+    const fo = foreignOverrides.find((f) => f.rowId === base.rowId);
+    if (fo) base.refuse = "profile patch already carries a config override row for " + base.rowId + " (" + fo.at + "; web editor or manual edit) — refusing to shadow it";
+  }
+  return { bases, foreignOverrides };
 }
 
 function parse020Args(argv) {
@@ -774,7 +819,7 @@ function runProfilePatchChannel(dispatch, argv) {
   console.log("channel: profile-patch (0.2.x installation " + dispatch.installVersion + " at " + dispatch.installDir + ")");
   console.log("profile: " + profile + " (" + patchPath + ")");
 
-  const bases = enumerateBases({ profileDir, installDir: dispatch.installDir, patchText });
+  const { bases } = enumerateBases({ profileDir, installDir: dispatch.installDir, patchText });
   const kind = structuralKind(patchText);
   if (kind === "other") {
     console.log("REFUSED: profile patch is not a YAML list; refusing to touch it");
@@ -782,27 +827,78 @@ function runProfilePatchChannel(dispatch, argv) {
   }
   const preScan = findMarkerBlocks(patchText.split(/\r?\n/));
   if (preScan.unbalanced) {
-    console.log("REFUSED: unbalanced variant marker block (" + preScan.unbalanced.trim().slice(0, 80) + "…); inspect " + patchPath + " manually");
+    console.log("REFUSED: unbalanced override marker block (" + preScan.unbalanced.trim().slice(0, 80) + "…); inspect " + patchPath + " manually");
     process.exit(2);
+  }
+
+  /** Non-marker override rows for a base's target row that appear AFTER our block → they win at runtime. */
+  function shadowedBy(base, text) {
+    const all = findMarkerBlocks(text.split(/\r?\n/));
+    if (all.unbalanced) return null;
+    const ours = all.blocks.find((b) => b.id === base.blockId);
+    const scanLines = text.split(/\r?\n/);
+    for (const idx of findPresetRowIndices(scanLines)) {
+      if (indentOf(scanLines[idx]) !== 0) continue;
+      const rowId = (/^([ \t]*)- id: (\S+)[ \t]*$/.exec(scanLines[idx]))[2];
+      if (rowId !== base.rowId) continue;
+      if (ours && idx >= ours.begin && idx <= ours.end) continue;
+      let hasConfig = false;
+      for (let k = idx + 2; k < scanLines.length; k++) {
+        if (/^- /.test(scanLines[k])) break;
+        if (/^ {2}config:[ \t]*$/.test(scanLines[k])) {
+          hasConfig = true;
+          break;
+        }
+      }
+      if (hasConfig && (!ours || idx > ours.end)) return "profile patch row '" + rowId + "' (line " + (idx + 1) + ") carries a later config override — it wins at runtime";
+    }
+    return null;
+  }
+
+  /** Base-source drift: the enumerated source file changed since the ledger recorded it. */
+  function baseDriftNote(base) {
+    const rec = state020[base.blockId];
+    if (!rec || !rec.baseFileSha) return null;
+    let currentSha = null;
+    if (base.baseKind === "bundle") {
+      const f = base.baseSource.slice(base.baseSource.indexOf("(") + 1, -1);
+      try {
+        currentSha = sha256(readFileSync(f, "utf8"));
+      } catch {
+        return "(note: base source no longer readable — " + f + ")";
+      }
+    } else {
+      currentSha = shaOf(readFileSync(patchPath, "utf8"));
+    }
+    return currentSha !== rec.baseFileSha ? "(note: base source changed since apply; re-apply to follow upstream)" : null;
   }
 
   if (args.command === "--status") {
     for (const base of bases) {
-      if (base.refuse) {
-        console.log(base.reportKey + ": REFUSED — " + base.refuse);
-        continue;
+      if (base.refuse) console.log(base.reportKey + ": REFUSED — " + base.refuse);
+      else if (base.skip) console.log(base.reportKey + ": SKIPPED (" + base.skip + ")");
+      else {
+        const existing = findMarkerBlocks(patchText.split(/\r?\n/)).blocks.find((b) => b.id === base.blockId);
+        let state = "absent";
+        if (existing) {
+          const existingSha = shaOf(existing.lines.join("\n"));
+          state = state020[base.blockId] && state020[base.blockId].blockSha === existingSha ? "applied" : "drift (content differs from ledger; may include web-editor edits)";
+        }
+        console.log(base.blockId + " (override of " + base.baseSource + "): " + state);
       }
-      if (base.skip) {
-        console.log(base.reportKey + ": SKIPPED (" + base.skip + ")");
-        continue;
+      // Shadow/drift observability for ANY base with a block on file — refused
+      // and skipped bases included: their earlier-written blocks can still be
+      // shadowed by a later foreign override row at runtime.
+      const existing = findMarkerBlocks(patchText.split(/\r?\n/)).blocks.find((b) => b.id === base.blockId);
+      if (existing && base.refuse) {
+        console.log("  WARNING: an earlier-written block for " + base.blockId + " is still on file and may be shadowed by the refused row");
       }
-      const existing = findMarkerBlocks(patchText.split(/\r?\n/)).blocks.find((b) => b.id === base.variantId);
-      let state = "absent";
       if (existing) {
-        const existingSha = shaOf(existing.lines.join("\n"));
-        state = state020[base.variantId] && state020[base.variantId].variantSha === existingSha ? "applied" : "drift (content differs from ledger)";
+        const drift = baseDriftNote(base);
+        if (drift) console.log("  " + base.blockId + " " + drift);
+        const shadow = shadowedBy(base, patchText);
+        if (shadow) console.log("  WARNING: " + base.blockId + " — " + shadow);
       }
-      console.log(base.variantId + " (variant of " + base.baseSource + "): " + state);
     }
     process.exitCode = 0;
     return;
@@ -815,7 +911,7 @@ function runProfilePatchChannel(dispatch, argv) {
     if (args.only) {
       targets = scan.blocks.filter((b) => b.id === args.only);
       if (targets.length === 0 && !state020[args.only]) {
-        console.log("no such variant: " + args.only);
+        console.log("no such override: " + args.only);
         process.exit(2);
       }
     }
@@ -834,7 +930,13 @@ function runProfilePatchChannel(dispatch, argv) {
       }
       writeFileSync(patchPath, nextText);
       wrote = true;
-      results.push(...targets.map((b) => b.id + ": RESTORED (variant block removed; pre-undo copy at " + backup + ")"));
+      results.push(
+        ...targets.map((b) => {
+          const rec = state020[b.id];
+          const edited = rec && rec.blockSha && shaOf(b.lines.join("\n")) !== rec.blockSha ? " (block content differed from the ledger — may include web-editor edits; pre-undo copy kept)" : "";
+          return b.id + ": RESTORED (override block removed" + edited + "; pre-undo copy at " + backup + ")";
+        }),
+      );
     }
     for (const id of Object.keys(state020)) {
       if (args.only && id !== args.only) continue;
@@ -849,8 +951,8 @@ function runProfilePatchChannel(dispatch, argv) {
     }
     if (wrote) saveMarker(marker);
     results.forEach((r) => console.log(r));
-    if (results.length === 0) console.log("nothing to undo (no variant blocks on file)");
-    else console.log("\nRemoved " + targets.length + " variant block(s). Restart dsh so the preset roster reloads.");
+    if (results.length === 0) console.log("nothing to undo (no override blocks on file)");
+    else console.log("\nRemoved " + targets.length + " override block(s). Restart dsh so the preset roster reloads.");
     process.exitCode = 0;
     return;
   }
@@ -870,65 +972,67 @@ function runProfilePatchChannel(dispatch, argv) {
       report.push(base.reportKey + ": SKIPPED (" + base.skip + ")");
       continue;
     }
-    const block = variantBlock(base.variantId, base.displayName, base.order, base.pluginsLines);
+    const block = overrideBlock(base);
     const blockSha = shaOf(block);
-    const existing = findMarkerBlocks(nextText.split(/\r?\n/)).blocks.find((b) => b.id === base.variantId);
+    const existing = findMarkerBlocks(nextText.split(/\r?\n/)).blocks.find((b) => b.id === base.blockId);
     if (!existing) {
       nextText = appendBlockForKind(nextText, block);
       wrote = true;
-      state020[base.variantId] = {
+      state020[base.blockId] = {
         profile,
         profileDir,
-        presetId: base.variantId,
+        presetId: base.baseId,
+        targetRowId: base.rowId,
         baseKind: base.baseKind,
         baseSource: base.baseSource,
         baseFileSha: base.baseFileSha,
-        variantSha: blockSha,
+        blockSha,
         patchedAt: new Date().toISOString(),
         backup: join(BACKUP_DIR, "profile-cordis-patch." + profile + ".bak"),
       };
-      report.push(base.variantId + ": WRITTEN (variant of " + base.baseSource + ")");
+      report.push(base.blockId + ": WRITTEN (override of " + base.baseSource + ")");
       continue;
     }
     const existingSha = shaOf(existing.lines.join("\n"));
     if (existingSha === blockSha) {
-      if (!state020[base.variantId]) {
-        state020[base.variantId] = {
+      if (!state020[base.blockId]) {
+        state020[base.blockId] = {
           profile,
           profileDir,
-          presetId: base.variantId,
+          presetId: base.baseId,
+          targetRowId: base.rowId,
           baseKind: base.baseKind,
           baseSource: base.baseSource,
           baseFileSha: base.baseFileSha,
-          variantSha: blockSha,
+          blockSha,
           patchedAt: new Date().toISOString(),
           backup: join(BACKUP_DIR, "profile-cordis-patch." + profile + ".bak"),
         };
         saveMarker(marker);
-        report.push(base.variantId + ": already applied (no-op; ledger entry adopted)");
+        report.push(base.blockId + ": already applied (no-op; ledger entry adopted)");
       } else {
-        report.push(base.variantId + ": already applied (no-op)");
+        report.push(base.blockId + ": already applied (no-op)");
       }
       continue;
     }
-    if (state020[base.variantId] && state020[base.variantId].variantSha === existingSha) {
-      const previousVariantSha = existingSha;
+    if (state020[base.blockId] && state020[base.blockId].blockSha === existingSha) {
+      const previousBlockSha = existingSha;
       nextText = replaceBlock(nextText, existing, block);
       wrote = true;
-      state020[base.variantId] = {
-        ...state020[base.variantId],
+      state020[base.blockId] = {
+        ...state020[base.blockId],
         baseFileSha: base.baseFileSha,
-        variantSha: blockSha,
-        previousVariantSha,
+        blockSha,
+        previousBlockSha,
         patchedAt: new Date().toISOString(),
       };
-      report.push(base.variantId + ": REGENERATED (base changed upstream; previous written content replaced)");
+      report.push(base.blockId + ": REGENERATED (base changed upstream; previous written content replaced)");
       continue;
     }
-    refuses.push(base.variantId);
+    refuses.push(base.blockId);
     report.push(
-      base.variantId + ": REFUSED — existing block differs from both the ledger and the freshly generated text" +
-        " (Web-editor or manual edits?); inspect manually, or run --undo --only " + base.variantId,
+      base.blockId + ": REFUSED — existing block differs from both the ledger and the freshly generated text" +
+        " (Web-editor or manual edits inside the block?); inspect manually, or run --undo --only " + base.blockId,
     );
   }
   if (wrote) {
@@ -938,12 +1042,20 @@ function runProfilePatchChannel(dispatch, argv) {
     report.push("(profile patch pre-write backup: " + backup + ")");
   }
   report.forEach((r) => console.log(r));
-  const variants = report.filter((r) => r.includes(": WRITTEN") || r.includes(": REGENERATED")).length;
-  console.log(
-    refuses.length > 0
-      ? "\n" + refuses.length + " base(s) refused — nothing was written for them; fix manually before restarting dsh."
-      : "\nDone. " + variants + " variant preset(s) on file. Restart dsh so the preset roster reloads.",
-  );
+  const written = report.filter((r) => r.includes(": WRITTEN") || r.includes(": REGENERATED")).length;
+  if (refuses.length > 0) {
+    console.log("\n" + refuses.length + " base(s) refused — nothing was written for them; fix manually before restarting dsh.");
+  } else {
+    const onFile = findMarkerBlocks(readFileSync(patchPath, "utf8").split(/\r?\n/)).blocks.length;
+    console.log("\nDone. " + onFile + " override block(s) on file. Restart dsh so the preset roster reloads.");
+  }
+  for (const base of bases) {
+    if (!base.blockId) continue;
+    const currentText = readFileSync(patchPath, "utf8");
+    if (!findMarkerBlocks(currentText.split(/\r?\n/)).blocks.some((b) => b.id === base.blockId)) continue;
+    const shadow = shadowedBy(base, currentText);
+    if (shadow) console.log("WARNING: " + base.blockId + " — " + shadow);
+  }
   process.exitCode = refuses.length > 0 ? 1 : 0;
 }
 
