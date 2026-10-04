@@ -4015,3 +4015,57 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 - **载体候裁**：①**案 B 接棒**（安装自带 shim＋`manageDesktopProfile:true`＋安装自带 pnpm 11.7.0＝官方 desktop profile 管理入口；沙箱二进制零触真实家根，且较案 A 更贴近领地本意；需用户对「shim 执行＝ELECTRON_RUN_AS_NODE node 模式、非启动 GUI App」定性点头）；②**手工 pnpm 直跑 profile 目录**（CLI 转发目标的机械等价；本机 pnpm 11.22.0；写入面最小＝package.json＋pnpm-lock＋node_modules，无 .plugin-manager）；③其他用户指定。
 - `.plugin-manager` 面随载体联动：采①必建（runProfilePnpm logRoot）、采②不建；若采①须把该项明示纳入授权面。
 - M0 其余结论不候裁：装载链（patch 解析／同 id 覆盖／注册／菜单／查看配置呈现）六步全绿；**T2 预备份、T3 真件安装、安装后静态自验、用户校验窗全部待载体裁定后续批执行**；验后去留（§3③ 保留预选）与更新暂停维持（§3④）随批顺延。
+
+## 71. EXE-BOOT-036 批（2026-10-04 · 开源线 · 桌面真件批：案 B shim 通道真件安装落位＋静态自验全绿，停靠候用户校验窗）
+
+**令源**：EXE-BOOT-036 启动包（预期链尾 95cc419 树净——实况符合；承接 035 停靠申报对账通过）。用户三裁随批落账：①载体＝**案 B**（安装自带 shim 官方通道，`manageDesktopProfile:true`＋安装自带 pnpm）；②**`.plugin-manager` 目录并入授权面**；③shim 执行定性＝**后台工具模式**（ELECTRON_RUN_AS_NODE node 进程、非 GUI 启动），红线「桌面 App 不启动」判据改为「**GUI 进程特征零出现**」、node 模式进程短暂在场属预期；案②（手工 pnpm 直跑）弃。沙箱设计稿载体落定随批加 §9 新增节（`D:\dsh-test-sandbox\docs\exe-boot-033-t3-desktop-form-livetest-design.md`；错账不回改）。本批 T3 令面＝plugin add 止：**patch 覆盖块 apply 步不在本批令面**（红线 3 cordis.patch.yml 全程禁写），真件现态如实记于 71.7。
+
+### 71.1 T0 前置核实（全绿；读数 `var/scratch/exe-boot-036-desktop/t0/t0-reading.txt`＋`var/scratch/exe-boot-036-desktop/t0/t0-home-listing.txt`）
+
+- 链尾 95cc419＋树净；全机 node／DeepSeek／dsh／harness／electron 进程逐一归属＝**空集**。
+- 桌面 profile 四件对台账逐字全等：cordis.patch.yml 8357B `02e5cc3a…`／cordis.yml 223B `c300dcf2…`／package.json 211B `eafc5b4e…`／pnpm-workspace.yaml 61B `ae7c5b68…`；顶层恰四件、无 node_modules、无 .plugin-manager；pnpm-workspace.yaml 内容首录（`packages: - .`＋`nodeLinker: hoisted`＋`autoInstallPeers: false`）。
+- 暂停件 306B sha `96c202ea…e95d85` 原样、原名缺席；~/.dsh 顶层清单基线落档（.credentials.yaml 仅列名、内容永未读）；"D:\DeepSeek Harness\resources\runtime\versions.json" 复核 node 24.18.1／pnpm 11.7.0。
+- 环境注记（脚本瑕疵如实记）：首跑脚本误用 PowerShell 只读自动变量 `$home`，T0-5 实列 C:\Users\LENOVO（用户根；纯读清单、零写入零影响）；修正变量名单步重取 ~/.dsh 顶层清单为正式基线。
+
+### 71.2 T1 shim 只读冒烟（全绿；读数 `var/scratch/exe-boot-036-desktop/t1/t1-smoke-reading.txt`）
+
+- shim 原样调用（未自行拼装 exe 参数）：`--version` → `0.2.0-rc.2`；`--help` → 启动器帮助全文；两次 stderr 全空。
+- 进程采样：各恰一次捕获，mode=node-cli，命令行逐字＝shim 自身形态 "D:\DeepSeek Harness\resources\runtime\cli\bin\..\..\..\..\DeepSeek Harness.exe" --expose-internals "D:\DeepSeek Harness\resources\runtime\cli\bin\..\..\..\app.asar\dsh\node_modules\@deepseek-ai\dsh-desktop-host\lib\cli.js"；**窗口标题空＝零 GUI 特征**；结束后残留 0（起止干净）。
+- 零写入自证：patch sha／profile 清单／~/.dsh 顶层清单前后全等。
+- 如实记：`$p.ExitCode` 取值为空（Start-Process 对 .cmd shim 的取值面限制），以输出正确＋进程起止干净＋残留 0 代偿判定。
+
+### 71.3 T2 真件预备份（全绿；读数 `var/scratch/exe-boot-036-desktop/t2/t2-reading.txt`）
+
+- 四件字节复制至 `backup/`，src=dst sha 逐件全等（回退法＝四件字节还原 Copy-Item 覆盖＋node_modules 与 .plugin-manager 目录移除＋还原后 sha 全等验证）。
+- 安装前三份基线快照落档 t3/：profile 递归清单（pre-install-state.txt）／~/.dsh 顶层（pre-home-top.txt）／LOCALAPPDATA\pnpm 递归 20,453 项（pre-lap-pnpm.txt）。
+
+### 71.4 T3 案 B 真件安装＋静态自验（全绿；读数 `var/scratch/exe-boot-036-desktop/t3/`）
+
+- **安装**：shim 原样 `plugin --profile desktop add D:\dsh-toolkit-opensource` → exit 0、514ms；stdout 逐字 `+ xiaobai-agent link:D:/dsh-toolkit-opensource`＋`Done in 514ms using pnpm v11.7.0`（安装自带 pnpm 实证）＋stderr `dsh: warning: xiaobai-agent declares no dsh.bundle——installed as a plain dependency, not a profile layer`（026 T4／035 M0 同族预期形态）。
+- **进程监控（全批 GUI 判据）**：node-cli(pid 13208)→node-pnpm(pid 20536，命令行逐字 "D:\DeepSeek Harness\DeepSeek Harness.exe" --expose-internals "D:\DeepSeek Harness\resources\runtime\pnpm\bin\pnpm.mjs" add D:\dsh-toolkit-opensource)，父链正确；全采样 4 条窗口标题空、GUI 标记 0；结束后残留 0（`process-watch.log` 原始采样）。
+- **写入面逐项（授权面内＝b 节清单＋裁②）**：package.json 211→268B 且逐字 diff＝仅 dependencies 块（backup 对照，S1）；pnpm-lock.yaml 新建 249B（lockfileVersion '9.0'）；node_modules 新增＝xiaobai-agent Junction→D:\dsh-toolkit-opensource（可达、经 junction 取 dsh.plugin.json sha `3141ba50…` 与仓原件全等，S4）＋.bin 内 dsh-doctor 三件 shim（toolkit package.json `bin` 字段所建、node_modules 面内单独列报）＋".pnpm/lock.yaml"＋.modules.yaml＋.pnpm-workspace-state-v1.json；.plugin-manager 新增＝logs/operation-mGbWjI/pnpm.log（**0 字节**——CLI 模式 stdout 继承、日志文件为占位）。
+- **patch 禁写自证**：cordis.patch.yml sha 前后全等（`02e5cc3a…`）；cordis.yml／pnpm-workspace.yaml sha 全等；~/.dsh 顶层前后零差异（V10）。
+- **可报差异（T3.e）**：真件 pnpm 11.7.0 所写 lock 的 link 表示形＝`version: link:D:/dsh-toolkit-opensource`（绝对形）；035 彩排 pnpm 11.22.0 同位＝相对路径形（`var/scratch/exe-boot-035-desktop/t1/m0-home/profiles/desktop035/pnpm-lock.yaml`）；两者 lockfileVersion 同为 '9.0'、其余逐字同构。
+
+### 71.5 T3.f pnpm store 副产物定谳（profile 外、先记后裁候裁项）
+
+- **位置**：`%LOCALAPPDATA%\pnpm\store\v11\projects\43eff13fec1df30fd9048341a3271e91`（新建，创建时点＝安装瞬间 07:38:50.996Z）。
+- **机制定谳**（读数 `var/scratch/exe-boot-036-desktop/t3/t3-store-probe-reading.txt`）：内容＝对 desktop profile 顶层各项的**符号链接集**（file/dir 条目 Target 逐字回指 "C:\Users\LENOVO\.dsh\profiles\desktop\…"），非文件拷贝、零字节增量（sha 内容同一性证）＝pnpm 原生 per-project 记录形态。
+- **规模与先例**：projects 父目录既有 6 个同构项目哈希目录（2026-08-16～09-19，用户既往 pnpm 使用先例），本次为第 7 个；零凭据面（链接集不含 ~/.dsh 根任何件）。
+- **候裁**：属 pnpm 原生 bookkeeping（非我方代码写入、pnpm 自身行为）；建议随授权面附册或明示豁免，由用户裁。
+
+### 71.6 T4 收尾
+
+- 残留进程终检 node.exe=0／DeepSeek Harness.exe=0／pnpm=0（`var/scratch/exe-boot-036-desktop/t3/t3-supplement-reading.txt` S5）；034 实例已由 035 T4 停讫、本批无常驻实例；证据区 `var/scratch/exe-boot-036-desktop/`（t0/t1/t2/t3＋backup）归档在案。
+
+### 71.7 停靠状态（候用户校验窗；唯一候裁项 71.5）
+
+- **真件现态**＝desktop profile 已挂 toolkit link（案 B shim 通道）、cordis.patch.yml 零改动（覆盖块未写）——**压缩引擎于官方预设的生效形态（034 §8 修订判据：查看配置内 compaction 首成员）须待后续批 apply 步落块后方可在 UI 验**；本批校验窗可验面＝宿主携 link 正常启动、插件以普通依赖在场（stderr 预期含 no dsh.bundle 注记与否照实录）、预设菜单官方原样、更新暂停仍生效（UI 事实沿 035 申报 C 节，无新发现）。
+- 验后去留预选（保留至发布批）与更新暂停维持沿既定；apply 覆盖块步候令。
+
+### 71.8 红线自证
+
+- **GUI 进程特征零出现**：T1/T3 全采样窗口 title 空、mode 恒 node-cli/node-pnpm、零 renderer/gpu/utility 子进程、结束后零残留；桌面 GUI App 未启动。
+- **授权面**：写入＝设计稿 b 节清单＋.plugin-manager（用户裁②）；profile 递归 diff 逐项核对无面外新增（V9）；~/.dsh 顶层零差异（V10）；.credentials.yaml 永未读（仅列名）；家根 cordis.patch.yml（6696B 件）零触及。
+- 冻结仓 D:\dsh-plugins\dsh-toolkit、doctor 仓、用户 web profile、npm 全局 0.1.5-rc.1 零触碰；网络零外联（link 本地完成 "Already up to date"）；零发布动作。
+- CHANGELOG 不加（无对外行为面变化，申报在案）；debt 不动（71.5 为先记后裁候裁项、非债务）。
