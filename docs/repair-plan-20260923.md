@@ -3919,3 +3919,55 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 - **T1 实例保持运行**＝本批唯一非常态遗存物（依裁决①③授权并要求；跨批处置挂 debt-033-a）。
 - 开源仓改动两笔：模板对齐笔 1+/1−（纯文档示例值）＋记账笔纯追加（plan/debt）；逐笔查暂存区；git 零删除自证。
 - 网络：零外联；凭据零读（T1 token 为沙箱回环临时访问物、非凭据，备案入账依包文 §4 T4 明示授权）；探针区 001–032 保留未动；本批证据区 `var/scratch/exe-boot-033-main/`（t1/t2/t3/t4）。
+
+## 69. EXE-BOOT-034 批（2026-10-04 · 开源线 · 用户验收推翻形态：预设通道同 id 覆盖返工）
+
+**令源**：EXE-BOOT-034 启动包（预期链尾 1f9978e 树净——实况符合；本包为对已批方案的返工：用户亲眼验收 033 常驻实例 UI 形态后方向性终裁）。
+
+### 69.1 用户方向性终裁（逐字）与返工定谳
+
+- 用户原话逐字：**"我要的是，你们在官方自带的预设上让我用上我的压缩插件，我的老版本就做到了"**——并明弃平行副本形态（"谁会去用？"）。
+- **如实记（错账不回改、不诿过于测试）**：031 按"新 id 平行变体"形态施工、032/033 两轮 DOM 实测验证的均是**技术成立**（变体在菜单可见、幂等、可还原、零 broken）——UX 形态（"菜单里多出三个我方条目"本身）未经用户验收前不构成验证对象。方案之错在**协调侧呈批框架**：①"一切如旧"表述失真（平行条目恰恰改变菜单形态）；②029 候选三（同 id 覆盖）被误标为"篡改官方预设"——T0 实勘定谳其为准官方机制（见 69.2）。历轮执行侧验证如实保留、形态责任归呈批侧。
+- 本轮裁决五项：①目标形态＝老版本等价（菜单仅官方原样、官方模式选中时我方 compact-router 在场、minimal 维持跳过可观测）；②技术路线改判＝同 id 覆盖（029 候选三正名）；③031 生成机制保留复用、仅输出目标改判、新 id 变体路径移除；④来者不拒维持、用户层基底机制由 T0f 定；⑤梁神两路/runbook/桌面方案承前——桌面方案稿"三变体"表述随批修订。
+
+### 69.2 T0 同 id 覆盖机制验证（六点全过；读数正本 `var/scratch/exe-boot-034-main/t0/archaeology.md`）
+
+- **a 合并语义（代码级＋实测）**：`dsh-app-boot` `applyEntryPatches`（41-110 行逐字件在案）——patch 行两形态（insert 追加／**非 insert 的 id 定向字段覆盖**），覆盖行替换所供字段、**config 整体替换不深合并**（schema $comment 逐字"config is replaced wholesale, not deep-merge"）、`name` 失配护栏（warn+skip）、目标缺失 warn+skip 不倒宿主、层序 bundle→profile→home→CLI 且同文件按文档序；dump-config 与启动共用同一语义（头注"so a dump can never drift from what boots"）。实测＝覆盖行在场时 dump 每 preset **恰单行**（无并列重复）。registry 同 id 注册抛错（`Duplicate agent preset`）反证平行 insert 不可行。
+- **b 菜单形态（实测）**：覆盖行在场时入口 A 菜单＝`["标准模式","PTC 模式","极简模式","创造模式"]` 与**清空态基线逐项一致**、入口 B 内置四＋自定义空、双入口零 xiaobai 痕迹（基线与实验 DOM＋截图在档 `var/scratch/exe-boot-034-main/t0/baseline-entryA-dom.txt`／`var/scratch/exe-boot-034-main/t0/t0-entryA-dom.txt`／`var/scratch/exe-boot-034-main/t0/t0-entryA-menu.png`）。
+- **c 选中语义（dump 级）**：三基底 preset 行 compaction 组成员＝`compact-router＋command-compact＋tool-result-pruner`（我方件在场、兄弟保留）、minimal 无 compaction 未动、零 xiaobai-compact（`var/scratch/exe-boot-034-main/t0/dump-config-t0.json`＋`var/scratch/exe-boot-034-main/t0/dump-analyze-t0.txt`）。
+- **d 网页编辑器互动（代码级＋宿主级实测）**：`dsh-config-editor` 全文判读——编辑器 `edit()` 以**生效挂载 config**（含我方覆盖结果）为 next 的基线；写位＝按 entry id+name 找最后一条非 insert 行（我方块在场→**原地改写我方块内行**；缺席→文件尾 append）；`next` 深等于 inherited 时清理循环剥掉所有同 id 行 config（含我方行）。宿主级实测：①模拟编辑器原地改写我方块内 config→我方 compact-router 成员**存活**、单行不变（`var/scratch/exe-boot-034-main/t0/dump-config-t0d1.json`）；②标记块外同 id config 行（编辑器独立写入形态）→我方 apply **REFUSE 拒遮蔽**＋status 遮蔽告警双行（`var/scratch/exe-boot-034-main/t1/rework-apply-vs-editor-row.log`／`var/scratch/exe-boot-034-main/t1/rework-status-shadow3.log`）。**破坏性互动未发现**（双向各有保护：编辑器不改我方成员存在性、我方不遮蔽编辑器行）。如实记：真实编辑器 UI 路径需 API key 会话、沙箱不可达——T0d 定谳基于 ConfigEditor 源码级＋宿主级行为模拟，"next===inherited 回退剥 config"分支为代码级推演未实测（debt-034-b）。
+- **e 继承（实测）**：覆盖行 config 全量照抄基底（仅成员替换）→菜单显示名/序/描述与原生宿主完全一致（b 项 DOM 比对背书；官方行本无 config.name，零注入）。
+- **f 用户层基底（实测）**：insert 形态用户层行作基底→我方覆盖行追加于后、**行序后者胜**＝单条目＋我方件在场＋undo 原样还原（`var/scratch/exe-boot-034-main/t1/rework-apply-userlayer.log`／`var/scratch/exe-boot-034-main/t1/dump-config-userlayer.json`／`var/scratch/exe-boot-034-main/t1/rework-undo-userlayer.log`）——同层并列不可行的解法取"追加覆盖行"而非"原位改写"（零触碰用户原行、回退零损）；根级（indent 0）dsh-agent-preset 行判为覆盖形态行永不作基底。
+- 停报触发核查：§6①②③全不触发；033 常驻实例 DOM 与本批返工目标形态差异＝用户终裁所致预期变化、非证据链冲突。
+
+### 69.3 T1 返工施工（单笔可 revert）
+
+- **施工面**：`scripts/apply-preset-patch.mjs`（020 通道输出改判：`overrideBlock` 生成同 id 覆盖行〔外层 rowId 保持＋config 全量 dedent 拷贝＋compaction 成员同位替换〕；`findPresetRowIndices`／`analyzePresetRow` 重构〔rowId/行缩进分类 insert 形态 vs 根级覆盖形态／config 全量 extent 捕获〕；**外来覆盖行检测 REFUSE**＋`shadowedBy` 遮蔽告警＋`baseDriftNote` 基底上游漂移注记（漂移观察项工具侧落地）；`xiaobai-compact` 遗留 id 跳过注记；marker 文案 variant→override；台账字段 blockSha/targetRowId/presetId=基底 id）＋`test/preset-patch-020.test.mjs` 重构（17 用例：020 覆盖形态 13＋老通道 4；**新基线 17 如实立账**，031 版 16 用例不保留平行形态断言）。
+- **施工纪律**：原因先于修法（每处改动对应 T0 判读点）；断言可观测（17 用例全绿；两处测试自身笔误——replace 目标缩进/断言缩进按 bundle 几何误写——修测试不修工具、成因在案）；`node --check` 全程通过；沙箱实测以脚本副本隔离台账（run0/run1）。
+- **清理**：沙箱既有三变体块经既有 undo 清除（`var/scratch/exe-boot-034-main/t0/patch-sha-before-undo.txt`→`var/scratch/exe-boot-034-main/t0/patch-sha-after-undo.txt`，台账 020 清零）——此步在 T0-prep 执行（先于 T0 实验，作干净基线），申报为 T1 清理项的提前执行。
+- **漂移观察项（设计＋工具侧落地；doctor 集成挂账）**：宿主升级致基底漂移的两类可观测面——①行 id/name 变更→宿主侧 warn+skip（我方行失效不倒宿主）＋我方 status "absent"；②基底内容漂移（id 不变）→我方覆盖行**静默遮蔽宿主更新**（结构性风险）→工具 `--status` 已落地 `baseDriftNote`（ledger.baseFileSha 对照现行源文件 sha→"base source changed since apply"）＋apply 后 REGENERATED 通道自动跟随；**doctor 集成**（引擎规则读台账做周期检查）涉 doctor 仓断言面＝本批不施工、挂账 debt-034-b。
+
+### 69.4 T2 回归读数（`var/scratch/exe-boot-034-main/t2/`）
+
+- **全量套件 3 轮全绿**：553/553×3（新基线＝536＋本批 17；数目闭合；run1/2/3 无 flake）。
+- **doctor dry-run**：issues=0（0/0/0）exit 0（YAML 缺席注记＝§60 明示形态）。
+- **doc-ref-guard**：全绿（自证 59/59 红集空）。
+- **0.1.5 老通道三态（真件只读副本）**：status＝patched×3＋liangshen unknown→apply＝no-op×3＋liangshen REFUSED（unknown 拒写、零写入双 sha 证）→undo＝3 RESTORED 字节级还原＋liangshen nothing-to-undo；真实侧 sha 前后全等（零触碰自证）。如实记：脚本系 031 模板改证据区指向（`var/scratch/exe-boot-034-main/t2/legacy-run034.ps1`），行为面与 031 同款。
+
+### 69.5 T3 实例处置与新常驻实例（读数正本 `var/scratch/exe-boot-034-main/t3/t3-reading.md`）
+
+- **033 实例处置**：pid 11112 在本批启动前已死亡（会话间机器重启；Stop-Process ProcessNotFound 实证）——debt-033-a 以"实例已亡"结案；token 随进程消亡、零安全面残留。
+- **新常驻实例**：pid 29284、端口 2642、2026-10-04 13:32:09 +08:00 起、`--no-open` 生效；URL（token 逐字）＝`http://127.0.0.1:2642/?token=1q-Lm53ATpnt1cPnsY8cn7tP4da_rQlQcEmj6-vkR_k`（沙箱回环临时访问物、非凭据）；40s＋≥2min 存活、token HTTP 200 实证；stderr 唯一已知 agent-memory 注入限制。
+- **DOM 复核（返工目标形态）**：入口 A＝官方四原样（与基线逐项一致）、入口 B＝内置四＋自定义组空、双入口零 xiaobai 零重复（`var/scratch/exe-boot-034-main/t3/final-entryA-dom.txt`／`var/scratch/exe-boot-034-main/t3/final-entryB-dom.txt`／`var/scratch/exe-boot-034-main/t3/final-entryA-menu.png`）；实例**保持运行**供用户复验，本批不停。
+
+### 69.6 T4 记账与 CHANGELOG
+
+- **CHANGELOG 对外条目**（用户可见行为变化）：预设通道呈现形态由"菜单新增三个 xiaobai compact 平行条目"（031 形态）改为"官方预设原样、官方模式内嵌我方压缩引擎"（034 返工形态）。
+- **桌面方案稿修订**：`D:\dsh-test-sandbox\docs\exe-boot-033-t3-desktop-form-livetest-design.md` 随批加"034 返工更新"节（三变体表述→同 id 覆盖形态；用户步骤预期三名字→官方四原样＋查看配置内我方成员）；随本批执行（已毕，见该稿文末）。
+- 提交两笔：返工笔（scripts＋test，单笔可 revert）＋记账笔（plan §69＋debt＋CHANGELOG，纯追加）；逐笔查暂存区；不 push、不 tag、不 publish。
+
+### 69.7 红线自证
+
+- **宿主自身包文件零改动**（0.2.0 实装树 webapp 包内 presets 等只读——T0 基底行全部读自安装树原件）；覆盖只落 profile patch 层（沙箱家根副本）；冻结仓零触碰；doctor 仓未触（漂移检查仅工具侧＋挂账）；家根零写入；用户侧两宿主与已装插件零启停零改动（真件只读 sha 双证）；用户 web/desktop profile 零写入。
+- 沙箱实例启停属授权（033 实例已亡如实记、本批实例保持运行）；沙箱家根 patch 写入属授权面。
+- 网络：零外联；凭据零读（.credentials.yaml 未读；token 为回环临时访问物）；探针区 001–033 保留未动；本批证据区 `var/scratch/exe-boot-034-main/`（t0–t4）。
