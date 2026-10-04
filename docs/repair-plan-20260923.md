@@ -4297,3 +4297,36 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 - 证据区 `var/scratch/exe-boot-041-web/`（t0–t4＋backup＋logs）归档；CHANGELOG 不加（部署动作、非包对外行为面，申报在案）；debt 不动（无新发现——peers missing 类属宿主供给面结构性提示、.bin shim 延续 040 观察项、github 不可达属环境注记，均非债务）。
 - 停靠条件**零触发**（升级报错已归因重跑全绿／写入恰授权面／三链原样／patch·梁神件·024 件全等／宿主全程停机零 GUI／挂回包过门）。
 - 用户窗拟步素材见停靠申报 C 节：插件管理器到达路径、web-ui-liangshen 行启用即写 user 层 disabled: false 覆盖行、重启生效＝declare 进名册、拉杆渲染于新会话屏；作者版 compaction 引擎告知；dshmarket 挂回后市集入口回归；各插件前后版本对照表。
+
+## 77. 插件管理真实入口实机勘察＋梁神启用沙箱彩排＋浏览器自开定谳批（EXE-BOOT-042 · 2026-10-04 · 全批真实侧零写入）
+
+### 77.0 用户实测反馈三笔入账＋新纪律生效
+- ①041 C 节「设置→插件管理器」路径系纸面推断、实机不成立＝**协调侧拟步失真第三笔认账**；②用户截图证实 Agent 预设页＝预期形态（官方四卡＋自定义入口、零多余）＝预设面健康入账；③0.1.5-rc.1 终端启动自动弹浏览器（既有纪律记录＋用户证词双证引用）而 0.2.0-rc.2 仅打印 URL＝差异定谳见 77.4。**新纪律入账并本批生效：报告内一切 UI 路径／用户可见行为断言必须标注证据基＝实机观测（沙箱 DOM）或代码级推断；本批全部断言照此标注。**
+- 前提更新一笔（T0 归因、非阻塞）：用户窗内 web profile patch 已由 041 终态 21846B `f1dde798` 变为 22140B/474 行 `9a749d94`（mtime 21:59:04 本地＝用户宿主 21:52 启动后 7 分钟）：只读 diff 恰三笔 user 层变化＝ui-settings-general 的 welcomeNoticeVersion（用户关欢迎横幅）＋web-ui-pet visible/几何/petId（用户开桌面宠物 whale-girl-refined）＋一行 !!js 行被编辑器换行重排（语义等价）——梁神启用未发生、与既有账面零冲突；**本批复刻源与基线一律取 9a749d94 现态**。
+
+### 77.1 T0（全绿；读数 var/scratch/exe-boot-042-web/t0/）
+- 链尾 3386d63 树净；进程归属：用户 web 宿主＝node 14388（父壳 27160、子 node 23884）监听 3080＋Edge 21036 四条 ESTABLISHED＝使用中〔实机观测，零触碰：连纯读 GET 亦未发〕；其余 ZCode/cmd/powershell＝本会话工具链。
+- 基线：024 件 `bdc8bbc7…1f7b9ed`／暂停件 `96c202ea…e95d85` 原名缺席／梁神件 `12ca00a6…`／patch 现态 `9a749d94`（77.0）／package.json `0853a872`／settings 导入件全等。
+
+### 77.2 T1 沙箱复刻＋真实 UI 地图（读数 t1/；DOM 全档 t1/dom/ 19 份＋逐页截图）
+- 复刻（源全只读）：profile 根件字节复制＋node_modules robocopy /XJ（日志 t1/robocopy-nm.log）＋xiaobai-agent Junction 重建（经链 package.json 与仓原件全等）；三自建链不复制＝其目标在实侧本就缺席（T1 实勘：route 与 route-suite 的 D 盘根目录、suite 相对目标均不在）且非 dsh bundle，dump 等价性实证之；copy-fidelity 五件全等；DSH_HOME 生效实证＝沙箱 cordis.yml mtime 触碰而实侧未动。
+- 复刻 dump 自检：判据与 041 T3 **同形**（官方四 preset 行／compact-router 三对／minimal 零 compaction／liangshen 行 disabled／dsh-market 行／旧称零出现／零警告 stderr 空）；总行数较 041 实侧少 32 条 id 行＝全为模型 id（家根级模型注册态，沙箱新家根无凭据）＝归因闭合、非形态差异〔停靠判据达成〕。
+- **真实 UI 地图〔全实机观测，沙箱 0.2.0-rc.2 实例 DOM 枚举〕**：主屏左栏「全局面板」两入口＝**「插件」（即插件管理器）**＋「任务看板」；主屏底栏＝设置／远程访问（配对面板）／检查更新／用量卡；主屏输入区＝预设 seat（选单 5 项）／访问模式／模型选择／启用后「梁神模式拨杆」；宠物浮层（用户 pet 配置在沙箱同样生效、遮挡左栏顶部＝两次点击需坐标绕行的成因）。
+- **插件管理面定谳〔实机观测〕**：管理器＝主屏「插件」面板（标题「插件」、副题「安装、启用和配置插件」；栏首「插件说明／刷新／添加插件」；官方 8 项＋已安装 4 项：插件市场[启用]、dsh-ops-console[启用]、**dsh-repo-spec「异常＋开关禁用」＝暂出 bundles 的实机映照**、@linxin666/dsh-web-all[启用]）。设置内**无**「插件管理器」同名词项〔12 页全走查〕：「内置插件」＝官方内置组合查看器（按预设 29 组件）；「Web 插件」＝全家桶已启用组件的配置面（远程访问设置／任务看板／梁神模式三卡）。**梁神行所在页〔实机观测〕**＝插件面板→「查看 @linxin666/dsh-web-all」详情页「包含的组件」（v0.4.4、共 19 个·16 运行中·3 已停用、逐组件开关；liangshen 行态「已关闭」；另有卸载与检查更新）。设置 12 页＝通用设置／模型／内置插件／Agent 预设／已归档会话／插件市场／更新与重启（含「重启 DSH」按钮）／Web 插件／皮肤／宠物／**创意工坊（＝dshmarket 商店前页：浏览 dsh-market.com 的皮肤/宠物/插件/预设）**／使用统计。
+- Agent 预设页（启用后）〔实机观测〕：官方四原样＋**自定义组「梁神模式」卡（code liangshen、作者描述文案逐字渲染）**；「查看配置： 梁神模式」实机展示完整组合＝compaction 组官方 `@deepseek-ai/dsh-compaction-basic`＋command-compact＋tool-result-pruner（UI 级复证 041 对表结论）、三相对脚本已锚包内绝对路径（file URL 形）、persona 无 agent_memory 行、tool-web fetch false（＝用户三定制增量不在作者版的 UI 可见证据）。
+
+### 77.3 T2 梁神启用三路彩排（全沙箱实操；读数 t2/）
+- **UI 路〔实机观测〕**：组件开关点击即生效并**即时持久化**——写入面＝profile patch 末尾恰追加 2 行 `- id: web-ui-liangshen`＋`disabled: false`（22140B→22181B `1f03973b`；真侧 patch 复核仍 `9a749d94`＝diff 即彩排写入本身）；DOM 计数 19 组件→17 运行中·2 已停用。护栏重启（按记录 PID＋cmdline 含 --port 3099 双验后才停）后：持久性实证（17·2 不变）＋**预设选单 5 项（官方四＋梁神模式）**＋**主屏「梁神模式拨杆」出现**（040 定谳的 missing 不渲染在启用后消除）＋拨杆拨动＝态标签普通模式→梁神模式、seat 按钮同步「梁神模式」。
+- **CLI 路〔代码级〕**：`dsh plugin` 子命令＝pnpm 参数透传＋allow-version（安装树 plugin 模块 5926B 实测 token 计数 add×1/allow-version×7/pnpm×8，list/enable/disable 全零）＝**CLI 无组件行启用通道**；list 干跑 4 分钟零输出、中止如实记。
+- **直写路〔沙箱实做〕**：UI 关回形态定谳＝非删行、就地翻值（patch 22181B→22180B 恰 −1B＝false→true，user 行保留 disabled true）；随后把该行就地翻回 false——**结果 sha 恰等于 UI 启用态 `1f03973b`＝直写与 UI 写逐字节等价**；dump 复核 liangshen 行 disabled false（dump 内 disabled true 共 40 处系官方组合既有禁用行、直证以行上下文为准）。
+- **三路对照**：UI 路＝用户两次点击＋重启、写入面最小且语义化（**推荐**）；直写路＝手改 patch 两行、逐字节等价已证、风险在手工编辑（真实侧此路仅纸面候授权）；CLI 路＝不可用。**declare 零写盘全程实证**：三路演练全程沙箱家根 .agent-presets 始终缺席；梁神真件全批 `12ca00a6` 未动。
+
+### 77.4 T3 浏览器自开定谳（代码级；逐字摘录存证 var/scratch/exe-boot-042-web/t3/t3-openlogic-reading.txt＋var/scratch/exe-boot-042-web/t3/cli-web-app-help.txt）
+- 0.2.0-rc.2 机制〔代码级〕：web-app 配置 openBrowser 默认 **true**（zod default(true)）；CLI 旗标 `--no-open`（帮助原文 do not open the Web UI in the default browser）仅本次关闭；handoffBrowser ＝ openBrowser 且非 SSH 启动（launchedThroughSsh 判定＝**SSH 会话自动抑制**）；开浏览器前必打印 `dsh web: opening the default browser; pass --no-open to disable` 行；打开失败则 stderr 打 could not open the default browser because 诊断且服务器继续运行。设置 UI 无此开关（12 页实机走查负证）＝官方用户面开关就是 CLI 旗标。
+- 用户差异定谳（证据分级）：0.1.5 默认自开＝既有纪律记录＋用户证词双证〔引用级〕；0.2.0 默认亦为自开〔代码级〕——故「新版仅打印 URL」**非版本改默认**：最可能＝启动命令含 `--no-open`（如沿用批纪律命令行），次可能＝SSH 会话环境或打开失败（stderr 有诊断行）。**用户侧判别式**：启动输出若从未出现 opening the default browser 行⇒本次调用 openBrowser 已被关（查命令里 --no-open）；若出现该行而浏览器未弹⇒stderr 必有失败诊断。**恢复自开方法〔代码级＋web app 帮助实测〕**：启动命令去掉 `--no-open` 即默认弹浏览器；settings 文件层无既置键（乙案默认态起点＝零迁移零残留；即便 0.1.5 曾有键亦未随乙案迁移至 web profile——「设置驱动」假说存档不下结论）。
+- 本批沙箱两次启动均 `--no-open`（纪律持守）、真侧零弹浏览器、零 Electron GUI。
+
+### 77.5 收尾停靠（候呈批）
+- 沙箱实例停讫（3099 仅 TIME_WAIT 残余、零监听零残留进程）；用户宿主 14388 存活、3080 四连接在；真侧终验四 sha 全 prefix-match（patch `9a749d94`／package.json `0853a872`／梁神件 `12ca00a6`／024 件 `bdc8bbc7`）＝**真实侧零写入闭合**；证据区 t0–t4＋sandbox-home 归档。
+- CHANGELOG 不加（勘察/彩排动作、非包对外行为面，申报在案）；debt 不动（无新发现：宠物浮层遮挡与 CLI 干跑挂起属观察记录非债务）。
+- 停靠条件零触发（复刻 dump 判据同形／彩排写入面全预期内／梁神真件未动／真侧零写入／UI 枚举与 041 冲突处已归因＝77.0 路径失真认账）。
