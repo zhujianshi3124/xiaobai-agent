@@ -5,11 +5,13 @@ import os from 'node:os'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { buildFixtureToolkit, buildFixtureHome, writeValidLedger } from './helpers/fixture-toolkit.mjs'
 
 // ── S2.5 合并批：doctor CLI 并桶后的"独立可用"实证钉（C1-007 用户终裁）────────────
 // 终裁原文（节录）："doctor 作为桶里的质检工具并进去；并且并进去之后，doctor 必须仍然可以
 // 单独拿去用——就像 dsh-web-all 里的每个插件都能单独拿出来用一样，桶只是分发形式。"
-// 本文件钉四格：成员四件在场＋零依赖、CLI 真跑（对桶根 dry-run 0/0/0）、整体抠出单独运行、
+// 本文件钉四格：成员四件在场＋零依赖、CLI 真跑（dry-run 0/0/0；EXE-BOOT-045 刷新笔起 scope
+// 为确定性夹具——真实机 doctor 读数含 039 后世界事实，见 S2.5-2 注）、整体抠出单独运行、
 // 独立入口三件（bin/exports/files）接线正确。
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -24,16 +26,33 @@ test('S2.5-1: doctor CLI 成员四件在场且零 npm 依赖（import 自洽）'
   assert.equal(typeof eng.runDoctor, 'function', 'engine.runDoctor 导出在场')
 })
 
-test('S2.5-2: 桶内 CLI 真跑 —— 对桶根 dry-run 0/0/0（exit 0）', () => {
-  const out = execFileSync(process.execPath, [CLI, '--json', '--scope', ROOT], {
-    encoding: 'utf8', maxBuffer: 1 << 26,
-  })
-  const j = JSON.parse(out)
-  const s = j.summary
-  assert.equal(`${s.error}/${s.warning}/${s.info}`, '0/0/0', 'dry-run 须 0/0/0：' + JSON.stringify(s))
+test('S2.5-2: 桶内 CLI 真跑 —— 对确定性夹具 scope dry-run 0/0/0（exit 0）', () => {
+  // EXE-BOOT-045 刷新笔：scope 从真实桶根改为确定性夹具（test/helpers/fixture-toolkit.mjs）。
+  // 缘由＝真实机的 doctor 读数含两笔 039 后世界事实（compact-router 台账漂移 mount 警示＋
+  // 家根旧备份件失效注册名 info，§79.2 归因）——本机状态泄入，非产品缺陷。夹具＝与真实仓
+  // 同源扫描面＋一笔有效台账＋确定性家根，0/0/0 判据零放宽；CLI 真跑/JSON 协议/exit 0 全保留。
+  const tk = buildFixtureToolkit({ tag: 's252' })
+  const home = buildFixtureHome({ tag: 's252' })
+  writeValidLedger(tk.root, home)
+  try {
+    const out = execFileSync(process.execPath, [CLI, '--json', '--scope', tk.root], {
+      encoding: 'utf8', maxBuffer: 1 << 26,
+      env: { ...process.env, DSH_HOME: home.home },
+    })
+    const j = JSON.parse(out)
+    const s = j.summary
+    assert.equal(`${s.error}/${s.warning}/${s.info}`, '0/0/0', 'dry-run 须 0/0/0：' + JSON.stringify(s))
+  } finally {
+    fs.rmSync(tk.root, { recursive: true, force: true })
+    fs.rmSync(home.home, { recursive: true, force: true })
+  }
 })
 
 test('S2.5-3: 整体抠出单独运行 —— doctor/cli/src 四件拷至临时目录后 CLI 可用（桶只是分发形式）', () => {
+  // EXE-BOOT-045 刷新笔：scope/家根同 S2.5-2 改确定性夹具（缘由见该笔注），抠出运行语义不变。
+  const tk = buildFixtureToolkit({ tag: 's253' })
+  const home = buildFixtureHome({ tag: 's253' })
+  writeValidLedger(tk.root, home)
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-doctor-extract-'))
   try {
     const dst = path.join(tmp, 'extracted')
@@ -41,14 +60,17 @@ test('S2.5-3: 整体抠出单独运行 —— doctor/cli/src 四件拷至临时�
     for (const f of ['cli.mjs', 'engine.mjs', 'executor.mjs', 'host-faces.json']) {
       fs.copyFileSync(path.join(ROOT, 'doctor', 'cli', 'src', f), path.join(dst, f))
     }
-    const out = execFileSync(process.execPath, [path.join(dst, 'cli.mjs'), '--json', '--scope', ROOT], {
+    const out = execFileSync(process.execPath, [path.join(dst, 'cli.mjs'), '--json', '--scope', tk.root], {
       encoding: 'utf8', maxBuffer: 1 << 26,
+      env: { ...process.env, DSH_HOME: home.home },
     })
     const j = JSON.parse(out)
     const s = j.summary
     assert.equal(`${s.error}/${s.warning}/${s.info}`, '0/0/0', '抠出后 dry-run 仍 0/0/0：' + JSON.stringify(s))
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true })
+    fs.rmSync(tk.root, { recursive: true, force: true })
+    fs.rmSync(home.home, { recursive: true, force: true })
   }
 })
 
