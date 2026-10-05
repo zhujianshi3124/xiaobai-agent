@@ -4330,3 +4330,43 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 - 沙箱实例停讫（3099 仅 TIME_WAIT 残余、零监听零残留进程）；用户宿主 14388 存活、3080 四连接在；真侧终验四 sha 全 prefix-match（patch `9a749d94`／package.json `0853a872`／梁神件 `12ca00a6`／024 件 `bdc8bbc7`）＝**真实侧零写入闭合**；证据区 t0–t4＋sandbox-home 归档。
 - CHANGELOG 不加（勘察/彩排动作、非包对外行为面，申报在案）；debt 不动（无新发现：宠物浮层遮挡与 CLI 干跑挂起属观察记录非债务）。
 - 停靠条件零触发（复刻 dump 判据同形／彩排写入面全预期内／梁神真件未动／真侧零写入／UI 枚举与 041 冲突处已归因＝77.0 路径失真认账）。
+
+## 78. 梁神启用后收口复核＋浏览器 launcher 失败查证＋发布批材料盘点批（EXE-BOOT-043 · 2026-10-05 · 全批真实侧零写入）
+
+### 78.0 协调侧更正三笔（本批认账入账）
+- **④笔失真认账（浏览器案，承 77.4 修正）**：用户硬证据＝启动命令裸 `dsh web`（提示符 system32 疑管理员窗）且日志逐字含 `dsh web: opening the default browser` 与 `web-app: could not open the default browser because browser launcher exited with code 3221225786` 两行——77.4「最可能启动命令含 --no-open」定谳被推翻；失败＝launcher 进程级死亡、非开关/设置面。**本批代码级根因见 78.3。错账不回改，77.4 原文留档。**
+- **⑤笔（T1.b 手段更正，轻微）**：启动包标 dump-config「只读」，然其有真实侧 cordis.yml mtime 触碰足迹（039 T6/041 T3 两批在案）——本批改沙箱等价法（真实侧根件刷新复制进沙箱后 dump，真实侧 mtime 括包自证零触碰），真实侧零写入达成。
+- **⑥笔（T3.d 版本面更正，轻微）**：「package.json 1.3.0」与实况不符——package.json 仍 **1.0.0**（bump＝发布批待动作）；契约已 1.3.0（028 批 23e01ec）；CHANGELOG 仍 [Unreleased]。
+
+### 78.1 T0（全绿；读数 var/scratch/exe-boot-043-web/t0/）
+- 链尾 970ee5d 树净；进程空集＋3080 无监听＝用户「已自停」前提实勘吻合；3099/3100 空闲。
+- 基线：patch 现态 **22180B `eebd3f6b…`（mtime 10-04 23:01:51 本地＝用户启用窗写入，较 042 终态 9a749d94/22140B 恰 +40B）**；package.json `0853a872`／cordis.yml `c300dcf2`（mtime 触碰 23:06＝宿主启动足迹、内容不变）／pnpm-lock `d13cd2cd`／梁神件 `12ca00a6`／024 件 `bdc8bbc7`／settings 导入件 `08fa43c8`／暂停件 `96c202ea` 原名缺席——除 patch 预期变化外全等。
+
+### 78.2 T1 收口复核（全绿；读数 var/scratch/exe-boot-043-web/t1/）
+- **patch 逐行归因（a）**：字节级重建 9a749d94 纯基（沙箱 042 副本剥启用两行，sha `9a749d94c7053551d6404a45601aab1a25cfad06b937870927a235dd16022e5e` 与 042 台账全等、全 sha 首次落档）→ 权威 diff **恰 4 行**＝梁神启用两行（`- id: web-ui-liangshen`＋`disabled: false`，L473-474、END 标记前位形与 042 彩排同）＋宠物几何两笔（`right: 1050→320` −1B、`bottom: 535→444` 0B）——字节账 +41−1＝+40B **恰好闭合**；零不可归因行。**新基线＝eebd3f6b（发布批前以新基线为准）。**
+- **三覆盖块（B 段）**：standard/ptc 对 034 规范件逐字节 identical；cordis 块差异**全枚举恰 18 行**＝①042 §77.0 已记账的 !!js skills 行换行重排（落 L453 块内、语义等价，+1 行）＋②宿主追加 user 行（welcome 横幅 4＋宠物 8＋梁神启用 2＋尾空行 1）——我方块内容原样，user 行落块尾系宿主追加位形（039/040 时点无 user 行故彼时全块 identical）；minimal 无块。红线「逐字节 identical」之字面差异全数归因、非新触发（78.2a diff 证明启用窗未触块内我方内容）。
+- **dump 沙箱等价（b）**：exit 0 stderr 空；官方四 preset 行／compact-router 六行／minimal 零 compaction／**梁神行 disabled:false 现态**／dsh-market 行／旧称零出现／零跳过警告；与 042 彩排态 dump 交叉 diff＝除 5 条沙箱路径来源注释外**恰只有宠物几何两行**＝状态等价实证。
+- **其余件（c）**：junction 经链三件与仓原件全等；三自建链 type/target 原样（悬空既定）；.bin 48 目＋dsh-doctor shim 3；settings 双缺席＋导入件全等；家根名级 0 差异＋.dsh-module-fallback 缺席；node_modules 全 scope 列举对 041-T3 终态 **0 差异**（首跑 5 条假阳性系本批脚本 scope 列举不全、复扫自纠在案）；会话数据目录（dsh-session-archive/dsh-usage/task-board）mtime 23:06-23:07＝使用窗归因（040 先例）＋**pet.json 484B→505B＝用户窗宠物启用足迹**（affinity/display 与 patch 行同值同窗，T0 时点已在场）。
+- **收尾复核（d）**：梁神件 12ca00a6 全 sha 全等（mtime 同 040 台账）／024 件、暂停件全等／桌面五件对 038 全 sha 台账全 MATCH。
+- **0.1.5 实装树核实**：沙箱内不在场（全搜索零命中，如实记）——改 registry 拉 `@deepseek-ai/dsh-web-app@0.1.5-rc.1` tarball 等价对照（匿名只读；**代理 7897 本批实测拒连，直连同主机同匿名、偏离「经代理」字面如实记**）。
+
+### 78.3 T2 浏览器 launcher 失败查证（代码级定谳＋沙箱机制复现；读数 var/scratch/exe-boot-043-web/t2/）
+- **0.2.0-rc.2 链（安装树代码级）**：web-app 载荷 spawn 自身 node 跑 eval opener 程序（stdio ignore/inherit/pipe、同控制台、env 经凭据形+DSH_* 剥除）→ eval 子 import **open@11.0.4** → win32 分支 spawn **PowerShell 5.1**（`-NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand`＝Base64(`$ProgressPreference='SilentlyContinue'; Start '<url>'`)、stdio ignore、同控制台）→ `Start-Process` 交接；open@11 自注：PS launcher 必须等其 close、libuv 把非 detached 子进程放 job object（父退即杀）。父侧错误二态：子 stderr 非空＝取首行（含 `browser operating-system launcher exited with code N` 形）；**stderr 空＝回退形 `browser launcher exited with code N`**。
+- **用户日志形态判读**＝回退形 ⇒ **eval 子进程自身以 3221225786 退出且 stderr 全空** ⇒ 系被控制台控制事件击杀于任何输出之前（catch 未及运行）；3221225786 ≡ **0xC000013A STATUS_CONTROL_C_EXIT**（公开知识：默认控制台控制处理例程终止＝Ctrl+C/Ctrl+Break/控制台关闭类事件，非自身崩溃）。
+- **沙箱机制复现**（无窗无浏览器）：组定向 CTRL_BREAK 投递给无 handler 控制台子进程 → 退出码**恰 3221225786**（发送方存活）；有 handler 目标（ping）同事件存活＝handler 有无决定生死，机制自洽。opener 实调未沙箱化＝「未实测」按红线 4 标注。
+- **0.1.5 对比（推翻「实现差异」）**：dsh-web-app 0.1.5-rc.1 vs 0.2.0-rc.2 载荷全文件 diff **恰 7 行且全为 auditStartupEntries 审计钩**，opener 程序/openBrowser/spawn 形逐字节相同；两代 `open` 依赖同 ^11.0.0（v11 线全为 PowerShell 系）。辅助代码级负证：0.1.5-rc.1 CLI 本体＋冻结仓可见 0.1.5 组件集**零 opener 代码**（其 opener 即 dsh-web-app 0.1.5-rc.1 本节同段）——「0.1.5 自动弹成功」维持引用级证词，非实现差异可解释。
+- **假说集**：③默认浏览器关联/④URL 转义（Base64 EncodedCommand 免疫）**代码级排除**——若 PS 交接失败应为 operating-system 文本形，与日志形不符；⑤我方零牵涉**代码级成立**（opener 链全在官方 web-app 载荷内、零插件钩子面，以代码为证）；①用户控制台环境/②终端形态**代码级不可确证→用户实验清单**（E1 时序判别/E1b 挂起观察/E2 PS 直测/E3 环境差分，逐字存 var/scratch/exe-boot-043-web/t2/t2-reading.txt）。
+- **主假说 H6**：eval 子被控制台事件击杀时仍存活（其等待的 PS 孙未完成交接）→ 浏览器从未弹出＋错误行；两子变体＝(a) PS 挂起直至用户 Ctrl+C 停服时才被事件击杀（错误行应现于停服时刻）/(b) 事件在交接前命中（错误行近启动时现）——**E1 一分钟判别**。成因非包缺陷、非宿主代码缺陷（代码形态正常）＝环境性触发候验，**不入 debt、不上游上报**（候验清单即交付物）；workaround＝`--no-open`＋点击打印 URL（用户既有事实，纸面不落地）。
+
+### 78.4 T3 发布批材料盘点（全只读；读数 var/scratch/exe-boot-043-web/t3/）
+- **远端现状**：origin fetch＝冻结源锚（push URL 已指 github.com/zhujianshi3124/xiaobai-agent.git）；冻结仓 refs 实勘 master `04816b8`（对 040 台账）＋tag v1.0.0=`77b980b2` ✓；**GitHub 发布仓两路探测均败**（代理 7897 拒连＋直连 reset）＝发布网络面前置未达（沿 041 注记候选）；registry 直连可达（0.1.5 两 tarball 落沙箱、匿名零令牌）。
+- **本地领先＝`7c1f47d..HEAD` 恰 25 笔**（026–042 批账笔＋代码笔：9db3a585 版本门禁重画／23e01ec 契约 1.3.0／121b8f44 apply-preset-patch 0.2.0 通道／7ecc8ecc 子件 manifest 双段／f179c09 预设呈现返工／c3c758d agent-memory R1 并发修复），一行摘要清单 `var/scratch/exe-boot-043-web/t3/local-ahead-list.txt`。工具注记：本控制台下 git log 带引号 format 串有计数伪象（log=3 vs rev-list=25），以 rev-list 定谳。
+- **CHANGELOG**：[Unreleased] 已含 026–034 用户可见面（＝1.3.0 面完整）；036–043 部署叙事**维持不加**（建议维持，呈批项 E）。
+- **版本面**：契约 1.3.0 ✓／package.json 1.0.0（bump 待发布批）／本地 tag 仅 v1.0.0；**tag 拟名建议 v1.3.0**（对齐契约 1.3.0、semver，呈批项）；npm 可选项＝未配置账号/token（零令牌红线）、publish 候用户裁。
+- **小尾巴清单（呈批素材）**：repo-spec 处置（卸载/留挂；现态＝已装、UI 异常＋禁用）／.bin dsh-doctor 三 shim 清理（冻结线遗物、零运行态影响）／三自建悬空链清理（route/route-suite/injector，用户领地须点头）／debt-039-a（挂回窗前置：dsh.bundle 声明＋模板填空，发布前后时点候裁）／debt-034-a/b／github 网络注记。
+- **push 机制预检**：http.version 未配置（默认 HTTP/1.1 无需强制）；网络面如上未达；**npm pack 双口径**＝dry-run 129 文件/448.3kB（129 文件口径不变 ✓）＋实包 xiaobai-agent-1.0.0.tgz 448295B 落沙箱 t3（tarball 版本号随 package.json 现态 1.0.0，发布批 bump 后须重打）。
+- **提交流程注记**：本控制台下 git log 长主题计数伪象两笔在案（78.4），numstat 复核照常以暂存区 diff --stat 为准。
+
+### 78.5 T4 收尾
+- 真实侧终验七件 sha 全 prefix/full match＋暂停件 MATCH＝**真实侧零写入闭合**（全批对真实侧仅读：无 GET、无 boot、无 dump-config 实侧运行）；零残留进程、3080/3099/3100 全 free；证据区 t0–t4＋sandbox-home 刷新副本归档。
+- CHANGELOG 不加（勘察/盘点动作、非包对外行为面，申报在案）；debt 不动（浏览器案判读＝环境性触发候验、非缺陷，78.3 已述）。
