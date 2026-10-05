@@ -1,13 +1,11 @@
-# xiaobai-agent 总装补丁：一个 bundle 层替代五个旧插件的 patch 层。
-# 开源 S1 剔除批（C1-007 G1/G3，2026-09-30）：web-search-local 行与 web.fetchProvider 已随
-# MIT 外来件剔除；search-router 保留为路由骨架，本地搜索位（local-multi）可缺席（缺席回落官方）。
-# 开源 S2.e（C1-007 案②，2026-10-01）：本文件为**模板形**——两处机器绝对路径改为占位符，
-# 部署时填空：<AGENT_MEMORY_DATA_ROOT>＝agent-memory 数据根（目录路径）；
-# <PANEL_ENTRY_URL>＝面板入口的 file:// URL（指向本包 panel/index.js）。
-# debt-039-a 施工笔（EXE-BOOT-045）：bundle 通道另配**零占位符**的 bundle.patch.yml
-# （package.json dsh.bundle.patch 声明之，缺省语义见该文件头）；本模板维持部署期填空形态不变。
-# compact-router 不在此：由 scripts/apply-preset-patch.mjs 改写预设 compaction 行名。
-
+# xiaobai-agent bundle 补丁（0.2.0 bundles 通道；debt-039-a 施工笔，EXE-BOOT-045）。
+# 与 cordis.patch.yml（部署期模板）的差异＝本文件**零占位符**：装载器 boot 期直读本包、
+# 无部署填空位，故模板的两处机器路径在此改走各自缺省语义——
+#   agent-memory dataRoot 缺席 ⇒ 插件缺省 <主目录>/.agent-memory
+#   （lib/agent-memory/lib/paths.js：显式 > env AGENT_MEMORY_ROOT > 缺省；部署期想改根走模板通道）；
+#   toolkit-manager 面板行＝包名+子路径导出形态（'xiaobai-agent/panel'，对 web-all 家族行同款：
+#   name=本包 exports "./panel" 子路径，由 bundle 层解析，零绝对路径）。
+# compact-router 不在此（与模板同理：预设托管，走 scripts/apply-preset-patch.mjs 通道）。
 - id: web
   config:
     searchProvider: auto-search
@@ -75,10 +73,9 @@
     - id: agent-memory-runtime
       name: 'xiaobai-agent/agent-memory/plugin'
       config:
-        dataRoot: <AGENT_MEMORY_DATA_ROOT>
         defaultWorkspace: null
       inject: [systemPrompt]
 
 - insert:
     - id: toolkit-manager
-      name: '<PANEL_ENTRY_URL>'
+      name: 'xiaobai-agent/panel'
