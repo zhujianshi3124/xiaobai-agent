@@ -345,7 +345,16 @@ test("020 · 版本交叉校验：安装树 0.1.x＋显式 DSH_HOME ⇒ REFUSE�
   const sb = makeSandbox("ver");
   makeInstall(sb.root, "0.1.5-rc.1");
   makeProfile(sb.root);
-  const bare = run(sb.scriptCopy, [], baseEnv(sb.root));
+  // EXE-BOOT-045 刷新笔：legacyDir 夹具化。原判据走 locatePresetsDir 的 npm 全局候选——
+  // 039 换树后该树消亡（§79.2 归因）→ legacyDir=null → REFUSE 文案支翻转（305 行支非 293 行支）。
+  // 本机状态泄入＝夹具缺陷；现以 DSH_PRESETS_DIR 提供确定性 legacy 候选（判定只需目录
+  // 存在 standard/agent.cordis.yml），**断言零改动**：仍钉 REFUSED＋/not 0\.2\.x/＋零写入。
+  const shippedPresets = join(sb.root, "shipped-presets");
+  mkdirSync(join(shippedPresets, "standard"), { recursive: true });
+  writeFileSync(join(shippedPresets, "standard", "agent.cordis.yml"), presetFileYaml({ rowId: "agent-memory-runtime", presetId: "standard", order: 1 }));
+  const env = baseEnv(sb.root);
+  env.DSH_PRESETS_DIR = shippedPresets;
+  const bare = run(sb.scriptCopy, [], env);
   assert.equal(bare.status, 2, bare.stdout);
   assert.match(bare.stdout, /REFUSED/);
   assert.match(bare.stdout, /not 0\.2\.x/);
@@ -575,7 +584,15 @@ test("legacy · 台账 patchedSha 路径：ledger 在案即 no-op（liangshen �
 
 test("legacy · 环境重定向即通道判定：DSH_PRESETS_DIR 在设 ⇒ 老通道（沙箱零真实文件接触）", () => {
   const sb = makeLegacySandbox("legacy-env");
+  // EXE-BOOT-045 刷新笔：安装树夹具化。decideChannel 对「legacyDir＋profileOk」组合以
+  // is020（安装树版本）优先裁决——039 后真实安装树已是 0.2.x ⇒ 通道翻转入新通道 ⇒
+  // 真实家根 8 profiles 多 profile REFUSE 泄入（§79.2 归因）。现以 DSH_INSTALL_DIR 钉
+  // 0.1.5 夹具安装树 ⇒ is020=false ⇒ 老通道；**断言零改动**。残余注记：DSH_HOME 未显式
+  // 在设（显式＋0.1.x＝按 031 铁则 REFUSE，是 344 笔的场景）⇒ 判定面 profileOk 仍按产品
+  // 语义只读探测真实家根（只读、与 034 全绿时点同形）。
+  makeInstall(sb.root, "0.1.5-rc.1");
   const env = sb.env;
+  env.DSH_INSTALL_DIR = join(sb.root, "install", "node_modules", "@deepseek-ai", "dsh");
   env.DSH_PRESETS_DIR = sb.presetsDir; // env 形态（非旗标）也应进老通道
   const r = run(sb.scriptCopy, [], env);
   assert.match(r.stdout, /presets dir: /);
