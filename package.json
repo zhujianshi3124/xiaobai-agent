@@ -34,6 +34,7 @@
   "files": [
     "index.js",
     "dsh.plugin.json",
+    "bundle.patch.yml",
     "lib/",
     "panel/",
     "!panel/docs",
@@ -46,6 +47,18 @@
     "CHANGELOG.md",
     "LICENSE"
   ],
+  "dsh": {
+    "engines": {
+      "dsh": ">=0.2.0-rc.2"
+    },
+    "bundle": {
+      "patch": "./bundle.patch.yml"
+    },
+    "client": {
+      "inject": [],
+      "platform": "web"
+    }
+  },
   "engines": {
     "node": ">=22"
   },

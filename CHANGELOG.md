@@ -4,6 +4,25 @@
 版本号 semver。工具箱泛化改造的阶段产出按 P0–P8 记录（规格见判定台账，阶段号
 P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`）。
 
+## [Unreleased]
+
+### bundle 通道上线：xiaobai-agent 可经 0.2.0 profile bundles 挂载（debt-039-a 施工，2026-10-05，EXE-BOOT-045）
+
+- **dsh.bundle 声明**：package.json 新增 `dsh.bundle.patch`（指向新增的零占位符
+  `bundle.patch.yml`）＋`dsh.engines.dsh >=0.2.0-rc.2`＋`dsh.client`（platform web）。
+  0.2.0 装载器此前对 bundles 列表内无 `dsh.bundle` 声明的包硬 throw→skippedBundles
+  （debt-039-a 挂账成因），现可整包入 bundles 列表随 profile 启动装载。
+- **零占位符 bundle patch**：新增 `bundle.patch.yml`——web 行 searchProvider 绑定
+  auto-search＋web-search-deepseek 启用＋rate-throttle／web-search-router／
+  agent-memory-runtime／toolkit-manager 四条 insert。模板里两处部署期机器路径在此改走
+  缺省语义：agent-memory dataRoot 缺席＝插件缺省 `<主目录>/.agent-memory`；面板行走
+  包名＋子路径导出（`xiaobai-agent/panel`，与 web-all 家族行同款，零绝对路径）。
+  部署期想自定数据根／面板入口仍走 `cordis.patch.yml` 模板填空通道（形态不变）。
+- **沙箱实测**（EXE-BOOT-045，0.2.0-rc.2 真装载器）：装载零 skippedBundles 警告；
+  dump-config 六针全中（四 insert 行＋面板行＋searchProvider 绑定全部生效）；面板 v2
+  API 200（`ok:true`＋registry durability ok＋`doctorAvailable:true`）；卸载复原后
+  dump-config 五针归零、零警告；真实侧零写入。
+
 ## [1.3.0] - 2026-10-05
 
 ### 外部克隆门禁自包含修复＋署名补齐（2026-10-03，C1-007 收尾批）

@@ -4,6 +4,8 @@
 # 开源 S2.e（C1-007 案②，2026-10-01）：本文件为**模板形**——两处机器绝对路径改为占位符，
 # 部署时填空：<AGENT_MEMORY_DATA_ROOT>＝agent-memory 数据根（目录路径）；
 # <PANEL_ENTRY_URL>＝面板入口的 file:// URL（指向本包 panel/index.js）。
+# debt-039-a 施工笔（EXE-BOOT-045）：bundle 通道另配**零占位符**的 bundle.patch.yml
+# （package.json dsh.bundle.patch 声明之，缺省语义见该文件头）；本模板维持部署期填空形态不变。
 # compact-router 不在此：由 scripts/apply-preset-patch.mjs 改写预设 compaction 行名。
 
 - id: web
