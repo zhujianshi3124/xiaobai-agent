@@ -4411,3 +4411,42 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 - ②桌面 .bin 三 shim（79.1 报告项）——桌面域候另批。
 - ③家根 profiles 遗物处置：repo-spec-e2/qa/test/web 四目录＋headless＋profiles/node_modules（79.3 附带发现）。
 - ④npm publish（未批＋零令牌；npm 账号可选项候用户）；debt-039-a（dsh.bundle 声明＋模板填空）挂回窗候裁照旧。
+
+## 80. 测试答案册刷新＋debt-039-a 施工＋桌面残留清理＋家根遗物勘单批（EXE-BOOT-045 · 2026-10-05 · 真实写入批＋对外 push 预批）
+
+### 80.0 裁决面
+- 用户终批四件套（测试刷新／debt-039-a 施工／桌面 shim 清理／家根勘单）＋push 预批「做完照常推」；npm publish 不做（红线 2）；版本维持 1.3.0（本批对外叙事落 CHANGELOG [Unreleased]，红线 6）。
+- doctor 仓（D:\dsh-test-sandbox\projects\doctor）零改动达成；T1 刷新未遇「必须改 doctor 仓才修得动」情形（夹具隔离法绕开，红线 4）。
+
+### 80.1 T0（全绿；读数 var/scratch/exe-boot-045-web/t0/）
+- 链尾 ae001de 树净；进程空集、3080/3099/3100 全 free；基线 14 件全 MATCH（web 七件＋暂停件＋044 T2 两新基线＋桌面三件＋桌面 .bin 3 shim 在场）。
+- 网络两路：代理 7897 拒连（与 043/044 同形）＋**直连 exit 0**（远端 master=ae001de 无漂移）→ push 分支＝执行（直连通道，044 偏离如实记沿承）。
+
+### 80.2 T1 测试答案册刷新（记账分笔① `5afd733`；读数 var/scratch/exe-boot-045-web/t1/）
+- **实跑红集合对表**：恰 044 归因五笔（w2-restart-hint／preset-patch-020 版本交叉笔／legacy 环境重定向笔／doctor-cli-bundled S2.5-2／S2.5-3）吻合、零新增红＝照刷新。
+- **方法纪律兑现**（不放宽判据、不删断言、家根状态泄入类修夹具隔离）：①新增 test/helpers/fixture-toolkit.mjs 确定性夹具＝真实仓扫描面同源（package.json/dsh.plugin.json/cordis.patch.yml/doctor-signals.json＋lib 四卡整树＋panel 三件）＋node_modules/@deepseek-ai **实体**拷贝〔pkg.missing-dependency 需 Node 解析、pkg.resolution-outside-scope 要求 realpath 在 scope 内——junction 方案实测被拒后改拷贝〕＋一笔有效台账条目（compact-router=mounted 确定性世界）＋三根齐家根（profiles/web＋.agent-presets 夹具预设件＋热 JSON）；node --test 对 test/ 内 .mjs **全文件发现**＝零 test() helper 计 1 文件级 pass〔panel-client-harness.mjs 既有同形先例〕＝总数 553→554 之账目解释。②w2-restart-hint 取数面改夹具 toolkit（四断言逐字未动）。③doctor-cli-bundled S2.5-2/S2.5-3 scope/家根改夹具（0/0/0 判据零放宽）。④preset-patch-020 两笔夹具隔离（版本交叉笔补 DSH_PRESETS_DIR 夹具 legacy 候选〔locatePresetsDir npm 全局候选随 039 消亡致 REFUSE 文案支翻转〕；legacy 环境重定向笔补 DSH_INSTALL_DIR 0.1.5 夹具安装树〔decideChannel 对 legacyDir+profileOk 以 is020 优先裁决、真实安装树已 0.2.x 致通道翻转〕；两笔断言零改动；残余注记＝legacy 笔 DSH_HOME 未显式在设时判定面仍只读探测真实家根，产品语义使然、与 034 全绿时点同形）。
+- **验收**：全量套件 **554/554 全绿 exit 0**（预跑 553＝548+5 对表、后跑 554＝554+0；逐名集合比对＋三文件 test() 计数前后一致复核在案）。doctor dry-run 真实家根 **0e/1w/1i 沿承**——**两笔定性结论＝039 后稳态、非缺陷**：mount.body-without-row＝preset-patch-state 账本与 039 后世界漂移之真读数（账钉 0.1.5 npm 预设件三件 ABSENT＋liangshen 笔 sha 漂移；基线口径据此改写由协调侧台账更新）；ref.stale-in-backup＝家根 .agent-presets 下 liangshen.bak-20260914 备份件旧称 @local/dsh-toolkit 失效引用之真读数（0.2.0 世界该注册名已消亡；备份件属用户领地、处置候裁）。doctor 0.1.5 老通道三态＋liangshen REFUSED 预期形态沿承核验＝全绿。
+- **产品级发现（候裁，不在本批修）**：020 通道台账命名空间（marker["020"][blockId]、记 blockSha）对 snapshot presetPatchedAny／doctor presetMountedFor **不可见**（两处消费者只平面遍历顶层 entry.file/patchedSha）⇒ 034 机制写入的覆盖块在面板/doctor 挂载态判定上存在盲区——真实 web profile patch 三块 marker 块在场（BEGIN/END standard/ptc/cordis）而挂载态判「未挂载」的深层成因；修法（消费者增读 020 命名空间按 blockSha 对账）候产品批。
+
+### 80.3 T2 debt-039-a 施工（记账分笔② `19ddbe2`；读数 var/scratch/exe-boot-045-web/t2/）
+- **实勘定形**：官方实例逐字段实勘（@linxin666/dsh-web-all 与 dshmarket 的 package.json dsh.bundle.patch＋dsh.engines.dsh＋dsh.client platform web；dshmarket 行形态＝name 包名解析入口；web-all 家族行＝name 子路径导出＋config.plugin 客户端模块）＋039 T6 装载段摘录复核（无 dsh.bundle 硬 throw→skippedBundles、bundlePatchPaths/loadOverlayPatches 链）。
+- **三件施工**：①package.json 增 dsh 声明＋files 白名单补 bundle.patch.yml（tarball 随包）；②新增**零占位符** bundle.patch.yml（web 行 searchProvider 绑 auto-search＋web-search-deepseek 启用＋rate-throttle/web-search-router/agent-memory-runtime/toolkit-manager 四 insert；dataRoot 缺省 ~/.agent-memory〔paths.js 优先级实勘〕、面板行 xiaobai-agent/panel 子路径导出形态＝零绝对路径；compact-router 不入＝预设托管照旧）；③cordis.patch.yml 模板头注补 bundle 通道指引（部署期填空形态不变）。真侧 web profile **零挂载**（挂不挂候用户另批，红线 5）。
+- **沙箱双相验证**（0.2.0-rc.2 真装载器；DSH_HOME 沙箱重定向、Phase B 起 AGENT_MEMORY_ROOT 双重定向；Start-Process Hidden 零 GUI；042 范式）：**UP**＝boot stderr **0 字节＝零 skippedBundles**＋dump-config 六针全中（toolkit-manager/agent-memory-runtime/rate-throttle/web-search-router/xiaobai-agent/panel/searchProvider 绑定全部生效）＋面板 v2 API 200（ok:true＋registry durability ok＋doctorAvailable:true；plugins=[]＝沙箱空注册表合法态）＋GET / 401＝token 门正常形态；**DOWN**＝bundles 摘除＋junction 删除后 reboot 零警告＋dump-config 五针归零＋停机净、零残留进程。**真实侧零写入**（~/.agent-memory 顶层 mtime 全 10-02 使用窗、无 search 目录；仓 .registry mtime 09-30——Phase A 曾有 toolkitRoot 沿 junction realpath 指真实仓与 agent-memory 缺省根两笔耦合，实测零落地写入、Phase B 起加 AGENT_MEMORY_ROOT 重定向双保险，如实记）。
+- **读数全套**：套件 554/554（提交后干净树复跑）＋doctor 0e/1w/1i 沿承＋守卫全绿红集空＋pack **130 文件**（129＋bundle.patch.yml＝施工合法增量）。
+- **执行差异一笔（如实入账）**：T2 收尾 suite 在**提交前**跑＝q2-layer-scan exit 1（其 §0 检 bundle patch 的 git 在册态、bundle.patch.yml 当时未入册）——提交后干净树复跑 554/554 全绿＝**时序伪象非代码问题**；commit 消息之 554/554 对现树成立（044 行数自指坑之姊妹笔，两笔均如实记）。
+
+### 80.4 T3 桌面残留清理（读数 var/scratch/exe-boot-045-web/t3/）
+- 动前逐字复读：desktop .bin 恰 3 目全为 dsh-doctor 三 shim；sha 台账实录（桌面 dsh-doctor＝1232B d9f9e7e3 **与 web 侧不同代**〔web＝1589B 8c4f599c〕、.CMD/.ps1 与 web 同 sha——守卫首跑曾以 web sha 误当桌面期望而 ABORT＝护栏拦对、修正为实录后删，如实记）。
+- 删除三 shim→**.bin 0 目、空目录保留**（web 侧同款处理法：目录保留不额外移除，照批单）。
+- 静态核验全绿：桌面三件全等（patch 30204B e8ee7814／cordis.yml c300dcf2／package.json e821f001）＋暂停件 96c202ea MATCH＋原名缺席＋desktop junction 完好＋.plugin-manager 在场＋node_modules 顶层 5 目仅 .bin 内变化。
+
+### 80.5 T4 家根遗物勘单（只读零删除；读数 var/scratch/exe-boot-045-web/t4/t4-relic-survey.txt）
+- **保护名单（置首、全在场核验）**：profiles/web（~120MB）／profiles/desktop／.agent-presets/liangshen／家根 024 件 bdc8bbc7／settings 导入件 08fa43c8／.credentials.yaml（存在性核验、永未读）。
+- **六遗物清单（每项路径／大小／mtime／内容概要／关联判断／风险预估，全文见证据区）**：①repo-spec-e2（09-19、约 1.0MB、deps＝dsh-repo-spec file:…0.2.0.tgz）②repo-spec-qa（同上 0.2.0 tgz）③repo-spec-test（0.1.0 tgz）④repo-spec-web（0.1.0 tgz＋.dsh-module-fallback 0.1.5 痕）＝repo-spec e2e 四测试 profile、自包含、现役五面交叉扫描零引用，删除风险＝低（孤儿 e2e 件）；⑤headless（09-17、宿主型合法 profile 名、bundles＝dsh-base+dsh-headless＋patchReload startup、含 .dsh-module-fallback＝0.1.5 时代创建；用户再跑 headless 时宿主按需复用/重建，删除风险＝低-中）；⑥profiles/node_modules（08-14 与 web 同秒＝装机遗物；279 目**全为死链接树**〔文件量合计≈0〕、@deepseek-ai 250 目＝0.1.5 投影时代产物；删除风险＝低、删除前应逐链复核）。**本批零删除、转用户裁决**。
+- **profile 枚举副作用注记**：profiles/node_modules 与 repo-spec-* 四目录被 apply-preset-patch 的 profile 枚举计入「多 profile REFUSE」（80.2 ④ 之泄入源）——遗物清理后该工具在真实家根的可用性将部分恢复（此为遗物处置的连带收益，候用户裁）。
+
+### 80.6 T5 浏览器实验清单转呈
+- 043 t2 读数 [9] 节（E1/E1b/E2/E3＋E4 附属＋E5 条件行）逐字抄录停靠申报（零概括零改写），存档路径 var/scratch/exe-boot-043-web/t2/t2-reading.txt 标注。
+
+### 80.7 T6 push（预批）与 T7 终验
+- push 三笔（5afd733／19ddbe2／本笔）直连通道＋ls-remote 复核远端 master 尾＝记账笔③；tag 不打（v1.3.0 已钉）；读数 var/scratch/exe-boot-045-web/t6/。终验读数 var/scratch/exe-boot-045-web/t7/（树净＋web 侧基线全等＋桌面侧除清理面全等＋进程空集＋证据区 t0–t7 归档）。
