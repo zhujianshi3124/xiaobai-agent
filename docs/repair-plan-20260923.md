@@ -4370,3 +4370,44 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 ### 78.5 T4 收尾
 - 真实侧终验七件 sha 全 prefix/full match＋暂停件 MATCH＝**真实侧零写入闭合**（全批对真实侧仅读：无 GET、无 boot、无 dump-config 实侧运行）；零残留进程、3080/3099/3100 全 free；证据区 t0–t4＋sandbox-home 刷新副本归档。
 - CHANGELOG 不加（勘察/盘点动作、非包对外行为面，申报在案）；debt 不动（浏览器案判读＝环境性触发候验、非缺陷，78.3 已述）。
+
+## 79. 发布执行批：版本对齐＋小尾巴清理＋GitHub push＋tag v1.3.0（EXE-BOOT-044 · 2026-10-05 · 真实写入批＋对外发布批·本链首次对外发布）
+
+### 79.0 裁决面与通道偏离如实记
+- **通道偏离一笔**：批单字面 push 走「代理 7897＋HTTP/1.1」，T0 实勘代理 7897 拒连（与 043 同形态）；按批单 T0 条款「探测结果决定 T3 分支、任一路通＝T3 执行」改**直连＋HTTP/1.1** 执行 exit 0（043 直连偏离如实记同款先例）。npm publish 不做（未批＋零令牌红线）；push 凭据经 credential manager 静默通过、GIT_TERMINAL_PROMPT=0＋GCM_INTERACTIVE=never 预置（零令牌入档、零交互弹窗）。
+- **pet.json 归因结案**：78.2(c) pet.json 484B→505B 一笔经用户确认＝用户窗宠物启用足迹，结案。
+
+### 79.1 T0 全绿（读数 var/scratch/exe-boot-044-web/t0/）
+- 链尾 57ea384 树净；领先 `7c1f47d..HEAD` 恰 26 笔（043 计 25＋043 记账笔）；进程空集、3080/3099/3100 全 free。
+- **基线九件全 MATCH**：patch 件 `eebd3f6b`/22180B（mtime 同 043 台账＝用户启用窗后零漂移）、web profile package.json `0853a872`、cordis.yml `c300dcf2`、pnpm-lock `d13cd2cd`、梁神件 `12ca00a6`、家根 024 件 `bdc8bbc7`、settings 导入件 `08fa43c8`、暂停件 `96c202ea`＋原名缺席；web pnpm-workspace/.npmrc 新入册基线。唯一 MATCH=False 系本批脚本对 042 沙箱副本期望串笔误（`1f03973b`＝042 彩排末态、与 043 T0 观测逐字一致）＝对表通过零漂移，脚本笔误如实记。
+- **网络两路探测**：代理拒连（Failed to connect over proxy 127.0.0.1）＋**直连 exit 0**——GitHub 发布仓实勘：master=`7c1f47d`（恰本地领先基＝纯 fast-forward 形）＋v1.0.0=`77b980b2`（远端无 `^{}` 解引用行＝轻量 tag，与本地 cat-file -t=commit 双证先例）。
+- **桌面 .bin 实勘（红线 3 报告项）**：3 目且全为 dsh-doctor 三 shim＝桌面侧 shim 遗物在场，本轮零触碰候另批。
+
+### 79.2 T1 版本对齐＋记账分笔① `4bcc72f`（读数 var/scratch/exe-boot-044-web/t1/）
+- **CHANGELOG 形态**＝[Unreleased] 待转正（批单①式吻合；全文件仅此一个版本节、无 compare 尾注）→ 转正 `[1.3.0] - 2026-10-05`；package.json version 1.0.0→1.3.0；test/doctor-cli-bundled.test.mjs 的 S2.5-4 版本钉断言随批同步 1.3.0〔钉命题「一个版本号管全部」不变，028 批 23e01ec 同款纪律〕；diff 恰 3 文件各 1 行。
+- **提交前读数（全数如实入账，对基线 553/0/0/0 的偏离全归因）**：全量套件 **548/553，5 红两根**——**①039 换树根 4 笔**（test/w2-restart-hint.test.mjs＝preset-patch-state.json 账钉的 npm 全局 0.1.5 预设三件 **ABSENT**＋liangshen 笔 sha 漂移〔账 acf18889 vs 盘 12ca00a6〕→presetState.patched=false→compact-router 未挂载态→effectNote 缺席〔panel/manager/snapshot.mjs 非 mounted 卡不下发提示位〕；test/preset-patch-020.test.mjs 版本交叉校验笔＝locatePresetsDir 旧树候选同因缺席→REFUSE 走「profile-patch form detected」文案支非「DSH_HOME is explicitly set」支；同文件 legacy 环境重定向笔＝真实安装树已 0.2.x→decideChannel 入新通道→真实家根 8 profiles 多 profile REFUSE 泄入夹具〔工具探测真实家根为既定行为、该测试未重定向 DSH_HOME〕；test/doctor-cli-bundled.test.mjs 两笔 0/0/0 断言＝被 mount.body-without-row 警示击穿＝与 CLI dry-run 同源）——**净树 stash 隔离重跑同红＝先于本批存在、非本批引入**；**②版本钉根 1 笔**＝本批 bump 连带，随批同步后 6 红→5 红＝**本批净变化零新增红**。doctor dry-run **0e/1w/1i**（真实家根；warning＝compact-router 已安装未挂载与①同根、**043 副本家根下复现同笔**＝039 后稳态非新发；info＝家根 .agent-presets 下 liangshen.bak-20260914 备份件旧称 `@local/dsh-toolkit` 失效引用之真读数；空家根等价法不适用＝doctor 拒空家根 exit 3，如实记）。doc-ref-guard 自证格 **59/59 全绿红集空** exit 0。npm pack dry-run **129 文件**口径对 043 不变（xiaobai-agent-1.3.0.tgz）。账本刷新/测试再钉杆候另批，不在本批 scope。
+- **工具注记**：PowerShell 5.1 `>` 重定向产出 UTF-16LE 日志＝BOM 感知解码后提取；git stash push/pop 两文件循环安全闭合、stash 清零。
+
+### 79.3 T2 小尾巴清理（读数 var/scratch/exe-boot-044-web/t2/）
+- **repo-spec 四路实勘定谳**：声明面＝web profile package.json 依赖行（沙箱 tarball 的 file: 依赖）；安装面 profile＝node_modules\dsh-repo-spec 实体 v0.1.0；安装面全局＝**npm -g `repo-spec-cli@0.1.0`**（四路之 npm 路直接命中）；pnpm -g 路因 PATH 告警未出清单→磁盘直查补全（pnpm root 仅 bin/store、无全局包）。
+- **正规移除**：`pnpm remove dsh-repo-spec` exit 0（826ms；声明行出、依赖键序重排＝pnpm 语义）＋`npm rm -g repo-spec-cli` exit 0（removed 4 packages；dsh 全局树无损）。沙箱 tarball 原件不动（沙箱地盘留档）。
+- **三自建悬空链删除**：injector（→..\suite\dsh-routing-suite\injector）/route（→D:\route）/route-suite（→D:\route-suite）——type/target 先证三目标全缺席、后删链本体。
+- **.bin 三 shim 删除**：dsh-doctor 三件（sha 先录后删），**.bin 48→45**。
+- **静态核验全绿**：六件对账 MATCH（patch 红线 `eebd3f6b` 不变；package.json 新基线 **477B `a645ea22`**、pnpm-lock 新基线 **20013B `f9768ec3`**＝移除合法变更、即 T2 新基线台账；cordis.yml/workspace/.npmrc 不变）；node_modules 零新增悬空（唯一链接＝xiaobai-agent junction 目标在；**pnpm remove 未误伤三链与 junction**）；top-level 46 目恰 −4（dsh-repo-spec/injector/route/route-suite）；bundles 声明面对实装一致（dsh-base/dsh-web-app 全局宿主树在场＋dshmarket/dsh-web-all/dsh-ops-console profile 在场）；**store 册面 7=7 零变动零册外新增**；红线七件＋暂停件全程 MATCH；进程窗口 watch 零非空标题＝零 GUI；备份双件 src=dst 在案（回退层）。
+- **T2 附带发现（零触碰、候裁）**：家根 profiles 8 条目全早于 034 全绿时点——repo-spec-e2/qa/test/web 四目录（2026-09-19，repo-spec e2e 足迹）＋headless（09-17，含 .dsh-module-fallback）＋**profiles/node_modules**（08-14 与 web profile 同秒＝装机遗物、279 子目）＋desktop（09-30）；处置候用户裁。
+
+### 79.4 T3 发布动作全绿（读数 var/scratch/exe-boot-044-web/t3/）
+- pre-push ls-remote 复勘：远端 master=`7c1f47d` 无漂移（非 fast-forward 风险排除，红线 1 全程未触）。
+- `push origin master` exit 0＝**`7c1f47d..4bcc72f  master -> master`**（领先 27 笔一次送达、纯 FF）。
+- 轻量 tag `v1.3.0` 钉 T1 代码笔 `4bcc72f`（cat-file -t=commit，照 v1.0.0 先例）；`push origin v1.3.0` exit 0＝`* [new tag]  v1.3.0 -> v1.3.0`。
+- post ls-remote 双复核：远端 master=4bcc72f＝本地尾 ✓；远端 v1.3.0=4bcc72f＝T1 笔 ✓；远端 refs 全景＝HEAD/master 4bcc72f＋v1.0.0 77b980b2（不动）＋v1.3.0 4bcc72f。
+
+### 79.5 T4 记账＋补推
+- 本节即记账分笔②（纯追加；提交前查暂存区＋守卫必跑，读数 var/scratch/exe-boot-044-web/t4/guard-pre-commit.log）。补推 master（送本节上远端）＋ls-remote 复核远端尾＝本笔，读数 var/scratch/exe-boot-044-web/t4/。
+- CHANGELOG 不加（发布执行动作＝79.2 转正即对外面、无新对外行为面，申报在案）；debt 不动（79.2/79.3 发现均列候裁清单位、非缺陷入册；debt-039-a 挂回窗前置照 043 维持）。
+
+### 79.6 待裁未决清单（候批）
+- ①039 根测试再钉杆/账本刷新批：w2-restart-hint／preset-patch-020 两笔／doctor-cli-bundled 两笔 0/0/0 断言之 039 世界再钉＋preset-patch-state 账刷新（刷新后 doctor mount 警示与 stale-in-backup info 之再裁一并）。
+- ②桌面 .bin 三 shim（79.1 报告项）——桌面域候另批。
+- ③家根 profiles 遗物处置：repo-spec-e2/qa/test/web 四目录＋headless＋profiles/node_modules（79.3 附带发现）。
+- ④npm publish（未批＋零令牌；npm 账号可选项候用户）；debt-039-a（dsh.bundle 声明＋模板填空）挂回窗候裁照旧。
