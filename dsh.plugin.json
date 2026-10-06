@@ -2,7 +2,7 @@
   "name": "xiaobai-agent",
   "id": "dsh/toolkit",
   "displayName": "DSH 工具箱（registry/doctor/面板总装）",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "contract": "^1.0",
   "requires": {
     "node": ">=22",

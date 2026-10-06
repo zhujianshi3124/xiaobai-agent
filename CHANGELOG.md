@@ -6,6 +6,17 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### suite manifest 版本对齐：dsh.plugin.json 1.0.0 → 1.3.0（EXE-BOOT-046）
+
+- 根 `dsh.plugin.json`（套件自描述，id `dsh/toolkit`）的 `version` 此前停在
+  1.0.0，而包版本自 1.3.0 起发布——面板插件卡片徽章直出该 manifest 的
+  `version`，用户可见"v1.0.0"与包/CHANGELOG 的 1.3.0 漂移。实勘确认该字段
+  零兼容决策依赖（契约兼容走 `contract: "^1.0"`、宿主兼容走
+  `requires.dshRuntime`），按"一个版本号管全部"口径对齐 1.3.0，并加
+  版本钉断言（manifest version 须等于包版本）。
+- 四张子插件卡（lib/*）与 panel 的 manifest 版本仍为 1.0.0，同族口径候裁
+  另批处理（本批授权面仅 suite manifest）。
+
 ### bundle 通道上线：xiaobai-agent 可经 0.2.0 profile bundles 挂载（debt-039-a 施工，2026-10-05，EXE-BOOT-045）
 
 - **dsh.bundle 声明**：package.json 新增 `dsh.bundle.patch`（指向新增的零占位符

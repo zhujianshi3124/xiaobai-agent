@@ -82,6 +82,8 @@ test('S2.5-4: 独立入口三件接线 —— bin/exports/files（含 signals �
   assert.ok(pkg.files.includes('doctor-signals.json'), 'files 含 doctor-signals.json（engine 协议文件随包）')
   assert.ok(pkg.files.includes('!doctor/cli/selftest'), 'files 排除 doctor/cli/test（G6 同口径）')
   assert.equal(pkg.version, '1.3.0', 'doctor 成员随桶版本（一个版本号管全部）')
+  const suiteManifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'dsh.plugin.json'), 'utf8'))
+  assert.equal(suiteManifest.version, pkg.version, 'suite manifest（dsh.plugin.json）随桶版本——面板卡片徽章直出此值，不得与包版本漂移')
   assert.equal(fs.existsSync(path.join(ROOT, 'doctor', 'README.md')), true, 'doctor 成员 README 在场')
 })
 
