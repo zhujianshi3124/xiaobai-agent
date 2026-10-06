@@ -1513,6 +1513,35 @@ function buildMountIssues(records) {
   // 旧口径「任一预设 patched ⇒ 任何本体都算已挂载」会把 body-vs-mount 检查整体压哑
   // （A1⑦/A3⑥ 要求软卸载后仍产出缺席提示），故收窄到声明名单；未声明该字段时回退旧口径。
   const presetNames = Array.isArray(signals.presetManagedNames) ? signals.presetManagedNames : null;
+  // 020 命名空间挂载对账（EXE-BOOT-046 盲区修复）：preset-patch-state.json 的 "020"
+  // 命名空间按 blockId 记录 0.2.x profile-patch 通道写入的覆盖块（apply-preset-patch.mjs
+  // VARIANT_STATE_NS）；039 后世界挂载态真实落在该通道，legacy 条目全灭时仅读顶层键会
+  // 一致误判未挂载。对账判据＝按 blockSha 复核盘上块（profile patch 内 BEGIN/END 标记
+  // 行之间的行集 sha256 === 记录 blockSha）。块定界符与 id 提取同脚本逐字一致——对账
+  // 的是套件自有状态文件的格式知识，与 legacy 条目的 file/patchedSha 字段同类，非插件名。
+  const PRESET_MARKER_BEGIN = '# >>> xiaobai-agent preset override BEGIN ';
+  const PRESET_MARKER_END_PREFIX = '# <<< xiaobai-agent preset override END ';
+  function preset020BlockMounted(rec, blockId) {
+    if (!rec || typeof rec !== 'object' || typeof rec.profileDir !== 'string' || typeof rec.blockSha !== 'string') return false;
+    try {
+      const patchPath = path.join(rec.profileDir, 'cordis.patch.yml');
+      if (!fs.existsSync(patchPath)) return false;
+      const lines = fs.readFileSync(patchPath, 'utf8').split(/\r?\n/);
+      for (let i = 0; i < lines.length; i++) {
+        if (!lines[i].startsWith(PRESET_MARKER_BEGIN)) continue;
+        const id = lines[i].slice(PRESET_MARKER_BEGIN.length).split(' ')[0];
+        if (id !== blockId) continue;
+        for (let k = i + 1; k < lines.length; k++) {
+          if (lines[k].startsWith(PRESET_MARKER_BEGIN)) return false; // 嵌套/未闭合＝不可信
+          if (lines[k].startsWith(PRESET_MARKER_END_PREFIX + blockId)) {
+            return sha256Text(lines.slice(i, k + 1).join('\n')) === rec.blockSha;
+          }
+        }
+        return false;
+      }
+      return false;
+    } catch (e) { return false; }
+  }
   function presetMountedFor(pkgName) {
     if (!presetState || typeof presetState !== 'object') return false;
     if (presetNames) {
@@ -1522,11 +1551,18 @@ function buildMountIssues(records) {
       if (!hit) return false;
     }
     for (const id of Object.keys(presetState)) {
+      if (id === '020') continue; // 命名空间键，非预设 id（下方按 blockSha 对账）
       const entry = presetState[id];
       try {
         if (entry && entry.file && entry.patchedSha && fs.existsSync(entry.file)
             && sha256Text(fs.readFileSync(entry.file, 'utf8')) === entry.patchedSha) return true;
       } catch (e) { /* 读不了视为未挂载 */ }
+    }
+    const ns020 = presetState['020'];
+    if (ns020 && typeof ns020 === 'object') {
+      for (const blockId of Object.keys(ns020)) {
+        if (preset020BlockMounted(ns020[blockId], blockId)) return true;
+      }
     }
     return false;
   }
