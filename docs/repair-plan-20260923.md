@@ -4505,6 +4505,7 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 
 ### 81.7 T6 push（预批）与 T7 终验
 - push 四笔（0a6cf51／4ffa7f5／728998e／本笔）直连通道＋ls-remote 复核远端 master 尾＝记账末笔；tag 不打（v1.3.0 已钉）；读数 var/scratch/exe-boot-046-web/t6/。终验读数 var/scratch/exe-boot-046-web/t7/（树净＋web patch eebd3f6b＋package.json/pnpm-lock 新基线在台账＋家根六件缺席＋现役五面全等＋桌面零变动＋进程空集＋证据区 t0–t7 归档）。
+- **push 实况订正笔（如实入账）**：首推遇瞬态断连（Recv failure: Connection was reset）→复探两路皆败跨 ~4 分钟多轮＝按批单挂起候网络窗（四笔全程安全在本地、远端无漂移）；~15 分钟后窗口重开补推 **exit 0**＝`1e51d4d..a3b10a2 master -> master` 纯 FF 四笔一次送达；ls-remote 终复核远端 master 尾＝a3b10a2（记账笔）、v1.3.0 tag 未动。全程读数 var/scratch/exe-boot-046-web/t6/push-suspend-reading.txt＋ls-remote-final.txt。本订正行随补推笔上远端（远端尾＝本笔）。
 
 ### 81.8 待裁未决清单
 - **relic-6（profiles/node_modules）处置**：610 链 401 活目标（0.2.0 树复活路径）——拆除（link-only 不伤目标体）或保留，候用户裁；拆除后 bare --status 仍 REFUSE（desktop＋web 两真 profile），故「部分恢复可用」收益以 --profile 显式路径为主。
