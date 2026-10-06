@@ -2,7 +2,7 @@
   "name": "xiaobai-agent/search-router",
   "id": "dsh/search-router",
   "displayName": "搜索路由（按会话模型选后端）",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "contract": "^1.0",
   "provides": {
     "entry": "./index.js",

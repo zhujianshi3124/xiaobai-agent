@@ -2,7 +2,7 @@
   "name": "xiaobai-agent/rate-throttle",
   "id": "dsh/rate-throttle",
   "displayName": "速率限制与换源路由",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "contract": "^1.0",
   "provides": {
     "entry": "./index.js",

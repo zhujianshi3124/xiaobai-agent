@@ -6,6 +6,22 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### 成员 manifest 版本对齐：lib 四卡与 panel/package.json 1.0.0 → 1.3.0（EXE-BOOT-047）
+
+- 046 遗留的同族口径候裁在本批收口：四张子插件卡（`lib/agent-memory`、
+  `lib/compact-router`、`lib/rate-throttle`、`lib/search-router`）的
+  `dsh.plugin.json` `version` 与 `panel/package.json` 的 `version` 由 1.0.0
+  对齐 1.3.0。五份带契约清单的 `version` 是契约必填字段且由面板插件卡片
+  徽章直出（v2 API entryView），此前用户可见"v1.0.0"与包版本 1.3.0 漂移；
+  实勘确认零兼容决策依赖（契约兼容走 `contract: "^1.0"`、宿主兼容走
+  `requires.dshRuntime`），按"一个版本号管全部"口径随桶，并加版本钉断言
+  （五份清单＋panel/package.json 的 version 须等于包版本）。
+- **046 注记订正**：046 曾记"panel 的 dsh.plugin.json 版本为 1.0.0"——实勘
+  为误记，`panel/dsh.plugin.json` 本就**没有** `version` 字段（其
+  `manifestVersion: 1` 是新格式标记非 semver；panel 无契约面、亦非 registry
+  entry，不进徽章读取面），本批不动该文件、不外加字段；046 所见 1.0.0 实为
+  `panel/package.json` 的版本。
+
 ### suite manifest 版本对齐：dsh.plugin.json 1.0.0 → 1.3.0（EXE-BOOT-046）
 
 - 根 `dsh.plugin.json`（套件自描述，id `dsh/toolkit`）的 `version` 此前停在

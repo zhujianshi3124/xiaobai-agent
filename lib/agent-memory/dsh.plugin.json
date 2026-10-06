@@ -2,7 +2,7 @@
   "name": "xiaobai-agent/agent-memory",
   "id": "dsh/agent-memory",
   "displayName": "智能体内存台账",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "contract": "^1.0",
   "provides": {
     "inject": ["systemPrompt"]
