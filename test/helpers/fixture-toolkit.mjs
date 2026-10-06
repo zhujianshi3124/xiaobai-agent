@@ -95,3 +95,56 @@ export function writeValidLedger(toolkitRoot, { presetFile, presetSha }) {
     },
   }, null, 2))
 }
+
+// ── 020 通道夹具（EXE-BOOT-046 双命名空间对账用例）────────────────────────────
+// 039 后世界：legacy 台账条目全灭（npm 全局预设件路径消亡），挂载态真实落在
+// preset-patch-state.json 的 "020" 命名空间（profile-patch 通道按 blockSha 记账）。
+// 本夹具提供一个含覆盖块的 profile patch＋一笔 020 台账，供断言两个挂载态消费者
+// （snapshot presetPatchedAny／doctor presetMountedFor）按 blockSha 对账成功。
+
+/** 临时 profile patch：含一个 marker 包裹的覆盖块（块形与 apply-preset-patch 写形一致）。 */
+export function buildFixtureProfilePatch({ tag = 'fx', blockId = 'liangshen' } = {}) {
+  const profileDir = mkdtempSync(join(tmpdir(), 'fixture-profile020-' + tag + '-'))
+  const blockLines = [
+    '# >>> xiaobai-agent preset override BEGIN ' + blockId + ' (fixture block; rollback: run --undo --only ' + blockId + ')',
+    '- id: liangshen-row',
+    "  name: '@deepseek-ai/dsh-agent-preset'",
+    '  config:',
+    '    id: ' + blockId,
+    '    order: 1',
+    '    plugins:',
+    '      - id: compaction',
+    "        name: 'xiaobai-agent/compact-router'",
+    '# <<< xiaobai-agent preset override END ' + blockId,
+  ]
+  writeFileSync(join(profileDir, 'cordis.patch.yml'), '[]\n\n' + blockLines.join('\n') + '\n')
+  return { profileDir, blockId, blockSha: shaText(blockLines.join('\n')) }
+}
+
+/**
+ * 写一笔「legacy 死条目＋020 命名空间」台账（039 后真实形态的确定性镜像）。
+ * legacy 条目 file 指向不存在的路径＝死条目；020 记录按 blockSha 对账。
+ * blockShaOverride 用于负控（账本 sha 与盘上块不一致 ⇒ 未挂载）。
+ */
+export function write020Ledger(toolkitRoot, { profileDir, blockId, blockSha, blockShaOverride } = {}) {
+  writeFileSync(join(toolkitRoot, 'preset-patch-state.json'), JSON.stringify({
+    standard: {
+      file: join(toolkitRoot, 'preset-backups', 'dead-legacy-entry.agent.cordis.yml'),
+      originalSha: '0'.repeat(64),
+      patchedSha: '0'.repeat(64),
+      patchedAt: '2026-09-14T05:13:13.000Z',
+      note: 'EXE-BOOT-046 fixture: DEAD legacy entry (post-039 world; npm-global preset gone)',
+    },
+    '020': {
+      [blockId]: {
+        profileDir,
+        presetId: blockId,
+        targetRowId: 'liangshen-row',
+        baseKind: 'profile-row',
+        blockSha: blockShaOverride ?? blockSha,
+        patchedAt: '2026-10-06T00:00:00.000Z',
+        note: 'EXE-BOOT-046 fixture: 020-namespace record (profile-patch channel)',
+      },
+    },
+  }, null, 2))
+}

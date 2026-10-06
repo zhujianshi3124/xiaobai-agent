@@ -112,9 +112,46 @@ function loadJson(abs) {
   }
 }
 
+// 020 命名空间（apply-preset-patch.mjs VARIANT_STATE_NS）：0.2.x profile-patch 通道
+// 按块记账。块定界符与 id 提取同脚本逐字一致；账本记录 interpretation 与 legacy
+// 条目（file/patchedSha）同类，都是套件自有状态文件的格式知识。
+const LEDGER_NS_020 = "020";
+const PRESET_MARKER_BEGIN = "# >>> xiaobai-agent preset override BEGIN ";
+const PRESET_MARKER_END_PREFIX = "# <<< xiaobai-agent preset override END ";
+
+/**
+ * 020 记录按 blockSha 对账盘上覆盖块：profile patch 内 BEGIN/END 标记行之间的
+ * 行集 sha256 === 记录 blockSha 才算挂载。读不了/未闭合/对不上＝未挂载（不盲信账本）。
+ */
+function preset020BlockMounted(rec, blockId) {
+  if (!rec || typeof rec !== "object" || typeof rec.profileDir !== "string" || typeof rec.blockSha !== "string") return false;
+  try {
+    const patchPath = join(rec.profileDir, "cordis.patch.yml");
+    if (!existsSync(patchPath)) return false;
+    const lines = readFileSync(patchPath, "utf8").split(/\r?\n/);
+    for (let i = 0; i < lines.length; i++) {
+      if (!lines[i].startsWith(PRESET_MARKER_BEGIN)) continue;
+      const id = lines[i].slice(PRESET_MARKER_BEGIN.length).split(" ")[0];
+      if (id !== blockId) continue;
+      for (let k = i + 1; k < lines.length; k++) {
+        if (lines[k].startsWith(PRESET_MARKER_BEGIN)) return false; // 嵌套/未闭合＝不可信
+        if (lines[k].startsWith(PRESET_MARKER_END_PREFIX + blockId)) {
+          return createHashSha256(lines.slice(i, k + 1).join("\n")) === rec.blockSha;
+        }
+      }
+      return false;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * P2.4：compact-router 预设挂载态（快照现读，不缓存）。
- * 判据 = preset-patch-state.json 存在且该预设当前文件 sha == 记录的 patchedSha。
+ * 判据 = preset-patch-state.json 存在且该预设当前文件 sha == 记录的 patchedSha；
+ * 020 命名空间按 blockSha 对账（EXE-BOOT-046 盲区修复——039 后世界挂载态真实
+ * 落在 profile-patch 通道，legacy 条目全灭时此前一致误判未挂载）。
  * 状态文件被 U9 纪律保持与磁盘对账；脚本侧 --status 是权威，但快照内不拉子进程。
  */
 function presetPatchedAny(toolkitRoot) {
@@ -123,6 +160,7 @@ function presetPatchedAny(toolkitRoot) {
   const all = {};
   let any = false;
   for (const [id, entry] of Object.entries(state)) {
+    if (id === LEDGER_NS_020) continue; // 命名空间键，非预设 id（下方按 blockSha 对账）
     let patched = false;
     try {
       if (entry && entry.file && entry.patchedSha && existsSync(entry.file)) {
@@ -133,6 +171,14 @@ function presetPatchedAny(toolkitRoot) {
     }
     all[id] = patched;
     if (patched) any = true;
+  }
+  const ns020 = state[LEDGER_NS_020];
+  if (ns020 && typeof ns020 === "object") {
+    for (const [blockId, rec] of Object.entries(ns020)) {
+      const patched = preset020BlockMounted(rec, blockId);
+      all[LEDGER_NS_020 + "/" + blockId] = patched;
+      if (patched) any = true;
+    }
   }
   return { patched: any, all };
 }
