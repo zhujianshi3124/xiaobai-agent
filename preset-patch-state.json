@@ -24,8 +24,34 @@
     "file": "C:/Users/LENOVO/.dsh/.agent-presets/liangshen/agent.cordis.yml",
     "backup": "D:/dsh-plugins/dsh-toolkit/preset-backups/liangshen.agent.cordis.yml.bak",
     "originalSha": "0c9d4015838cdf0c06b1d8f3e5bc9c8911976ecdce84acb8e5c2f1d3796c2ada",
-    "patchedSha": "acf1888929763b4f4f0f2616877458a1d9a67974818c3e1d2c97f2ff992145ff",
-    "patchedAt": "2026-09-18T07:58:55.761Z",
-    "note": "第 19 轮 U9 刷新：marker 与磁盘重新对账（内容自 2026-09-14 改写后未再变化，仅 hash 补账）"
+    "patchedSha": "12ca00a6cbc5bfa3b8112f2c1f2eead3a0cefa87294e687ef381a0e1ec2f8d12",
+    "patchedAt": "2026-10-06T09:18:16.385Z",
+    "note": "EXE-BOOT-046 T3 刷新：U9 式 hash 补账（039 后世界重录；内容仍含 xiaobai-agent/compact-router 行，patched 态成立；前值 acf18889…→现值 12ca00a6…）"
+  },
+  "020": {
+    "standard": {
+      "profile": "web",
+      "profileDir": "C:\\Users\\LENOVO\\.dsh\\profiles\\web",
+      "presetId": "standard",
+      "targetRowId": "preset-standard",
+      "baseKind": "bundle",
+      "baseSource": "bundle @deepseek-ai/dsh-web-app (C:\\Users\\LENOVO\\AppData\\Roaming\\npm\\node_modules\\@deepseek-ai\\dsh\\node_modules\\@deepseek-ai\\dsh-web-app\\presets\\standard.patch.yml)",
+      "baseFileSha": "6cd2f197737fc94a45e487d0bb57869461dd6f392d45f6429b576e75d973eda8",
+      "blockSha": "3f4300f25fea41f30e85fb63782b5e13a8118f81a4b03fcc8a4675701948d76c",
+      "patchedAt": "2026-10-06T09:17:33.413Z",
+      "backup": "D:\\dsh-toolkit-opensource\\preset-backups\\profile-cordis-patch.web.bak"
+    },
+    "ptc": {
+      "profile": "web",
+      "profileDir": "C:\\Users\\LENOVO\\.dsh\\profiles\\web",
+      "presetId": "ptc",
+      "targetRowId": "preset-ptc",
+      "baseKind": "bundle",
+      "baseSource": "bundle @deepseek-ai/dsh-web-app (C:\\Users\\LENOVO\\AppData\\Roaming\\npm\\node_modules\\@deepseek-ai\\dsh\\node_modules\\@deepseek-ai\\dsh-web-app\\presets\\ptc.patch.yml)",
+      "baseFileSha": "8fcf6b04dce7c2c76fab925129f6ac9b05ebb546840508e6cde72aa2da991832",
+      "blockSha": "281a2236565c0022eb2478698d805c00d2b4090eaec0ff87765a2111d99e4916",
+      "patchedAt": "2026-10-06T09:17:33.417Z",
+      "backup": "D:\\dsh-toolkit-opensource\\preset-backups\\profile-cordis-patch.web.bak"
+    }
   }
 }
