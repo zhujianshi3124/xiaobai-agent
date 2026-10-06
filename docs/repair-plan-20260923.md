@@ -4514,3 +4514,51 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 - **真侧首启后确认**：patch sha 静态复读（预期 eebd3f6b 零演化）；面板 tab 目视（设置→插件 tab）。
 - **浏览器案**：证据链定稿（证词＋沙箱双相位＋open@ 勘定）；RAV 保留、零处置建议。
 
+---
+
+## 82. relic-6 活体链接树拆除＋成员 manifest 版本面核裁＋apply-preset-patch 复验批（EXE-BOOT-047 · 2026-10-06 · 真实写入批＋对外 push 预批）
+
+### 82.0 裁决面与总账
+- 用户批单：真实写入批（relic-6 拆除已批「拆」＋开源仓代码笔成员 manifest「先核后动」＋apply-preset-patch 只读复验＋对外 push 预批「做完照常推」沿承）；npm publish 不做（红线 2）；主版本面 1.3.0 不动（红线 6）；web patch eebd3f6b／profile package.json a0c78114／pnpm-lock f9768ec3／梁神件 12ca00a6／024 件 bdc8bbc7／settings 件 08fa43c8／暂停件 96c202ea／junction xiaobai-agent 零触碰（红线 4）；桌面 profile 全域、冻结仓 D:\dsh-plugins\dsh-toolkit、doctor 仓零触碰（红线 5）；执行侧最高纪律「指令与实况逐项核实、有疑先报」全程兑现。
+- 本批两笔：T2 成员 manifest 对齐 `e669420` → 本节记账笔。全部单笔可 revert。
+- 偏离三笔（如实入账，见 82.2）：彩排 attempt 1 仓根杂散链（已清＋仓净复核）／v2 拆除日志覆写（已自持久化输出恢复＋双向对账）／doctor 输出 PS 管道转码伪象（C6-bis 字节级重捕获，判定内容未变）。
+
+### 82.1 T0（全绿；读数 var/scratch/exe-boot-047-web/t0/）
+- 链尾 14af23b 树净 HEAD-MATCH=True；进程空集、3080/3099/3100 全 free。
+- 基线台账 14 件全 MATCH（web package.json 按 046-T4 新基线 a0c78114·502B 对表）＋桌面 .bin 0 目＋web junction LinkType=Junction→D:\dsh-toolkit-opensource；七遗物仅 relic-6 在场（1–5、7 缺席＝046 后形态）＋保护名单在场＋.credentials.yaml EXISTS=True 永未读。
+- **npm 全局 0.2.0-rc.2 树健康基线预录（T1 零损伤对照基准）**：dsh package.json 7333B sha=0a85203e…＋bin 入口件（package.json bin 字段所指脚本）sha=1a03dee1…＋**全树逐文件 sha manifest＝26616 文件／3365 目录／树内 0 链接／474,975,005B**（npm-tree-manifest-before.txt）＋npm ls -g --depth=0 exit 0＋dsh --version 只读探针 exit 0（0.2.0-rc.2）且 ~/.dsh 顶层零增量（探针零副作用实证）。
+- 网络两路：代理 7897 拒连（沿承 043–046）＋**直连 exit 0**（远端 master=14af23b 无漂移、纯 FF 前提成立）→ push＝直连通道执行。
+- pnpm store path=D:\.pnpm-store\v11（本批零 pnpm 操作，红线 8 watch-only）。
+
+### 82.2 T1 relic-6 拆除（用户已批「拆」；读数 var/scratch/exe-boot-047-web/t1/）
+- **A1 证据固化（不可再生档案）**：全深勘链（永不进入链接）＝top-level 279／reparse 610／活体（目标在场）401／断链 209；401 活体目标全部指 npm 全局 dsh 树；209 断链中 607 条指 npm 树内已消亡路径、**2 条指 D:\deepseek-harness-master（0.1.5 时代 dev 树路径、目标缺席）＝046 §81.2「全部指向 npm 全局」之记载在此 2 条上如实订正**。与 046 档案逐条对账＝610/610 路径全对齐、target-exists 旗零漂移（对账脚本报的 1 缺 1 增系 046 档案首行 UTF-8 BOM 伪象，非状态漂移）；046 同法复刻（depth-3 Walk-NM）交叉验证同数（610/401/209、真实文件 0）。档案＝relic6-links-047.txt（LIVE/BROKEN 分列）＋relic6-survey-047.json（含 401 活体目标 package.json 金丝雀 sha）＋relic6-delta-vs-046.txt。
+- **A2 引用复扫＝XREF-GATE PASS**：现役五面＋梁神件＋settings 件＋双 profile cordis.yml 共九面扫 profiles\node_modules 路径字面（反斜杠／正斜杠／双反斜杠三形）＝全 NONE。
+- **A3 沙箱彩排（安全门；读数 rehearsal-reading.txt）**：
+  - **attempt 1 无效（偏离①如实记）**：mklink 误用相对路径→6 条彩排 junction 落在 PS 进程 CWD＝开源仓根（未入 git、指向沙箱无害目标）——脚本自身 post-mklink 断言当场抓到（0/7 created）但未中止＝门未防住带病续跑；杂散链以 cmd rmdir（无 /s）逐条 link-only 拆除、仓 status 复核净、零受控文件触碰。attempt 2 改绝对路径＋「7/7 建成才放行」硬中止门。
+  - **attempt 2 实证（真实 PASS）**：Node 视角诊断（junction＝lstat/dirent isSymbolicLink=true、readlink 绝对目标）＋**P1 cmd rmdir（无 /s）与 P2 node fs.rmdirSync（顶/嵌两形）双证「只拆链接、目标逐字节不动」**（目标 manifest 前后全等）；P3 node fs.rmSync recursive 在 Node v24.19.0 同证 link-only（数据点、不作选型依据）；P4 PS Remove-Item -Force＝PS 5.1 NullReferenceException 拒删且目标无损（安全但不可用）；P5 PS Remove-Item -Recurse -Force＝本版 PS 亦呈 link-only（仍列禁用——版本差异风险，纪律不因单次观测解禁）；P6 node fs.unlinkSync 亦 link-only；**SAFE-FAIL**＝P1/P2 对真实非空目录拒删（目录非空／ENOTEMPTY）且内容无损＝误调不伤真实树。
+  - 执行原语选型＝P2 fs.rmdirSync（与 P1 同等已证、进程内零逐链 shell 开销），P1 为已证后备；gate 输出首选行 cmd-rmdir 与实际选型之差异如实注记。
+- **B 真侧拆除（分批＋批后校验）**：v1 拆 361/610（29 个 @-scope 桶全净＋顶层 accepts）后因「顶层 junction 桶拆除即目录消失→重扫 ENOENT 哨兵被误计残留」假警报中止（脚本缺陷，非拆除事故）；v2 预飞因 v1 日志行 `REMOVED|<path> -> <target>` 取段解析错判 361 条「凭空消失」＋**中止时覆写日志（执行失误②如实记）**中止零写入；日志自持久化执行输出全量恢复（recovery 脚本双向对账＝恢复 361＝勘单缺席 361、零差，removal-log-v1-recovered.txt 入档）→ v3（追加写＋双格式解析＋哨兵过滤＋桶消失＝0 残留）续跑拆余 249——**总计 610/610 全拆**（v3 pre-flight 平衡 361+249=610 零 mismatch、npm 金丝雀 package.json/bin.js 双 sha 前后全等、批后目标抽检两跑合计 108 例零坏、本跑 865ms；removal-log.txt／removal-result.json 在档）。
+- **尾处理（照批单）**：profiles/node_modules 残余＝29 个空壳 scope 目录（0 真实文件、0 残链）＝**照 045 桌面 .bin 先例保留并注明**；零真实文件残留、无候裁尾货。
+- **C 后验＝ALL-CLEAR（t1-post-reading.txt）**：基线 12 件＋暂停件 re-sha 全 MATCH＋web junction 完好；profiles 现形 desktop/node_modules/web、.agent-presets 现 liangshen；**npm 全局树零损伤＝逐文件 sha manifest 前后 IDENTICAL（26616/26616、0 增 0 删 0 变）**＋npm root shims 顶层零漂移＋npm ls -g exit 0＋dsh --version 0.2.0-rc.2 且 ~/.dsh 零增量；doctor dry-run **0e/0w/0i exit 0**；pnpm store path 不变、零 pnpm 操作。
+- **RAV 执行期观察＝零事件**（全程无弹窗、无拦截征象、无命令异常失败；610 链拆除未触发任何安全软件反应，如实记）。
+
+### 82.3 T2 成员 manifest 版本面（先核后动；记账分笔① `e669420`；读数 var/scratch/exe-boot-047-web/t2/）
+- **五面实勘（t2-survey.txt）**：①读取面＝panel/manager 之 v2 API entryView 直出 manifest.version（entryView 组装处，t2-survey.txt 引用行在档）→客户端插件卡片徽章（全仓唯一 manifest.version 消费点、用户可见面）②兼容决策＝registry/contract 零版本语义（compat/semver 扫描零命中；契约兼容走 contract ^1.0、宿主走 requires.dshRuntime；doctor 引擎「给了才查」仅形检非空 semver〔doctor 引擎 manifest 校验节〕）③测试钉值＝真实成员清单零钉（registry.test 两处均夹具自值；S2.5-4 仅钉 suite manifest；q2-layer-scan 对 panel/package.json 仅信息性打印）④发版联动先例＝「一个版本号管全部」（23e01ec/4bcc72f）＋046 T2 前例＋CHANGELOG 046 节明文「同族口径候裁另批」＝本批⑤独立版本语义＝无据（成员随单包发布、无独立 publish 面）→ **分支一（对齐）**。
+- **六件施工**：lib 四卡 dsh.plugin.json version 1.0.0→1.3.0（agent-memory/compact-router/rate-throttle/search-router——契约必填字段〔validate.ts 四必填 id/displayName/version/contract〕＋徽章面）＋panel/package.json version 1.0.0→1.3.0（同族版本面）；**panel/dsh.plugin.json 不动＝实勘订正 046 误记**——该文件本无 version 字段（manifestVersion:1 系新格式标记非 semver；无契约面、非 registry entry 不进 entryView），046 所见 1.0.0 实为 panel/package.json，本批不外加字段；test/provides-data.test.mjs 增成员版本随桶钉（五份带契约清单＋panel/package.json 的 version===package.json version；断言全新增、零放宽零删除）；CHANGELOG [Unreleased] 记账（含订正注记）。
+- **验收**：全量套件 **558/558 全绿 exit 0**（557＋新增 1 钉恰合账）＋doc-ref-guard 全绿红集空 exit 0＋pack **130 文件**现口径＋doctor dry-run 0e/0w/0i exit 0；numstat 实跑＝7 文件 36+/5−（CHANGELOG 16+、test 15+、五版本件各 1/1）。
+
+### 82.4 T3 apply-preset-patch 真实家根复验（只读 --status 零 apply；读数 var/scratch/exe-boot-047-web/t3/）
+- bare＝**REFUSED multiple profiles (desktop, node_modules, web)** exit 0——多 profile 门未开；29 空壳目录仍被 profile 枚举计入候选（如实观察，非缺陷定性）。**「多 profile REFUSE 消除」不成立（如实报）；「部分恢复可用」（045 §80.5 预言）以 --profile 显式路径形态兑现**。
+- --profile web＝standard **applied**／ptc **applied**／minimal SKIPPED（设计性 no compaction member）／cordis **drift**（content differs from ledger; may include web-editor edits＝用户编辑保护语义）＝046 T3 分笔② 真实刷新后的 applied 态跨批保持（80.2 盲区时代 drift 已翻 applied 之兑现持续在档）。
+- --profile desktop（本批首次实勘 desktop 侧 --status 形态）＝standard **applied**／ptc **applied**／minimal SKIPPED／cordis drift＝desktop patch（30204B e8ee7814，038 台账）内两块与 020 账本块级对账吻合。
+- 零写入证明：三跑后 web patch eebd3f6b／desktop patch e8ee7814 复读全等（红线 4 达成）。
+
+### 82.5 T4 push（预批）与 T5 终验
+- push 两笔（e669420／本记账笔）直连通道、不 force（红线 1）、遇非 fast-forward＝停报；ls-remote 复核远端 master 尾＝记账末笔；tag 不打（v1.3.0 已钉）；读数 var/scratch/exe-boot-047-web/t4/。
+- 终验：git log/status 树净＋relic-6 缺席（610 链零残）＋npm 全局树零损伤证明在档＋基线件全等＋进程空集、三端口 free＋证据区 t0–t5 归档于 D:\dsh-test-sandbox\var\scratch\exe-boot-047-web\（读数 var/scratch/exe-boot-047-web/t5/）。
+
+### 82.6 待裁未决清单
+- **cordis 020 块拒录重录**（沿承 §81.8）：本批复验 web/desktop 两侧同呈 drift（用户编辑保护语义）；重录需 re-apply＝patch 写入面，候用户另批。
+- **真侧首启确认**（沿承 §81.5/81.8）：patch sha 静态复读（预期 eebd3f6b 零演化）＋面板 tab 目视（设置→插件；T2 对齐后 lib 四卡徽章应显示 v1.3.0）——转呈协调侧候用户首启窗。
+- **node_modules 空壳目录的 profile 枚举面**：29 空壳使 apply-preset-patch bare 门保持三候选 REFUSED；若用户欲 bare 可用需删空壳目录（045 先例为保留）——本批照先例保留不动，留此候裁。
+
