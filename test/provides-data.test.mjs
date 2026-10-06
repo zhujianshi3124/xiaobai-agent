@@ -165,3 +165,18 @@ test('迁移后·五份带 contract 的清单整体过 validateManifest（现闸
     );
   }
 });
+
+// ── 五、成员版本面随桶（"一个版本号管全部"，EXE-BOOT-047 同族口径收口）──────────────
+// 五份带契约清单的 version 是契约必填且由面板卡片徽章直出（v2-api entryView），
+// 不得与包版本漂移；panel/package.json 同属成员版本面（q2-layer-scan 信息性取数）。
+// panel/dsh.plugin.json 无 version 字段＝manifestVersion 1 新格式形态（无契约面、
+// 非 registry entry），本钉不涉、亦不得借机外加字段。
+test('成员版本面随桶版本——五份带契约清单与 panel/package.json 不得与包版本漂移', () => {
+  const pkgVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
+  for (const key of CONTRACT_BEARERS) {
+    assert.equal(readManifest(PATHS[key]).version, pkgVersion,
+      `${PATHS[key]} 的 version 须随桶（${pkgVersion}）——徽章直出此值，漂移即用户可见裂缝`);
+  }
+  const panelPkg = JSON.parse(readFileSync(join(root, 'panel', 'package.json'), 'utf8'));
+  assert.equal(panelPkg.version, pkgVersion, 'panel/package.json 的 version 须随桶');
+});
