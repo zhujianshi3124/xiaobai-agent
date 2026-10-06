@@ -4450,3 +4450,66 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 
 ### 80.7 T6 push（预批）与 T7 终验
 - push 三笔（5afd733／19ddbe2／本笔）直连通道＋ls-remote 复核远端 master 尾＝记账笔③；tag 不打（v1.3.0 已钉）；读数 var/scratch/exe-boot-045-web/t6/。终验读数 var/scratch/exe-boot-045-web/t7/（树净＋web 侧基线全等＋桌面侧除清理面全等＋进程空集＋证据区 t0–t7 归档）。
+
+---
+
+## 81. 家根遗物清理＋账本盲区修复与真实刷新＋toolkit 面板挂载＋老版浏览器对照批（EXE-BOOT-046 · 2026-10-06 · 真实写入批＋对外 push 预批）
+
+### 81.0 裁决面与总账
+- 用户批单：真实写入批（开源仓代码笔＋真实家根清理七件已批＋真实 web profile 挂载与账本刷新已批＋对外 push 预批「做完照常推」沿承）；npm publish 不做（红线 2）；版本号 1.3.0 不动（红线 7）；doctor 仓零改动达成（红线 4）；执行侧最高纪律「指令与实况逐项核实、有疑先报」全程兑现。
+- 本批四笔（实际笔序照实报）：T2 suite manifest 对齐 `0a6cf51` → T3 分笔① 盲区修复代码＋测试 `4ffa7f5` → T3 分笔② 真实账本刷新 `728998e` → 本节记账笔。全部单笔可 revert。
+- **本批停报级发现一笔（relic-6，§81.2）**：045 勘单「死链接树」定性被现场实勘证伪，删除面自动门控跳过、转用户裁决。
+
+### 81.1 T0（全绿；读数 var/scratch/exe-boot-046-web/t0/）
+- 链尾 1e51d4d 树净 HEAD-MATCH=True；进程空集、3080/3099/3100 全 free。
+- 基线台账 14 件全 MATCH（web 七件＋暂停件 96c202ea 原名缺席＋044 T2 两新基线＋桌面三件）＋桌面 .bin **0 目**（045 T3 后形态）＋web junction LinkType=Junction→D:\dsh-toolkit-opensource。
+- 家根对 045 T4 勘单复核：七遗物全在场（尺寸/mtime 与勘单逐项吻合；relic-7 liangshen.bak-20260914 定位于 .agent-presets 下 55.7KB）＋保护名单全在场＋.credentials.yaml EXISTS=True 永未读。
+- 网络两路：代理 7897 拒连（沿承 043–045）＋**直连 exit 0**（远端 master=1e51d4d 无漂移、纯 FF 前提成立）→ push＝直连通道执行。
+
+### 81.2 T1 家根遗物清理（6/7 执行＋1 件门控跳过；读数 var/scratch/exe-boot-046-web/t1/）
+- **现场复核**：现役五面交叉扫描重跑（web/desktop package.json＋cordis.patch.yml＋家根 024 件）六遗物名 references 全 NONE＝XREF-GATE PASS。
+- **删除六件**（reparse-safe 两段式：先逐链拆链接体、后删实体树；每件记路径/大小/mtime/gone=True）：①repo-spec-e2（1025.3KB）②repo-spec-qa（1025.3KB）③repo-spec-test（995.1KB）④repo-spec-web（995.1KB）⑤headless（0.7KB）；⑦liangshen.bak-20260914（55.7KB）另加三步＝现行梁神件 agent.cordis.yml 复读无损（12ca00a6 在场核验）→.bak 全文 5 文件归档证据区双侧 sha 全等→方删。
+- **⑥ profiles/node_modules 停报级发现（门控跳过、候用户裁决）**：逐链实勘 610 条 reparse 中 **401 条目标在场**（top-level 279 目与勘单吻合，但内含 junction 树全量枚举时目标非缺席）——全部指向现行 npm 全局 @deepseek-ai/dsh 0.2.0-rc.2 安装树（`AppData\Roaming\npm\node_modules\@deepseek-ai\dsh\node_modules\...`）。045 勘单「279 目全为死链接树、文件量≈0」定性**证伪**：该树系 0.1.5 投影时代产物（08-14），039 换树重装后同路径目标复活，junction 现指**活体**。按红线 3「每笔删除前现场复核非现役无引用、存疑即报」＝脚本 RELIC6-GATE FAIL 自动跳过、零删除。注意：junction 拆除本不伤目标体（link-only 删除），但批单预期「279 目全验目标缺席」与实况不符，超出授权面字样、转裁决。
+- **后验全绿**：现役五面＋红线八件 re-sha 全 MATCH（web patch eebd3f6b／梁神 12ca00a6／024 件 bdc8bbc7／settings 08fa43c8／暂停件 96c202ea／desktop 三件）；junction 完好；profiles 目录残余＝desktop＋node_modules＋web、.agent-presets 残余＝liangshen。
+- **doctor 前后对读**：删除前 0e/1w/1i（stale-in-backup 指 liangshen.bak-20260914）→删除后 **0e/1w/0i**＝stale-in-backup 消失（mount 警示沿承至 T3 刷新）。
+- **apply-preset-patch REFUSE 态复验（只跑 --status 零 apply）**：bare 调用＝REFUSED multiple profiles（desktop, node_modules, web——relic-6 目录名被计入 profile 枚举）；`--profile web`＝020 通道可跑，standard/ptc/cordis 三块报告 drift（账本无 020 记录）＝80.2 盲区之真实现场。「部分恢复可用」如实报：遗物清理后 bare 调用仍 REFUSE（desktop＋web 两真 profile 在册即触发多 profile 门），可用性恢复仅限 --profile 显式路径。
+
+### 81.3 T2 suite manifest 版本面（先核后动；记账笔 `0a6cf51`；读数 var/scratch/exe-boot-046-web/t2/）
+- **实勘五面**：①契约 validateManifest 仅形检（非空 semver、format@version）②panel v2 entryView 直出 manifest.version→客户端插件卡片徽章 "v"+version＝**用户可见面**（套件卡显示 v1.0.0 而包/CHANGELOG=1.3.0）③doctor 仅空串形检、toolkitVersion 取自 package.json④registry 零版本语义（兼容决策走 contract ^1.0 与 requires.dshRuntime）⑤全仓测试零钉值（"1.0.0" 全系夹具自值）→**独立版本语义无据**→按 23e01ec/4bcc72f「一个版本号管全部」纪律对齐。
+- **三件施工**：dsh.plugin.json version 1.0.0→1.3.0（单字段）＋S2.5-4 增版本钉断言（suite manifest version===package.json version）＋CHANGELOG [Unreleased] 记账（含成员 manifest 漂移候裁注记）。受影响四测试文件 63/63 全绿＋守卫全绿。
+- **成员 manifest 漂移候裁**：lib 四卡＋panel 的 dsh.plugin.json 均 1.0.0（同族口径、不在本批授权面）。
+
+### 81.4 T3 账本盲区修复＋真实账本刷新（分笔① `4ffa7f5`＋分笔② `728998e`；读数 var/scratch/exe-boot-046-web/t3/）
+- **代码笔（045 §80.2 候裁项落地）**：snapshot presetPatchedAny 与 doctor presetMountedFor 增读 020 命名空间按 blockSha 对账（profile patch 内 BEGIN/END 标记行集 sha256===记录 blockSha 才算挂载；命名空间键不再冒充预设 id；跳过/未闭合/对不上＝未挂载不盲信账本）；doctor 侧块定界符知识属套件自有状态文件格式知识（与 legacy file/patchedSha 同类、非插件名、红线 4 口径不破）；夹具世界扩展（buildFixtureProfilePatch＋write020Ledger＝legacy 死条目＋020 记录的 039 后世界镜像）＋新测试三用例（正向 snapshot mounted／正向 doctor 0/0/0／负向 sha 错配两面一致判未挂载）；断言零放宽零删除。**全量套件 557/557 全绿 exit 0**（554＋3 恰合账）。
+- **真实刷新＝先彩排后实跑**：①沙箱彩排（拷贝工具实例→sandbox PLUGIN_DIR）证实 standard/ptc 走「already applied (no-op; ledger entry adopted)」采纳支（再生文本与盘上块逐字节一致、blockSha 3f4300f2/281a2236 与只读勘验吻合）、cordis 走 REFUSED 支（盘上块既非账本亦非再生文本＝用户编辑保护语义）、patch 零写入；②真实刷新（仓内工具 --profile web）：standard/ptc 采纳入账（020 命名空间两笔、工具自写字段全形）、cordis 拒录如实保留、dshmarket/web-all/ops-console 三 bundle 有实体无预设行＝零 base 零写入；③liangshen U9 式 hash 补账（第 19 轮先例：内容已验仍含 xiaobai-agent/compact-router 行＝patched 态成立，patchedSha acf18889→12ca00a6 仅 hash 对账＋note）；死 legacy 三笔照历史保留。
+- **对读**：刷新前 0e/1w/0i（mount.body-without-row）→刷新后 **0e/0w/0i exit 0**＝mount 假警示消除；020 status standard/ptc 由 drift 转 **applied**；web patch eebd3f6b 执行前后双读全等（还原点副本留档未启用）＝红线 6 byte 级达成。
+- **0.1.5 老通道三态＋liangshen 新态**：老通道三笔 standard/ptc/cordis 目标文件 ABSENT（039 后现实、照历史保留）；liangshen 由 sha 漂移态转**账实相符 patched 态**（hash 补账后 legacy classify 可再核）。
+
+### 81.5 T4 toolkit 面板挂载真实 web profile（先 B 后 C；读数 var/scratch/exe-boot-046-web/t4/）
+- **安全门 GATE-PASS（双跑一致、first-run 探针伪象修正后取干净判定）**：忠实复刻（patch 逐字节 eebd3f6b＋五 bundle 全可解析：官方二件走安装树回退、dshmarket/dsh-ops-console/@linxin666\dsh-web-all 三件 junction 自真实 profile node_modules＋junction xiaobai-agent→仓）→boot 3099（DSH_HOME＋AGENT_MEMORY_ROOT 双重定向、Hidden 零 GUI）→核验全绿：**stderr 0 字节＝零 skippedBundles**＋面板 v2 API 200（ok:true＋doctorAvailable:true＋durability ok；plugins=[]＝沙箱空注册表合法态）＋fallbackUi 200＋dump-config 六针全中＋**patch 演化＝NONE**＋cordis.yml 不变＋复刻区 042 范式清零＋repo .registry mtime 09-30 不变＝真实侧零写入。
+- **产品行为实勘定案**：0.2.0 装载器 boot 期**直读** bundle 包内 bundle.patch.yml（debt-039-a 设计）、不向 profile patch 写任何内容——比批单「仅 bundle 块合法追加」预期更强，patch 演化预测＝**无**（predicted-post-boot-sha.txt 在档）。
+- **真侧施工**：profile package.json dsh.profile.bundles 增 "xiaobai-agent"（精确锚点单行插入、恰一行）；junction 已在场核验（T0＋施工前双验）；pnpm 面实勘＝零动作（bundles 列表非依赖面；045 沙箱无 lockfile 亦装载成功）；**新基线**：package.json a645ea22→**a0c78114fdfc0578**、pnpm-lock f9768ec3 不动；静态核验＝bundles 声明面与实装一致＋junction 完好＋patch 复读仍 eebd3f6b＋lock 不变。
+- **交付物留档 t4/**：用户下次自然首启预期清单（面板位置＝设置→插件 tab、order 90；patch 零演化预测；六针功能面；RAV 弹窗应对先例）＋卸载复原 runbook（045 沙箱已验同款回退路径：bundles 摘一项〔＋可选 junction 拆除〕→重启→dump-config 五针归零、patch 零风险）。
+- 真侧首启后确认事项候后续批静态复读：patch sha 仍 eebd3f6b 即闭环（红线 6 口径）。
+
+### 81.6 T5 老版浏览器对照实验（唯一真浏览器例外达成；读数 var/scratch/exe-boot-046-web/t5/）
+- **老版版本号实勘**＝**0.1.5-rc.1**（039 批备份 npm-global-host dsh-package.json 铁证，非批单字面猜测）；沙箱全局前缀全新安装（npm -g --prefix 隔离、零触真实全局）＋HOME 重定向沙箱家根＋最小可启形态（0.1.5 时代 profile 形态：cordis.yml＋patch []＋bundles 二官方件 junction 自老树）。
+- **老树复刻受阻与顶替偏离（如实申报）**：0.1.5-rc.1 宿主插件清单硬载 @deepseek-ai/dsh-sandbox-local，而它在包内仅 devDependencies（^0.1.5-rc.1）且依赖链含未公开发布的 @deepseek-ai/dsh-experimental-code-runtime-python（registry 404）；npm 缓存仅元数据无内容体→以真机 0.2.0-rc.2 全局树在档 dsh-sandbox-local junction 顶替（老宿主树＋老 profile 树两级补位后走通）；三次失败尝试日志全留档。核心读数（监听＋open announce）均来自老版自带 dsh-web-app@0.1.5 线与宿主 boot 代码、不受顶替影响。
+- **相位一（老版，不带 --no-open）**：到达 **"opening the default browser; pass --no-open to disable"**（stdout 逐字在档）；监听 ~2s、announce 后进程 ~6s 自退＝「user patch-layer watching requires the Cordis HMR service」＝沙箱最小复刻缺 HMR 件之伪象（老真实树全量在装无此错、非老版产品缺陷）；无新浏览器进程。
+- **相位二（新版 0.2.0-rc.2 真全局二进制同法对照）**：同形 announce＋服务器健康（stderr 0B、常驻至 PID guard 停服）；无新浏览器进程。
+- **两树 open@ 实勘（「升级换零件」候选收口）**：老树 open@11.0.4＝新树 open@11.0.4——**opener 零件未随升级更换**；两代 profile pnpm-lock 均无 open@ 条目（opener 系宿主树自带非 profile 依赖面）。
+- **探测局限如实记**：本机 Edge 常驻 12 进程，tab 式打开在进程差分上不可见——「无新进程」不等于「未开 tab」；用户真实机证词（无弹窗）仍为第一证据。
+- **RAV 只读取证**：RAV Endpoint Protection 7.7.12（Reason Cybersecurity Inc.）＋SecurityCenter2 注册 AV 三件（Reason Cybersecurity／Lenove Anti-Virus powered by Huorong Security／Windows Defender）；进程名 rav 无匹配（其进程用他名）。**零交互零改动**；依用户明示保留，本批一切结论不涉及退出或卸载 RAV。
+- **用户侧证词原文逐字入档** var/scratch/exe-boot-046-web/t5/case-browser.txt（五条＋定稿标注，勿改写纪律兑现）＝**浏览器案证据链定稿**。
+- 实验毕停服、关实验弹窗进程（首轮 diff 捕获的 msedge 后台自启件误入差分、已如实记并处理）、沙箱三树删除零残留（t5-close-reading.txt 自证）。
+
+### 81.7 T6 push（预批）与 T7 终验
+- push 四笔（0a6cf51／4ffa7f5／728998e／本笔）直连通道＋ls-remote 复核远端 master 尾＝记账末笔；tag 不打（v1.3.0 已钉）；读数 var/scratch/exe-boot-046-web/t6/。终验读数 var/scratch/exe-boot-046-web/t7/（树净＋web patch eebd3f6b＋package.json/pnpm-lock 新基线在台账＋家根六件缺席＋现役五面全等＋桌面零变动＋进程空集＋证据区 t0–t7 归档）。
+
+### 81.8 待裁未决清单
+- **relic-6（profiles/node_modules）处置**：610 链 401 活目标（0.2.0 树复活路径）——拆除（link-only 不伤目标体）或保留，候用户裁；拆除后 bare --status 仍 REFUSE（desktop＋web 两真 profile），故「部分恢复可用」收益以 --profile 显式路径为主。
+- **成员 manifest 版本漂移**：lib 四卡＋panel 均 1.0.0（对齐 1.3.0 与否候裁，同 T2 实勘口径）。
+- **cordis 020 块拒录**：块内容与再生文本不一致（用户编辑保护语义拒录）——重录需 re-apply（＝patch 写入、红线 6 面），候用户另批；现状 mount 判定已由 standard/ptc 两笔满足。
+- **真侧首启后确认**：patch sha 静态复读（预期 eebd3f6b 零演化）；面板 tab 目视（设置→插件 tab）。
+- **浏览器案**：证据链定稿（证词＋沙箱双相位＋open@ 勘定）；RAV 保留、零处置建议。
+
