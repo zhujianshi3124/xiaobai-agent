@@ -4562,3 +4562,48 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 - **真侧首启确认**（沿承 §81.5/81.8）：patch sha 静态复读（预期 eebd3f6b 零演化）＋面板 tab 目视（设置→插件；T2 对齐后 lib 四卡徽章应显示 v1.3.0）——转呈协调侧候用户首启窗。
 - **node_modules 空壳目录的 profile 枚举面**：29 空壳使 apply-preset-patch bare 门保持三候选 REFUSED；若用户欲 bare 可用需删空壳目录（045 先例为保留）——本批照先例保留不动，留此候裁。
 
+---
+
+## 83. 家根空壳清理＋桌面自动更新勘案＋过程档案全面盘点批（EXE-BOOT-048 · 2026-10-06 · 收官勘案批＋对外 push 预批）
+
+### 83.0 裁决面与总账
+- 用户批单：收官勘案批（T1 家根 29 空壳清理已批＋T2 桌面自动更新勘案只读出裁决材料＋T3 过程档案全面盘点纯清点＋对外 push 预批「做完照常推」沿承）；本批开源仓产品代码零改动预期（仅 plan 记账笔）；执行侧最高纪律照常（删前逐目录现场复核、网络两路、有疑先报后动）。
+- 本批一笔（记账笔）；沙箱 docs 新增两件（T2 勘案文档＋T3 盘点文档）；真实侧写入恰授权面＝家根 profiles/node_modules 29 空壳及其空父目录拆除＋沙箱自家证据区/docs 写入＋本笔提交＋push〔预批〕。单笔可 revert。
+
+### 83.1 T0 盘点与网络探测（全绿一例外；读数 var/scratch/exe-boot-048-web/t0/）
+- 链尾 32309bb 树净 HEAD-MATCH=True；进程空集、3080/3099/3100 全 free。
+- 基线台账 14 面全 MATCH（web 七件＋梁神＋024 件＋settings＋桌面三件＋暂停件 96c202ea 原名缺席＋desktop .bin 0 目＋junction 完好）＋七遗物形态＝047 终态（1–5、7 缺席）＋保护名单在场＋.credentials.yaml EXISTS=True 永未读。
+- **relic-6 终态枚举＝恰 29 个 @-scope 空壳**（0 顶层文件、逐目录 inner-entries=0）＝T1 授权面对表基准。
+- npm 轻健康：dsh 0.2.0-rc.2 package.json sha＝047 基线、npm ls -g exit 0、dsh --version 探针 ~/.dsh 零增量；pnpm store path=D:\.pnpm-store\v11（本批零 pnpm 操作）。
+- **网络两路皆败**（代理 7897 拒连沿承＋直连 Recv failure: Connection was reset）＝push 候窗；T4 实况见 83.5（同窗内 npm registry 与 download.deepseek.com 反而可达＝按目的域分化，如实记）。
+
+### 83.2 T1 家根 29 空壳清理（已批；读数 var/scratch/exe-boot-048-web/t1/）
+- **A 现场门控（先核后动）**：删前逐一现场复核＝计数恰 29＋顶层 0 文件＋逐目录「真实目录、零内含（文件/子目录/链接全零）」；任一不符即零删除停报——实况 **29/29 全过门**（t1-shell-survey.json 逐目录档案）。
+- **B 拆除**：原语沿承 047 已证 P2＝node fs.rmdirSync（链接只拆/非空拒删双证在档），每次 rmdir 前再验空；追加写日志（047 v2 教训兑现）＝**29/29 全拆零中止**。
+- **C 空父目录处置（照批单红线 4）**：node_modules 双读验空后移除（045 勘单⑥装机遗物本体、已批范畴、删前记录在案）——profiles/ 现形＝**desktop＋web 恰两现役**。
+- **D 后验 ALL-CLEAR**：基线 14 面 re-sha 全 MATCH＋junction 完好（readlink→D:\dsh-toolkit-opensource）＋desktop .bin 0 目＋**doctor dry-run 0e/0w/0i exit 0**（047 终态保持）＋npm 轻健康零增量；双 patch 复读全等（eebd3f6b／e8ee7814）＝零写入证明。
+- **E 裸命令复验（只读 --status）**：bare＝**REFUSED: multiple profiles (desktop, web)**——协调侧预判成立（「删空壳后裸命令可用」不成立；node_modules 除名后候选恰归两真 profile；显式 --profile 仍为可用形态）。退出码订正如实记：工具源码 scripts/apply-preset-patch.mjs:804-805 该支真实 exit=2（本批 spawnSync 直捕），047 t3 所记「exit 0」系当时包装层读数伪象（047 status-bare.txt 只存文本无退出码行）＝记录层差异非行为变化。
+
+### 83.3 T2 桌面自动更新勘案（只读，产出裁决材料；文档 D:\dsh-test-sandbox\docs\exe-boot-048-t2-desktop-autoupdate-survey.md；读数 t2/）
+- **方法**：app.asar（121MB，12967 条目）只读解析器＋关键词定位（73 文件命中）＋按需抽取 74 件（asar-extract/，桌面安装体零触碰）。
+- **暂停机制代码级坐实**：主进程 DesktopUpdateCoordinator.enabled()＝`existsSync(resources\app-update.yml)`——只查在场性；恢复＝改名回原名、无其他条件；两启两闭零重建证据链复核（§73.2）＋本批 sha 复核（批单「036 全新安装」措辞订正：036 本体是 profile 内插件安装，App 本体 2026-09-29 安装后从未重装，未复活链实体＝§73.2）。
+- **更新为用户授权制**：autoDownload=false＋autoInstallOnAppQuit=false；check（元数据，周期调度＋resume 唤醒自动）→ download（用户点击 desktop_upgrade_click）→ install（quitAndInstall(true,true) 静默装＋自启）；暂停态检查报「no packaged update source」＝038 用户目测失败类提示的代码侧对应。
+- **升级不冲精调态（核心问题逐项判定）**：applyRelease 每次启动跑但三件全条件化＝initProfile 仅缺则建（不覆写现件）＋migrateProfileSettings 仅 0.1.5 legacy 逐字节匹配（本机 no-op）＋removeLinkProjections 仅拆 .dsh-module-fallback 内投影（源码明言 other symlinks stay；本机无该目录；xiaobai-agent junction 安全）；安装器范围外＝家根 .agent-presets／~/.dsh/pet.json（宠物偏好落点实证）／settings 导入件；**唯一会变＝暂停态本身被升级自然解除**（新安装器重写原名 app-update.yml〔代码级推断〕）；唯一风险面＝DesktopFatalRecovery.sanitizeProfile（非更新路径：patch 改名备份＋bundles 重置官方表，对话框可见、可手动还原）。
+- **版本现态**：npm dist-tags latest＝next＝0.2.0-rc.2、alpha＝0.2.1-alpha.1（政策不入沿承）；feed nightly.yml＝200 且版本＝0.2.0-rc.2（与已装同版）——**今日恢复＝查询即「已是最新」**。推荐＝维持暂停（手动升级窗＋仪式）；若恢复的升级窗仪式草案（web/desktop 八步联动）入文档 §8。
+- 证据基纪律：升级行为整体〔代码级推断〕档（本机从未升级过，安装 mtime 2026-09-29 为证）。
+
+### 83.4 T3 过程档案全面盘点（纯清点零执行；文档 D:\dsh-test-sandbox\docs\exe-boot-048-t3-archive-inventory.md；读数 t3/t3-inventory-raw.txt）
+- 沙箱全域 ≈2.36GB 逐树清点（40 顶层项＋var/scratch 58 区逐批规模）；**现役登记面**（开源仓 60.4MB／桌面安装体 1015MB／npm 全局 26616 文件〔047 manifest 权威〕／pnpm 双册面 72MB＋632.8MB／doctor 仓 ce31f834 树净·debt-034-a 挂账注明／冻结仓 04816b8 树净）。
+- 两代回退备份定位：036 全量（exe-boot-036-desktop\backup\）＋037 patch 字节（exe-boot-037-desktop\backup\＋t2\plugin\preset-backups）＋同族旁证（046 web 还原点 22180B／026 暂停件前置备份 306B）。
+- 分级三档（划勾单 A1–A5／B1–B10／C1–C5）：必留＝047 relic6 不可再生档案＋四组备份＋026 t4 锚件（034 终态规范件）＋doctor 仓＋家根现役应用态（**家根零清理候选**）；可归档＝四大沙箱实装树/副本（026 dsh-home 535MB／042+043 sandbox-home 256MB／025+024+031 407MB）＋各批证据区＋dsh-repo-spec 工具仓 66.4MB＋data 110.7MB（压缩须另批＋原路径 README 指路保 plan 引用）；可删＝_trash_candidates 3.7MB＋var\inbox/backup-0920 1.2MB＋根散件工装与过程稿 ≈0.26MB（被 git 历史/plan 覆盖）。**零删除零归档零搬移兑现。**
+- 副产出反哺 T2：~/.dsh/pet.json 505B 在档＝宠物偏好落点实证。
+
+### 83.5 T4 push 实况
+- push 一笔（本记账笔）直连通道、显式 pushurl 复核、不 force（红线 2）、非 FF＝停报；tag 不打（v1.3.0 已钉）；读数 var/scratch/exe-boot-048-web/t4/。
+
+### 83.6 待裁未决清单（转呈用户两件）
+- **T2 桌面自动更新恢复与否**：利弊单＋推荐（维持暂停）＋恢复则升级窗仪式草案——文档 §7/§8，候用户裁决。
+- **T3 档案分级划勾单**：A1–A5／B1–B10／C1–C5 逐项候勾（归档施工须另批＋锚件提取先行）。
+- 沿承候裁（不新增）：cordis 020 块拒录重录（web/desktop 双 drift）；真侧首启确认（patch sha 复读＋四卡 v1.3.0 徽章目视）。
+
+
