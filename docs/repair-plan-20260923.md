@@ -4582,17 +4582,17 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 - **B 拆除**：原语沿承 047 已证 P2＝node fs.rmdirSync（链接只拆/非空拒删双证在档），每次 rmdir 前再验空；追加写日志（047 v2 教训兑现）＝**29/29 全拆零中止**。
 - **C 空父目录处置（照批单红线 4）**：node_modules 双读验空后移除（045 勘单⑥装机遗物本体、已批范畴、删前记录在案）——profiles/ 现形＝**desktop＋web 恰两现役**。
 - **D 后验 ALL-CLEAR**：基线 14 面 re-sha 全 MATCH＋junction 完好（readlink→D:\dsh-toolkit-opensource）＋desktop .bin 0 目＋**doctor dry-run 0e/0w/0i exit 0**（047 终态保持）＋npm 轻健康零增量；双 patch 复读全等（eebd3f6b／e8ee7814）＝零写入证明。
-- **E 裸命令复验（只读 --status）**：bare＝**REFUSED: multiple profiles (desktop, web)**——协调侧预判成立（「删空壳后裸命令可用」不成立；node_modules 除名后候选恰归两真 profile；显式 --profile 仍为可用形态）。退出码订正如实记：工具源码 scripts/apply-preset-patch.mjs:804-805 该支真实 exit=2（本批 spawnSync 直捕），047 t3 所记「exit 0」系当时包装层读数伪象（047 status-bare.txt 只存文本无退出码行）＝记录层差异非行为变化。
+- **E 裸命令复验（只读 --status）**：bare＝**REFUSED: multiple profiles (desktop, web)**——协调侧预判成立（「删空壳后裸命令可用」不成立；node_modules 除名后候选恰归两真 profile；显式 --profile 仍为可用形态）。退出码订正如实记：工具源码 scripts/apply-preset-patch.mjs 的 bare --status REFUSED 支该支真实 exit=2（本批 spawnSync 直捕），047 t3 所记「exit 0」系当时包装层读数伪象（047 status-bare.txt 只存文本无退出码行）＝记录层差异非行为变化。
 
 ### 83.3 T2 桌面自动更新勘案（只读，产出裁决材料；文档 D:\dsh-test-sandbox\docs\exe-boot-048-t2-desktop-autoupdate-survey.md；读数 t2/）
 - **方法**：app.asar（121MB，12967 条目）只读解析器＋关键词定位（73 文件命中）＋按需抽取 74 件（asar-extract/，桌面安装体零触碰）。
-- **暂停机制代码级坐实**：主进程 DesktopUpdateCoordinator.enabled()＝`existsSync(resources\app-update.yml)`——只查在场性；恢复＝改名回原名、无其他条件；两启两闭零重建证据链复核（§73.2）＋本批 sha 复核（批单「036 全新安装」措辞订正：036 本体是 profile 内插件安装，App 本体 2026-09-29 安装后从未重装，未复活链实体＝§73.2）。
+- **暂停机制代码级坐实**：主进程 DesktopUpdateCoordinator.enabled()＝`existsSync("resources\app-update.yml")`——只查在场性；恢复＝改名回原名、无其他条件；两启两闭零重建证据链复核（§73.2）＋本批 sha 复核（批单「036 全新安装」措辞订正：036 本体是 profile 内插件安装，App 本体 2026-09-29 安装后从未重装，未复活链实体＝§73.2）。
 - **更新为用户授权制**：autoDownload=false＋autoInstallOnAppQuit=false；check（元数据，周期调度＋resume 唤醒自动）→ download（用户点击 desktop_upgrade_click）→ install（quitAndInstall(true,true) 静默装＋自启）；暂停态检查报「no packaged update source」＝038 用户目测失败类提示的代码侧对应。
-- **升级不冲精调态（核心问题逐项判定）**：applyRelease 每次启动跑但三件全条件化＝initProfile 仅缺则建（不覆写现件）＋migrateProfileSettings 仅 0.1.5 legacy 逐字节匹配（本机 no-op）＋removeLinkProjections 仅拆 .dsh-module-fallback 内投影（源码明言 other symlinks stay；本机无该目录；xiaobai-agent junction 安全）；安装器范围外＝家根 .agent-presets／~/.dsh/pet.json（宠物偏好落点实证）／settings 导入件；**唯一会变＝暂停态本身被升级自然解除**（新安装器重写原名 app-update.yml〔代码级推断〕）；唯一风险面＝DesktopFatalRecovery.sanitizeProfile（非更新路径：patch 改名备份＋bundles 重置官方表，对话框可见、可手动还原）。
-- **版本现态**：npm dist-tags latest＝next＝0.2.0-rc.2、alpha＝0.2.1-alpha.1（政策不入沿承）；feed nightly.yml＝200 且版本＝0.2.0-rc.2（与已装同版）——**今日恢复＝查询即「已是最新」**。推荐＝维持暂停（手动升级窗＋仪式）；若恢复的升级窗仪式草案（web/desktop 八步联动）入文档 §8。
+- **升级不冲精调态（核心问题逐项判定）**：applyRelease 每次启动跑但三件全条件化＝initProfile 仅缺则建（不覆写现件）＋migrateProfileSettings 仅 0.1.5 legacy 逐字节匹配（本机 no-op）＋removeLinkProjections 仅拆 .dsh-module-fallback 内投影（源码明言 other symlinks stay；本机无该目录；xiaobai-agent junction 安全）；安装器范围外＝家根 .agent-presets／~/.dsh/pet.json（宠物偏好落点实证）／settings 导入件；**唯一会变＝暂停态本身被升级自然解除**（新安装器重写原名 "app-update.yml"〔代码级推断〕）；唯一风险面＝DesktopFatalRecovery.sanitizeProfile（非更新路径：patch 改名备份＋bundles 重置官方表，对话框可见、可手动还原）。
+- **版本现态**：npm dist-tags latest＝next＝0.2.0-rc.2、alpha＝0.2.1-alpha.1（政策不入沿承）；feed "nightly.yml"＝200 且版本＝0.2.0-rc.2（与已装同版）——**今日恢复＝查询即「已是最新」**。推荐＝维持暂停（手动升级窗＋仪式）；若恢复的升级窗仪式草案（web/desktop 八步联动）入文档 §8。
 - 证据基纪律：升级行为整体〔代码级推断〕档（本机从未升级过，安装 mtime 2026-09-29 为证）。
 
-### 83.4 T3 过程档案全面盘点（纯清点零执行；文档 D:\dsh-test-sandbox\docs\exe-boot-048-t3-archive-inventory.md；读数 t3/t3-inventory-raw.txt）
+### 83.4 T3 过程档案全面盘点（纯清点零执行；文档 D:\dsh-test-sandbox\docs\exe-boot-048-t3-archive-inventory.md；读数 D:\dsh-test-sandbox\var\scratch\exe-boot-048-web\t3\t3-inventory-raw.txt）
 - 沙箱全域 ≈2.36GB 逐树清点（40 顶层项＋var/scratch 58 区逐批规模）；**现役登记面**（开源仓 60.4MB／桌面安装体 1015MB／npm 全局 26616 文件〔047 manifest 权威〕／pnpm 双册面 72MB＋632.8MB／doctor 仓 ce31f834 树净·debt-034-a 挂账注明／冻结仓 04816b8 树净）。
 - 两代回退备份定位：036 全量（exe-boot-036-desktop\backup\）＋037 patch 字节（exe-boot-037-desktop\backup\＋t2\plugin\preset-backups）＋同族旁证（046 web 还原点 22180B／026 暂停件前置备份 306B）。
 - 分级三档（划勾单 A1–A5／B1–B10／C1–C5）：必留＝047 relic6 不可再生档案＋四组备份＋026 t4 锚件（034 终态规范件）＋doctor 仓＋家根现役应用态（**家根零清理候选**）；可归档＝四大沙箱实装树/副本（026 dsh-home 535MB／042+043 sandbox-home 256MB／025+024+031 407MB）＋各批证据区＋dsh-repo-spec 工具仓 66.4MB＋data 110.7MB（压缩须另批＋原路径 README 指路保 plan 引用）；可删＝_trash_candidates 3.7MB＋var\inbox/backup-0920 1.2MB＋根散件工装与过程稿 ≈0.26MB（被 git 历史/plan 覆盖）。**零删除零归档零搬移兑现。**
@@ -4675,3 +4675,49 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 ### 85.7 待裁未决清单
 - 删后历史读数引用悬空的 README 指路缓解（048 划勾单预告）候裁另批；
 - web patch 新基线（llm-deepseek-account 块归属确认后）候裁；「有更新」徽章 UI 实测候窗；C2/C3 六件 Defender 拦截件处置（唯一解＝用户侧安全软件白名单，候用户裁决）；049 旧包 B1/B2/B4/B6 四件清理候裁；三坑正式入档（坑一悬空链中断 bsdtar／坑二 ustar 100 字节链接目标上限／坑三重活并发——本批自写打包器＋串行纪律已绕开）。
+
+## 86. 指路条与守卫收口＋049 旧包清理＋web patch 基线落账批（EXE-BOOT-052 · 2026-10-07 · 扫尾批＋对外 push 预批）
+
+### 86.0 裁决面
+- 051 停靠申报候裁项获用户裁决：C2/C3 十二件 Defender 拦截件＝**暂不加白名单、零动作保持现状**；「有更新」徽章 UI 实测＝**留 0.2.1 正式版升级窗（本批不做）**。web patch 两项差异经用户确认＝用户侧行为（使用窗拖动宠物＋10-07 晨以 DeepSeek-V4.1-Flash/V4-Pro 双模型跑项目）→ 86.6 落基线。
+- 本批定位＝轻量扫尾：无全树 sha、无大压缩、无目录级大删除（仅四件旧包文件）；写入面＝红线 8 封闭清单（指路条／开源仓 docs／049 四件旧包／050 证据区归位／自家证据区）。
+
+### 86.1 T0 基线与守卫基跑（读数 var/scratch/exe-boot-052-web/t0/）
+- 三仓链尾全对（开源 ae5ca96 树净、冻结 04816b8 树净、doctor ce31f834 树净）；机器门 PASS（列目录 1ms／sha 9.1MB 包 12ms／列 profile 0ms）；3080＝用户 web 宿主占用（PID 28224 同 051，零触碰零请求）；基线 12 面双读 MATCH；handoff 在场核对（4,184B sha b76350c8）；web patch 双读＝78573160 未变（051 收口值，mtime 2026-10-07T00:41:28Z）。
+- **守卫基跑＝271 红**（活文档 239／存档件 32；行号 1、缺文件 270）＝051 申报同态。token 级分析（var/scratch/exe-boot-052-web/t0/guard-baseline-reds.json＋red-token-analysis.json）：160 文件型路径 token＋111 裸名（其中 108 名经删前文件索引定位原路径；3 名不在索引）＋1 行号形态；**目录型 token＝0 条**。
+
+### 86.2 T1 C1-011 遗留归位＋轻扫
+- 050-gate 三件（out.tar 4,608B／B10-list.txt 502,464B 恰 5,973 行／src 两文件实验树）整组同盘移入 var/scratch/exe-boot-050-web/c1-011-legacy/＋README（出处＝C1-011 手测、junction 跟入实验产物、结论勿采信注记、指向 051 重验读数）；050-gate 现为空目录保留。
+- 轻扫：开源仓树净；沙箱 docs 无其他 C1-011 遗留（仅 handoff 登记件）；两归档区无计划外新增。
+
+### 86.3 T2 指路条与悬空红处置（预期前提与实况不符，如实记）
+- **前提订正**：批单预期红集以目录型为主（指路条可消解）；实勘＝**目录型 token 零条**——红集全部为文件型/裸名引用（引用对象是具体文件；目录＋README 指路条无法使已删文件名复存在）。守卫机制交叉验证：048 时代同文档集仅 5 红＝彼时全部引用（含裸名经沙箱递归索引）可解析，故 266 条增量全部系 051 授权删除之后果（051 T3 删除在前、红集增长在后，两条独立观测互证）。
+- 处置＝按红线 2 明文：**指路条建 0 条**（宁少勿滥——无目录型工作对象，未被引用的消失路径不建）；已删文件名不得同名占位冒充→**266 条全部列候裁登记**（var/scratch/exe-boot-052-web/t2/pending-adjudication.json＋.md：157 文件路径型自带原路径＋108 裸名经删前索引定位原位＋1 原位不明）。「无法安全消解＝逐条列明＋候裁，不阻其余条目」预案兑现。
+
+### 86.4 T3 048 遗留五红查证＋旧账更正
+- 查证（var/scratch/exe-boot-052-web/t3/t3-fix-legacy-reds.mjs；git 与日志时戳）：guard-t4.log 生成于 2026-10-06T13:08:46Z＝048 记账笔提交（122e077，13:10:08Z）前约 80 秒；在盘红集恰 5 条且全部落在 §83 自身文本（:4585 行号形态；:4589/:4591/:4592 未解析路径；:4595 相对形式）——**048 记账笔「提交前守卫全绿…自证 exit 0 红集空」在提交时点即与在盘日志不符**（事实层查证；成因过程不可重建，不回改原笔）。
+- 五笔处置（零语义形态微调，授权面红线 8②）：①:4585 行号形态→改支路定位语（bare --status REFUSED 支）；②:4589 existsSync 代码字面量加引号（更贴源码形态）；③:4591 裸名加引号；④:4592 裸名加引号；⑤:4595 相对形式展开为全路径（同目标文件在场＝var/scratch/exe-boot-048-web/t3/t3-inventory-raw.txt 18,566B）→引用复通。
+- 守卫复跑：271→**266 红、行号类清零**。
+- **旧账更正子节**（错账不回改，本节为更正记录）：①048 记账笔守卫表述更正为「守卫实跑 exit 1、红集 5 条（§83 自身行号/路径写法引入），未修复即提交」；②051 记账笔 §85.4「十组原件 ≈1.94GB 源字节删除」更正为精确值 **1,828,161,995B（1.83GB dec／1.70GiB）**。
+
+### 86.5 T4 体量口径差结论（只读）
+- 048 划勾单逐项数字＝MiB 取整快照：B1/B2/B3/B5/B6/B7/B8/B10 八项与 051 精确字节数 MiB 取整吻合；B4 项划勾单「≈19MB」系其分行估算合计（≈15MB＋≈3.5MB）较实值 30.6MiB 低约 11.6MiB＝估算口径偏差来源；B9 项 9MB vs 8.5MiB 属取整。
+- 精确总账：B1–B10＝1,828,161,995B；B1–B9＝1,485,508,240B（1.49GB dec）。划勾单合计行「≈1.55GB」为粗估（与 B1–B9 或 B1–B10 精确和均不闭合）；051 申报「≈1.94GB」为粗放取整（偏差 +6%）→ 86.4 更正子节收口。
+
+### 86.6 T5 web patch 新基线落账（真侧只读）
+- 现值双读稳定：**sha 78573160d9335c12…（22,786B／496 行，mtime 2026-10-07T00:41:28Z）＝051 收口值零漂移**；对 78573160 逐行 diff＝零差异。
+- 对前基线 eebd3f6b（22,180B／477 行）全部差异＝恰两项、均经用户确认：①宠物几何（right 1041/bottom 508 vs 320/444；10-06/10-07 使用窗拖动）；②llm-deepseek-account 插件条目（DeepSeek-V4.1-Flash/V4-Pro 模型配置 +19 行；10-07 晨用户配置）。逐行枚举在档＝var/scratch/exe-boot-051-web/t4/t4-patch-diff.txt＋t4-patch-region.txt。
+- **新基线＝上值落账**；注记：该件为用户宿主运行态、用户侧行为可续变，日后以 diff 形态判归（用户侧配置形态→落账；结构性损毁/既有条目消失等非用户侧可解释差异→停报候裁）。
+- 020 账本复核：preset-patch-state.json mtime 仍 2026-10-06T09:18:16Z（046 刷新后零变动）＋liangshen patchedSha 12ca00a6 与现盘全等＝不动（理由沿承 051）。
+
+### 86.7 T6 049 旧包四件清理（红线 1 三验门）
+- 四件逐一三验全过（读数 var/scratch/exe-boot-052-web/t6/t6-log.txt）：B1（V1 读回 28,783 条 0/0/0＋V2 条目数对 051 台账＋V3 包 sha 0635793a 对 manifest）／B2（8,383 条；7c54606c）／B4（2,068 条；a714118e）／B6（2,716 条；5e76053f）→ 旧包删除（删前 sha 留档：B1 ca420757/119,688,159B、B2 693d70b2/99,626,092B、B4 f5fe117e/25,629,777B、B6 88b9c71b/59,688,854B，与 051 T0 基线全等）。
+- 删后 049 区清点＝恰余 B3/B5/B7/B8/B9 五包（94,636,329／258,084／18,150,892／163,452／4,163,611B），目录本身保留。
+
+### 86.8 push 实况与守卫终态
+- push 两路探测（代理 7897＋直连）择通者、显式 pushurl、不 force；非 FF 停报；tag 不打（v1.3.0 已钉）。守卫终跑读数 t7/：红集 266 条＝**恰为本批已立案候裁项（86.3 登记）、零新增**——按本批 T7 门「残留＝已立案候裁项且零新增可提交」如实记后提交。
+
+### 86.9 待裁未决清单
+- **266 条悬空文件引用**（清单 var/scratch/exe-boot-052-web/t2/pending-adjudication.json）：守卫机制下文件型/裸名引用无指路条解法（同名占位禁止）。如需清零须三选一：①守卫代码增加「归档指路」解析层（代码级改动候裁）；②对涉档案件启用勘误节机制（改档案件内容，超出本批授权面）；③接受常态红集、逐批申报持续登记。
+- "MANIFEST.json"（plan 裸名引用）原位不明（不在十组删除索引、不在 C 面快照、四候选根现无）＝待查。
+- C2/C3 十二件 Defender 拦截件＝用户裁定暂保持现状；「有更新」徽章 UI 实测＝留 0.2.1 正式版升级窗（沿承 86.0）。
