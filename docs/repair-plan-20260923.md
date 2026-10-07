@@ -48,6 +48,8 @@
 
 **汇报口径**：大白话 + 技术附录双轨；漏项自曝滚存补笔，不重写已提交笔。
 
+**文档引用守卫·常态红集（2026-10-07 起，EXE-BOOT-052 批用户裁决入例）**：删除批之后文档内的悬空引用（文件路径/裸名，指向已归档/已删除目标）＝**常态红集**，不阻断记账；以登记册 **D:\dsh-test-sandbox\docs\pending-adjudication.json** 为准（正式化固化自 052 批证据区源册，266 条在案）。守卫及格线＝**零新增红**：新增文本零红＋残留红逐条对登记册全等（比对键＝doc|行号|token 多重集），即视为通过，不再以「红集空」为通过口径。凡后续有删除面的批次，须先把本批新增悬空项同步追加进登记册，再提交记账（先登记、后提交）。
+
 ---
 
 ## 2. 高危四条：本会话回代码的独立取证结论
@@ -4720,4 +4722,41 @@ Personal access tokens 删除该令牌（前枚 ghp_8P9R… 若在亦一并删�
 ### 86.9 待裁未决清单
 - **266 条悬空文件引用**（清单 var/scratch/exe-boot-052-web/t2/pending-adjudication.json）：守卫机制下文件型/裸名引用无指路条解法（同名占位禁止）。如需清零须三选一：①守卫代码增加「归档指路」解析层（代码级改动候裁）；②对涉档案件启用勘误节机制（改档案件内容，超出本批授权面）；③接受常态红集、逐批申报持续登记。
 - "MANIFEST.json"（plan 裸名引用）原位不明（不在十组删除索引、不在 C 面快照、四候选根现无）＝待查。
+
+## 87. 常态红集惯例落笔＋登记册正式化＋"MANIFEST.json" 来历查证＋守卫口径对账＋b3a157b 补推收口批（EXE-BOOT-053 · 2026-10-07 · 档案大扫除战役终结批）
+
+- **87.0 裁决面**：本批三主题全承接 §86.9 用户裁决——①266 条悬空引用＝接受常态红集、守卫及格线改「零新增红」→ 87.2 落为惯例层固定表述；②"MANIFEST.json" 原位不明待查 → 87.3 收口（查得来历）；③b3a157b 补推候窗 → 87.1 窗开就地清账。本批＝轻量终结批：零删除面、无重活、产品代码零改动；CHANGELOG 不加（无对外行为面变化）；debt 不动。
+
+### 87.1 T0 基线＋机器门＋网络窗＋补推（读数 var/scratch/exe-boot-053-web/t0/）
+- 三仓链尾/树净全对：开源仓 b3a157b 树净（父笔 ae5ca96、领先远端恰 1 笔、tag v1.3.0＝4bcc72f；origin fetch 指冻结仓／push 指 GitHub 与单面警示一致）；冻结仓 04816b8、doctor 仓 ce31f834 零触碰。
+- 机器门 PASS（毫秒级，052 基线同量级）：列目录 0ms／9.1MB 包 sha 8ms（a714118e 同值）／列 web profile 0ms。3080＝用户宿主 PID 28224 在跑（与 051/052 同 PID），零触碰零请求。
+- 基线 12 面双读全 MATCH；web patch LIVE 双读＝**78573160d9335c12（22,786B/496 行，mtime 2026-10-07T00:41:28Z）＝052 收口值零漂移**（未触发 diff 判归支）；web/desktop 两侧 xiaobai-agent junction 完好（target 指开源仓树、pkgThrough 0035b825310afe30 双侧全等，desktop 侧为本批补勘项）；handoff 件 docs/handoff-c1-011-to-050.md 全等（4,184B b76350c8）。
+- 守卫基跑＝**266 红＝登记册 multiset 精确全等**（零新增零缺失；052 t2 after-t3 日志 var/scratch/exe-boot-052-web/t2/guard-after-t3-full.log 与登记册互证亦全等）＝红线 1 及格线基跑通过。
+- 网络窗两路探测：直连通（1.8s）、代理 7897 不通（Could not connect，与 048/052 同态）→ **窗开，T0 即补推 b3a157b**：推前再验远端尾＝ae5ca96 全等 → 纯 FF（ae5ca96..b3a157b，显式 pushurl，3.97s）→ ls-remote 复核远端尾＝**b3a157b PASS**。052 申报第二节遗留补推项就地清账。
+
+### 87.2 T1 惯例落笔＋登记册正式化
+- §1 编排通则（守卫/读数纪律惯例层）增固定表述一条，语义四点齐备：删除批后悬空引用＝常态红集；以登记册 D:\dsh-test-sandbox\docs\pending-adjudication.json 为准；守卫及格线＝零新增红（新增文本零红＋残留红逐条对登记册全等，比对键＝doc|行号|token 多重集）；后续删除批先登记后提交。落笔后守卫复跑＝266 红、新增文本零红（mine=0）。
+- 登记册正式化＝052 t2 源册 var/scratch/exe-boot-052-web/t2/pending-adjudication.json 字节级复制固化至沙箱 docs（sha d8da34cc… 前后全等；266 条零删改、未增列——比对所需 doc/line/token/kind/origPaths 字段源册已备）。自本节起 §1 惯例句所引路径即该正式化件。
+
+### 87.3 T2 "MANIFEST.json" 来历查证＝**查得来历**（只读；读数 var/scratch/exe-boot-053-web/t2/t2-log.txt）
+- 何批何指：EXE-BOOT-022（副本线）S4 收口账笔 `304ed34`（2026-10-02）以 §55 新节 88 行写入；引用位＝§55.2 设计落位对表 A2 条——agent-memory 检索派生缓存（`<dataRoot>/search/`）全局清单件的设计形态命名，与 A1 落位互证实现面：lib/agent-memory/lib/paths.js#searchManifestPath（`search/` 目录拼装该件）＋lib/agent-memory/lib/search-index.js（读/写供链）。git -S 全史恰两笔触该串＝304ed34（引入）＋b3a157b（§86.9 引号提及、非引用）。
+- 现为何态：运行期派生缓存件、非仓内档案件——实际在档 **C:\Users\LENOVO\.agent-memory\search\MANIFEST.json**（1,534B，mtime 2026-10-07T04:47:25Z＝用户宿主当日活跃；顶层键恰 A2 形状 version/updatedAt/sessions/totalBytes、4 会话；dataRoot 缺省＝家目录 .agent-memory，.dsh 侧五探针＋深扫零命中）。
+- 悬空机理与命名对照：守卫裸名解析＝候选根仅试根层（无递归），该件在运行期数据根下故落空成红＝「运行期产物名」类真阳性；仓史 tracked 同名形态仅 test/fixtures/contract/valid-manifest.json（契约夹具）、工作树 21 件同名小写件全为 panel 备份态（他物）；沙箱 docs 惟一 manifest 类命名件＝docs/specs/manifest-requirements-spec.md（规约文档）、沙箱 archives 惟一 manifest 类命名＝051 五包各带打包清单件（如 archives/exe-boot-051/B1-exe-boot-026-main-final.manifest.json，共五份）——均非同件；048 划勾单（§83.4）零 "MANIFEST" 字样＝与 052「不在十组删除索引」记载一致。
+- 处置：§86.9 该候裁项收口为「原位已明＝运行期 `<dataRoot>/search/`」；登记册该条按零删改原则保持原样（origPaths 留空），解明记录以本节为准；红集维持常态（引用对象非仓内可定位路径，无需修复）。
+
+### 87.4 T3 守卫口径对账＋旧账更正子节（052 落盘原件实算；读数 var/scratch/exe-boot-053-web/t3/t3-log.txt）
+- 实算：052 t0 基跑日志 var/scratch/exe-boot-052-web/t0/guard-baseline-full.log＝271 条，与 var/scratch/exe-boot-052-web/t0/red-token-analysis.json 271 行 multiset 双向全等；互斥口径实数＝**159 文件型＋111 裸名＋1 行号形态＝271**。
+- **更正子节（错账不回改）**：§86.1「160 文件型路径 token＋111 裸名…＋1 行号形态」（052 申报合计读作 272）更正为「159 文件型（互斥口径）、合计 271」。差一笔出处＝**行号形态那笔被双计**：该笔 token（"scripts/apply-preset-patch.mjs:804-805"，路径形状带行锚）被文件型口径收编一次、又单列行号形态一次。同句「111 裸名（108 定位＋3 不在索引）」「目录型 0 条」实算相符不动。
+- 算术链闭合：271 −5 修复（2 文件型＋2 裸名＋1 行号形态＝§86.4 五笔）→ **266＝157 文件型＋109 裸形（108 有原位＋1 "MANIFEST.json"〔87.3 已解明〕）**＝登记册 byKind 全等；分类规则＝token 归一化（反斜杠→斜杠）后含「/」＝文件型（var/scratch/exe-boot-052-web/t2/t2-register.mjs 原规则）。
+
+### 87.5 T4 push 实况与守卫终态
+- push：两路探测择通者（本窗直连通）、显式 pushurl、不 force、非 FF 停报、tag 不打（v1.3.0 已钉）；推前远端尾复核＝上笔（b3a157b）、推后 ls-remote 复核远端尾＝本笔（读数 var/scratch/exe-boot-053-web/t4/）。守卫终跑（含本节全部文字）＝266 红＋行号位移映射比对（§1 插两行使 plan 行号 ≥53 者整体 +2、比对按映射归位）＝零新增红。
+- 提交前查暂存区＋numstat 实跑入账；单笔可 revert。
+
+### 87.6 战役收官注记（档案大扫除 048 划勾 → 053 链终态）
+- 删除面：051 批十组可归档原件 1,828,161,995B 删讫（§85，换五终版包）＋052 批 049 区旧包四件删讫（§86.7）；本批零删除。
+- 归档面：archives/exe-boot-051 五包五 manifest＋archives/exe-boot-049 五包（B3/B5/B7/B8/B9）在档；各批证据区按批保留。
+- 登记册：266 条常态红集正式化于 D:\dsh-test-sandbox\docs\pending-adjudication.json（87.2）；后续删除批先登记后提交（§1 惯例）。
+- 基线面：web patch 现行基线＝78573160（052 收口值，本批零漂移）；三仓链尾＝b3a157b（远端同步）/04816b8/ce31f834。
+- 战役收官，进平稳期；睡项清单在案（C2/C3 十二件 Defender 拦截件保持现状＝用户裁定；「有更新」徽章 UI 实测留 0.2.1 正式版升级窗）。
 - C2/C3 十二件 Defender 拦截件＝用户裁定暂保持现状；「有更新」徽章 UI 实测＝留 0.2.1 正式版升级窗（沿承 86.0）。
