@@ -30,9 +30,12 @@ const patchPath = join(root, "cordis.patch.yml");
 // 三处 insert name 与头注随包名同步，模板形占位符机制原样）：5c4e6980 → 534e22e3。
 // 第 9 次（副本线第 5 次，2026-10-02 C1-007 发布后安全审计清理批：静态组真实账号编排→示例组，
 // 行数 16 不变零行号涟漪）：534e22e3 → 60484b76。
+// 第 10 次（副本线第 6 次，2026-10-05 19ddbe2c bundle 通道上线 debt-039-a 施工〔EXE-BOOT-045 用户批·T2〕：
+// patch 模板头注补 bundle 通道指引 +2 行，内容行零改动；该笔未随动基准，2026-10-14 审核实测
+// p24 硬闸 ABORT 发现，本次追认滚存〔机制未放宽〕）：60484b76 → e47c1c16。
 // 成因全文与该文件内注释、
 // panel/docs/evidence/H-REAL-HOST-REVERIFY.md、docs/debt.md A#24 / A#25 / 计划 §29 / §44。
-const BASE_SHA_EXPECT = "60484b76fcf8776bb41e302c9553ee3018bf7be2fbec05e21aa266a4a248af7b";
+const BASE_SHA_EXPECT = "e47c1c161d7ba31e9c2f063d40b9059e079a49b23255497fbc76c6929b0c9b5e";
 const BASE_SHA = createHash("sha256").update(readFileSync(patchPath, "utf8")).digest("hex");
 if (BASE_SHA !== BASE_SHA_EXPECT) {
   console.error("ABORT: 真实 cordis.patch.yml 基线漂移（" + BASE_SHA.slice(0, 12) + "）——拒绝在非基准态跑矩阵");
