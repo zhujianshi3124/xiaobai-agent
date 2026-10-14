@@ -33,3 +33,6 @@ test/fixtures/registry/last-error-plugin/marker.flag
 
 # 临时快照
 _nm-before.txt
+
+# 第三方会话（姊妹审计线）记忆层残留（.workbuddy/memory/），非本仓产物，不入库
+.workbuddy/
