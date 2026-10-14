@@ -33,7 +33,10 @@ const BASE_SHA = createHash("sha256").update(readFileSync(patchPath, "utf8")).di
 //（用户终裁），三处 insert name 与头注随包名同步；模板形占位符机制原样）：5c4e6980… → 534e22e3…。
 // 基准滚存（第 9 次＝副本线第 5 次，2026-10-02 C1-007 发布后安全审计清理批：patch 模板静态组
 // 真实账号编排→示例组（example-provider-*／example-model-*，行数 16 不变零行号涟漪））：534e22e3… → 60484b76…。
-const BASELINE_SHA_EXPECTED = "60484b76fcf8776bb41e302c9553ee3018bf7be2fbec05e21aa266a4a248af7b";
+// 基准滚存（第 10 次＝副本线第 6 次，2026-10-05 19ddbe2c bundle 通道上线 debt-039-a 施工〔EXE-BOOT-045
+// 用户批·T2〕：patch 模板头注补 bundle 通道指引 +2 行，内容行零改动；该笔未随动基准，2026-10-14
+// 审核实测 p24 硬闸 ABORT 发现，本次追认滚存〔机制未放宽〕）：60484b76… → e47c1c16…。
+const BASELINE_SHA_EXPECTED = "e47c1c161d7ba31e9c2f063d40b9059e079a49b23255497fbc76c6929b0c9b5e";
 if (BASE_SHA !== BASELINE_SHA_EXPECTED) {
   console.error("ABORT: 真实 cordis.patch.yml 基线漂移（" + BASE_SHA.slice(0, 12) + "）——拒绝在非基准态跑验证");
   process.exit(1);
@@ -421,7 +424,7 @@ async function snapshotOf(dir) {
 // ---------- 收尾：真实仓零写入自证 ----------
 {
   const nowSha = sha(readFileSync(patchPath, "utf8"));
-  check("真实 cordis.patch.yml 全程零写入（基准 5c4e6980… 模板形不变；判据随滚存笔动态，文案随本笔在位改对）", nowSha === BASE_SHA && BASE_SHA === BASELINE_SHA_EXPECTED);
+  check("真实 cordis.patch.yml 全程零写入（基准 e47c1c16… 模板形不变；判据随滚存笔动态，文案随本笔在位改对）", nowSha === BASE_SHA && BASE_SHA === BASELINE_SHA_EXPECTED);
   rmSync(work, { recursive: true, force: true });
 }
 
