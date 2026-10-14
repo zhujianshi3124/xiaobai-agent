@@ -35,12 +35,14 @@ registry／doctor／管理面板，并携带四个子插件。
 
 - **services：`registry` + `doctor`**（`dsh.plugin.json` `provides`）——插件装载/状态对齐器与体检引擎；doctor 的检查知识在独立仓 `projects/doctor`（engine 零硬编码插件名）。
 - **面板**：`toolkit-panel`（`settings.plugins.tab` 槽位，部署行 id `toolkit-manager`，挂 `panel/index.js`）——插件开关、体检、配置编辑、审计视图的唯一管理入口（用户明确要求，长期有效）。
-- **契约**：`contract/`（contract v1.2 正典，`^1.0` 消费；v1.2 起带契约面的清单与旧字段双写判 error、纯宿主原生形态容忍＋提醒，见 `docs/contract.md` §2）。
+- **契约**：`contract/`（contract v1.3 正典，`^1.0` 消费；v1.2 起带契约面的清单与旧字段双写判 error、纯宿主原生形态容忍＋提醒，见 `docs/contract.md` §2）。
+- **命令行体检 `dsh-doctor`**（`package.json` `bin` → `doctor/cli/src/cli.mjs`）：默认 dry-run 只读不写；`--json` 输出结构化体检报告、`--states` 输出回滚链摘要；`--apply`/`--rollback` 为写盘模式，需逐条确认或 `--yes` 受托执行。实测：`node doctor/cli/src/cli.mjs --json --scope .` exit 0（`toolkitVersion: 1.3.0`）。
+- **面板记忆搜索**：面板服务端提供记忆检索（`panel/manager/memory-search.mjs`，检索索引在 `lib/agent-memory/lib/search-index.js`），随 `agent-memory` 台账按关键词检索记忆条目（实测 `test/panel-memory-search.test.mjs` 7/7、`test/agent-memory.search.test.mjs` 12/12）。
 
 ## 目录地图
 
 ```
-lib/            五个子插件（各有 dsh.plugin.json + README.md）
+lib/            四个子插件（各有 dsh.plugin.json + README.md）
 panel/          管理面板（服务端 + 客户端 React + 兜底页 HTML）
 registry/       插件注册表/装载器/状态对齐（registry 服务实现）
 contract/       契约（TS 源码 + 构建）
@@ -51,10 +53,10 @@ test/           测试（node --test）
 
 ## 挂载与部署实况
 
-- 部署行在 `cordis.patch.yml`（模板形，基准 sha256 `60484b76…`/3265B，C1-007 发布后安全审计
-  清理批滚存（副本线第 5 次：patch 模板静态组真实账号编排→示例组）；滚存链 `b0f304c9`→
-  `693cfcd7`→`a186a710`→`5c4e6980`→`534e22e3`→`60484b76`，逐次成因见 `scripts/p24-verify.mjs`
-  头注；前值 `534e22e3…`/3336B 系定名批基准）：
+- 部署行在 `cordis.patch.yml`（模板形，基准 sha256 `e47c1c16…`/3492B；滚存链 `b0f304c9`→
+  `693cfcd7`→`a186a710`→`5c4e6980`→`534e22e3`→`60484b76`→`e47c1c16`，逐次成因见
+  `scripts/p24-verify.mjs` 头注〔第 10 次＝2026-10-05 bundle 通道施工补头注未随动基准，
+  2026-10-14 审核实测发现后追认；前值 `60484b76…`/3265B 系 C1-007 发布后安全审计清理批基准〕）：
   `web`／`web-search-deepseek`
   既有行 config，`rate-throttle`／`web-search-router`／
   `agent-memory-runtime`／`toolkit-manager` 四行为 insert；**compact-router 不在 patch**——
