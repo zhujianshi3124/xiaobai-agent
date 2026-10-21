@@ -1,0 +1,60 @@
+{
+  "name": "xiaobai-agent/governance-usage-track",
+  "id": "dsh/governance-usage-track",
+  "displayName": "使用追踪与僵尸识别",
+  "version": "1.3.0",
+  "contract": "^1.0",
+  "provides": {
+    "entry": "./index.js",
+    "inject": []
+  },
+  "configSchema": {
+    "type": "object",
+    "meta": {},
+    "dict": {
+      "enabled": {
+        "type": "boolean",
+        "meta": {}
+      },
+      "reportRoot": {
+        "type": "string",
+        "meta": {}
+      },
+      "usageLedgerPath": {
+        "type": "string",
+        "meta": {}
+      },
+      "zombieDays": {
+        "type": "number",
+        "meta": {}
+      },
+      "highFreqCalls": {
+        "type": "number",
+        "meta": {}
+      },
+      "midFreqCalls": {
+        "type": "number",
+        "meta": {}
+      },
+      "writeHistory": {
+        "type": "boolean",
+        "meta": {}
+      }
+    }
+  },
+  "requirements": {
+    "runtime": {
+      "node": ">=22",
+      "dsh": ">=0.1.2-rc.1 <0.2.0 || >=0.2.0-rc.2 <0.3.0"
+    },
+    "binaries": [],
+    "packages": {},
+    "registers": {
+      "events": [],
+      "services": [],
+      "commands": [],
+      "providers": []
+    },
+    "exports": {}
+  }
+}

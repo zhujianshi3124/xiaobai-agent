@@ -96,3 +96,16 @@
         reportRoot: ''
         similarityThreshold: 0.6
       inject: []
+
+- insert:
+    - id: governance-usage-track
+      name: 'xiaobai-agent/governance-usage-track'
+      config:
+        enabled: true
+        reportRoot: ''
+        usageLedgerPath: ''
+        zombieDays: 14
+        highFreqCalls: 500
+        midFreqCalls: 50
+        writeHistory: true
+      inject: []

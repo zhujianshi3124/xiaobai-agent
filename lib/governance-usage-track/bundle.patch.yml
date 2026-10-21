@@ -1,0 +1,22 @@
+# governance-usage-track bundle 补丁（批次 5B 首件；形态照 governance-preflight 样板）。
+#
+# 与 lib/rate-throttle、lib/agent-memory、lib/governance-preflight、
+# lib/governance-context-audit、lib/governance-overlap-detect 的 bundle.patch.yml 同族：
+# 本子包自带一条 insert 行，由仓根 package.json 的 dsh.bundle.patch 数组按序拼接（批次 1 地基）。
+#
+# 本行**不写 disabled**（裁决 C）：默认挂载，apply() 才会执行、才会产出报告。
+# 「默认静默」指不注入、不出声，不是不运行——红线原文是"只写结构化报告"。
+# 内部逻辑由 config.enabled 控制；inject 为空数组＝不依赖任何宿主服务
+# （本插件只读 usage-ledger.json 与 manifest，完全不需要 ctx 服务）。
+- insert:
+    - id: governance-usage-track
+      name: 'xiaobai-agent/governance-usage-track'
+      config:
+        enabled: true
+        reportRoot: ''
+        usageLedgerPath: ''
+        zombieDays: 14
+        highFreqCalls: 500
+        midFreqCalls: 50
+        writeHistory: true
+      inject: []
