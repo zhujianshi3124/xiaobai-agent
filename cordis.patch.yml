@@ -78,3 +78,12 @@
         enabled: true
         reportRoot: ''
       inject: []
+
+- insert:
+    - id: governance-context-audit
+      name: 'xiaobai-agent/governance-context-audit'
+      config:
+        enabled: true
+        reportRoot: ''
+        usageLedgerPath: ''
+      inject: []

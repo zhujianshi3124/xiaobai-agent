@@ -29,6 +29,7 @@
     "./agent-memory": "./lib/agent-memory/lib/index.js",
     "./agent-memory/plugin": "./lib/agent-memory/plugin.js",
     "./governance-preflight": "./lib/governance-preflight/index.js",
+    "./governance-context-audit": "./lib/governance-context-audit/index.js",
     "./package.json": "./package.json"
   },
   "files": [
@@ -56,7 +57,8 @@
         "./lib/rate-throttle/bundle.patch.yml",
         "./lib/agent-memory/bundle.patch.yml",
         "./bundle.patch.yml",
-        "./lib/governance-preflight/bundle.patch.yml"
+        "./lib/governance-preflight/bundle.patch.yml",
+        "./lib/governance-context-audit/bundle.patch.yml"
       ]
     },
     "client": {
