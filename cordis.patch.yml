@@ -109,3 +109,12 @@
         midFreqCalls: 50
         writeHistory: true
       inject: []
+
+- insert:
+    - id: governance-tiering
+      name: 'xiaobai-agent/governance-tiering'
+      config:
+        enabled: true
+        reportRoot: ''
+        writeHistory: true
+      inject: []

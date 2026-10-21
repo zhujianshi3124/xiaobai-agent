@@ -32,6 +32,7 @@
     "./governance-context-audit": "./lib/governance-context-audit/index.js",
     "./governance-overlap-detect": "./lib/governance-overlap-detect/index.js",
     "./governance-usage-track": "./lib/governance-usage-track/index.js",
+    "./governance-tiering": "./lib/governance-tiering/index.js",
     "./package.json": "./package.json"
   },
   "files": [
@@ -62,7 +63,8 @@
         "./lib/governance-preflight/bundle.patch.yml",
         "./lib/governance-context-audit/bundle.patch.yml",
         "./lib/governance-overlap-detect/bundle.patch.yml",
-        "./lib/governance-usage-track/bundle.patch.yml"
+        "./lib/governance-usage-track/bundle.patch.yml",
+        "./lib/governance-tiering/bundle.patch.yml"
       ]
     },
     "client": {

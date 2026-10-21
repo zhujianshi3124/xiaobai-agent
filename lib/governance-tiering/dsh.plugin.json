@@ -1,0 +1,44 @@
+{
+  "name": "xiaobai-agent/governance-tiering",
+  "id": "dsh/governance-tiering",
+  "displayName": "治理分层与卸载候选识别",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "provides": {
+    "entry": "./index.js",
+    "inject": []
+  },
+  "configSchema": {
+    "type": "object",
+    "meta": {},
+    "dict": {
+      "enabled": {
+        "type": "boolean",
+        "meta": {}
+      },
+      "reportRoot": {
+        "type": "string",
+        "meta": {}
+      },
+      "writeHistory": {
+        "type": "boolean",
+        "meta": {}
+      }
+    }
+  },
+  "requirements": {
+    "runtime": {
+      "node": ">=22",
+      "dsh": ">=0.1.2-rc.1 <0.2.0 || >=0.2.0-rc.2 <0.3.0"
+    },
+    "binaries": [],
+    "packages": {},
+    "registers": {
+      "events": [],
+      "services": [],
+      "commands": [],
+      "providers": []
+    },
+    "exports": {}
+  }
+}
