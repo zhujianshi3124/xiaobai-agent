@@ -9,8 +9,7 @@
 # compact-router 不在此：由 scripts/apply-preset-patch.mjs 改写预设 compaction 行名。
 
 - id: web
-  config:
-    searchProvider: auto-search
+  config: {}
 
 - id: web-search-deepseek
   disabled: false
@@ -59,17 +58,6 @@
                 - { provider: example-provider-j, model: example-model-b }
                 - { provider: example-provider-k, model: example-model-b }
       inject: [llm, tokenMeter]
-
-- insert:
-    - id: web-search-router
-      name: 'xiaobai-agent/search-router'
-      config:
-        mode: auto
-        officialProviders: [llm-deepseek]
-        officialProviderPatterns: []
-        officialModelPatterns: []
-        defaultWhenUnknown: local
-      inject: [web]
 
 - insert:
     - id: agent-memory-runtime

@@ -10,7 +10,7 @@
 //   web-search-router 行——它是现存唯一带 provider 引用的 patch 行。）
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
@@ -21,14 +21,30 @@ import { PLUGINS, crossRefNeedles, declaredDependents, pluginByRowId } from '../
 import { extractRegisters } from '../registry/dist/loader.js'
 
 const ROOT = resolve(import.meta.dirname, '..')
-const PATCH_SRC = join(ROOT, 'cordis.patch.yml')
+
+// 合成 patch 文本：本仓 search-router 移除后，真实 cordis.patch.yml 已无带 provider
+// 引用的插件行。此文本自带「平台行 searchProvider 引用 + 一个声明该 provider 的挂载行」，
+// 让交叉引用预检的 provider 维度继续可测（不依赖真实仓内容）。
+const SYNTH_PATCH = [
+  '- id: web',
+  '  config:',
+  '    searchProvider: auto-search',
+  '',
+  '- insert:',
+  '    - id: web-search-router',
+  "      name: 'xiaobai-agent/search-router'",
+  '      config:',
+  '        mode: auto',
+  '      inject: [web]',
+  '',
+].join('\n')
 
 /** 一份可写的 patch 副本 + 最小仓根（卸载 plan 需要 lib/<plugin> 在场）。 */
 function sandbox(t, plugin) {
   const root = mkdtempSync(join(tmpdir(), 'h2-crossrefs-'))
   t.after(() => rmSync(root, { recursive: true, force: true }))
   const file = join(root, 'cordis.patch.yml')
-  cpSync(PATCH_SRC, file)
+  writeFileSync(file, SYNTH_PATCH, 'utf8')
   if (plugin) mkdirSync(join(root, 'lib', plugin), { recursive: true })
   return { root, file, text: readFileSync(file, 'utf8') }
 }
@@ -36,29 +52,40 @@ function sandbox(t, plugin) {
 test('停用方向：provider 引用被看见，且旧口径（仅行 id）确实看不见', (t) => {
   const { file, text } = sandbox(t)
 
-  // plan 阶段不碰 backupRoot（只有 execute 才写备份），这里留空即可。
-  const plan = createTogglePlan({ file, rowId: 'web-search-router', enabled: false })
-  assert.ok(plan.crossRefs.length > 0, '停用 search-router（web-search-router 行）必须报出引用')
-  const hit = plan.crossRefs.find((r) => /searchProvider: auto-search/.test(r.text))
-  assert.ok(hit, '必须命中 web 行的 searchProvider: auto-search')
-  assert.equal(hit.source, 'patch')
-  assert.ok(hit.line > 0, 'patch 命中要带行号，便于用户跳过去看')
+  // 本仓已无任何插件声明 providers，故临时注入合成条目，使 createTogglePlan 内部
+  // crossRefNeedles(rowId) 仍能取到 provider needle；finally 复原避免污染漂移守卫。
+  assert.ok(!Object.isFrozen(PLUGINS),
+    'PLUGINS 已冻结，本用例的临时注入写法失效；若确要冻结 PLUGINS，请把本用例改为显式 alsoMatch:["auto-search"] 方案')
+  const saved = PLUGINS['search-router']
+  try {
+    PLUGINS['search-router'] = { rowId: 'web-search-router', pkg: 'xiaobai-agent/search-router', providers: ['auto-search'] }
+    // plan 阶段不碰 backupRoot（只有 execute 才写备份），这里留空即可。
+    const plan = createTogglePlan({ file, rowId: 'web-search-router', enabled: false })
+    assert.ok(plan.crossRefs.length > 0, '停用 search-router（web-search-router 行）必须报出引用')
+    const hit = plan.crossRefs.find((r) => /searchProvider: auto-search/.test(r.text))
+    assert.ok(hit, '必须命中 web 行的 searchProvider: auto-search')
+    assert.equal(hit.source, 'patch')
+    assert.ok(hit.line > 0, 'patch 命中要带行号，便于用户跳过去看')
 
-  // 非空洞性：同一份文本、同一个行 id，按修复前的口径（只有行 id）扫 ⇒ 零命中。
-  assert.deepEqual(findCrossReferences(text, { rowId: 'web-search-router', alsoMatch: [] })
-    .filter((h) => /searchProvider: auto-search/.test(h.text)), [], '旧口径不该看得见这条（看不见才是它的问题）')
-  assert.deepEqual(crossRefNeedles('web-search-router'), ['auto-search'], '补上的正是 provider id 维度')
+    // 非空洞性：同一份文本、同一个行 id，按修复前的口径（只有行 id）扫 ⇒ 零命中。
+    assert.deepEqual(findCrossReferences(text, { rowId: 'web-search-router', alsoMatch: [] })
+      .filter((h) => /searchProvider: auto-search/.test(h.text)), [], '旧口径不该看得见这条（看不见才是它的问题）')
+    assert.deepEqual(crossRefNeedles('web-search-router'), ['auto-search'], '补上的正是 provider id 维度')
+  } finally {
+    if (saved === undefined) delete PLUGINS['search-router']
+    else PLUGINS['search-router'] = saved
+  }
 })
 
 test('停用方向：search-router 的 auto-search 引用同样命中', () => {
-  const text = readFileSync(PATCH_SRC, 'utf8')
-  const refs = buildCrossRefs(text, { rowId: 'web-search-router', plugin: 'search-router' })
+  const text = SYNTH_PATCH
+  const refs = buildCrossRefs(text, { rowId: 'web-search-router', plugin: 'search-router', alsoMatch: ['auto-search'] })
   assert.ok(refs.some((r) => /searchProvider: auto-search/.test(r.text)), '停用 search-router 要报出 web 行的 searchProvider 引用')
 })
 
 test('停用方向：声明式依赖机制保留待用（S1 剔除批后登记表空、恒如实为空）', () => {
-  const text = readFileSync(PATCH_SRC, 'utf8')
-  const refs = buildCrossRefs(text, { rowId: 'web-search-router', plugin: 'search-router' })
+  const text = SYNTH_PATCH
+  const refs = buildCrossRefs(text, { rowId: 'web-search-router', plugin: 'search-router', alsoMatch: ['auto-search'] })
   assert.deepEqual(
     refs.filter((r) => r.source === 'declared-dependency'), [],
     '登记表清空后不得再报历史依赖（web-search-local 已出包）',
@@ -69,12 +96,23 @@ test('停用方向：声明式依赖机制保留待用（S1 剔除批后登记�
 
 test('卸载方向：软/真卸载 plan 都带 crossRefs（修复前卸载路径无任何此类预检）', (t) => {
   const { root, text } = sandbox(t, 'search-router')
-  const soft = createSoftUninstallPlan({ toolkitRoot: root, plugin: 'search-router' })
-  assert.ok(Array.isArray(soft.crossRefs) && soft.crossRefs.length > 0, '软卸载必须给引用报告')
-  assert.ok(soft.crossRefs.some((r) => /searchProvider: auto-search/.test(r.text)), '含 provider 引用那条')
+  // 卸载 plan 入口 assertUninstallable(plugin) 需要登记项；本仓已无该条目，故临时注入合成条目，
+  // finally 复原避免污染漂移守卫（它遍历 Object.keys(PLUGINS)）。
+  assert.ok(!Object.isFrozen(PLUGINS),
+    'PLUGINS 已冻结，本用例的临时注入写法失效；若确要冻结 PLUGINS，请把本用例改为显式 alsoMatch:["auto-search"] 方案')
+  const saved = PLUGINS['search-router']
+  try {
+    PLUGINS['search-router'] = { rowId: 'web-search-router', pkg: 'xiaobai-agent/search-router', managedBy: 'patch', hostKey: 'searchProvider', providers: ['auto-search'] }
+    const soft = createSoftUninstallPlan({ toolkitRoot: root, plugin: 'search-router' })
+    assert.ok(Array.isArray(soft.crossRefs) && soft.crossRefs.length > 0, '软卸载必须给引用报告')
+    assert.ok(soft.crossRefs.some((r) => /searchProvider: auto-search/.test(r.text)), '含 provider 引用那条')
 
-  const truth = createTrueUninstallPlan({ toolkitRoot: root, plugin: 'search-router' })
-  assert.ok(Array.isArray(truth.crossRefs) && truth.crossRefs.length > 0, '真卸载（销毁式）同样要给报告')
+    const truth = createTrueUninstallPlan({ toolkitRoot: root, plugin: 'search-router' })
+    assert.ok(Array.isArray(truth.crossRefs) && truth.crossRefs.length > 0, '真卸载（销毁式）同样要给报告')
+  } finally {
+    if (saved === undefined) delete PLUGINS['search-router']
+    else PLUGINS['search-router'] = saved
+  }
   // 同一份文本、同一条引用，旧口径看不见 ⇒ 证明这条报告是新增维度带来的
   assert.deepEqual(findCrossReferences(text, { rowId: 'web-search-router', alsoMatch: [] })
     .filter((h) => /searchProvider: auto-search/.test(h.text)), [])
@@ -82,15 +120,27 @@ test('卸载方向：软/真卸载 plan 都带 crossRefs（修复前卸载路径
 
 test('不阻断语义：crossRefs 非空时停用照样写得下去（决定权在用户）', (t) => {
   const { root, file, text } = sandbox(t)
-  const plan = createTogglePlan({
-    file,
-    rowId: 'web-search-router',
-    enabled: false,
-    backupRoot: join(root, 'backups'),
-    reason: 'test-h2',
-    note: 'h2',
-  })
-  assert.ok(plan.crossRefs.length > 0, '前提：本例确实带着警告')
+  // 同 :52：createTogglePlan 内部依赖 crossRefNeedles，需临时注入合成登记项；finally 复原。
+  assert.ok(!Object.isFrozen(PLUGINS),
+    'PLUGINS 已冻结，本用例的临时注入写法失效；若确要冻结 PLUGINS，请把本用例改为显式 alsoMatch:["auto-search"] 方案')
+  const saved = PLUGINS['search-router']
+  let plan
+  try {
+    PLUGINS['search-router'] = { rowId: 'web-search-router', pkg: 'xiaobai-agent/search-router', providers: ['auto-search'] }
+    plan = createTogglePlan({
+      file,
+      rowId: 'web-search-router',
+      enabled: false,
+      backupRoot: join(root, 'backups'),
+      reason: 'test-h2',
+      note: 'h2',
+    })
+    assert.ok(plan.crossRefs.length > 0, '前提：本例确实带着警告')
+    assert.equal(plan.crossRefs.filter((r) => /searchProvider: auto-search/.test(r.text)).length, 1, '恰有一条 provider 引用')
+  } finally {
+    if (saved === undefined) delete PLUGINS['search-router']
+    else PLUGINS['search-router'] = saved
+  }
   putPlan(plan) // 面板路由里由 /toggle/plan 负责入池，execute 才取得到
   const result = executePlan(plan.token)
   assert.ok(result, '带警告的停用必须能执行（只报告不阻断）')
@@ -101,7 +151,7 @@ test('不阻断语义：crossRefs 非空时停用照样写得下去（决定权�
 })
 
 test('边界：平台行（本表没有的 rowId）不抛、只按行 id 查；无行 id 的预设插件按包名查', () => {
-  const text = readFileSync(PATCH_SRC, 'utf8')
+  const text = SYNTH_PATCH
   assert.equal(pluginByRowId('web'), null, '`web` 是宿主平台行，不属本表')
   assert.doesNotThrow(() => buildCrossRefs(text, { rowId: 'web', plugin: null }))
   const preset = buildCrossRefs(text, { plugin: 'compact-router' })

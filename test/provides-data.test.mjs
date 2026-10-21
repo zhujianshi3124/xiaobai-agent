@@ -29,13 +29,12 @@ const LIB = 'lib';
 const PATHS = {
   bucket: 'dsh.plugin.json',
   compactRouter: join(LIB, 'compact-router', 'dsh.plugin.json'),
-  searchRouter: join(LIB, 'search-router', 'dsh.plugin.json'),
   rateThrottle: join(LIB, 'rate-throttle', 'dsh.plugin.json'),
   agentMemory: join(LIB, 'agent-memory', 'dsh.plugin.json'),
   panel: join('panel', 'dsh.plugin.json'),
 };
-/** 带契约字段的五份（panel 无 contract 字段，走 legacy 合成分支＋D-15 显式闸，不经契约闸）。 */
-const CONTRACT_BEARERS = ['bucket', 'compactRouter', 'searchRouter', 'rateThrottle', 'agentMemory'];
+/** 带契约字段的四份（panel 无 contract 字段，走 legacy 合成分支＋D-15 显式闸，不经契约闸）。 */
+const CONTRACT_BEARERS = ['bucket', 'compactRouter', 'rateThrottle', 'agentMemory'];
 
 // ── 一、迁移后的提供面实况（逐份 deepEqual）──────────────────────────────
 
@@ -47,11 +46,6 @@ test('迁移后·compact-router provides＝entry+services+commands+inject 四面
     inject: ['llm', 'tokenMeter', 'sessions', 'commands'],
     commands: ['compact-mode', 'compact-llm', 'compact-instant', 'compact-auto', 'compact-archive'],
   });
-});
-
-test('迁移后·search-router provides＝entry+providers+inject', () => {
-  const m = readManifest(PATHS.searchRouter);
-  assert.deepEqual(m.provides, { entry: './index.js', providers: ['auto-search'], inject: ['web'] });
 });
 
 test('迁移后·桶根 provides＝services(实供两服务)+inject；entry 仍在 legacy 套件面（成因钉住）', () => {
@@ -106,7 +100,7 @@ test('迁移后·legacy registers 的已迁四槽在真实清单里全部清空�
     }
   }
   // 入口面：三份内置清单已让位给 provides.entry；桶根与 agent-memory 是在册例外（见上两节的成因）
-  for (const key of ['compactRouter', 'searchRouter', 'rateThrottle']) {
+  for (const key of ['compactRouter', 'rateThrottle']) {
     assert.equal((readManifest(PATHS[key]).requirements.exports || {})['.'], undefined,
       `${PATHS[key]} 的 legacy 入口声明必须已让位给 provides.entry`);
   }
@@ -114,7 +108,7 @@ test('迁移后·legacy registers 的已迁四槽在真实清单里全部清空�
 
 // ── 四、形态现状：manifestVersion 退役、name 保留的成因、五键骨架齐载 ──────
 
-test('迁移后·五份带契约的清单 manifestVersion 全退役，name 仍在（冻结 doctor 的别名解析锚）', () => {
+test('迁移后·四份带契约的清单 manifestVersion 全退役，name 仍在（冻结 doctor 的别名解析锚）', () => {
   for (const key of CONTRACT_BEARERS) {
     const m = readManifest(PATHS[key]);
     assert.equal(Object.prototype.hasOwnProperty.call(m, 'manifestVersion'), false,
@@ -133,10 +127,10 @@ test('迁移后·凡保留 requirements 的清单五键齐载（doctor"在场才
     carriers++;
     for (const k of FIVE) assert.ok(k in m.requirements, `${PATHS[key]} 保留了 requirements 却缺五键之一 "${k}" ⇒ 冻结 CLI 报 schema.required-missing`);
   }
-  assert.equal(carriers, 6, '今天六份清单都还保留 requirements（成因逐名在册＝debt C-4）');
+  assert.equal(carriers, 5, '今天五份清单都还保留 requirements（成因逐名在册＝debt C-4）');
 });
 
-test('迁移后·extractRegisters 对六份真实清单的归一结果（面板与冲突检查的取数实况）', () => {
+test('迁移后·extractRegisters 对五份真实清单的归一结果（面板与冲突检查的取数实况）', () => {
   // 只比**非空面**：五键骨架里的 legacy 空数组会被 pickSlot 如实读出（空即"已声明为空"），
   // 那不是提供面知识，面板与冲突检查用的就是这份归一结果——空槽在本断言里不参与比较，
   // 空槽的存在与否由上一节"legacy 侧不得留已迁走的声明"与"五键齐载"两格钉住。
@@ -148,14 +142,13 @@ test('迁移后·extractRegisters 对六份真实清单的归一结果（面板�
     services: ['compaction'], commands: ['compact-mode', 'compact-llm', 'compact-instant', 'compact-auto', 'compact-archive'],
     inject: ['llm', 'tokenMeter', 'sessions', 'commands'],
   });
-  assert.deepEqual(got.searchRouter, { providers: ['auto-search'], inject: ['web'] });
   assert.deepEqual(got.rateThrottle, { inject: ['llm', 'tokenMeter'] });
   assert.deepEqual(got.agentMemory, { inject: ['systemPrompt'] });
   // panel 无 provides、legacy registers 仅剩 inject/events ⇒ 回落取数，events 不进提供面
   assert.deepEqual(got.panel, { inject: ['webServer'] });
 });
 
-test('迁移后·五份带 contract 的清单整体过 validateManifest（现闸不红）', () => {
+test('迁移后·四份带 contract 的清单整体过 validateManifest（现闸不红）', () => {
   for (const key of CONTRACT_BEARERS) {
     const verdict = validateManifest(readManifest(PATHS[key]));
     assert.equal(
@@ -167,11 +160,11 @@ test('迁移后·五份带 contract 的清单整体过 validateManifest（现闸
 });
 
 // ── 五、成员版本面随桶（"一个版本号管全部"，EXE-BOOT-047 同族口径收口）──────────────
-// 五份带契约清单的 version 是契约必填且由面板卡片徽章直出（v2-api entryView），
+// 四份带契约清单的 version 是契约必填且由面板卡片徽章直出（v2-api entryView），
 // 不得与包版本漂移；panel/package.json 同属成员版本面（q2-layer-scan 信息性取数）。
 // panel/dsh.plugin.json 无 version 字段＝manifestVersion 1 新格式形态（无契约面、
 // 非 registry entry），本钉不涉、亦不得借机外加字段。
-test('成员版本面随桶版本——五份带契约清单与 panel/package.json 不得与包版本漂移', () => {
+test('成员版本面随桶版本——四份带契约清单与 panel/package.json 不得与包版本漂移', () => {
   const pkgVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
   for (const key of CONTRACT_BEARERS) {
     assert.equal(readManifest(PATHS[key]).version, pkgVersion,

@@ -28,7 +28,6 @@
     "./compact-router": "./lib/compact-router/index.js",
     "./agent-memory": "./lib/agent-memory/lib/index.js",
     "./agent-memory/plugin": "./lib/agent-memory/plugin.js",
-    "./search-router": "./lib/search-router/index.js",
     "./package.json": "./package.json"
   },
   "files": [
@@ -52,7 +51,11 @@
       "dsh": ">=0.2.0-rc.2"
     },
     "bundle": {
-      "patch": "./bundle.patch.yml"
+      "patch": [
+        "./lib/rate-throttle/bundle.patch.yml",
+        "./lib/agent-memory/bundle.patch.yml",
+        "./bundle.patch.yml"
+      ]
     },
     "client": {
       "inject": [],

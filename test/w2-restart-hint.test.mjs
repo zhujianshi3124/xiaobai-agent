@@ -23,7 +23,7 @@ import { buildFixtureToolkit, buildFixtureHome, writeValidLedger } from './helpe
 import { rmSync } from 'node:fs'
 
 // S1 剔除批后非可写卡＝三张（web-search-local 已出包；rate-throttle 是可写卡、另一支钉）。
-const FOUR = ['agent-memory', 'compact-router', 'search-router']
+const FOUR = ['agent-memory', 'compact-router']
 
 function fixtureWorld(tag) {
   const tk = buildFixtureToolkit({ tag })
@@ -50,20 +50,6 @@ test('W2-余件 · 非可写卡提示位：服务端逐卡下发 effectNote 且�
     }
     assert.match(snap.plugins.find((x) => x.dir === 'agent-memory').configPanel.effectNote, /agent-memory-runtime 行/)
     assert.match(snap.plugins.find((x) => x.dir === 'compact-router').configPanel.effectNote, /预设托管/)
-  } finally { fx.cleanup() }
-})
-
-test('W2-余件 · search-router 提示位两半：热 JSON 即生效 + patch 重启生效（且被盖住）', async () => {
-  const fx = fixtureWorld('w2-b')
-  try {
-    const snap = await buildSnapshot({ toolkitRoot: fx.root, hotRouterPath: fx.hotRouterPath })
-    const p = snap.plugins.find((x) => x.dir === 'search-router')
-    assert.match(p.configPanel.effectNote, /热改即生效（无需重启）/, '热 JSON 半边')
-    assert.match(p.configPanel.effectNote, /patch 行改动要重启 DSH 才生效/, 'patch 半边')
-    assert.match(p.configPanel.effectNote, /会被它盖住/, '遮蔽关系不得丢（searchRouterModeShadow 顺位事实）')
-    // 既有 mode 展示面不受本批牵动
-    assert.ok(p.configPanel.mode, 'mode 生效值+来源展示必须在')
-    assert.ok(p.configPanel.note.includes('不提供 mode 编辑'), '既有 note 原样保留')
   } finally { fx.cleanup() }
 })
 

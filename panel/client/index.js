@@ -177,7 +177,13 @@ window.__ModuleLoader__.load({
 			dlgWarn: { marginTop: 6, padding: "6px 8px", borderRadius: 4, background: "#2a2210", border: "1px solid #6b5a1e", fontSize: 11.5, color: "#e0d5b7", lineHeight: 1.8 },
 			dlgWarnTop: { marginBottom: 6, padding: "5px 8px", borderRadius: 4, background: "#3a1414", border: "1px solid #8a3030", fontSize: 12, fontWeight: 700, color: "#f0c0bc" },
 			dlgErr: { fontSize: 11.5, color: "#f2a6a0" },
-			banner: { margin: "12px 0", padding: "10px 12px", borderRadius: 6, background: "#12241e", border: "1px solid #2c5a4a", color: "#9fd8c0", fontSize: 13 }
+			banner: { margin: "12px 0", padding: "10px 12px", borderRadius: 6, background: "#12241e", border: "1px solid #2c5a4a", color: "#9fd8c0", fontSize: 13 },
+			// ---- 批次4 治理视图（只读区块）----
+			govBox: { margin: "0 0 10px", padding: "10px 12px", borderRadius: 6, background: "#151922", border: "1px solid #2a2f36" },
+			govHead: { fontSize: 12.5, fontWeight: 700, color: "#c8cdd4", marginBottom: 4 },
+			govLine: { fontSize: 12, color: "#d7dae0", lineHeight: 1.7, wordBreak: "break-word" },
+			govPath: { fontFamily: "ui-monospace, Consolas, monospace", color: "#8ab4f8" },
+			govEmpty: { padding: "10px 2px", fontSize: 12.5, color: "#9aa0a6", lineHeight: 1.7 }
 		};
 
 		function Badge(props) {
@@ -1628,6 +1634,21 @@ window.__ModuleLoader__.load({
 			footer: "检索帮你找，接手新会话仍需走移交确认。"
 		};
 
+		// ════ 批次4 治理视图（只读区块 · 报告占位）════════════════════════════
+		// 数据面＝GET /custody（面板域既有只读路由，apiBase 前缀；客户端既有调用点见 ConsoleSection）。
+		// 本批零新增路由、零新增事件订阅：治理报告尚无数据面，故只做约定路径占位与空态，
+		// 不建目录、不写任何文件。文案与面板其余降级块同族——如实说明，不假装可用。
+		var GOVERNANCE_COPY = {
+			title: "治理视图",
+			desc: "本机插件与保管档的只读对账。治理报告按约定落在插件仓的 .toolkit-governance/ 下；本版尚未生成。",
+			reportPath: ".toolkit-governance/",
+			reportAbsent: "治理报告尚未生成（约定目录 .toolkit-governance/ 不存在）。这是当前版本的正常状态，不影响插件开关与体检。",
+			fetchFailed: "读取治理数据时出错（<reason>）。治理视图暂不可用，面板其余区块不受影响。",
+			noData: "已读取，但保管档里没有任何条目——治理数据为空。",
+			loading: "正在读取治理数据…",
+			footer: "治理视图只读：不改插件、不改配置、不写任何文件。"
+		};
+
 		// snippet 里命中词加粗（大小写不敏感切分；假 react 下返回元素树，p22 文本收集兼容）
 		function boldQueryParts(snippet, q) {
 			var text = String(snippet == null ? "" : snippet);
@@ -1755,6 +1776,100 @@ window.__ModuleLoader__.load({
 			});
 		}
 
+		/**
+		 * 纯呈现卡（props 进、元素树出）：res=null 尚未读取/报告目录不存在；res.phase=unavailable
+		 * 报告目录不可用；res.phase=error 读取失败；res.phase=done 数据列（空则空态文案）。
+		 * 与 MemorySearchCard 同范式：拆出纯函数层，p22 同族可对每个状态真跑
+		 * （headless createElement 陷阱的同族对策）。本批实际只到 null / done / error 三支，
+		 * unavailable 支留给治理报告数据面落地后接——四态结构先立住，不写单支简化版。
+		 */
+		function GovernanceCard(props) {
+			var res = props.res;
+			var busy = props.busy;
+			var onReload = props.onReload;
+			var kids = [];
+			kids.push(react.createElement("div", { key: "desc", style: styles.desc }, GOVERNANCE_COPY.desc));
+			kids.push(react.createElement("div", { key: "row", style: styles.searchRow },
+				react.createElement("span", { key: "p", style: styles.govPath }, GOVERNANCE_COPY.reportPath),
+				react.createElement("button", {
+					key: "go", style: busy ? Object.assign({}, styles.button, styles.buttonDisabled) : styles.button,
+					disabled: busy, onClick: onReload
+				}, busy ? "读取中…" : "重新读取")
+			));
+
+			if (res === null) {
+				kids.push(react.createElement("div", { key: "idle", style: styles.govEmpty },
+					busy ? GOVERNANCE_COPY.loading : GOVERNANCE_COPY.reportAbsent));
+			} else if (res.phase === "unavailable") {
+				kids.push(react.createElement("div", { key: "unavail", style: styles.govEmpty },
+					String(res.reason || GOVERNANCE_COPY.reportAbsent)));
+			} else if (res.phase === "error") {
+				kids.push(react.createElement("div", { key: "err", style: styles.govEmpty },
+					String(res.message || GOVERNANCE_COPY.fetchFailed.replace("<reason>", ""))));
+			} else {
+				var data = res.data || {};
+				var rows = Array.isArray(data.entries) ? data.entries : [];
+				if (rows.length === 0) {
+					kids.push(react.createElement("div", { key: "none", style: styles.govEmpty }, GOVERNANCE_COPY.noData));
+				} else {
+					kids.push(react.createElement("div", { key: "head", style: styles.muted },
+						"保管档共 " + rows.length + " 条；预设托管状态：" + (data.presetState ? "已记录" : "未记录")));
+					rows.forEach(function (row, i) {
+						var id = String((row && row.custodyId) || "");
+						var plugin = String((row && row.plugin) || "");
+						var files = Number((row && row.fileCount) || 0);
+						var bytes = Number((row && row.totalBytes) || 0);
+						var at = String((row && row.createdAt) || "");
+						kids.push(react.createElement("div", { key: "r" + i, style: styles.searchRowLine },
+							react.createElement("span", { key: "a", style: styles.techRow },
+								id + "｜" + (plugin || "(未记录插件)") + "｜" + files + " 个文件｜" + bytes + " 字节" + (at ? "｜" + at : ""))));
+					});
+				}
+			}
+
+			kids.push(react.createElement("div", { key: "report", style: styles.govBox },
+				react.createElement("div", { key: "h", style: styles.govHead }, "治理报告"),
+				react.createElement("div", { key: "l", style: styles.govLine }, GOVERNANCE_COPY.reportAbsent)));
+
+			kids.push(react.createElement("div", { key: "foot", style: styles.searchFooter }, GOVERNANCE_COPY.footer));
+
+			return react.createElement("div", { style: styles.card }, kids);
+		}
+
+		function GovernanceSection() {
+			var resSt = react.useState(null);   // null=尚未读取；{ phase, ... }
+			var res = resSt[0];
+			var setRes = resSt[1];
+			var busySt = react.useState(false);
+			var busy = busySt[0];
+			var setBusy = busySt[1];
+
+			var load = react.useCallback(async function () {
+				setBusy(true);
+				try {
+					var http = await fetch(PANEL_API + "/custody", { cache: "no-store" });
+					var body = await http.json();
+					if (!body || body.ok !== true) {
+						setRes({ phase: "error", message: GOVERNANCE_COPY.fetchFailed.replace("<reason>", String((body && body.error) || ("HTTP " + http.status))) });
+						return;
+					}
+					var custody = (body && body.custody) || {};
+					setRes({ phase: "done", data: {
+						entries: Array.isArray(custody.entries) ? custody.entries : [],
+						presetState: custody.presetState || null
+					} });
+				} catch (e) {
+					setRes({ phase: "error", message: GOVERNANCE_COPY.fetchFailed.replace("<reason>", String((e && e.message) || e)) });
+				} finally {
+					setBusy(false);
+				}
+			}, []);
+
+			react.useEffect(function () { load(); }, [load]);
+
+			return react.createElement(GovernanceCard, { res: res, busy: busy, onReload: load });
+		}
+
 		function ToolkitPanel() {
 			var state = react.useState(null);
 			var snapshot = state[0];
@@ -1871,6 +1986,10 @@ window.__ModuleLoader__.load({
 				// S4 F-37：记忆检索独立卡（批1）——全库行为的读卡，不是单插件配置
 				react.createElement("h2", { key: "search-h2", style: styles.h2 }, "记忆检索"),
 				react.createElement(MemorySearchSection, { key: "memory-search" }),
+				// 批次4：治理视图（只读区块）——与记忆检索同族：全库只读对账，不碰单插件配置；
+				// 排在 patch 域写操作之前，保持「全局只读 → 单插件写」的既有阅读序。
+				react.createElement("h2", { key: "gov-h2", style: styles.h2 }, "治理视图（只读对账 · 报告占位）"),
+				react.createElement(GovernanceSection, { key: "governance" }),
 				// P6 归一：旧 5 卡片区降级为「内置插件工具区」，插件特有入口（两层开关/参数编辑/
 				// 卸载恢复/技术详情）原样保留在本区，入口可达（P6 映射表见 P6 报告）
 				react.createElement("h2", { style: styles.h2 }, "内置插件工具区（patch 域 · 开关 / 参数 / 卸载恢复）"),

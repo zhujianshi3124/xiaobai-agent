@@ -1,0 +1,7 @@
+- insert:
+    - id: agent-memory-runtime
+      name: 'xiaobai-agent/agent-memory/plugin'
+      disabled: true
+      config:
+        defaultWorkspace: null
+      inject: [systemPrompt]

@@ -43,7 +43,6 @@ const silent = { info: () => {}, warn: () => {}, error: () => {} }
 const BUILTINS_WITH_INDEX = [
   ['compact-router', 'lib/compact-router'],
   ['rate-throttle', 'lib/rate-throttle'],
-  ['search-router', 'lib/search-router'],
 ]
 
 for (const [label, rel] of BUILTINS_WITH_INDEX) {

@@ -1,0 +1,16 @@
+{
+  "name": "xiaobai-agent/agent-memory",
+  "version": "1.3.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./lib/index.js",
+    "./plugin": "./plugin.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./bundle.patch.yml"
+    }
+  }
+}

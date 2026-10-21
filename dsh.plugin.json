@@ -64,8 +64,7 @@
   "aliases": {
     "@local/dsh-compact-router": "xiaobai-agent/compact-router",
     "@local/agent-memory": "xiaobai-agent/agent-memory",
-    "dsh-rate-throttle": "xiaobai-agent/rate-throttle",
-    "dsh-search-router": "xiaobai-agent/search-router"
+    "dsh-rate-throttle": "xiaobai-agent/rate-throttle"
   },
   "requirements": {
     "runtime": {

@@ -16,7 +16,6 @@ const ORIGINS = {
   "agent-memory": { origin: "local" },
   "compact-router": { origin: "local" },
   "rate-throttle": { origin: "local" },
-  "search-router": { origin: "local" },
   // 开源 S1 剔除批（C1-007 G1）：web-search-local（origin: derived，upstream
   // @gausszhou/dsh-web-search-local，MIT）已随 MIT 外来件整体出包，面板四卡。
 };
@@ -25,7 +24,6 @@ const ROW_IDS = {
   "agent-memory": "agent-memory-runtime",
   "compact-router": null,
   "rate-throttle": "rate-throttle",
-  "search-router": "web-search-router",
 };
 
 export function parseRootRows(patchText) {

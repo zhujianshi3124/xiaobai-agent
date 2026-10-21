@@ -47,12 +47,11 @@ const PATCH_CONFIGS = {
       ],
     },
   },
-  'search-router': { mode: 'auto', officialProviders: ['llm-deepseek'], officialProviderPatterns: [], officialModelPatterns: [], defaultWhenUnknown: 'local' },
   'agent-memory': { dataRoot: '<USER_HOME>\\.agent-memory', defaultWorkspace: null },
   'compact-router': {},
 }
 
-test('S6-C1：4 插件 manifest configSchema 对 patch 真实配置值校验全部通过（validateConfigAgainstSchema）', async () => {
+test('S6-C1：3 插件 manifest configSchema 对 patch 真实配置值校验全部通过（validateConfigAgainstSchema）', async () => {
   const { validateConfigAgainstSchema } = await import('xiaobai-agent/contract')
   for (const [name, patchConfig] of Object.entries(PATCH_CONFIGS)) {
     const manifest = JSON.parse(readFileSync(join(lib(name), 'dsh.plugin.json'), 'utf8'))

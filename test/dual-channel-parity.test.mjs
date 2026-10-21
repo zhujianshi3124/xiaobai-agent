@@ -57,7 +57,6 @@ const ENTRIES = [
   { label: '桶根 index.js', path: join(ROOT, 'index.js') },
   { label: 'rate-throttle', path: join(ROOT, 'lib', 'rate-throttle') },
   { label: 'compact-router', path: join(ROOT, 'lib', 'compact-router') },
-  { label: 'search-router', path: join(ROOT, 'lib', 'search-router') },
   { label: 'agent-memory/plugin.js', path: join(ROOT, 'lib', 'agent-memory', 'plugin.js') },
 ]
 

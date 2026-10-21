@@ -12,12 +12,12 @@ import { PLUGINS, DEPENDENCIES } from '../panel/manager/plugin-registry.mjs'
 const root = join(import.meta.dirname, '..')
 const read = (rel) => readFileSync(join(root, rel), 'utf8')
 
-test('S1钉① 登记面四卡：PLUGINS 无 web-search-local 且 DEPENDENCIES 清空', () => {
+test('S1钉① 登记面三卡：PLUGINS 无 web-search-local 且 DEPENDENCIES 清空', () => {
   assert.ok(!('web-search-local' in PLUGINS), '登记表不得再有 web-search-local')
   assert.deepEqual(
     Object.keys(PLUGINS).sort(),
-    ['agent-memory', 'compact-router', 'rate-throttle', 'search-router'],
-    '登记面恰为四卡（S1 剔除批 5→4）',
+    ['agent-memory', 'compact-router', 'rate-throttle'],
+    '登记面恰为三卡（S1 剔除批 5→4；search-router 移除批 4→3）',
   )
   assert.deepEqual(DEPENDENCIES, [], '依赖登记清空（declaredDependents 机制保留待用）')
 })
@@ -42,8 +42,4 @@ test('S1钉② 出包面词面清零：patch/manifest/exports/signals/client 无
     assert.ok(!t.includes('@gausszhou'), rel + ' 不得再含 upstream 署名（出处归 upstream 自述）')
   }
   assert.ok(!existsSync(join(root, 'lib', 'web-search-local')), 'lib/web-search-local 目录已出包')
-  // G2(b)：本地搜索位常量保留（位在、实现可缺席）；G3：缺席回落＋警示文案在场。
-  const sr = read('lib/search-router/index.js')
-  assert.match(sr, /DELEGATE_LOCAL = "local-multi"/, 'G2(b)：本地搜索位常量保留')
-  assert.match(sr, /本地搜索未配置/, 'G3：缺席警示文案在场')
 })

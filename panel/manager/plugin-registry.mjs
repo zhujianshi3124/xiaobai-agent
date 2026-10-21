@@ -41,15 +41,6 @@ export const PLUGINS = {
     managedBy: "patch",
     providers: [],
   },
-  "search-router": {
-    rowId: "web-search-router",
-    pkg: "xiaobai-agent/search-router",
-    category: "search",
-    defaultMode: "true",
-    hostKey: "searchProvider",
-    managedBy: "patch",
-    providers: ["auto-search"],
-  },
 };
 
 /** 行 id → 插件名（`web` 等平台行不属本表，返回 null）。 */

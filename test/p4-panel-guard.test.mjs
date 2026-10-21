@@ -49,9 +49,13 @@ test('② 判据是派生的，不是手写的：名字集 == lib/ 目录 + 套�
 
 test('⑨ 名字判据是整词形，不得把长标识符误判成点名（apply-engine 同族坑）', () => {
   const names = collectSubPluginNames()
-  const falseFriend = scanText({ text: 'const s = "search-router-extra-not-a-plugin"\nconst t = rateThrottleX\n', names, exemptNames: false })
+  // 取样名字必须真实存在于派生名字集（lib/* 目录名 ∪ manifest aliases 末段），
+  // 否则「真点名」格会因样本本身不在集合里而假红。
+  const sample = [...names].sort()[0]
+  assert.ok(sample, '派生名字集不得为空（空集会让本用例失去判别力）')
+  const falseFriend = scanText({ text: `const s = "${sample}-extra-not-a-plugin"\nconst t = rateThrottleX\n`, names, exemptNames: false })
   assert.equal(falseFriend.filter((h) => h.rule === 'name').length, 0, '子串命中 = 判据过宽，会把无关标识符判成点名')
-  const real = scanText({ text: 'const s = "search-router"\n', names, exemptNames: false })
+  const real = scanText({ text: `const s = "${sample}"\n`, names, exemptNames: false })
   assert.ok(real.some((h) => h.rule === 'name'), '真点名必须抓到（前一格不许是靠判据失灵变绿的）')
 })
 
