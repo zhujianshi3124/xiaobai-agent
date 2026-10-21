@@ -70,3 +70,11 @@
 - insert:
     - id: toolkit-manager
       name: '<PANEL_ENTRY_URL>'
+
+- insert:
+    - id: governance-preflight
+      name: 'xiaobai-agent/governance-preflight'
+      config:
+        enabled: true
+        reportRoot: ''
+      inject: []
