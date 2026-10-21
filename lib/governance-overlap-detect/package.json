@@ -1,0 +1,15 @@
+{
+  "name": "xiaobai-agent/governance-overlap-detect",
+  "version": "1.3.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./bundle.patch.yml"
+    }
+  }
+}

@@ -149,8 +149,8 @@ for (const d of libDirs) {
   console.log("      top-level keys: " + Object.keys(j).join(", "));
 }
 console.log("");
-// 快照值：每新增一个 lib 子插件需同步 +1。批次5A=4（preflight），批次5A续=5（context-audit）。
-check("② 成卡目录数 = 5", manifests.length === 5, "实测 " + manifests.length + "：" + manifests.map((m) => m.dir).join(", "));
+// 快照值：每新增一个 lib 子插件需同步 +1。批次5A=4（preflight），续=5（context-audit），收尾=6（overlap-detect）。
+check("② 成卡目录数 = 6", manifests.length === 6, "实测 " + manifests.length + "：" + manifests.map((m) => m.dir).join(", "));
 // P5 契约化不变量更新（2026-09-19，REQ-9）：顶层新增契约字段 id/displayName/version/
 // contract/configSchema 是子插件契约身份，不是 layer② 的 patch 指令——继续禁止
 // patch/override/bundle/rows 类字段（任何层级）与嵌套 id；顶层契约 id 例外。

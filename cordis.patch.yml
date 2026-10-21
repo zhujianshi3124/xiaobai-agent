@@ -87,3 +87,12 @@
         reportRoot: ''
         usageLedgerPath: ''
       inject: []
+
+- insert:
+    - id: governance-overlap-detect
+      name: 'xiaobai-agent/governance-overlap-detect'
+      config:
+        enabled: true
+        reportRoot: ''
+        similarityThreshold: 0.6
+      inject: []

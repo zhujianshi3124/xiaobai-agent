@@ -1,0 +1,18 @@
+# governance-overlap-detect bundle 补丁（批次 5A 收尾；形态照 governance-preflight 样板）。
+#
+# 与 lib/rate-throttle、lib/agent-memory、lib/governance-preflight、
+# lib/governance-context-audit 的 bundle.patch.yml 同族：本子包自带一条 insert 行，
+# 由仓根 package.json 的 dsh.bundle.patch 数组按序拼接（批次 1 地基）。
+#
+# 本行**不写 disabled**（裁决 C）：默认挂载，apply() 才会执行、才会产出报告。
+# 「默认静默」指不注入、不出声，不是不运行——红线原文是"只写结构化报告"。
+# 内部逻辑由 config.enabled 控制；inject 为空数组＝不依赖任何宿主服务
+# （ctx.skills 走 ctx.get 只读软探测，缺席即降级，不进 inject 门控）。
+- insert:
+    - id: governance-overlap-detect
+      name: 'xiaobai-agent/governance-overlap-detect'
+      config:
+        enabled: true
+        reportRoot: ''
+        similarityThreshold: 0.6
+      inject: []
