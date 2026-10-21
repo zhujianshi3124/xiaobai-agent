@@ -592,6 +592,13 @@ export function planWebConfigRestore(text, { key, raw, lineIndex }) {
   if (located.target) {
     throw new PlanError("host-key-occupied", "web 宿主键 " + key + " 当前已有值（" + located.target.value + "），拒绝自动覆盖");
   }
+  // 无键可插回时如实返回「未改动」，与 planWebConfigRemove 的 removedRaw:null 对称。
+  // 上游 captureHostKeyPlacement 在键本就不在场时会把 raw 置 null；裸用会 TypeError
+  // （本函数曾在此裸调 raw.replace，被 p24 的 sha 硬闸掩盖两个批次）。
+  // 与 uninstall.mjs:555 的 `if (hostKey && hostKey.raw)` 守卫同构。
+  if (raw === null || raw === undefined || raw === "") {
+    return { nextText: text, changed: false, restored: false };
+  }
   const { lines, hasCrlf } = splitLines(text);
   const next = lines.slice();
   const cleanRaw = raw.replace(/\r?\n$/, "");
