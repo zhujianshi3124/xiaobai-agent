@@ -18,6 +18,19 @@ import { createHash } from "node:crypto";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const eng = await import(new URL("../panel/manager/apply-engine.mjs", import.meta.url).href);
+// 登记表注入（合成 search-router 夹具的一半，见下方 syntheticText 前的说明）。
+// 引擎按 rowId → PLUGINS 反查 providers，把它并进交叉引用匹配词；不注入就扫不到
+// 「以 provider id 写的引用」，§7 的 H2/D-14 那一格会静默退化成恒 0。
+const reg = await import(new URL("../panel/manager/plugin-registry.mjs", import.meta.url).href);
+reg.PLUGINS["search-router"] = {
+  rowId: "web-search-router",
+  pkg: "xiaobai-agent/search-router",
+  category: "search",
+  defaultMode: "true",
+  hostKey: "searchProvider",
+  managedBy: "patch",
+  providers: ["auto-search"],
+};
 
 let passed = 0;
 let failed = 0;
@@ -65,6 +78,56 @@ function freshPatch() {
   return file;
 }
 
+// ---------- 合成 search-router 夹具（批次 2 移除登记面后的替代）----------
+// 真 lib/search-router/ 目录与 patch 行已随批次 2 出包删除，但 §7 要证的仍是**引擎能力**
+// （行块锚点解析 / 交叉引用按 provider id 命中 / 两层分立），不是这个插件的产品面。
+// 故用合成夹具保住覆盖，零仓内新资产：
+//   ① 登记表注入 —— 缺它 crossRefNeedles 取不到 providers，"以 provider id 写的引用"就扫不到
+//      （先例：test/panel-crossrefs.test.mjs:59/:103/:126，npm test 面内既有惯例）
+//   ② 合成 patch 文本 —— 在真文本上做两处替换，CRLF 同形
+// 不造合成 lib/：createTogglePlan 只吃 patch 文本 + 登记表，不吃 lib 树。
+const SR_ROW_ID = "web-search-router";
+const SR_PKG = "xiaobai-agent/search-router";
+const SR_BLOCK = [
+  "- insert:",
+  "    - id: web-search-router",
+  "      name: 'xiaobai-agent/search-router'",
+  "      config:",
+  "        mode: auto",
+  "        officialProviders: [llm-deepseek]",
+  "        officialProviderPatterns: []",
+  "        officialModelPatterns: []",
+  "        defaultWhenUnknown: local",
+  "      inject: [web]",
+  "",
+].join("\r\n");
+
+/** 真文本 → 合成文本。两处替换都必须命中，否则硬失败（防「空转 PASS」这个既有缺陷复发）。 */
+function syntheticText() {
+  const withHostKey = realText.replace(
+    "  config: {}\r\n",
+    "  config:\r\n    searchProvider: auto-search\r\n",
+  );
+  if (withHostKey === realText) throw new Error("合成夹具失败：web 行的 config: {} 未命中");
+  const out = withHostKey.replace(
+    "\r\n- insert:\r\n    - id: agent-memory-runtime",
+    "\r\n" + SR_BLOCK + "\r\n- insert:\r\n    - id: agent-memory-runtime",
+  );
+  if (out === withHostKey) throw new Error("合成夹具失败：agent-memory-runtime 插入锚未命中");
+  if (!out.includes("- id: " + SR_ROW_ID) || !out.includes("    searchProvider: auto-search")) {
+    throw new Error("合成夹具失败：替换后文本缺 search-router 行或宿主键");
+  }
+  return out;
+}
+
+let srCaseNo = 0;
+function freshSyntheticPatch() {
+  srCaseNo += 1;
+  const file = join(work, "patch-sr-" + srCaseNo + ".yml");
+  writeFileSync(file, syntheticText(), "utf8");
+  return file;
+}
+
 // ---------- 1. 锚点唯一（P2.2 硬要求，含 CRLF 兼容）----------
 {
   const file = freshPatch();
@@ -73,8 +136,9 @@ function freshPatch() {
     /\r\n/.test(text) && !/(?<!\r)\n/.test(text));
 
   const hit = eng.locateRowAnchor(text, "rate-throttle");
-  // 行号随 S2.e 案② 模板形头注 +3 行滚存：13（行 14）→ 16（行 17）。
-  check("anchor rate-throttle resolves exactly once", hit && hit.lineIndex === 16, "line " + (hit.lineIndex + 1));
+  // 行号滚存史：13（行 14）→ 16（行 17）→ 17（行 18，批次 5A/5B 追加 5 条治理挂载行后）。
+  // 现行实测：rate-throttle=18 / agent-memory-runtime=63（web-search-router 行已不存在）。
+  check("anchor rate-throttle resolves exactly once", hit && hit.lineIndex === 17, "line " + (hit.lineIndex + 1));
 
   let missing = null;
   try { eng.locateRowAnchor(text, "no-such-row"); } catch (e) { missing = e; }
@@ -102,11 +166,15 @@ function freshPatch() {
   const selfRefs = eng.findCrossReferences(text, { rowId: "rate-throttle", alsoMatch: ["xiaobai-agent/rate-throttle"] });
   check("real patch: rate-throttle is not referenced by others", selfRefs.length === 0, JSON.stringify(selfRefs));
 
-  // 正例：构造一个引用它的行块（S1 剔除批后插入锚换 web-search-router 行）
+  // 正例：构造一个引用它的行块。锚取**真文件里现存的** agent-memory-runtime 行 ——
+  // 原先锚 web-search-router 行，该行已随批次 2 出包删除，replace 空转 ⇒ withRef === text，
+  // 断言恒报空（空转 PASS/FAIL 同源缺陷）。这里加命中校验，锚再消失就硬失败而不是静默空转。
+  const REF_ANCHOR = "    - id: agent-memory-runtime\n";
   const withRef = lf(text).replace(
-    "    - id: web-search-router\n",
-    "    - id: other-row\n      config:\n        uses: rate-throttle\n\n    - id: web-search-router\n",
+    REF_ANCHOR,
+    "    - id: other-row\n      config:\n        uses: rate-throttle\n\n" + REF_ANCHOR,
   );
+  check("premise: the cross-ref fixture anchor really exists in the patch", withRef !== lf(text));
   const refs = eng.findCrossReferences(withRef, { rowId: "rate-throttle", alsoMatch: ["xiaobai-agent/rate-throttle"] });
   check("cross-ref detected when another block references the id", refs.length === 1, JSON.stringify(refs));
   // 不硬编码行号（依赖 fixture 变换，脆）；改断言"指向的行确实是那条引用"，
@@ -117,13 +185,14 @@ function freshPatch() {
     !!(refs[0] && refs[0].line > 0 && refs[0].line <= withRef.split(/\r?\n/).length),
     "line " + (refs[0] && refs[0].line));
 
-  // 负例：子串不误报
-  const substr = lf(text).replace("    - id: web-search-local\n", "    - id: other-row\n      config:\n        name: rate-throttle-extra\n\n");
+  // 负例：子串不误报（锚同样取真文件现存行；原锚 web-search-local 已随 S1 剔除批出包）
+  const substr = lf(text).replace(REF_ANCHOR, "    - id: other-row\n      config:\n        name: rate-throttle-extra\n\n");
+  check("premise: the substring negative-case fixture really modified the text", substr !== lf(text));
   check("cross-ref does NOT fire on a substring (rate-throttle-extra)",
     eng.findCrossReferences(substr, { rowId: "rate-throttle" }).length === 0);
 
   // 负例：注释行不误报
-  const commented = "# rate-throttle is noted here\n" + lf(text).replace("    - id: web-search-local\n", "");
+  const commented = "# rate-throttle is noted here\n" + lf(text).replace(REF_ANCHOR, "");
   check("cross-ref does NOT fire on a comment line",
     eng.findCrossReferences(commented, { rowId: "rate-throttle" }).length === 0);
 
@@ -268,16 +337,17 @@ function freshPatch() {
 // 起因：上轮只证过 rate-throttle 一张，而面板开放 toggle 的是 3 张卡（S1 剔除批前 4 张）。
 // 「只证 1 张」等于没证 —— 本段把每一张都真跑一遍，并对齐锚点行号。
 const CARDS = [
-  { dir: "rate-throttle", rowId: "rate-throttle", line: 17, pkg: "xiaobai-agent/rate-throttle", xref: { patch: 0, declared: 0, any: [] } },
+  { dir: "rate-throttle", rowId: "rate-throttle", line: 18, pkg: "xiaobai-agent/rate-throttle", xref: { patch: 0, declared: 0, any: [] } },
   // H2（债务 D-14）：搜索卡被停用时要报出"以 provider id 写的引用"（patch 命中）。
-  // （web-search-local 原另有声明式依赖一条，已随开源 S1 剔除批出包；行号随该批滚存 66→59/77→70，
-  //   再随 S2.e 案② 模板形头注 +3 行滚存 59→62/70→73。）
-  { dir: "search-router", rowId: "web-search-router", line: 62, pkg: "xiaobai-agent/search-router", xref: { patch: 1, declared: 0, any: [/searchProvider:\s*auto-search/] } },
-  { dir: "agent-memory", rowId: "agent-memory-runtime", line: 73, pkg: "xiaobai-agent/agent-memory", xref: { patch: 0, declared: 0, any: [] } },
+  // 真 lib/search-router/ 与真 patch 行已随批次 2 出包删除 ⇒ 本卡走**合成夹具**
+  // （登记表注入 + syntheticText），保住的是「宿主键引用能被扫出来」这条引擎能力。
+  // 行号 64 = 合成文本实测值（真文本 121 行 → 合成 133 行），不是从旧值推算的。
+  { dir: "search-router", rowId: "web-search-router", line: 64, pkg: "xiaobai-agent/search-router", synthetic: true, xref: { patch: 1, declared: 0, any: [/searchProvider:\s*auto-search/] } },
+  { dir: "agent-memory", rowId: "agent-memory-runtime", line: 63, pkg: "xiaobai-agent/agent-memory", xref: { patch: 0, declared: 0, any: [] } },
 ];
 {
   for (const card of CARDS) {
-    const file = freshPatch();
+    const file = card.synthetic ? freshSyntheticPatch() : freshPatch();
     const before = readFileSync(file, "utf8");
     const beforeSha = sha(before);
 
@@ -441,8 +511,11 @@ const CARDS = [
   eng.executePlan(plan.token);
   const after = lf(readFileSync(file, "utf8"));
 
-  // (a) 每一行的 config 子树逐字节不变（两层无覆盖）（S1 剔除批后枚举 4→3）
-  const cfgKeys = ["rate-throttle", "web-search-router", "agent-memory-runtime"];
+  // (a) 每一行的 config 子树逐字节不变（两层无覆盖）。
+  // 枚举从**原文现取**，不再硬编码插件名单 —— 硬编码会在插件出包后静默少比一行，
+  // 且 layerTwoOf 对缺席行两侧都返回 ""，比较仍「成立」，缺陷不可见。
+  const cfgKeys = [...new Set([...before.matchAll(/^\s*- id:\s*(\S+)\s*$/gm)].map((m) => m[1]))];
+  check("premise: cfgKeys enumerated from the real patch (non-empty)", cfgKeys.length > 0, "rows=" + cfgKeys.length);
   let allCfgSame = true;
   for (const id of cfgKeys) {
     if (layerTwoOf(before, id) !== layerTwoOf(after, id)) allCfgSame = false;
@@ -460,7 +533,12 @@ const CARDS = [
 
   const stale = eng.createTogglePlan({ file, rowId: "agent-memory-runtime", enabled: false, backupRoot });
   eng.putPlan(stale);
-  const third = readFileSync(file, "utf8").replace("    - id: web-search-router\r\n", "    - id: web-search-router\r\n      disabled: false\r\n");
+  // 原锚是 web-search-router 行（已随批次 2 删除）⇒ replace 空转、third === 原文，
+  // 下面那条 sha-conflict 断言修好夹具后会真红。改锚到**另一行**（toolkit-manager），
+  // 既保持「文件被别处改动」的原意，又不碰 plan 的目标行；并加命中校验防再次空转。
+  const STALE_ANCHOR = "    - id: toolkit-manager\r\n";
+  const third = readFileSync(file, "utf8").replace(STALE_ANCHOR, STALE_ANCHOR + "      disabled: false\r\n");
+  check("premise: the stale-plan fixture really modified the file", third !== readFileSync(file, "utf8"));
   writeFileSync(file, third, "utf8");
   let e = null;
   try { eng.executePlan(stale.token); } catch (err) { e = err; }

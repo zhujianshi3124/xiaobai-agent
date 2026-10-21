@@ -170,16 +170,21 @@ check("html renderer: inline script evaluated and toggleHtml reachable", typeof 
 // ============================================================
 // A. 逐卡：toggle 该不该出现 + 两层是否分立
 // ============================================================
+// 退役（批次 2 移除 search-router 登记面）：原第 4 项
+//   { dir: "search-router", toggle: true, layer2: "该插件没有内部开关" }
+// 退役理由：PLUGINS 只剩三卡、lib/search-router/ 已删，服务端永不产出这张卡；
+//   若靠往 snapshot 注入幽灵卡保住 4 卡，等于给渲染器喂产品面不存在的记录。
+// 覆盖面由谁吸收：「toggle 该出现」＝rate-throttle + agent-memory 两卡；
+//   「该插件没有内部开关」＝agent-memory。无独有代码路径。
 const EXPECT = [
   { dir: "agent-memory", toggle: true, layer2: "该插件没有内部开关" },
   { dir: "compact-router", toggle: false, layer2: null },
   { dir: "rate-throttle", toggle: true, layer2: "关闭" },
-  { dir: "search-router", toggle: true, layer2: "该插件没有内部开关" },
 ];
 
 const tree = reactR.render(snap);
 const cards = reactR.cardsOf(tree);
-check("react renderer: every plugin produced a card (4)", cards.length === 4, "cards=" + cards.length);
+check("react renderer: every plugin produced a card (3)", cards.length === 3, "cards=" + cards.length);
 check("react renderer: card order matches snapshot.plugins", cards.every((c, i) => c.props.plugin.dir === snap.plugins[i].dir));
 
 for (const exp of EXPECT) {
@@ -222,17 +227,20 @@ check("react renderer: never emits a merged layer value",
 //   ②③ react TechRow / html techRow 逐卡＝snapshot 真值格式化（双通道 parity，
 //     随 snapshot 同步，恒绿）。
 // ============================================================
+// 退役（批次 2）：原 "search-router": ["web"] 一项已删。
+// 退役理由：该 lib 与 patch 行已出包，snapshot 不再产出此卡，真值表无从取数。
+// 覆盖面由谁吸收：inject 提取面由余下三卡（compact-router 4 项 / rate-throttle 2 项 /
+//   agent-memory 1 项）各钉一次，三种项数形态都在，无独有代码路径。
 const INJECT_EXPECT = {
   "compact-router": ["llm", "tokenMeter", "sessions", "commands"],
   "rate-throttle": ["llm", "tokenMeter"],
-  "search-router": ["web"],
   "agent-memory": ["systemPrompt"], // EXE-BOOT-011 施工笔3（案 C）：agentMemory 系统提示词变量接线
 };
 const fmtInject = (a) => (a && a.length > 0) ? a.join(", ") : "（无）";
 
 // ① snapshot 真值（与 manifest registers.inject 实况逐字对表）（S1 剔除批四→三枚举）
-check("inject: snapshot 三卡真值＝manifest registers.inject 实况（compact-router/rate-throttle/search-router）",
-  ["compact-router", "rate-throttle", "search-router"].every((d) =>
+check("inject: snapshot 两卡真值＝manifest registers.inject 实况（compact-router/rate-throttle）",
+  ["compact-router", "rate-throttle"].every((d) =>
     JSON.stringify((snap.plugins.find((x) => x.dir === d) || {}).inject) === JSON.stringify(INJECT_EXPECT[d])));
 check("inject: snapshot agent-memory 真值＝[systemPrompt]（EXE-BOOT-011 施工笔3：agentMemory 变量接线）",
   JSON.stringify((snap.plugins.find((x) => x.dir === "agent-memory") || {}).inject) === JSON.stringify(["systemPrompt"]));
@@ -538,7 +546,11 @@ htmlR.setPatch(PATCH_TEXT);
     htmlLabelOf(impostor) === RT_LABEL.bothOff, htmlLabelOf(impostor));
   check("E2 react: 别家卡即使出现 routing.enabled 也不被专案接管",
     reactLabelOf(impostor) === RT_LABEL.bothOff, String(reactLabelOf(impostor)));
-  for (const dir of ["agent-memory", "search-router"]) {
+  // 退役（批次 2）：原循环 ["agent-memory", "search-router"]，search-router 已删。
+  // 退役理由：卡不存在，htmlLabelOf(undefined) 只会抛错，不构成断言。
+  // 覆盖面由谁吸收：反向钉的语义是「专案不外溢到其余卡」，agent-memory 一张即可证；
+  //   rate-throttle 是专案本体，compact-router 另有 E3 专钉。
+  for (const dir of ["agent-memory"]) {
     const p = snap.plugins.find((x) => x.dir === dir);
     check("E2 反向钉 " + dir + ": 真实卡状态行不受牵连（html）", htmlLabelOf(p) === "运行中 · 正在生效", htmlLabelOf(p));
     check("E2 反向钉 " + dir + ": 真实卡状态行不受牵连（react）", reactLabelOf(p) === "运行中 · 正在生效", String(reactLabelOf(p)));
@@ -562,10 +574,14 @@ htmlR.setPatch(PATCH_TEXT);
 }
 
 // ---- W2 余件 · 断点修复批②：非可写卡"改完要重启"提示位（两渲染器 + rate-throttle 不双渲染）----
-// （S1 剔除批：非可写卡 4→3，web-search-local 已出包。）
+// （S1 剔除批：非可写卡 4→3，web-search-local 已出包；批次 2 再 →2，search-router 已出包。）
+// 退役（批次 2）：原 THREE 含 "search-router"，原 dirs 含 "search-router"。
+// 退役理由：卡不存在，p 为 undefined、effectNoteHtml(undefined) 只会抛错。
+// 覆盖面由谁吸收：「note 卡有提示 / 可写卡不双渲染」两分支各留一卡 ——
+//   note 分支＝agent-memory + compact-router，不渲染分支＝rate-throttle。无独有代码路径。
 {
-  const THREE = ["agent-memory", "compact-router", "search-router"];
-  for (const dir of ["agent-memory", "compact-router", "rate-throttle", "search-router"]) {
+  const THREE = ["agent-memory", "compact-router"];
+  for (const dir of ["agent-memory", "compact-router", "rate-throttle"]) {
     const isNote = THREE.includes(dir);
     const p = snap.plugins.find((x) => x.dir === dir);
     const serverCopy = p && p.configPanel ? p.configPanel.effectNote : undefined;
