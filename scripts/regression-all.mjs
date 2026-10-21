@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // 回归全跑器：按顺序执行各专项脚本，只回传每个脚本的「结果行」，输出紧凑。
-// 用法：node scripts/regression-all.mjs                 全链（16 专项脚本 + node --test）
-//       node scripts/regression-all.mjs --scripts-only  只跑 16 专项脚本，跳过 node --test
+// 用法：node scripts/regression-all.mjs                 全链（17 专项脚本 + node --test）
+//       node scripts/regression-all.mjs --scripts-only  只跑 17 专项脚本，跳过 node --test
 //
 // ── 为什么有 --scripts-only（责任面划分，不是把红藏起来）─────────────────────
 // 缺口：npm test 的最后一步就是 node --test，**node --test 这一面 npm test 已经覆盖**；
-//       而 16 个专项脚本 npm test 一个都不跑 —— 这正是「红了两个批次无人知」的那个缺口。
+//       而 17 个专项脚本 npm test 一个都不跑 —— 这正是「红了两个批次无人知」的那个缺口。
 // 所以 git pre-commit hook 只调 --scripts-only：它补的是 npm test 覆盖不到的那一面。
 // 为什么不让 hook 跑全链：本机 node --test 有 4 项**环境性常驻红**（档案第五节在册，非回归）：
 //   ① p22b 在场态钉（:61 doesNotMatch(/SKIP：.panel-backups/)，而本机 .panel-backups/ 不存在）
@@ -51,6 +51,8 @@ const scripts = [
   ["doctor-cli stage3", "doctor/cli/selftest/acceptance-stage3.mjs"],
   ["doctor-cli stage4a", "doctor/cli/selftest/run-tests-stage4a.mjs"],
   ["doctor-cli stage4b", "doctor/cli/selftest/run-tests-stage4b.mjs"],
+  // 批次 5C：governance-router 的专项验证（纯函数 + 假 registry 端到端 + 零写入自证）。
+  ["p25-router-verify", "scripts/p25-router-verify.mjs"],
   ["pluggable-lint", "scripts/pluggable-lint.mjs"],
 ];
 
@@ -109,7 +111,7 @@ console.log("══════════════════════�
 // 结论行：默认（全链）保持原样一字不变；只有 --scripts-only 才追标范围，
 // 因为那种模式下「全部通过」若不加限定，会被读成「全链通过」。
 console.log(scriptsOnly
-  ? (bad === 0 ? "全部通过" : "存在 " + bad + " 项异常") + "  ｜ 范围：仅专项脚本 16 项（node --test 未跑）"
+  ? (bad === 0 ? "全部通过" : "存在 " + bad + " 项异常") + "  ｜ 范围：仅专项脚本 17 项（node --test 未跑）"
   : (bad === 0 ? "全部通过" : "存在 " + bad + " 项异常"));
 console.log("══════════════════════════════════════════════════════════");
 process.exit(bad === 0 ? 0 : 1);

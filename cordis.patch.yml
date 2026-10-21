@@ -118,3 +118,14 @@
         reportRoot: ''
         writeHistory: true
       inject: []
+
+- insert:
+    - id: governance-router
+      name: 'xiaobai-agent/governance-router'
+      config:
+        enabled: true
+        reportRoot: ''
+        rules: []
+        maxInjectPerTurn: 1
+        dedupeScope: session
+      inject: []

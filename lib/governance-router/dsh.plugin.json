@@ -1,0 +1,76 @@
+{
+  "name": "xiaobai-agent/governance-router",
+  "id": "dsh/governance-router",
+  "displayName": "规则路由与技能注入守卫",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "provides": {
+    "entry": "./index.js",
+    "inject": []
+  },
+  "configSchema": {
+    "type": "object",
+    "meta": {},
+    "dict": {
+      "enabled": {
+        "type": "boolean",
+        "meta": {}
+      },
+      "reportRoot": {
+        "type": "string",
+        "meta": {}
+      },
+      "rules": {
+        "type": "array",
+        "meta": {},
+        "inner": {
+          "type": "object",
+          "meta": {},
+          "dict": {
+            "skill": {
+              "type": "string",
+              "meta": {}
+            },
+            "patterns": {
+              "type": "array",
+              "meta": {},
+              "inner": {
+                "type": "string",
+                "meta": {}
+              }
+            },
+            "priority": {
+              "type": "number",
+              "meta": {}
+            }
+          }
+        }
+      },
+      "maxInjectPerTurn": {
+        "type": "number",
+        "meta": {}
+      },
+      "dedupeScope": {
+        "type": "string",
+        "meta": {}
+      }
+    }
+  },
+  "requirements": {
+    "runtime": {
+      "node": ">=22",
+      "dsh": ">=0.1.2-rc.1 <0.2.0 || >=0.2.0-rc.2 <0.3.0"
+    },
+    "binaries": [],
+    "packages": {},
+    "registers": {
+      "events": [
+        "agent/pre-step"
+      ],
+      "services": [],
+      "commands": [],
+      "providers": []
+    },
+    "exports": {}
+  }
+}

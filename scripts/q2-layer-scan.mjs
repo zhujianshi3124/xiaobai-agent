@@ -51,7 +51,7 @@ const LAYERS = [
     n: "②",
     name: "四插件清单（声明 requirements/exports，不含挂载行）",
     // 载体名不枚举具体目录：枚举必随每次增删插件而过期（本行原列 4 个目录，search-router 已随批次 2
-    // 出包、governance-* 五个又已加入，磁盘实测 8 个）。逐目录实况以 §2 的 readdirSync 枚举为准。
+    // 出包、governance-* 六个又已加入，磁盘实测 9 个）。逐目录实况以 §2 的 readdirSync 枚举为准。
     carrier: "lib/<plugin>/dsh.plugin.json",
     phys: join(root, "lib"),
     evidence: [
@@ -143,7 +143,7 @@ check("① 文件为 CRLF（与 P2 写路径前提一致）",
 // ============================================================
 // §2 第②层：五个 lib/*/dsh.plugin.json
 // ============================================================
-console.log("\n=== §2 第②层 lib/*/dsh.plugin.json ×4 ===\n");
+console.log("\n=== §2 第②层 lib/*/dsh.plugin.json（逐目录枚举） ===\n");
 const libRoot = join(root, "lib");
 const libDirs = readdirSync(libRoot, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name).sort();
 const manifests = [];
@@ -157,8 +157,8 @@ for (const d of libDirs) {
   console.log("      top-level keys: " + Object.keys(j).join(", "));
 }
 console.log("");
-// 快照值：每新增一个 lib 子插件需同步 +1。批次5A=4（preflight），续=5（context-audit），收尾=6（overlap-detect），5B=7（usage-track），5B=8（tiering）。
-check("② 成卡目录数 = 8", manifests.length === 8, "实测 " + manifests.length + "：" + manifests.map((m) => m.dir).join(", "));
+// 快照值：每新增一个 lib 子插件需同步 +1。批次5A=4（preflight），续=5（context-audit），收尾=6（overlap-detect），5B=7（usage-track），5B=8（tiering），5C=9（router）。
+check("② 成卡目录数 = 9", manifests.length === 9, "实测 " + manifests.length + "：" + manifests.map((m) => m.dir).join(", "));
 // P5 契约化不变量更新（2026-09-19，REQ-9）：顶层新增契约字段 id/displayName/version/
 // contract/configSchema 是子插件契约身份，不是 layer② 的 patch 指令——继续禁止
 // patch/override/bundle/rows 类字段（任何层级）与嵌套 id；顶层契约 id 例外。
@@ -212,25 +212,51 @@ check("④ toolkit-manager 行已进入该文件 git 历史（第 11 轮语义�
 
 const headBlob = execFileSync("git", ["show", "HEAD:cordis.patch.yml"], { cwd: root });
 const diskText = readFileSync(join(root, "cordis.patch.yml"), "utf8");
-console.log("\n  HEAD blob  sha256=" + sha256(headBlob) + "  size=" + headBlob.length);
+console.log("\n  HEAD blob   sha256=" + sha256(headBlob) + "  size=" + headBlob.length);
 console.log("  disk(工作区) sha256=" + sha256(Buffer.from(diskText, "utf8")) + "  size=" + Buffer.byteLength(diskText));
+// 这一格测的是**历史**（该行有没有进过提交），不是漂移 ⇒ 继续比 HEAD，不受下面改法影响。
 check("④ HEAD 版本含 toolkit-manager 行", headBlob.toString("utf8").includes("toolkit-manager"),
   "HEAD 末尾行: " + JSON.stringify(headBlob.toString("utf8").split(/\r?\n/).filter(Boolean).slice(-1)[0]));
 
-// --- 字节级对账：LF 归一后 磁盘 == HEAD（⇒ 除行尾风格外零漂移）---
-const headStr = headBlob.toString("utf8");
+// --- 字节级对账：LF 归一后 磁盘 == **暂存区**（⇒ 除行尾风格外无未提交漂移）---
+//
+// 【为什么比暂存区而不是 HEAD —— 判据的时态与触发时点不匹配，不是放宽】
+//   本脚本会被 scripts/git-hooks/pre-commit 调用（路径过滤命中 cordis.patch.yml 就跑到）。
+//   hook 跑在**提交动作发生之前**，此刻 HEAD 天然落后这次提交一整笔 ⇒ 凡改过 patch 的提交，
+//   「磁盘 == HEAD」必然为假 ⇒ 该格必红 ⇒ hook 永久拦下一切 patch 改动。
+//   而绕过它只能 --no-verify，那正是本项目最反对的做法（见档案坑 12）。
+//   ⇒ 死锁的根因是「拿 HEAD 当漂移基准」，不是「判据太严」。
+//
+// 【为什么改成暂存区仍保住原语义，而且更强】
+//   该格的原意是「磁盘没有**未入账**的漂移」。入账的动作是 git add，不是 git commit：
+//     · 提交前已暂存但未提交的改动 —— 不是漂移，就是这次提交本身 ⇒ 不该红（死锁解除）
+//     · 磁盘改了但没暂存 —— 才是真漂移 ⇒ disk ≠ index，照样红（守卫仍在）
+//     · 平时无改动 —— index == HEAD == disk，行为与改前逐字一致
+//   ⇒ 改后还能抓到「暂存了 A 又手改 B」这种原来抓不到的情况，判据更强。
+const indexBlob = (() => {
+  try {
+    return execFileSync("git", ["show", ":cordis.patch.yml"], { cwd: root, maxBuffer: 1e8 });
+  } catch (error) {
+    // 暂存区里没有该文件（未被 git 跟踪 / 空索引）⇒ 退回 HEAD 并明示，不静默换基准。
+    console.log("  ⚠ 暂存区无 cordis.patch.yml（" + String(error && error.message || error).split("\n")[0] + "）⇒ 回落 HEAD blob");
+    return headBlob;
+  }
+})();
+console.log("  index(暂存区) sha256=" + sha256(indexBlob) + "  size=" + indexBlob.length);
+
+const indexStr = indexBlob.toString("utf8");
 const diskLf = diskText.replace(/\r\n/g, "\n");
-check("④ 磁盘（LF 归一）与 HEAD 逐字节一致（⇒ 除行尾风格外无任何漂移）",
-  diskLf === headStr, diskLf === headStr ? "归一后完全相同" : "归一后仍有差异");
-if (diskLf === headStr) {
+check("④ 磁盘（LF 归一）与**暂存区**逐字节一致（⇒ 除行尾风格外无未提交漂移）",
+  diskLf === indexStr, diskLf === indexStr ? "归一后完全相同" : "归一后仍有差异（磁盘有未暂存的漂移）");
+if (diskLf === indexStr) {
   const numCRLF = (diskText.match(/\r\n/g) || []).length;
-  const headBytes = headBlob.length;
+  const indexBytes = indexBlob.length;
   console.log("\n  字节账：");
-  console.log("      HEAD blob（git 库内存 LF）        : " + headBytes);
+  console.log("      index blob（git 库内存 LF）      : " + indexBytes);
   console.log("      磁盘 CRLF 行数（每行 +1 字节）    : " + numCRLF);
-  check("④ 字节账闭合：HEAD(LF) + CRLF 增量 = 磁盘 size",
-    headBytes + numCRLF === Buffer.byteLength(diskText, "utf8"),
-    headBytes + " + " + numCRLF + " = " + (headBytes + numCRLF)
+  check("④ 字节账闭合：index(LF) + CRLF 增量 = 磁盘 size",
+    indexBytes + numCRLF === Buffer.byteLength(diskText, "utf8"),
+    indexBytes + " + " + numCRLF + " = " + (indexBytes + numCRLF)
       + "  vs 磁盘 " + Buffer.byteLength(diskText, "utf8"));
 }
 
@@ -370,7 +396,7 @@ if (!SCAN_PRESETS) {
 // §6 汇总
 // ============================================================
 console.log("\n=== §6 汇总 ===");
-  console.log("  四层中：第①层 = 仓根 cordis.patch.yml；第②层 = lib/*/dsh.plugin.json ×4；");
+  console.log("  四层中：第①层 = 仓根 cordis.patch.yml；第②层 = lib/*/dsh.plugin.json（逐目录枚举）；");
 console.log("          第③层 = panel/dsh.plugin.json；第④层 = scripts/apply-preset-patch.mjs -> ~/.dsh/.agent-presets。");
 console.log("");
 console.log("  " + passed + "/" + (passed + failed) + " PASS" + (failed ? "  <-- 有 FAIL" : ""));
