@@ -9,6 +9,8 @@
  *   ① 白名单合法性：18 字段合法值放行 + 越界 / 错类型 / 非整数 / 注入串拒绝；
  *   ② 假写拒绝路径：白名单外字段（logPath / staticGroups / excludeProviders / mode / routing.foo）；
  *   ③ 遮蔽与生效值：search-router mode 来源三分支（env > 热 JSON > patch）+ 各卡 configPanel 口径；
+ *      （批次 2 移除 search-router 登记项后该卡不再进快照，三分支改直调 buildConfigPanel 取数，
+ *        覆盖代价与理由见 ③ 段头注。）
  *   ④ 引擎：config 子树定位 / 原地替换 / 插入回退 / CRLF 保持 / 锚点歧义拒绝；
  *   ⑤ 端到端：plan → execute（副本）+ 写前备份 manifest（reason/note 传真值）+ sha 链；
  *   ⑥ 跨字段校验：maxIntervalMs ≥ 当前 minIntervalMs（读真实 patch 现值，只读）；
@@ -181,17 +183,26 @@ check("过期 plan → plan-expired 拒绝", expiredHandled);
 section("③ 遮蔽与生效值（snapshot）");
 const hotOk = join(tmp, "hot-router.json");
 writeFileSync(hotOk, JSON.stringify({ mode: "auto" }), "utf8");
-const s1 = await snap.buildSnapshot({ toolkitRoot: root, hotRouterPath: hotOk, envMode: undefined });
-const sr1 = s1.plugins.find((p) => p.dir === "search-router");
-check("热 JSON 有 mode → 生效值 auto / 来源热 JSON", sr1.configPanel.mode.value === "auto" && sr1.configPanel.mode.source.includes("热 JSON"));
-const s2 = await snap.buildSnapshot({ toolkitRoot: root, hotRouterPath: hotOk, envMode: "official" });
-const sr2 = s2.plugins.find((p) => p.dir === "search-router");
-check("env 覆盖热 JSON → 生效值 official / 来源 env", sr2.configPanel.mode.value === "official" && sr2.configPanel.mode.source.includes("环境变量"));
+// 为什么这三条改成**直调 buildConfigPanel**（而不是走 buildSnapshot 取卡）：
+//   批次 2 移除了 search-router 的登记项，`buildSnapshot` 按 `Object.keys(PLUGINS)` 出卡，
+//   快照自此**永不出该卡**（实测 plugins=3），`find(p => p.dir === "search-router")` 恒 undefined。
+//   被测对象没变：这四条钉的是「mode 三分支遮蔽」这条**引擎逻辑**（snapshot.mjs:293-301 / :335-344），
+//   而该逻辑的入口正是 `buildConfigPanel(dir, rowId, patchText, { hotRouterPath, envMode })` 这个导出函数
+//   （先例：test/w2-restart-hint.test.mjs:70 已直接调用它）。故直调保住覆盖，且不需要登记表注入/合成 lib。
+// **覆盖代价（如实记）**：直调后「buildSnapshot 把 hotRouterPath / envMode 透传给 buildConfigPanel」
+//   这条接线不再被本脚本断言。该接线对 search-router 已**不可达**（登记表无此条目 ⇒ 快照永不出该卡），
+//   属**死路径覆盖**而非活覆盖丢失；其余三卡（rate-throttle / agent-memory / compact-router）的
+//   口径断言仍在下面走 buildSnapshot 实测。
+const sr1 = snap.buildConfigPanel("search-router", null, realText, { hotRouterPath: hotOk, envMode: undefined });
+check("热 JSON 有 mode → 生效值 auto / 来源热 JSON", sr1.mode.value === "auto" && sr1.mode.source.includes("热 JSON"));
+const sr2 = snap.buildConfigPanel("search-router", null, realText, { hotRouterPath: hotOk, envMode: "official" });
+check("env 覆盖热 JSON → 生效值 official / 来源 env", sr2.mode.value === "official" && sr2.mode.source.includes("环境变量"));
 const hotNoMode = join(tmp, "hot-nomode.json");
 writeFileSync(hotNoMode, JSON.stringify({}), "utf8");
-const s3 = await snap.buildSnapshot({ toolkitRoot: root, hotRouterPath: hotNoMode, envMode: undefined });
-const sr3 = s3.plugins.find((p) => p.dir === "search-router");
-check("热 JSON 无 mode 且无 env → 走 patch", sr3.configPanel.mode.value === null && sr3.configPanel.mode.source.includes("patch"));
+const sr3 = snap.buildConfigPanel("search-router", null, realText, { hotRouterPath: hotNoMode, envMode: undefined });
+check("热 JSON 无 mode 且无 env → 走 patch", sr3.mode.value === null && sr3.mode.source.includes("patch"));
+// 各卡 configPanel 口径仍走真仓真快照（三卡全 mounted，实跑覆盖）。
+const s1 = await snap.buildSnapshot({ toolkitRoot: root, hotRouterPath: hotOk, envMode: undefined });
 const rt = s1.plugins.find((p) => p.dir === "rate-throttle");
 check("rate-throttle configPanel.editable = true", rt.configPanel.editable === true);
 check("rate-throttle 当前值含 enabled=false / routing.enabled=true（与 patch 一致）",
@@ -202,7 +213,7 @@ for (const d of ["agent-memory", "compact-router"]) {
   const p = s1.plugins.find((x) => x.dir === d);
   check(d + " = 无内部开关 / 不可编辑", p.configPanel.editable === false && p.configPanel.noInternalSwitch === true);
 }
-check("search-router configPanel.editable = false（方案 1）", sr1.configPanel.editable === false);
+check("search-router configPanel.editable = false（方案 1）", sr1.editable === false);
 
 // ---------- ⑦ UI 两渲染器 ----------
 section("⑦ UI 两渲染器（新增区块 + 既有断言字符串未破坏）");

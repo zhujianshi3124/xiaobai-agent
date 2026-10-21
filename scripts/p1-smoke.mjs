@@ -298,8 +298,10 @@ check("CSRF blocks doctor cross-site POST", csrf === 403, "status " + csrf);
 
 const snapMod = await import(pathToFileURL(join(panelDir, "manager", "snapshot.mjs")).href);
 const snap = await snapMod.buildSnapshot({ toolkitRoot: root });
-check("snapshot sees 4 business plugins", Array.isArray(snap.plugins) && snap.plugins.length === 4, "n=" + (snap.plugins && snap.plugins.length));
+check("snapshot sees 3 business plugins（批次 2 移除 search-router 后 4→3）", Array.isArray(snap.plugins) && snap.plugins.length === 3, "n=" + (snap.plugins && snap.plugins.length));
 // （web-search-local 已随开源 S1 剔除批出包，原 derived/gausszhou 断言格随之退役。）
+// （search-router 卡随批次 2「移除 search-router 全套登记面」出包，真仓真快照自此 3 卡。本格测的是
+//   真仓真快照，故按 3 卡钉；不用合成登记项救活——那会把产品面事实测成假绿。）
 check("self id is toolkit-manager", snap.self && snap.self.id === "toolkit-manager", snap.self && snap.self.id);
 check("self panel patch-mounted", snap.self && snap.self.managedBy === "patch");
 
@@ -546,10 +548,15 @@ check("client keeps defensive fallback", clientSrc.includes("rowAnchorFromPatch"
   // 交叉引用的**真实正例**：构造一份含引用的临时 patch，确认服务端能报出来
   // （走引擎层直接调用，避免改动真实文件）
   const eng2 = await import(pathToFileURL(join(panelDir, "manager", "apply-engine.mjs")).href);
-  const refText = readFileSync(join(root, "cordis.patch.yml"), "utf8").replace(
-    /(\r?\n)(- insert:\r?\n    - id: web-search-router)/,
+  const patchOrig = readFileSync(join(root, "cordis.patch.yml"), "utf8");
+  // 锚取**真文件里现存的** agent-memory-runtime 行：原锚 web-search-router 行已随批次 2 出包删除，
+  // replace 空转 ⇒ refText === 原文、正例恒报空（p22-verify:168-176 踩过同一坑，那边加了 premise 断言）。
+  // 下一行就是 premise 守卫：锚再消失即硬失败，不再静默空转。
+  const refText = patchOrig.replace(
+    /(\r?\n)(- insert:\r?\n    - id: agent-memory-runtime)/,
     "$1- id: other-row$1  config:$1    uses: rate-throttle$1$1$2",
   );
+  check("P2.2 cross-reference fixture anchor really exists in the patch", refText !== patchOrig);
   const refHits = eng2.findCrossReferences(refText, { rowId: "rate-throttle" });
   check("P2.2 cross-reference detection has a real positive case", refHits.length >= 1, JSON.stringify(refHits));
 
@@ -605,12 +612,18 @@ check("client keeps defensive fallback", clientSrc.includes("rowAnchorFromPatch"
   check("P2.2b fallback page tells the user to edit a conditional row by hand",
     htmlSrc2.includes("请手工编辑"));
 
-  // ---- P2.2b 全卡覆盖：3 张可 toggle 卡的锚点行号与真实文件对账 ----
-  // （S1 剔除批后 3 张：web-search-local 行已出包；行号随该批滚存重测——web-search-router 66→59、
-  //   agent-memory-runtime 77→70；rate-throttle 14 不变）
+  // ---- P2.2b 全卡覆盖：有 patch 行的卡（现 2 张）的锚点行号与真实文件对账 ----
+  // （登记表现 3 卡，其中 compact-router 无 patch 行——预设托管 rowId=null，故不在本表：
+  //   web-search-local 随 S1 剔除批出包；web-search-router 行随批次 2 出包，本表同步移除该项。）
   const patchLines = readFileSync(join(root, "cordis.patch.yml"), "utf8").split(/\r?\n/);
-  // S2.e 案② 头注 +3 行（模板形说明），行号随滚存笔整体下移：14→17、59→62、70→73。
-  const CARD_LINES = [["rate-throttle", 17], ["web-search-router", 62], ["agent-memory-runtime", 73]];
+  // 行号快照守卫：**故意不改成模糊匹配**（项目档案坑 5——改成 >= 或模糊匹配等于拆掉守卫）。
+  // 现行值 18／63 的来历，逐提交复算（git show <c>:cordis.patch.yml 逐行正则）：
+  //   eae2da4 rt=17 am=73（本格原值，当时对得上）
+  //   19ddbe2 头注 +2 行（debt-039-a bundle 通道说明）→ 其后整体下移 2
+  //   6a2a633 批次 2：web 行 config 两行并一行 −1、删 web-search-router 整块 −11
+  //            ⇒ rt 17→18、am 73→63；web-search-router 行不复存在，故从本表**移除该项**（不置 0）
+  //   5A/5B 五个治理挂载块共 +40 行，**全部追加在文件尾部**，rt/am 行号零位移（70eb3bd→a2e145c 恒 18／63）
+  const CARD_LINES = [["rate-throttle", 18], ["agent-memory-runtime", 63]];
   for (const [id, line] of CARD_LINES) {
     const found = patchLines.findIndex((l) => new RegExp("^\\s*- id:\\s*" + id + "\\s*$").test(l));
     check("P2.2b anchor line reconciled for " + id, found + 1 === line, "line " + (found + 1) + " (expected " + line + ")");
