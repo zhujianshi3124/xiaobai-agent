@@ -13,7 +13,64 @@ import { createHash } from "node:crypto";
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const patchPath = join(root, "cordis.patch.yml");
 const BASE_SHA = createHash("sha256").update(readFileSync(patchPath, "utf8")).digest("hex");
-// 基准滚存（第 1 次，2026-09-21 H5，用户裁决"加引号修配置"）：ce0b0b81… → bb7af96f…。
+
+// ---------- 合成夹具（批次 2 移除 search-router 全套登记面后，本脚本仍须覆盖其挂载面）----------
+// 三件套：① 登记表注入 ② 合成 patch 文本 ③ 合成 lib 目录。全部落在 os.tmpdir 副本里，零仓内新资产。
+// 三件套之一：合成 patch —— 在真文本上做两处替换（CRLF 同形），替换后须同时出现
+// `- id: web-search-router` 与 `    searchProvider: auto-search` 两行。
+function buildSynthPatch(text) {
+  const eol = text.includes("\r\n") ? "\r\n" : "\n";
+  const lines = text.split(/\r?\n/);
+  const out = [];
+  let keyed = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!keyed && line === "- id: web" && lines[i + 1] === "  config: {}") {
+      out.push(line, "  config:", "    searchProvider: auto-search");
+      i++;
+      keyed = true;
+      continue;
+    }
+    if (line === "- insert:" && lines[i + 1] === "    - id: agent-memory-runtime") {
+      out.push("- insert:", "    - id: web-search-router", "      name: 'xiaobai-agent/search-router'", "      config:", "        enabled: true", "");
+    }
+    out.push(line);
+  }
+  if (!keyed) throw new Error("合成 patch 构造失败：真 cordis.patch.yml 里找不到 web 行的 `config: {}`");
+  return out.join(eol);
+}
+const SYNTH_PATCH = buildSynthPatch(readFileSync(patchPath, "utf8"));
+// 合成 lib 清单：schema 必填四项齐（runtime/binaries/packages/registers），providers 声明 auto-search
+// ⇒ doctor 不报 schema.required-missing，也不把 web 行的 searchProvider 判成 dangling-reference。
+// exports 为空 ⇒ 无需造 exports 目标桩。
+const SYNTH_MANIFEST = JSON.stringify({
+  name: "xiaobai-agent/search-router",
+  id: "dsh/search-router",
+  displayName: "搜索路由",
+  version: "1.0.0",
+  contract: "^1.0",
+  provides: { entry: "./index.js", inject: [] },
+  configSchema: { type: "object", meta: {}, dict: { enabled: { type: "boolean", meta: {} } } },
+  requirements: {
+    runtime: { node: ">=22", dsh: ">=0.1.2-rc.1 <0.2.0 || >=0.2.0-rc.2 <0.3.0" },
+    binaries: [],
+    packages: {},
+    registers: { events: [], services: [], commands: [], providers: ["auto-search"] },
+    exports: {},
+  },
+}, null, 2);
+// 三件套之二：登记表注入（缺它一律 plugin-unknown 崩）。先例：test/panel-crossrefs.test.mjs:61/:105
+// 在 npm test 面内早就在用同一写法。
+const { PLUGINS: PANEL_PLUGINS } = await import("file:///" + join(root, "panel", "manager", "plugin-registry.mjs").replace(/\\/g, "/"));
+PANEL_PLUGINS["search-router"] = {
+  rowId: "web-search-router",
+  pkg: "xiaobai-agent/search-router",
+  category: "search",
+  defaultMode: "true",
+  hostKey: "searchProvider",
+  managedBy: "patch",
+  providers: ["auto-search"],
+};// 基准滚存（第 1 次，2026-09-21 H5，用户裁决"加引号修配置"）：ce0b0b81… → bb7af96f…。
 // 起因：cordis.patch.yml:61 的 engines 第 8 项 `360` 未加引号被 YAML 解析成整数，
 // H3 起宿主通道开始按 Standard Schema 校验该插件配置 ⇒ 启动即 ValidationError 掀掉整个宿主。
 // 修的是数据（`360` → `'360'`），守卫机制本身一字未放宽。取证见
@@ -36,7 +93,10 @@ const BASE_SHA = createHash("sha256").update(readFileSync(patchPath, "utf8")).di
 // 基准滚存（第 10 次＝副本线第 6 次，2026-10-05 19ddbe2c bundle 通道上线 debt-039-a 施工〔EXE-BOOT-045
 // 用户批·T2〕：patch 模板头注补 bundle 通道指引 +2 行，内容行零改动；该笔未随动基准，2026-10-14
 // 审核实测 p24 硬闸 ABORT 发现，本次追认滚存〔机制未放宽〕）：60484b76… → e47c1c16…。
-const BASELINE_SHA_EXPECTED = "e47c1c161d7ba31e9c2f063d40b9059e079a49b23255497fbc76c6929b0c9b5e";
+// 基准滚存（第 11 次＝副本线第 7 次，批次 5A/5B 治理挂载面落地：向 cordis.patch.yml 追加
+// governance-preflight / governance-context-audit / governance-overlap-detect / governance-usage-track /
+// governance-tiering 五条治理挂载行，行数与内容变更，守卫机制一字未放宽）：e47c1c16… → 9bd1b10a…。
+const BASELINE_SHA_EXPECTED = "9bd1b10a1e2a0807538d7cc0c32e3b54af4367df652ffed7ac2590fc2ad46930";
 if (BASE_SHA !== BASELINE_SHA_EXPECTED) {
   console.error("ABORT: 真实 cordis.patch.yml 基线漂移（" + BASE_SHA.slice(0, 12) + "）——拒绝在非基准态跑验证");
   process.exit(1);
@@ -52,16 +112,20 @@ const sha = (t) => createHash("sha256").update(t).digest("hex");
 
 // ---------- 副本构造 ----------
 const work = mkdtempSync(join(tmpdir(), "p24-verify-"));
-function makeCopy(name, { patchText, withPlugins = true } = {}) {
+function makeCopy(name, { patchText, withPlugins = true, synth = false } = {}) {
   const dir = join(work, name);
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, "cordis.patch.yml"), patchText !== undefined ? patchText : readFileSync(patchPath, "utf8"), "utf8");
+  writeFileSync(join(dir, "cordis.patch.yml"), patchText !== undefined ? patchText : synth ? SYNTH_PATCH : readFileSync(patchPath, "utf8"), "utf8");
   cpSync(join(root, "doctor-signals.json"), join(dir, "doctor-signals.json"));
   cpSync(join(root, "dsh.plugin.json"), join(dir, "dsh.plugin.json"));
   cpSync(join(root, "package.json"), join(dir, "package.json"));
   cpSync(join(root, "preset-patch-state.json"), join(dir, "preset-patch-state.json"));
   if (withPlugins) {
-    for (const p of ["agent-memory", "compact-router", "rate-throttle", "search-router"]) {
+    // 批次 5A/5B 向 cordis.patch.yml 追加了 5 条治理挂载行；副本须同构，否则 doctor 报
+    // mount.row-without-body（副本里没有这 5 个本体）。search-router 已出包，本体由 synth 开关合成。
+    for (const p of ["agent-memory", "compact-router", "rate-throttle",
+      "governance-preflight", "governance-context-audit", "governance-overlap-detect",
+      "governance-usage-track", "governance-tiering"]) {
       mkdirSync(join(dir, "lib", p), { recursive: true });
       cpSync(join(root, "lib", p, "dsh.plugin.json"), join(dir, "lib", p, "dsh.plugin.json"));
       writeFileSync(join(dir, "lib", p, "body.js"), "// body of " + p + "\n", "utf8");
@@ -75,6 +139,12 @@ function makeCopy(name, { patchText, withPlugins = true } = {}) {
           writeFileSync(stubAbs, "// stub\n", "utf8");
         }
       }
+    }
+    // 三件套之三：合成 lib/search-router（写在 tmpdir 副本里，不写仓）
+    if (synth) {
+      mkdirSync(join(dir, "lib", "search-router"), { recursive: true });
+      writeFileSync(join(dir, "lib", "search-router", "dsh.plugin.json"), SYNTH_MANIFEST, "utf8");
+      writeFileSync(join(dir, "lib", "search-router", "body.js"), "// body of search-router\n", "utf8");
     }
     // peer 依赖桩（tmpdir 上层无 node_modules，doctor pkg.missing-dependency 解析需要）
     const depVersions = {
@@ -120,7 +190,8 @@ async function snapshotOf(dir) {
 
 // ---------- ② row-plan-sha.test ----------
 {
-  const text = readFileSync(patchPath, "utf8");
+  // 合成文本：真 cordis.patch.yml 的 web 行已无 searchProvider（批次 2 移除登记面），本块专测该键
+  const text = SYNTH_PATCH;
   const r1 = planRemoveRow(text, "rate-throttle");
   const r2 = planRemoveRow(text, "rate-throttle");
   check("② plan SHA 确定（同输入同 nextSha）", sha(r1.nextText) === sha(r2.nextText) && r1.insertAt === r2.insertAt);
@@ -137,7 +208,7 @@ async function snapshotOf(dir) {
 
 // ---------- ③ host-row-unset-restore.test（软卸载 search-router 全链路）----------
 {
-  const dir = makeCopy("soft-search");
+  const dir = makeCopy("soft-search", { synth: true });
   const before = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
   const plan = createSoftUninstallPlan({ toolkitRoot: dir, plugin: "search-router", userReason: "测试" });
   const exec = executeSoftUninstall({ plan, toolkitRoot: dir, backupRoot: backupRootFor(dir) });
@@ -171,7 +242,7 @@ async function snapshotOf(dir) {
 
 // ---------- ④⑤ 销毁式真卸载全链路（search-router；S1 剔除批原主角 web-search-local 出包，换现存可销毁件）+ 重装 → 挂载 ----------
 {
-  const dir = makeCopy("true-sr");
+  const dir = makeCopy("true-sr", { synth: true });
   const before = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
   const libDir = join(dir, "lib", "search-router");
   const stash = join(work, "true-sr-reinstall-stash"); // 暂存放副本仓之外（避免被 doctor 当作在案本体）
@@ -232,13 +303,13 @@ async function snapshotOf(dir) {
   check("⑤ 挂载后：4 卡全 mounted 且无 dependency-broken", snap3.plugins.every((p) => p.status === "mounted"));
 
   // —— 无收据 ⇒ 拒绝挂载（面板不臆造 config）——
-  const dir3 = makeCopy("mount-no-receipt");
+  const dir3 = makeCopy("mount-no-receipt", { synth: true });
   let nc = null;
   try { createMountPlan({ toolkitRoot: dir3, plugin: "search-router" }); } catch (e) { nc = e.code; }
   check("⑤ 无收据 → mount-no-receipt 拒绝（零硬编码，不臆造 config）", nc === "mount-no-receipt", String(nc));
 
   // —— 恢复 API 对真卸载一律拒绝 ——
-  const dir4 = makeCopy("true-restore-refused");
+  const dir4 = makeCopy("true-restore-refused", { synth: true });
   const p4 = createTrueUninstallPlan({ toolkitRoot: dir4, plugin: "search-router" });
   executeTrueUninstall({ plan: p4, toolkitRoot: dir4, backupRoot: backupRootFor(dir4) });
   let rr = null;
@@ -345,7 +416,7 @@ async function snapshotOf(dir) {
   check("⑦ doctor 基线副本：error=0 且无 mount 信号", base.summary.error === 0 && !base.issues.some((i) => i.category === "mount"));
   // A5（S1 剔除批改造）：原场景"真卸载 web-search-local → missing-provider warning"随
   // providerDependencies 清空退役（搜索依赖登记已不存在）——改钉"清空后 doctor 不再产该类 warning"。
-  const dir = makeCopy("doc-a5");
+  const dir = makeCopy("doc-a5", { synth: true });
   const plan = createTrueUninstallPlan({ toolkitRoot: dir, plugin: "search-router" });
   executeTrueUninstall({ plan, toolkitRoot: dir, backupRoot: backupRootFor(dir) });
   const r = runDoctor(dir);
@@ -354,7 +425,7 @@ async function snapshotOf(dir) {
   check("⑦ A5（改）：mount 类提示 severity≠error 且 doctor error=0", r.summary.error === 0 && mount.every((i) => i.severity !== "error"));
   check("⑦ A5（改）：无 dangling warning（真卸载行块已摘）", !mount.some((i) => i.id === "provider.dangling-reference"));
   // dangling：手工把 searchProvider 指向不存在的 provider
-  const dir2 = makeCopy("doc-dangling");
+  const dir2 = makeCopy("doc-dangling", { synth: true });
   const t = readFileSync(join(dir2, "cordis.patch.yml"), "utf8").replace("searchProvider: auto-search", "searchProvider: ghost-provider");
   writeFileSync(join(dir2, "cordis.patch.yml"), t, "utf8");
   const r2 = runDoctor(dir2);
@@ -424,7 +495,7 @@ async function snapshotOf(dir) {
 // ---------- 收尾：真实仓零写入自证 ----------
 {
   const nowSha = sha(readFileSync(patchPath, "utf8"));
-  check("真实 cordis.patch.yml 全程零写入（基准 e47c1c16… 模板形不变；判据随滚存笔动态，文案随本笔在位改对）", nowSha === BASE_SHA && BASE_SHA === BASELINE_SHA_EXPECTED);
+  check("真实 cordis.patch.yml 全程零写入（基准 9bd1b10a… 模板形不变；判据随滚存笔动态，文案随本笔在位改对）", nowSha === BASE_SHA && BASE_SHA === BASELINE_SHA_EXPECTED);
   rmSync(work, { recursive: true, force: true });
 }
 

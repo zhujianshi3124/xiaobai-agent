@@ -33,9 +33,12 @@ const patchPath = join(root, "cordis.patch.yml");
 // 第 10 次（副本线第 6 次，2026-10-05 19ddbe2c bundle 通道上线 debt-039-a 施工〔EXE-BOOT-045 用户批·T2〕：
 // patch 模板头注补 bundle 通道指引 +2 行，内容行零改动；该笔未随动基准，2026-10-14 审核实测
 // p24 硬闸 ABORT 发现，本次追认滚存〔机制未放宽〕）：60484b76 → e47c1c16。
+// 第 11 次（副本线第 7 次，批次 5A/5B 治理挂载面落地：向 cordis.patch.yml 追加
+// governance-preflight / governance-context-audit / governance-overlap-detect / governance-usage-track /
+// governance-tiering 五条治理挂载行，行数与内容变更，守卫机制一字未放宽）：e47c1c16 → 9bd1b10a。
 // 成因全文与该文件内注释、
 // panel/docs/evidence/H-REAL-HOST-REVERIFY.md、docs/debt.md A#24 / A#25 / 计划 §29 / §44。
-const BASE_SHA_EXPECT = "e47c1c161d7ba31e9c2f063d40b9059e079a49b23255497fbc76c6929b0c9b5e";
+const BASE_SHA_EXPECT = "9bd1b10a1e2a0807538d7cc0c32e3b54af4367df652ffed7ac2590fc2ad46930";
 const BASE_SHA = createHash("sha256").update(readFileSync(patchPath, "utf8")).digest("hex");
 if (BASE_SHA !== BASE_SHA_EXPECT) {
   console.error("ABORT: 真实 cordis.patch.yml 基线漂移（" + BASE_SHA.slice(0, 12) + "）——拒绝在非基准态跑矩阵");
@@ -78,19 +81,91 @@ function firstDiff(label, aText, bText) {
 // 1. 副本构造（与 p24-verify 同构：插件树 + exports 桩 + peer 依赖桩）
 // ════════════════════════════════════════════════════════════
 const work = mkdtempSync(join(tmpdir(), "p24-ui-matrix-"));
-const PLUGIN_DIRS = ["agent-memory", "compact-router", "rate-throttle", "search-router"];
+/** 每份副本落盘时的基线文本 sha（真 patch 或合成 patch 各自一份；拍板二口径）。 */
+const copyBaseSha = new Map();
+const baseShaOf = (dir) => copyBaseSha.get(dir);
+
+// ---------- 合成夹具（批次 2 移除 search-router 全套登记面后仍须保住其挂载面覆盖）----------
+// 三件套：① 登记表注入 ② 合成 patch 文本 ③ 合成 lib 目录。全部落在 os.tmpdir 副本里，零仓内新资产。
+// 只有显式 synth:true 的副本才拿合成面；默认仍用真实 cordis.patch.yml（哪些副本是合成的，调用点肉眼可见）。
+const SYNTH_PATCH = (() => {
+  const text = readFileSync(patchPath, "utf8");
+  const eol = text.includes("\r\n") ? "\r\n" : "\n";
+  const lines = text.split(/\r?\n/);
+  const out = [];
+  let keyed = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!keyed && line === "- id: web" && lines[i + 1] === "  config: {}") {
+      out.push(line, "  config:", "    searchProvider: auto-search");
+      i++;
+      keyed = true;
+      continue;
+    }
+    if (line === "- insert:" && lines[i + 1] === "    - id: agent-memory-runtime") {
+      out.push("- insert:", "    - id: web-search-router", "      name: 'xiaobai-agent/search-router'", "      config:", "        enabled: true", "");
+    }
+    out.push(line);
+  }
+  if (!keyed) throw new Error("合成 patch 构造失败：真 cordis.patch.yml 里找不到 web 行的 `config: {}`");
+  return out.join(eol);
+})();
+const SYNTH_MANIFEST = JSON.stringify({
+  name: "xiaobai-agent/search-router",
+  id: "dsh/search-router",
+  displayName: "搜索路由",
+  version: "1.0.0",
+  contract: "^1.0",
+  provides: { entry: "./index.js", inject: [] },
+  configSchema: { type: "object", meta: {}, dict: { enabled: { type: "boolean", meta: {} } } },
+  requirements: {
+    runtime: { node: ">=22", dsh: ">=0.1.2-rc.1 <0.2.0 || >=0.2.0-rc.2 <0.3.0" },
+    binaries: [],
+    packages: {},
+    registers: { events: [], services: [], commands: [], providers: ["auto-search"] },
+    exports: {},
+  },
+}, null, 2);
+const { PLUGINS: PANEL_PLUGINS } = await import(new URL("../panel/manager/plugin-registry.mjs", import.meta.url).href);
+PANEL_PLUGINS["search-router"] = {
+  rowId: "web-search-router",
+  pkg: "xiaobai-agent/search-router",
+  category: "search",
+  defaultMode: "true",
+  hostKey: "searchProvider",
+  managedBy: "patch",
+  providers: ["auto-search"],
+};
+// 批次 5A/5B 向 cordis.patch.yml 追加 5 条治理挂载行；副本须同构，否则 doctor 报
+// mount.row-without-body（副本里没有这 5 个本体）。search-router 已出包，本体由 synth 开关合成。
+const GOVERNANCE_DIRS = [
+  "governance-preflight", "governance-context-audit", "governance-overlap-detect",
+  "governance-usage-track", "governance-tiering",
+];
+const PLUGIN_DIRS = ["agent-memory", "compact-router", "rate-throttle", "search-router", ...GOVERNANCE_DIRS];
 
 /**
  * 副本构造（与 p24-verify 同构：插件树 + exports 桩 + peer 依赖桩）。
  * `withPresetBridge` 默认 true：真实基线里 compact-router 由预设补丁挂载（preset-patched），
  * 夹具必须同构，否则副本里 compact-router 会落在 installed-unmounted，doctor 也不回 0/0/0。
  */
-function makeCopy(name, { withPresetBridge = true } = {}) {
+function makeCopy(name, { withPresetBridge = true, synth = false } = {}) {
   const dir = join(work, name);
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, "cordis.patch.yml"), readFileSync(patchPath, "utf8"), "utf8");
+  const patchText = synth ? SYNTH_PATCH : readFileSync(patchPath, "utf8");
+  writeFileSync(join(dir, "cordis.patch.yml"), patchText, "utf8");
+  copyBaseSha.set(dir, sha(patchText));
   for (const f of ["doctor-signals.json", "dsh.plugin.json", "package.json"]) cpSync(join(root, f), join(dir, f));
   for (const p of PLUGIN_DIRS) {
+    // search-router 已随批次 2 出包：本体只由 synth 开关合成（三件套之三，写在副本里，不写仓）。
+    if (p === "search-router") {
+      if (!synth) continue;
+      mkdirSync(join(dir, "lib", p), { recursive: true });
+      writeFileSync(join(dir, "lib", p, "dsh.plugin.json"), SYNTH_MANIFEST, "utf8");
+      writeFileSync(join(dir, "lib", p, "body.js"), "// body of " + p + "\n", "utf8");
+      writeFileSync(join(dir, "lib", p, "extra.js"), "// extra of " + p + "\n", "utf8");
+      continue;
+    }
     mkdirSync(join(dir, "lib", p), { recursive: true });
     cpSync(join(root, "lib", p, "dsh.plugin.json"), join(dir, "lib", p, "dsh.plugin.json"));
     writeFileSync(join(dir, "lib", p, "body.js"), "// body of " + p + "\n", "utf8");
@@ -376,7 +451,10 @@ function loadHtmlClient() {
   return fn(fakeDoc, () => new Promise(() => {}));
 }
 
-const realSnap = await snapMod.buildSnapshot({ toolkitRoot: root, hotRouterPath: join(root, "no-hot.json"), envMode: undefined });
+// 文案保真/六态/A1–C3 的取数面 = 合成副本（真仓已无 search-router 本体与挂载行；
+// 真仓本身仍只用于收尾的零写入自证）。
+const realSnapDir = makeCopy("render-base", { synth: true });
+const realSnap = await snapMod.buildSnapshot({ toolkitRoot: realSnapDir, hotRouterPath: join(realSnapDir, "no-hot.json"), envMode: undefined });
 const reactR = loadReactClient(realSnap.patch.text);
 const htmlR = loadHtmlClient();
 htmlR.setPatch(realSnap.patch.text);
@@ -813,9 +891,9 @@ function assertNoRestoreNoMount(tag, r, plugin) {
 // ---------- A0 前置基线（§3.2 每例前置：基线 sha / doctor 0/0/0 / 5 卡 mounted）----------
 {
   const tag = "A0";
-  const dir = makeCopy("a0");
+  const dir = makeCopy("a0", { synth: true });
   const api = makeApi(dir);
-  check(tag + " 前置：副本 cordis.patch.yml = 基线 sha", shaFile(join(dir, "cordis.patch.yml")) === BASE_SHA_EXPECT);
+  check(tag + " 前置：副本 cordis.patch.yml = 本副本基线 sha", shaFile(join(dir, "cordis.patch.yml")) === baseShaOf(dir));
   const doc = runDoctor(dir);
   check(tag + " 前置：doctor 0/0/0", doc.summary.error === 0 && doc.summary.warning === 0 && doc.summary.info === 0,
     JSON.stringify(doc.summary) + " " + JSON.stringify(doc.issues.map((i) => [i.id, i.severity, i.message, i.file])));
@@ -828,7 +906,7 @@ function assertNoRestoreNoMount(tag, r, plugin) {
 // ---------- A1 单删 rate-throttle（软）----------
 {
   const tag = "A1";
-  const dir = makeCopy("a1");
+  const dir = makeCopy("a1", { synth: true });
   const api = makeApi(dir);
   const before = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
   const libBefore = shaFile(join(dir, "lib", "rate-throttle", "body.js"));
@@ -870,7 +948,7 @@ function assertNoRestoreNoMount(tag, r, plugin) {
 // ---------- A2 单删 compact-router（软，预设桥）----------
 {
   const tag = "A2";
-  const dir = makeCopy("a2", { withPresetBridge: true });
+  const dir = makeCopy("a2", { withPresetBridge: true, synth: true });
   const api = makeApi(dir);
   const presetState = JSON.parse(readFileSync(join(dir, "preset-patch-state.json"), "utf8"));
   const beforeShas = {};
@@ -904,7 +982,7 @@ function assertNoRestoreNoMount(tag, r, plugin) {
 // ---------- A3 单删 agent-memory（软）----------
 {
   const tag = "A3";
-  const dir = makeCopy("a3");
+  const dir = makeCopy("a3", { synth: true });
   const api = makeApi(dir);
   const before = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
   const libBefore = shaFile(join(dir, "lib", "agent-memory", "body.js"));
@@ -925,7 +1003,7 @@ function assertNoRestoreNoMount(tag, r, plugin) {
 // ---------- A4 单删 search-router（真 · 销毁式）----------
 {
   const tag = "A4";
-  const dir = makeCopy("a4");
+  const dir = makeCopy("a4", { synth: true });
   const api = makeApi(dir);
   const exec = await destroyTrue(tag, api, "search-router");
   assertDestroyHard(tag, dir, "search-router", exec);
@@ -951,7 +1029,7 @@ function assertNoRestoreNoMount(tag, r, plugin) {
 // ---------- B1 双真卸载同批（search-router + rate-throttle；原"搜索对同删"出包改造）----------
 {
   const tag = "B1";
-  const dir = makeCopy("b1");
+  const dir = makeCopy("b1", { synth: true });
   const api = makeApi(dir);
   const ea = await destroyTrue(tag + "·search-router", api, "search-router");
   const eb = await destroyTrue(tag + "·rate-throttle", api, "rate-throttle");
@@ -976,7 +1054,7 @@ function assertNoRestoreNoMount(tag, r, plugin) {
 // ---------- C1 联动全软 ----------
 {
   const tag = "C1";
-  const dir = makeCopy("c1", { withPresetBridge: true });
+  const dir = makeCopy("c1", { withPresetBridge: true, synth: true });
   const api = makeApi(dir);
   const before = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
   for (const p of ["rate-throttle", "compact-router", "agent-memory"]) {
@@ -1003,7 +1081,7 @@ function assertNoRestoreNoMount(tag, r, plugin) {
 // ---------- C2 极端组合（三软 + 一真·销毁式；S1 剔除批原"两真"随 web-search-local 出包改单真）----------
 {
   const tag = "C2";
-  const dir = makeCopy("c2", { withPresetBridge: true });
+  const dir = makeCopy("c2", { withPresetBridge: true, synth: true });
   const api = makeApi(dir);
   for (const p of ["rate-throttle", "compact-router", "agent-memory"]) {
     const x = await uninstall(api, p, "soft");
@@ -1049,7 +1127,7 @@ function assertNoRestoreNoMount(tag, r, plugin) {
     check(tag3 + " ② 三软恢复后：搜索仍缺席（**销毁式不可恢复**，符合语义）",
       !/- id: web-search-router/.test(mid)
       && !/^    searchProvider:/m.test(mid));
-    check(tag3 + " ② 三软恢复后 sha ≠ 基线（搜索未回）", shaFile(join(dir, "cordis.patch.yml")) !== BASE_SHA_EXPECT);
+    check(tag3 + " ② 三软恢复后 sha ≠ 基线（搜索未回）", shaFile(join(dir, "cordis.patch.yml")) !== baseShaOf(dir));
   }
 
   // 模拟重装：把源码从暂存放回 lib（= 用户开源后重新下载安装）
@@ -1071,8 +1149,8 @@ function assertNoRestoreNoMount(tag, r, plugin) {
     check(tag3 + " ④ mount/execute(search-router) ok", me.status === 200 && me.json.ok === true, JSON.stringify(me.json));
   }
   const c3After = readFileSync(join(dir, "cordis.patch.yml"), "utf8");
-  check(tag3 + " ⑤ 搜索挂载后 sha 回基线（字节级）", shaFile(join(dir, "cordis.patch.yml")) === BASE_SHA_EXPECT,
-    firstDiff("patch", readFileSync(patchPath, "utf8"), c3After));
+  check(tag3 + " ⑤ 搜索挂载后 sha 回基线（字节级）", shaFile(join(dir, "cordis.patch.yml")) === baseShaOf(dir),
+    firstDiff("patch", SYNTH_PATCH, c3After));
   check(tag3 + " ⑤ 宿主键 :7 searchProvider 回原值", /^    searchProvider: auto-search/m.test(c3After));
   const r3 = await renderCase(dir);
   assertCards(tag3 + "·全恢复后", r3, {
@@ -1230,7 +1308,7 @@ section("批2 操作台/双回滚（D 段）");
   check("D9 真实 ~/.dsh 无 doctor-patch-state.json / doctor-backups / doctor-apply.lock", ["doctor-patch-state.json", "doctor-backups", "doctor-apply.lock"].every((n) => !existsSync(join("C:", "Users", "<user>", ".dsh", n))), "");
 
   // ---------- D10 删除原因输入（§3.6a：选填/200 截断/null，两渲染器逐字在产品面） ----------
-  const dirD10 = makeCopy("doc-d10");
+  const dirD10 = makeCopy("doc-d10", { synth: true });
   const apiD10 = makeApi(dirD10);
   const longReason = "很长的原因很长的原因".repeat(30).slice(0, 250);
   const unR = await uninstall(apiD10, "rate-throttle", "true", longReason);
@@ -1253,7 +1331,7 @@ section("批2 操作台/双回滚（D 段）");
 // 6. 收尾：真实仓零写入自证
 // ════════════════════════════════════════════════════════════
 section("收尾");
-check("真实 cordis.patch.yml 全程零写入（基准 a663f61b… 不变）", sha(readFileSync(patchPath, "utf8")) === BASE_SHA, sha(readFileSync(patchPath, "utf8")).slice(0, 12));
+check("真实 cordis.patch.yml 全程零写入（基准 9bd1b10a… 不变）", sha(readFileSync(patchPath, "utf8")) === BASE_SHA, sha(readFileSync(patchPath, "utf8")).slice(0, 12));
 // 守卫口径（Q1' 修正，L-059）：放行「面板运行期合法的长期落痕」，只拦本矩阵**新增**产物。
 //   soft-uninstalls.json —— 软卸载台账（面板发起）
 //   row-adjacency.json    —— 行块邻接留痕（D-UI-05 长期证据，与清账解耦、只增不减）
