@@ -1,0 +1,64 @@
+#!/bin/sh
+# ─────────────────────────────────────────────────────────────────────────────
+# pre-commit hook（仓内正本，安装方式见 scripts/install-git-hooks.mjs）
+#
+# 【跑什么】
+#   仅当**暂存区**含以下路径之一时，才跑 node scripts/regression-all.mjs（全链回归，约 40s）：
+#     cordis.patch.yml   panel/   scripts/   lib/
+#   其它提交（只改文档、_scratch、协作规则等）直接放行，零耗时。
+#
+# 【什么时候跑】
+#   每次 git commit 时，由 git 自动调用。判据是「本次提交实际要落盘的文件」，
+#   不是工作树差异 —— 即 git diff --cached --name-only 的结果。
+#
+# 【为什么只对这几类路径跑】
+#   本次事故的成因是「改了 cordis.patch.yml 但没人跑回归链」。
+#   路径过滤精确命中这一类改动，而不是把所有提交都拖慢 40s。
+#   无差别跑全链会让人想办法绕过 hook，那比没有 hook 更糟。
+#
+# 【怎么临时绕过】
+#     git commit --no-verify
+#   或  SKIP_REGRESSION=1 git commit ...
+#
+# 【绕过之后会发生什么】
+#   回归链**不会跑**。p22 / p23 / p24 这类脚本红掉时不会有任何提示 ——
+#   它们不在 npm test 里（npm test 完全不调 regression-all）。
+#   历史实况：这些脚本曾红了整整两个批次无人知晓，直到有人手工补跑才发现。
+#   所以 --no-verify 只应在「确认本次改动不可能影响回归面」时使用，且应在提交说明里写明原因。
+# ─────────────────────────────────────────────────────────────────────────────
+set -e
+
+if [ "$SKIP_REGRESSION" = "1" ]; then
+  echo "[pre-commit] SKIP_REGRESSION=1 —— 跳过回归链。回归面未被验证。"
+  exit 0
+fi
+
+# 暂存区文件名（相对仓根，--diff-filter=d 排除纯删除）
+STAGED=$(git diff --cached --name-only --diff-filter=d 2>/dev/null || true)
+
+if [ -z "$STAGED" ]; then
+  exit 0
+fi
+
+# 路径过滤：命中的是「回归面」——改这些才需要跑全链
+# 注意 cordis.patch.yml 必须整名锚定（$）：否则 cordis.patch.yml.bak 这类备份文件会被误命中。
+HIT=$(printf '%s\n' "$STAGED" | grep -E '^(cordis\.patch\.yml$|panel/|scripts/|lib/)' || true)
+
+if [ -z "$HIT" ]; then
+  exit 0
+fi
+
+echo "[pre-commit] 本次提交触及回归面："
+printf '%s\n' "$HIT" | sed 's/^/  - /'
+echo "[pre-commit] 正在跑 node scripts/regression-all.mjs（约 40s）…"
+echo "[pre-commit] 临时绕过：git commit --no-verify（回归链将不跑，缺陷可能两个批次后才被发现）"
+
+if ! node scripts/regression-all.mjs; then
+  echo ""
+  echo "[pre-commit] ✗ 回归链未全绿，提交被拦下。"
+  echo "[pre-commit] 上面列出的 ✗ 项即为未通过项。请先修好，或按需使用 git commit --no-verify 并说明原因。"
+  exit 1
+fi
+
+echo "[pre-commit] ✓ 回归链全绿。"
+exit 0

@@ -1,6 +1,17 @@
 #!/usr/bin/env node
 // 回归全跑器：按顺序执行各专项脚本，只回传每个脚本的「结果行」，输出紧凑。
 // 用法：node scripts/regression-all.mjs
+//
+// ── 摘除两项死工装（2026-10-21，协调侧裁决，实测为据）──────────────────────────
+// ① q2-shipped-scan：读本机 npm 全局安装的 shipped preset（scripts/q2-shipped-scan.mjs:16
+//    ROOT=C:\Users\…\npm\node_modules\@deepseek-ai\dsh\…\dsh-agent-presets，实测该 presets
+//    目录不存在 ⇒ :40 直接 ENOENT 崩）；且 :118 的 outPath 是硬编码仓外绝对路径
+//    <TOOLKIT_ROOT>\…（实测该目录不存在）。属一次性取证工装，
+//    不是每次改动都该跑的东西；外部克隆环境必然崩，留着只会制造永久红。
+//    另：它具备写盘能力（:119 writeFileSync），一个会写文件的脚本不该进常跑回归器。
+// ② master-merge-fidelity：:6 硬编码读 <TOOLKIT_ROOT>\panel\docs\HANDOFF-MASTER.md
+//    （实测 Test-Path=False）⇒ 起跑即 ENOENT。属一次性合并保真抽检，被检对象已不存在。
+// 两项脚本文件本身保留（历史取证可重放），只是不再进常跑清单。
 import { execFileSync } from "node:child_process";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,8 +31,7 @@ const scripts = [
   ["p24-verify", "scripts/p24-verify.mjs"],
   ["p24-ui-matrix", "scripts/p24-ui-matrix.mjs"],
   ["q2-layer-scan", "scripts/q2-layer-scan.mjs"],
-  ["q2-shipped-scan", "scripts/q2-shipped-scan.mjs"],
-  ["master-merge-fidelity", "scripts/master-merge-fidelity.mjs"],
+  // 摘除（2026-10-21，协调侧裁决）：q2-shipped-scan 与 master-merge-fidelity 是死工装，见下方注释。
   ["backup-write-test", "scripts/backup-write-test.mjs"],
   // S2.5 合并批（C1-007 单包合一终裁）：doctor CLI 成员入桶（doctor/cli/）——四套件基线随桶内重立。
   ["doctor-cli run-tests", "doctor/cli/selftest/run-tests.mjs"],
