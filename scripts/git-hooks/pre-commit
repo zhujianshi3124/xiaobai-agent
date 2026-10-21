@@ -3,9 +3,25 @@
 # pre-commit hook（仓内正本，安装方式见 scripts/install-git-hooks.mjs）
 #
 # 【跑什么】
-#   仅当**暂存区**含以下路径之一时，才跑 node scripts/regression-all.mjs（全链回归，约 40s）：
+#   仅当**暂存区**含以下路径之一时，才跑 node scripts/regression-all.mjs --scripts-only（约 8s）：
 #     cordis.patch.yml   panel/   scripts/   lib/
 #   其它提交（只改文档、_scratch、协作规则等）直接放行，零耗时。
+#
+# 【为什么 hook 不跑 node --test（不是偷懒，是划责任面）】
+#   ① **npm test 已经覆盖 node --test** —— package.json 的 test 脚本最后一步就是 node --test。
+#      让 hook 再跑一遍是重复劳动，且会把提交耗时从约 8s 推到约 40s。
+#   ② **本机 node --test 有 4 项环境性常驻红**（项目档案第五节在册，均非回归）：
+#        - p22b 在场态行为钉：断言输出不含 "SKIP：.panel-backups"，而本机 .panel-backups/ 不存在，
+#          脚本正常走 SKIP 分支打印该行
+#        - q2-layer-scan 在场态行为钉：同源同因
+#        - doc-ref-guard 在场态全绿：活文档/存档件里存在指向已不存在文件的引用
+#        - F2⑤ schemastery：<TEST_SANDBOX> 缺 @deepseek-ai/schemastery（**环境红线，不许碰**）
+#      这 4 项清不掉。让 hook 跑全链 ⇒ hook 永久拦一切提交 ⇒ 所有人只能 --no-verify。
+#      那不是严格，那是把 hook 变成摆设，比没有 hook 更糟。
+#   ③ 所以 hook 补的是 **npm test 覆盖不到的那一面**：16 个专项脚本 npm test 一个都不跑，
+#      而「p22/p23/p24 红了两个批次无人知」正是这个缺口。
+#   ⇒ 责任面：node --test 归 npm test，16 个专项脚本归 hook。两面都不丢，只是不重复跑。
+#   ⇒ 全链仍随时可跑：npm run regression（= 不带参数，含 node --test）。
 #
 # 【什么时候跑】
 #   每次 git commit 时，由 git 自动调用。判据是「本次提交实际要落盘的文件」，
@@ -13,7 +29,7 @@
 #
 # 【为什么只对这几类路径跑】
 #   本次事故的成因是「改了 cordis.patch.yml 但没人跑回归链」。
-#   路径过滤精确命中这一类改动，而不是把所有提交都拖慢 40s。
+#   路径过滤精确命中这一类改动，而不是把所有提交都拖慢。
 #   无差别跑全链会让人想办法绕过 hook，那比没有 hook 更糟。
 #
 # 【怎么临时绕过】
@@ -50,15 +66,17 @@ fi
 
 echo "[pre-commit] 本次提交触及回归面："
 printf '%s\n' "$HIT" | sed 's/^/  - /'
-echo "[pre-commit] 正在跑 node scripts/regression-all.mjs（约 40s）…"
+echo "[pre-commit] 正在跑 node scripts/regression-all.mjs --scripts-only（16 专项脚本，约 8s）…"
+echo "[pre-commit] 注：node --test 这一面由 npm test 负责，此处不重复跑（理由见本文件头注）。"
 echo "[pre-commit] 临时绕过：git commit --no-verify（回归链将不跑，缺陷可能两个批次后才被发现）"
 
-if ! node scripts/regression-all.mjs; then
+if ! node scripts/regression-all.mjs --scripts-only; then
   echo ""
-  echo "[pre-commit] ✗ 回归链未全绿，提交被拦下。"
+  echo "[pre-commit] ✗ 专项脚本回归未全绿，提交被拦下。"
   echo "[pre-commit] 上面列出的 ✗ 项即为未通过项。请先修好，或按需使用 git commit --no-verify 并说明原因。"
+  echo "[pre-commit] 想跑全链（含 node --test）自行执行：npm run regression"
   exit 1
 fi
 
-echo "[pre-commit] ✓ 回归链全绿。"
+echo "[pre-commit] ✓ 专项脚本回归全绿。"
 exit 0
