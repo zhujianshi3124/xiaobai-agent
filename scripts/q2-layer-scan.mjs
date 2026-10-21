@@ -50,7 +50,9 @@ const LAYERS = [
   {
     n: "②",
     name: "四插件清单（声明 requirements/exports，不含挂载行）",
-    carrier: "lib/{rate-throttle,compact-router,agent-memory,search-router}/dsh.plugin.json",
+    // 载体名不枚举具体目录：枚举必随每次增删插件而过期（本行原列 4 个目录，search-router 已随批次 2
+    // 出包、governance-* 五个又已加入，磁盘实测 8 个）。逐目录实况以 §2 的 readdirSync 枚举为准。
+    carrier: "lib/<plugin>/dsh.plugin.json",
     phys: join(root, "lib"),
     evidence: [
       "面板卡片判据：panel/manager/snapshot.mjs:112 readdirSync(libRoot) + 清单存在性",
@@ -110,7 +112,13 @@ const nestedRows = rows.filter((r) => r.indent > 0);
 console.log("\n  统计：顶层行 " + topRows.length + " 个" + "（" + topRows.map((r) => r.id).join(", ") + "）");
 console.log("        嵌套行 " + nestedRows.length + " 个" + "（" + nestedRows.map((r) => r.id).join(", ") + "）");
 
-const TOOLKIT_IDS = ["rate-throttle", "web-search-router", "agent-memory-runtime", "toolkit-manager"];
+// 本名单＝「本仓应有挂载行的插件」枚举钉（不是行序校验、不是行号快照）。滚存史：
+//   9024b8e 首笔 5 项（含 web-search-local）；247dfc6 S1 剔除批 5→4（去 web-search-local）；
+//   6a2a633 批次 2「移除 search-router 全套登记面」4→3（去 web-search-router）。
+// 批次 2 同步了产品面四处（lib/search-router 目录、cordis.patch.yml 行、bundle.patch.yml 行、
+// plugin-registry 登记项），**漏了本处账面**（git 实测 6a2a633 的 27 个变更文件里零个 scripts/ 文件）。
+// 断言仍保持 missing.length === 0 硬相等：改的是名单长度，不是判定强度（勿改 >= 或「至少一个」）。
+const TOOLKIT_IDS = ["rate-throttle", "agent-memory-runtime", "toolkit-manager"];
 const allIds = rows.map((r) => r.id);
 const counts = {};
 for (const id of allIds) counts[id] = (counts[id] || 0) + 1;
@@ -118,12 +126,12 @@ const dupes = Object.entries(counts).filter(([, n]) => n > 1);
 check("① 层内无重复 id 行（含五个 toolkit id）", dupes.length === 0,
   dupes.length ? "重复: " + JSON.stringify(dupes) : "全部 id 恰好出现 1 次（共 " + allIds.length + " 个）");
 const missing = TOOLKIT_IDS.filter((id) => !allIds.includes(id));
-console.log("  四个 toolkit id 在本层命中：" + TOOLKIT_IDS.map((id) => id + "×" + (counts[id] || 0)).join("  "));
-check("① 四个 toolkit id 中仅 compact-router 无对应行（toolkit 侧预期如此）",
+console.log("  三个 toolkit id 在本层命中：" + TOOLKIT_IDS.map((id) => id + "×" + (counts[id] || 0)).join("  "));
+check("① 三个 toolkit id 中仅 compact-router 无对应行（toolkit 侧预期如此）",
   missing.length === 0 && nestedRows.filter((r) => r.id === "toolkit-manager").length === 1,
   "缺行: " + (missing.length ? missing.join(",") : "无"));
 console.log("  注：嵌套 id 中 example-group-a/example-group-b 是 rate-throttle.routing.staticGroups 的组 id（示例配置），不是插件挂载行；");
-console.log("      真正的 4 个插件挂载行 = rate-throttle / web-search-router / agent-memory-runtime / toolkit-manager（S1 剔除批 5→4）。");
+console.log("      真正的 3 个插件挂载行 = rate-throttle / agent-memory-runtime / toolkit-manager（S1 剔除批 5→4；批次 2 移除 search-router 后 4→3）。");
 
 const OVERRIDE_PAT = /(^|\s)(override|overrides|replace|replaces|shadow|shadowing|覆盖|遮蔽|取代)(\s|:|$)/i;
 const overrideHits = patchLines.map((l, i) => ({ n: i + 1, l })).filter((x) => OVERRIDE_PAT.test(x.l.split("#")[0]));
