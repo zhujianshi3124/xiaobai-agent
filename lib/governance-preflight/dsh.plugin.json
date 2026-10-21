@@ -1,0 +1,40 @@
+{
+  "name": "xiaobai-agent/governance-preflight",
+  "id": "dsh/governance-preflight",
+  "displayName": "治理预检",
+  "version": "1.3.0",
+  "contract": "^1.0",
+  "provides": {
+    "entry": "./index.js",
+    "inject": []
+  },
+  "configSchema": {
+    "type": "object",
+    "meta": {},
+    "dict": {
+      "enabled": {
+        "type": "boolean",
+        "meta": {}
+      },
+      "reportRoot": {
+        "type": "string",
+        "meta": {}
+      }
+    }
+  },
+  "requirements": {
+    "runtime": {
+      "node": ">=22",
+      "dsh": ">=0.1.2-rc.1 <0.2.0 || >=0.2.0-rc.2 <0.3.0"
+    },
+    "binaries": [],
+    "packages": {},
+    "registers": {
+      "events": [],
+      "services": [],
+      "commands": [],
+      "providers": []
+    },
+    "exports": {}
+  }
+}

@@ -28,6 +28,7 @@
     "./compact-router": "./lib/compact-router/index.js",
     "./agent-memory": "./lib/agent-memory/lib/index.js",
     "./agent-memory/plugin": "./lib/agent-memory/plugin.js",
+    "./governance-preflight": "./lib/governance-preflight/index.js",
     "./package.json": "./package.json"
   },
   "files": [
@@ -54,7 +55,8 @@
       "patch": [
         "./lib/rate-throttle/bundle.patch.yml",
         "./lib/agent-memory/bundle.patch.yml",
-        "./bundle.patch.yml"
+        "./bundle.patch.yml",
+        "./lib/governance-preflight/bundle.patch.yml"
       ]
     },
     "client": {
