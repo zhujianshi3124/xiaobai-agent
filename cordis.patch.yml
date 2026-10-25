@@ -129,3 +129,12 @@
         maxInjectPerTurn: 1
         dedupeScope: session
       inject: []
+
+- insert:
+    - id: governance-cleanup
+      name: 'xiaobai-agent/governance-cleanup'
+      config:
+        enabled: true
+        reportRoot: ''
+        writeHistory: true
+      inject: []

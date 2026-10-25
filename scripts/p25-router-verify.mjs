@@ -528,22 +528,22 @@ console.log('\n── ③ 仓内一致性守卫 ──')
   const reg = readFileSync(join(root, 'scripts', 'regression-all.mjs'), 'utf8')
   check('3.3 regression-all 清单含 p25-router-verify', reg.includes('p25-router-verify') && reg.includes('scripts/p25-router-verify.mjs'))
   const hook = readFileSync(join(root, 'scripts', 'git-hooks', 'pre-commit'), 'utf8')
-  check('3.3 pre-commit hook 文案已随 16→17 同步', hook.includes('17 个专项脚本') && !hook.includes('16 个专项脚本'), '仍见 16 或未见 17')
-  check('3.3 regression-all 文案已随 16→17 同步', reg.includes('17 专项脚本') && !reg.includes('16 专项脚本'), '仍见 16 或未见 17')
+  check('3.3 pre-commit hook 文案已随 17→18 同步', hook.includes('18 个专项脚本') && !hook.includes('17 个专项脚本'), '仍见 17 或未见 18')
+  check('3.3 regression-all 文案已随 17→18 同步', reg.includes('18 专项脚本') && !reg.includes('17 专项脚本'), '仍见 17 或未见 18')
 }
 
 {
   // 3.4 快照守卫已 +1（坑 5：不许改成 >=）
   const q2 = readFileSync(join(root, 'scripts', 'q2-layer-scan.mjs'), 'utf8')
-  check('3.4 q2-layer-scan 成卡目录数已改 9', q2.includes('manifests.length === 9'), '未找到 === 9')
-  check('3.4 q2-layer-scan 未退化为 >=', !/manifests\.length >= 9/.test(q2))
+  check('3.4 q2-layer-scan 成卡目录数已改 10', q2.includes('manifests.length === 10'), '未找到 === 10')
+  check('3.4 q2-layer-scan 未退化为 >=', !/manifests\.length >= 10/.test(q2))
   const parity = readFileSync(join(root, 'scripts', 'doctor-cli-contract-parity.mjs'), 'utf8')
-  check('3.4 parity 内置 manifest 计数已改 11', parity.includes('builtinManifests.length === 11'), '未找到 === 11')
-  check('3.4 parity 未退化为 >=', !/builtinManifests\.length >= 11/.test(parity))
+  check('3.4 parity 内置 manifest 计数已改 12', parity.includes('builtinManifests.length === 12'), '未找到 === 12')
+  check('3.4 parity 未退化为 >=', !/builtinManifests\.length >= 12/.test(parity))
 }
 
 {
-  // 3.5 p24 两脚本的 sha 硬闸已滚存到当前真值（第 12 次）
+  // 3.5 p24 两脚本的 sha 硬闸已滚存到当前真值（第 13 次）
   const realSha = createHash('sha256').update(readFileSync(join(root, 'cordis.patch.yml'), 'utf8')).digest('hex')
   const pv = readFileSync(join(root, 'scripts', 'p24-verify.mjs'), 'utf8')
   const pm = readFileSync(join(root, 'scripts', 'p24-ui-matrix.mjs'), 'utf8')
@@ -551,9 +551,11 @@ console.log('\n── ③ 仓内一致性守卫 ──')
   check('3.5 p24-ui-matrix 基准 sha = 真实 sha', pm.includes('"' + realSha + '"'), '基准与真值不符')
   check('3.5 p24-verify 副本目录含 governance-router（否则 doctor 报 row-without-body）', pv.includes('"governance-router"'))
   check('3.5 p24-ui-matrix 副本目录含 governance-router', pm.includes('"governance-router"'))
+  check('3.5 p24-verify 副本目录含 governance-cleanup', pv.includes('"governance-cleanup"'))
+  check('3.5 p24-ui-matrix 副本目录含 governance-cleanup', pm.includes('"governance-cleanup"'))
   // 滚存笔必须留痕（本项目的硬规矩：数据变更要能在注释里读出来）
-  check('3.5 p24-verify 有第 12 次滚存笔', pv.includes('第 12 次'))
-  check('3.5 p24-ui-matrix 有第 12 次滚存笔', pm.includes('第 12 次'))
+  check('3.5 p24-verify 有第 13 次滚存笔', pv.includes('第 13 次'))
+  check('3.5 p24-ui-matrix 有第 13 次滚存笔', pm.includes('第 13 次'))
 }
 
 {

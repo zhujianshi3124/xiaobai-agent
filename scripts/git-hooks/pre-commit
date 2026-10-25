@@ -18,9 +18,9 @@
 #        - F2⑤ schemastery：<TEST_SANDBOX> 缺 @deepseek-ai/schemastery（**环境红线，不许碰**）
 #      这 4 项清不掉。让 hook 跑全链 ⇒ hook 永久拦一切提交 ⇒ 所有人只能 --no-verify。
 #      那不是严格，那是把 hook 变成摆设，比没有 hook 更糟。
-#   ③ 所以 hook 补的是 **npm test 覆盖不到的那一面**：17 个专项脚本 npm test 一个都不跑，
+#   ③ 所以 hook 补的是 **npm test 覆盖不到的那一面**：18 个专项脚本 npm test 一个都不跑，
 #      而「p22/p23/p24 红了两个批次无人知」正是这个缺口。
-#   ⇒ 责任面：node --test 归 npm test，17 个专项脚本归 hook。两面都不丢，只是不重复跑。
+#   ⇒ 责任面：node --test 归 npm test，18 个专项脚本归 hook。两面都不丢，只是不重复跑。
 #   ⇒ 全链仍随时可跑：npm run regression（= 不带参数，含 node --test）。
 #
 # 【什么时候跑】
@@ -66,7 +66,7 @@ fi
 
 echo "[pre-commit] 本次提交触及回归面："
 printf '%s\n' "$HIT" | sed 's/^/  - /'
-echo "[pre-commit] 正在跑 node scripts/regression-all.mjs --scripts-only（17 专项脚本，约 9s）…"
+echo "[pre-commit] 正在跑 node scripts/regression-all.mjs --scripts-only（18 专项脚本，约 10s）…"
 echo "[pre-commit] 注：node --test 这一面由 npm test 负责，此处不重复跑（理由见本文件头注）。"
 echo "[pre-commit] 临时绕过：git commit --no-verify（回归链将不跑，缺陷可能两个批次后才被发现）"
 

@@ -1,0 +1,44 @@
+{
+  "name": "xiaobai-agent/governance-cleanup",
+  "id": "dsh/governance-cleanup",
+  "displayName": "治理清理计划与残留检查",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "provides": {
+    "entry": "./index.js",
+    "inject": []
+  },
+  "configSchema": {
+    "type": "object",
+    "meta": {},
+    "dict": {
+      "enabled": {
+        "type": "boolean",
+        "meta": {}
+      },
+      "reportRoot": {
+        "type": "string",
+        "meta": {}
+      },
+      "writeHistory": {
+        "type": "boolean",
+        "meta": {}
+      }
+    }
+  },
+  "requirements": {
+    "runtime": {
+      "node": ">=22",
+      "dsh": ">=0.1.2-rc.1 <0.2.0 || >=0.2.0-rc.2 <0.3.0"
+    },
+    "binaries": [],
+    "packages": {},
+    "registers": {
+      "events": [],
+      "services": [],
+      "commands": [],
+      "providers": []
+    },
+    "exports": {}
+  }
+}

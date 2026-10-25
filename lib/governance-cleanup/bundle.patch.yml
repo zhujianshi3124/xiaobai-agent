@@ -1,0 +1,28 @@
+# governance-cleanup bundle 补丁（批次 5B 第三件，补齐 7/7；形态照 governance-tiering 样板）。
+#
+# 与 lib/rate-throttle、lib/agent-memory、lib/governance-preflight、
+# lib/governance-context-audit、lib/governance-overlap-detect、lib/governance-usage-track、
+# lib/governance-tiering、lib/governance-router 同族：本子包自带一条 insert 行，
+# 由仓根 package.json 的 dsh.bundle.patch 数组按序拼接（批次 1 地基）。
+#
+# 插件间数据流（**这是模块 import 之外的另一种耦合，注释里必须能看出来**）：
+#   governance-usage-track ──写─> .toolkit-governance/governance-usage-track/latest.json
+#                                     │
+#                                     └─读─> governance-tiering ──写─> .toolkit-governance/governance-tiering/latest.json
+#                                                                        │
+#                                                                        └─读─> governance-cleanup ──写─> .toolkit-governance/governance-cleanup/latest.json
+#   即：cleanup 是 tiering 的下游消费者，只读它的报告，不重读 ledger，也不自己重算分层（口径单一来源）。
+#   三者通过**磁盘 JSON 文件**耦合，不是模块 import（pluggable-lint 禁 lib/ 内跨插件静态 import）。
+#
+# 本行**不写 disabled**（裁决 C）：默认挂载，apply() 才会执行、才会产出报告。
+# 「默认静默」指不注入、不出声，不是不运行——红线原文是"只写结构化报告"。
+# 内部逻辑由 config.enabled 控制；inject 为空数组＝不依赖任何宿主服务
+# （本插件只读上游报告文件，完全不需 ctx 服务）。
+- insert:
+    - id: governance-cleanup
+      name: 'xiaobai-agent/governance-cleanup'
+      config:
+        enabled: true
+        reportRoot: ''
+        writeHistory: true
+      inject: []
