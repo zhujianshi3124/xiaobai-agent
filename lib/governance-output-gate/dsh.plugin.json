@@ -1,0 +1,32 @@
+{
+  "name": "xiaobai-agent/governance-output-gate",
+  "id": "dsh/governance-output-gate",
+  "displayName": "输出闸门开关",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "provides": {
+    "entry": "./lib/index.js",
+    "inject": ["commands", "sessions"],
+    "commands": []
+  },
+  "configSchema": {
+    "type": "object",
+    "meta": {},
+    "dict": {}
+  },
+  "requirements": {
+    "runtime": {
+      "node": ">=22",
+      "dsh": ">=0.1.2-rc.1 <0.2.0 || >=0.2.0-rc.2 <0.3.0"
+    },
+    "binaries": [],
+    "packages": {},
+    "registers": {
+      "events": [],
+      "services": [],
+      "commands": [],
+      "providers": []
+    },
+    "exports": {}
+  }
+}

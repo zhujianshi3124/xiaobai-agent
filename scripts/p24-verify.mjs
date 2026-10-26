@@ -100,7 +100,10 @@ PANEL_PLUGINS["search-router"] = {
 // governance-router 一条治理挂载行，行数与内容变更，守卫机制一字未放宽）：9bd1b10a… → bc9b33bd…。
 // 基准滚存（第 13 次＝副本线第 9 次，批次 5B governance-cleanup 落地：向 cordis.patch.yml 追加
 // governance-cleanup 一条治理挂载行，行数与内容变更，守卫机制一字未放宽）：bc9b33bd… → 98c476fd…。
-const BASELINE_SHA_EXPECTED = "98c476fdf0f7948234d436bd4e7314330762a2b8e847221c5f664a31df6ae509";
+// 基准滚存（第 14 次＝副本线第 10 次，governance-output-gate 正式化为第 11 个治理插件：向
+// cordis.patch.yml 追加 governance-output-gate 一条治理挂载行，行数与内容变更，守卫机制一字未放宽）：
+// 98c476fd… → efb47700…。
+const BASELINE_SHA_EXPECTED = "efb477002b6954c8e59644439698c4627658dbd8d67951c421501041ec481b45";
 if (BASE_SHA !== BASELINE_SHA_EXPECTED) {
   console.error("ABORT: 真实 cordis.patch.yml 基线漂移（" + BASE_SHA.slice(0, 12) + "）——拒绝在非基准态跑验证");
   process.exit(1);
@@ -125,11 +128,12 @@ function makeCopy(name, { patchText, withPlugins = true, synth = false } = {}) {
   cpSync(join(root, "package.json"), join(dir, "package.json"));
   cpSync(join(root, "preset-patch-state.json"), join(dir, "preset-patch-state.json"));
   if (withPlugins) {
-    // 批次 5A/5B/5C 向 cordis.patch.yml 追加了 7 条治理挂载行；副本须同构，否则 doctor 报
-    // mount.row-without-body（副本里没有这 7 个本体）。search-router 已出包，本体由 synth 开关合成。
+    // 批次 5A/5B/5C 与闸门正式化批向 cordis.patch.yml 追加了 8 条治理挂载行；副本须同构，否则 doctor 报
+    // mount.row-without-body（副本里没有这 8 个本体）。search-router 已出包，本体由 synth 开关合成。
     for (const p of ["agent-memory", "compact-router", "rate-throttle",
       "governance-preflight", "governance-context-audit", "governance-overlap-detect",
-      "governance-usage-track", "governance-tiering", "governance-router", "governance-cleanup"]) {
+      "governance-usage-track", "governance-tiering", "governance-router", "governance-cleanup",
+      "governance-output-gate"]) {
       mkdirSync(join(dir, "lib", p), { recursive: true });
       cpSync(join(root, "lib", p, "dsh.plugin.json"), join(dir, "lib", p, "dsh.plugin.json"));
       writeFileSync(join(dir, "lib", p, "body.js"), "// body of " + p + "\n", "utf8");
@@ -499,7 +503,7 @@ async function snapshotOf(dir) {
 // ---------- 收尾：真实仓零写入自证 ----------
 {
   const nowSha = sha(readFileSync(patchPath, "utf8"));
-  check("真实 cordis.patch.yml 全程零写入（基准 98c476fd… 模板形不变；判据随滚存笔动态，文案随本笔在位改对）", nowSha === BASE_SHA && BASE_SHA === BASELINE_SHA_EXPECTED);
+  check("真实 cordis.patch.yml 全程零写入（基准 efb47700… 模板形不变；判据随滚存笔动态，文案随本笔在位改对）", nowSha === BASE_SHA && BASE_SHA === BASELINE_SHA_EXPECTED);
   rmSync(work, { recursive: true, force: true });
 }
 

@@ -37,3 +37,7 @@ _nm-before.txt
 # 第三方会话（姊妹审计线）记忆层残留（.workbuddy/memory/），非本仓产物，不入库
 .workbuddy/
 .toolkit-governance/
+
+# 闸门辅助件（回滚快照 / 历史 .bak），不入库（用户裁决 2026-10-25 5④）
+lib/governance-output-gate/_rollback/
+lib/governance-output-gate/lib/*.bak-*

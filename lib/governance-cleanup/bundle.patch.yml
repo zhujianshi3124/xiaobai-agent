@@ -1,4 +1,4 @@
-# governance-cleanup bundle 补丁（批次 5B 第三件，补齐 7/7；形态照 governance-tiering 样板）。
+# governance-cleanup bundle 补丁（批次 5B 第三件，补齐 7/7；第 11 个治理插件 governance-output-gate 落地后为 8/8；形态照 governance-tiering 样板）。
 #
 # 与 lib/rate-throttle、lib/agent-memory、lib/governance-preflight、
 # lib/governance-context-audit、lib/governance-overlap-detect、lib/governance-usage-track、

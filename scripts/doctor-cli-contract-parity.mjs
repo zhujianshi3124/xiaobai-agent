@@ -83,7 +83,7 @@ for (const e of readdirSync(join(ROOT, 'lib'), { withFileTypes: true })) {
   if (e.isDirectory() && existsSync(join(ROOT, rel))) builtinManifests.push(rel)
 }
 // 快照值：每新增一个 lib 子插件需同步 +1（同时更新文案里的 lib 数）。
-check('A0 内置 manifest 计数 = 12（10 lib + 桶根 + panel）', builtinManifests.length === 12, builtinManifests.join(', '))
+check('A0 内置 manifest 计数 = 13（11 lib + 桶根 + panel）', builtinManifests.length === 13, builtinManifests.join(', '))
 
 const realReport = runDoctorJson(ROOT)
 const schemaIssuesByFile = new Map()

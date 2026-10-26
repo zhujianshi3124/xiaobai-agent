@@ -38,6 +38,7 @@
     "./governance-tiering": "./lib/governance-tiering/index.js",
     "./governance-router": "./lib/governance-router/index.js",
     "./governance-cleanup": "./lib/governance-cleanup/index.js",
+    "./governance-output-gate": "./lib/governance-output-gate/lib/index.js",
     "./package.json": "./package.json"
   },
   "files": [
@@ -71,7 +72,8 @@
         "./lib/governance-usage-track/bundle.patch.yml",
         "./lib/governance-tiering/bundle.patch.yml",
         "./lib/governance-router/bundle.patch.yml",
-        "./lib/governance-cleanup/bundle.patch.yml"
+        "./lib/governance-cleanup/bundle.patch.yml",
+        "./lib/governance-output-gate/bundle.patch.yml"
       ]
     }
   },

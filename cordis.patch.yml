@@ -138,3 +138,8 @@
         reportRoot: ''
         writeHistory: true
       inject: []
+
+- insert:
+    - id: governance-output-gate
+      name: 'xiaobai-agent/governance-output-gate'
+      inject: [commands, sessions]
