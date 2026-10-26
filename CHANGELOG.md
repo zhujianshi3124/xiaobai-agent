@@ -6,6 +6,17 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### 输出闸门：文档先审后写 + `/gate ctx` 实测（同样只改既有插件）
+
+- **文档先审后写**（解决 3.3.1「先写后审 vs 先审后写」死锁）：`send_report`
+  新增 `kind:"document"`（`target` + `old_string`/`new_string` 或 `content`）。
+  提交的是「稿」不是「文件」——写入前先送审，放行后写守卫按**写后内容哈希**
+  校验，无放行稿拒绝写入；写后改一字即新稿。叫停/整改场景走同一顺序。
+- **`/gate ctx`**：读各会话日志的 `usage`/`contextWindow` 实测占比（与
+  `ctx-watch.mjs` 同原理），不是估算。判官不自测，闸门代测；请求未注明
+  ≥35% 时判官不得写 ROTATE（纪律 5.6）。
+- 规则唯一源：纪律 3.3.3 / 5.6（5.10）、指南「文档先审后写」/ 4.1（2.17）。
+
 ### 输出闸门：汇报改为提交式（send_report，融合进既有插件，不新增插件）
 
 - **`send_report` 工具**（注册在 `governance-output-gate` 的 text 半，未新增插件）：
