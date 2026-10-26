@@ -1,13 +1,13 @@
 # xiaobai-agent（DSH 工具箱）
 
 `xiaobai-agent`（manifest id `dsh/toolkit`）——DSH 宿主的插件桶：一个 bundle 层总装
-registry／doctor／管理面板，并携带四个子插件。
+registry／doctor／管理面板，并携带 12 个子插件。
 
 **定位**：帮助新手小白用更低的成本体验 vibe coding——降低疑虑与"舍不得"；面向免费 API 优化。
 
 **本项目全部任务均由 AI 完成。**
 
-本 README 是**桶总览**（用户基本要求令，2026-09-28 补齐）；各子插件细节见 `lib/<插件名>/README.md`。
+本 README 是**桶总览**（用户基本要求令，2026-09-28 补齐）；各子插件细节见 `lib/<插件名>/`（部分目录带 README.md）。
 
 ## 快速上手（三步）
 
@@ -22,14 +22,22 @@ registry／doctor／管理面板，并携带四个子插件。
 - **不适合**：老手使用，也不适合批量化的大任务；
 - 免费 API 的 TPM/RPM 缓解效果**取决于 key 的数量**——数量过少时，换源与冷却起到的作用也有限。
 
-## 子插件清单（四个；web-search-local 已随开源 S1 剔除批出包）
+## 子插件清单（12 个；web-search-local 已随开源 S1 剔除批出包）
 
 | 子插件 | 一句话（权威卡面文案） | 目录 |
 |---|---|---|
 | agent-memory（智能体内存台账） | 记住你说过的话和项目里的重要信息，下次对话还能用上。 | [`lib/agent-memory`](lib/agent-memory/README.md) |
 | compact-router（压缩路由） | 对话变长时自动压缩历史内容，省上下文又不断片；压缩方式有自动、LLM 摘要、即时抽取三种，可随时切换。 | [`lib/compact-router`](lib/compact-router/README.md) |
 | rate-throttle（速率限制与换源路由） | 在多个模型服务之间自动换路、出错冷却与降档压缩，避开限额和故障；另有请求限速开关（默认关闭）。 | [`lib/rate-throttle`](lib/rate-throttle/README.md) |
-| search-router（搜索路由） | 决定每次联网搜索走哪条路：官方搜索还是本地搜索（本地搜索位可缺席，缺席回落官方并警示）。 | [`lib/search-router`](lib/search-router/README.md) |
+| agent-model-follow（子卡模型跟随） | 把 Team Lead 的子卡保持在 Lead 当前模型上——子卡的模型在 spawn 时被冻结，Lead 换模型后旧子卡仍打老模型。 | [`lib/agent-model-follow`](lib/agent-model-follow) |
+| governance-preflight（治理预检） | 一次性只读扫描「本套件装了什么、声明了什么、有没有违规面」，把结果写成结构化报告。 | [`lib/governance-preflight`](lib/governance-preflight) |
+| governance-context-audit（上下文开销审计） | 一次性只读盘点 skill／插件／MCP 的注入开销（token 成本），把结果写成结构化报告。 | [`lib/governance-context-audit`](lib/governance-context-audit) |
+| governance-overlap-detect（重叠冲突检测） | 一次性只读盘点 skill／插件的功能重叠与冲突，把结果写成结构化报告。 | [`lib/governance-overlap-detect`](lib/governance-overlap-detect) |
+| governance-usage-track（使用追踪与僵尸识别） | 跨时间盘点 usage-ledger.json，产出按天时间序列＋使用频次分层＋僵尸识别＋趋势。 | [`lib/governance-usage-track`](lib/governance-usage-track) |
+| governance-tiering（治理分层与卸载候选识别） | 读上游 usage-track 报告，按「保留／观察／暂不动／卸载候选」四档定档并写清判据。 | [`lib/governance-tiering`](lib/governance-tiering) |
+| governance-cleanup（治理清理计划与残留检查） | 把 tiering 的 review 候选变成分步骤、可回滚、带残留检查的清理计划；本插件不执行任何清理动作。 | [`lib/governance-cleanup`](lib/governance-cleanup) |
+| governance-router（规则路由与技能注入守卫） | 用户没点名、但意图明确命中某条规则时，主动注入该技能正文（只注入正文，目录注入归宿主）。 | [`lib/governance-router`](lib/governance-router) |
+| governance-output-gate（输出闸门开关） | 按工作区开关四面机制：gate-text 扣留待审文本、gate-tools 限制 Lead 写入面、gate-guard 管状态与判官创建。 | [`lib/governance-output-gate`](lib/governance-output-gate) |
 
 ## 桶本体提供什么
 
@@ -42,7 +50,7 @@ registry／doctor／管理面板，并携带四个子插件。
 ## 目录地图
 
 ```
-lib/            四个子插件（各有 dsh.plugin.json + README.md）
+lib/            12 个子插件（各有 dsh.plugin.json）
 panel/          管理面板（服务端 + 客户端 React + 兜底页 HTML）
 registry/       插件注册表/装载器/状态对齐（registry 服务实现）
 contract/       契约（TS 源码 + 构建）
