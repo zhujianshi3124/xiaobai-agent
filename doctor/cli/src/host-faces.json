@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedFrom": "@deepseek-ai/dsh host type definitions (installed under AppData\\Roaming\\npm\\node_modules\\@deepseek-ai\\dsh\\node_modules\\@deepseek-ai), read-only derivation from inject/provide declarations on 2026-09-15; 2026-09-29 补录 systemPrompt（EXE-BOOT-011 施工笔3：面真实在位而 9/15 派生遗漏，安装版 dsh-system-prompt lib/index.js:211 实证）.",
+  "generatedFrom": "@deepseek-ai/dsh host type definitions (installed under AppData\\Roaming\\npm\\node_modules\\@deepseek-ai\\dsh\\node_modules\\@deepseek-ai), read-only derivation from inject/provide declarations on 2026-09-15; 2026-09-29 补录 systemPrompt（EXE-BOOT-011 施工笔3：面真实在位而 9/15 派生遗漏，安装版 dsh-system-prompt lib/index.js:211 实证）; 2026-10-26 补录 agents 与 agentTeams（批次 8 agent-model-follow 仓内化：同型派生遗漏，安装版 dsh-agent lib/index.js:332 与 dsh-experimental-agent-team lib/index.js:1452 实证，宿主自家 dsh-api-session-controller 亦 inject ['agents', 'sessions', 'workspaceRegistry']）.",
   "providedFaces": [
     {
       "face": "llm",
@@ -37,6 +37,14 @@
     {
       "face": "systemPrompt",
       "source": "dsh-system-prompt/lib/index.js:211 super(ctx, \"systemPrompt\")（EXE-BOOT-011 施工笔3 补录）"
+    },
+    {
+      "face": "agents",
+      "source": "dsh-agent/lib/index.js:332 super(ctx, \"agents\")（2026-10-26 批次 8 补录）"
+    },
+    {
+      "face": "agentTeams",
+      "source": "dsh-experimental-agent-team/lib/index.js:1452 super(ctx, \"agentTeams\")（2026-10-26 批次 8 补录）"
     }
   ]
 }

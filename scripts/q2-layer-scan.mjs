@@ -51,7 +51,7 @@ const LAYERS = [
     n: "②",
     name: "四插件清单（声明 requirements/exports，不含挂载行）",
     // 载体名不枚举具体目录：枚举必随每次增删插件而过期（本行原列 4 个目录，search-router 已随批次 2
-    // 出包、governance-* 八个又已加入，磁盘实测 11 个）。逐目录实况以 §2 的 readdirSync 枚举为准。
+    // 出包、governance-* 八个与 agent-model-follow 又已加入，磁盘实测 12 个）。逐目录实况以 §2 的 readdirSync 枚举为准。
     carrier: "lib/<plugin>/dsh.plugin.json",
     phys: join(root, "lib"),
     evidence: [
@@ -157,8 +157,8 @@ for (const d of libDirs) {
   console.log("      top-level keys: " + Object.keys(j).join(", "));
 }
 console.log("");
-// 快照值：每新增一个 lib 子插件需同步 +1。批次5A=4（preflight），续=5（context-audit），收尾=6（overlap-detect），5B=7（usage-track），5B=8（tiering），5C=9（router），5B=10（cleanup），闸门=11（output-gate，本笔把守卫从 10 滚到 11，与注释同一次编辑）。
-check("② 成卡目录数 = 11", manifests.length === 11, "实测 " + manifests.length + "：" + manifests.map((m) => m.dir).join(", "));
+// 快照值：每新增一个 lib 子插件需同步 +1。批次5A=4（preflight），续=5（context-audit），收尾=6（overlap-detect），5B=7（usage-track），5B=8（tiering），5C=9（router），5B=10（cleanup），闸门=11（output-gate，本笔把守卫从 10 滚到 11，与注释同一次编辑），批次8=12（agent-model-follow 仓内化，目录插件形态）。
+check("② 成卡目录数 = 12", manifests.length === 12, "实测 " + manifests.length + "：" + manifests.map((m) => m.dir).join(", "));
 // P5 契约化不变量更新（2026-09-19，REQ-9）：顶层新增契约字段 id/displayName/version/
 // contract/configSchema 是子插件契约身份，不是 layer② 的 patch 指令——继续禁止
 // patch/override/bundle/rows 类字段（任何层级）与嵌套 id；顶层契约 id 例外。

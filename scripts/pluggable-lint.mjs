@@ -25,7 +25,11 @@ function norm(p) {
 
 function pluginOfLibFile(abs) {
   const rel = path.relative(libDir, abs).split(path.sep)[0];
-  return plugins.includes(rel) ? rel : null;
+  if (plugins.includes(rel)) return rel;
+  // lib 根层的同名兼容 shim（批次 8：agent-model-follow.js → ./agent-model-follow/）：
+  // 指向同名词目录的转发属插件自身公开入口，不是跨插件耦合——视作自身。
+  const stem = rel.replace(/\.m?js$/, '');
+  return plugins.includes(stem) ? stem : null;
 }
 
 function selfPluginOfTestFile(abs) {

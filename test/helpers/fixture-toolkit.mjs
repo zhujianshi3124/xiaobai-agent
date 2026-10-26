@@ -21,7 +21,7 @@ export function shaText(text) {
 }
 
 // doctor/snapshot 的本体在案面 = lib/*/dsh.plugin.json（engine.mjs bodies 只认 lib/ 前缀）。
-const LIB_DIRS = ['agent-memory', 'compact-router', 'governance-cleanup', 'governance-context-audit', 'governance-output-gate', 'governance-overlap-detect', 'governance-preflight', 'governance-router', 'governance-tiering', 'governance-usage-track', 'rate-throttle']
+const LIB_DIRS = ['agent-memory', 'agent-model-follow', 'compact-router', 'governance-cleanup', 'governance-context-audit', 'governance-output-gate', 'governance-overlap-detect', 'governance-preflight', 'governance-router', 'governance-tiering', 'governance-usage-track', 'rate-throttle']
 
 // 夹具预设件：内容自洽即可（台账只对 sha；挂载判据不看内容语义）。
 // 放在家根 .agent-presets/liangshen/ 下＝贴真实形态，且不进 scope 扫描面

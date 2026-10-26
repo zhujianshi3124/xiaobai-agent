@@ -31,6 +31,7 @@
     "./compact-router": "./lib/compact-router/index.js",
     "./agent-memory": "./lib/agent-memory/lib/index.js",
     "./agent-memory/plugin": "./lib/agent-memory/plugin.js",
+    "./agent-model-follow": "./lib/agent-model-follow/index.js",
     "./governance-preflight": "./lib/governance-preflight/index.js",
     "./governance-context-audit": "./lib/governance-context-audit/index.js",
     "./governance-overlap-detect": "./lib/governance-overlap-detect/index.js",
@@ -65,6 +66,7 @@
       "patch": [
         "./lib/rate-throttle/bundle.patch.yml",
         "./lib/agent-memory/bundle.patch.yml",
+        "./lib/agent-model-follow/bundle.patch.yml",
         "./bundle.patch.yml",
         "./lib/governance-preflight/bundle.patch.yml",
         "./lib/governance-context-audit/bundle.patch.yml",

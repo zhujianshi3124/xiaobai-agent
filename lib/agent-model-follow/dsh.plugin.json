@@ -1,0 +1,33 @@
+{
+  "name": "xiaobai-agent/agent-model-follow",
+  "id": "dsh/agent-model-follow",
+  "displayName": "子卡模型跟随",
+  "version": "1.0.0",
+  "contract": "^1.0",
+  "provides": {
+    "entry": "./index.js",
+    "inject": [
+      "agents"
+    ]
+  },
+  "configSchema": {
+    "type": "object",
+    "meta": {},
+    "dict": {}
+  },
+  "requirements": {
+    "runtime": {
+      "node": ">=22",
+      "dsh": ">=0.1.2-rc.1 <0.2.0 || >=0.2.0-rc.2 <0.3.0"
+    },
+    "binaries": [],
+    "packages": {},
+    "registers": {
+      "events": [],
+      "services": [],
+      "commands": [],
+      "providers": []
+    },
+    "exports": {}
+  }
+}

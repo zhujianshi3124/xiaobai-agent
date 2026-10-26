@@ -43,9 +43,12 @@ const patchPath = join(root, "cordis.patch.yml");
 // 第 14 次（副本线第 10 次，governance-output-gate 正式化为第 11 个治理插件：向 cordis.patch.yml
 // 追加 governance-output-gate 一条治理挂载行，行数与内容变更，守卫机制一字未放宽）：
 // 98c476fd → efb47700。
+// 第 15 次（副本线第 11 次，批次 8 agent-model-follow 仓内化（目录插件形态）：向 cordis.patch.yml
+// 追加 agent-model-follow 一条挂载行，行数与内容变更，守卫机制一字未放宽）：
+// efb47700 → 631128a0。
 // 成因全文与该文件内注释、
 // panel/docs/evidence/H-REAL-HOST-REVERIFY.md、docs/debt.md A#24 / A#25 / 计划 §29 / §44。
-const BASE_SHA_EXPECT = "efb477002b6954c8e59644439698c4627658dbd8d67951c421501041ec481b45";
+const BASE_SHA_EXPECT = "631128a07f9b87b622345f000c6adc5f4d78b8308b9304e849267bda891bc37a";
 const BASE_SHA = createHash("sha256").update(readFileSync(patchPath, "utf8")).digest("hex");
 if (BASE_SHA !== BASE_SHA_EXPECT) {
   console.error("ABORT: 真实 cordis.patch.yml 基线漂移（" + BASE_SHA.slice(0, 12) + "）——拒绝在非基准态跑矩阵");
@@ -143,14 +146,14 @@ PANEL_PLUGINS["search-router"] = {
   managedBy: "patch",
   providers: ["auto-search"],
 };
-// 批次 5A/5B/5C 与闸门正式化批向 cordis.patch.yml 追加 8 条治理挂载行；副本须同构，否则 doctor 报
-// mount.row-without-body（副本里没有这 8 个本体）。search-router 已出包，本体由 synth 开关合成。
+// 批次 5A/5B/5C、闸门正式化批与批次 8 仓内化向 cordis.patch.yml 追加 9 条挂载行；副本须同构，否则 doctor 报
+// mount.row-without-body（副本里没有这 9 个本体）。search-router 已出包，本体由 synth 开关合成。
 const GOVERNANCE_DIRS = [
   "governance-preflight", "governance-context-audit", "governance-overlap-detect",
   "governance-usage-track", "governance-tiering", "governance-router", "governance-cleanup",
   "governance-output-gate",
 ];
-const PLUGIN_DIRS = ["agent-memory", "compact-router", "rate-throttle", "search-router", ...GOVERNANCE_DIRS];
+const PLUGIN_DIRS = ["agent-memory", "agent-model-follow", "compact-router", "rate-throttle", "search-router", ...GOVERNANCE_DIRS];
 
 /**
  * 副本构造（与 p24-verify 同构：插件树 + exports 桩 + peer 依赖桩）。
@@ -1339,7 +1342,7 @@ section("批2 操作台/双回滚（D 段）");
 // 6. 收尾：真实仓零写入自证
 // ════════════════════════════════════════════════════════════
 section("收尾");
-check("真实 cordis.patch.yml 全程零写入（基准 efb47700… 不变）", sha(readFileSync(patchPath, "utf8")) === BASE_SHA, sha(readFileSync(patchPath, "utf8")).slice(0, 12));
+check("真实 cordis.patch.yml 全程零写入（基准 631128a0… 不变）", sha(readFileSync(patchPath, "utf8")) === BASE_SHA, sha(readFileSync(patchPath, "utf8")).slice(0, 12));
 // 守卫口径（Q1' 修正，L-059）：放行「面板运行期合法的长期落痕」，只拦本矩阵**新增**产物。
 //   soft-uninstalls.json —— 软卸载台账（面板发起）
 //   row-adjacency.json    —— 行块邻接留痕（D-UI-05 长期证据，与清账解耦、只增不减）

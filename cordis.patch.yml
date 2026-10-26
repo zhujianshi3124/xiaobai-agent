@@ -68,6 +68,11 @@
       inject: [systemPrompt]
 
 - insert:
+    - id: agent-model-follow
+      name: 'xiaobai-agent/agent-model-follow'
+      inject: [agents]
+
+- insert:
     - id: toolkit-manager
       name: '<PANEL_ENTRY_URL>'
 

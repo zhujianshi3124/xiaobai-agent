@@ -282,11 +282,11 @@ console.log('\n── ⑤ 同步面 ──')
   check('5.7 pre-commit hook 文案已随 17→18 同步', hook.includes('18 个专项脚本') && !hook.includes('17 个专项脚本'), '仍见 17 或未见 18')
 
   const q2 = readFileSync(join(root, 'scripts', 'q2-layer-scan.mjs'), 'utf8')
-  check('5.8 q2 成卡目录数已改 11', q2.includes('manifests.length === 11'), '未找到 === 11')
-  check('5.8 q2 未退化为 >=', !/manifests\.length >= 11/.test(q2))
+  check('5.8 q2 成卡目录数已改 12', q2.includes('manifests.length === 12'), '未找到 === 12')
+  check('5.8 q2 未退化为 >=', !/manifests\.length >= 12/.test(q2))
   const parity = readFileSync(join(root, 'scripts', 'doctor-cli-contract-parity.mjs'), 'utf8')
-  check('5.8 parity 计数已改 13', parity.includes('builtinManifests.length === 13'), '未找到 === 13')
-  check('5.8 parity 未退化为 >=', !/builtinManifests\.length >= 13/.test(parity))
+  check('5.8 parity 计数已改 14', parity.includes('builtinManifests.length === 14'), '未找到 === 14')
+  check('5.8 parity 未退化为 >=', !/builtinManifests\.length >= 14/.test(parity))
 }
 
 // ══════════════════════════════════════════════════════════════════════════
