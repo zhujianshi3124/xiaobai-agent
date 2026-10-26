@@ -41,3 +41,6 @@ _nm-before.txt
 # 闸门辅助件（回滚快照 / 历史 .bak），不入库（用户裁决 2026-10-25 5④）
 lib/governance-output-gate/_rollback/
 lib/governance-output-gate/lib/*.bak-*
+
+# lib 根层同名 shim 的历史备份（用户外部 10-25 留档），不入库（用户裁决 2026-10-26）
+lib/*.bak-*
