@@ -58,7 +58,7 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const TOOLKIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SANDBOX = '<TEST_SANDBOX>';
+const SANDBOX = process.env.DSH_TEST_SANDBOX ?? path.resolve(TOOLKIT, '..', 'dsh-test-sandbox');
 const DOCTOR_REPO = path.join(SANDBOX, 'projects', 'doctor');
 const HOME = os.homedir();
 // 运行期/产物面目录名单（单一来源）：.gitignore 声明的"运行期产物，不入库"族＋构建产物/依赖树。

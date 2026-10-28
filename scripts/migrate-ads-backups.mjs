@@ -15,9 +15,10 @@
 // 用法：node scripts/migrate-ads-backups.mjs [--apply]   （缺省 dry-run）
 import { readFileSync, readdirSync, writeFileSync, existsSync, statSync, unlinkSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { join } from "node:path";
+import { join, resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = "<TOOLKIT_ROOT>";
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const BKROOT = join(ROOT, ".panel-write-backups");
 const APPLY = process.argv.includes("--apply");
 const sha = (b) => createHash("sha256").update(b).digest("hex");

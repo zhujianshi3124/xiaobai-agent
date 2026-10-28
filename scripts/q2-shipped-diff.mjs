@@ -1,9 +1,12 @@
 // Q2 尾① 附：shipped preset「原版(备份) ↔ 现版(磁盘)」差异还原
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 
-const REPO = '<TOOLKIT_ROOT>';
-const SHIPPED = '<USER_HOME>\\AppData\\Roaming\\npm\\node_modules\\@deepseek-ai\\dsh\\node_modules\\@deepseek-ai\\dsh-agent-presets\\presets';
+const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const SHIPPED = path.join(process.env.APPDATA ?? path.join(os.homedir(), 'AppData', 'Roaming'), 'npm', 'node_modules', '@deepseek-ai', 'dsh', 'node_modules', '@deepseek-ai', 'dsh-agent-presets', 'presets');
 const sha = b => crypto.createHash('sha256').update(b).digest('hex');
 
 // 极简 LCS 行级 diff（够用）

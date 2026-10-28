@@ -25,12 +25,13 @@
 #   This script keeps its role: detect "no dsh web process AND port not listening", then start.
 param(
   [int]$Port = 3080,
-  [string]$LogDir = "<TOOLKIT_ROOT>\.panel-backups\restart-logs"
+  [string]$LogDir = (Join-Path (Split-Path -Parent $PSScriptRoot) ".panel-backups\restart-logs")
 )
 
 $ErrorActionPreference = "Stop"
-$nodeExe = "D:\node.exe"
-$dshBin = "<USER_HOME>\AppData\Roaming\npm\node_modules\@deepseek-ai\dsh\lib\bin.js"
+$nodeExe = (Get-Command node -ErrorAction SilentlyContinue).Source
+if (-not $nodeExe) { $nodeExe = Join-Path $env:ProgramFiles "nodejs\node.exe" }
+$dshBin = Join-Path $env:APPDATA "npm\node_modules\@deepseek-ai\dsh\lib\bin.js"
 $logFile = Join-Path $LogDir ("restart-selfheal-" + (Get-Date -Format "yyyyMMdd-HHmmss") + ".log")
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 

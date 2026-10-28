@@ -10,14 +10,17 @@
 //     改名为 `compact-router` —— 属【文档化的预设改写注入路径】（见 cordis.patch.yml:3 注释）。
 //     因此 shipped preset 里【有】1 处 compact-router 行是设计如此，不是泄漏。
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = '<USER_HOME>\\AppData\\Roaming\\npm\\node_modules\\@deepseek-ai\\dsh\\node_modules\\@deepseek-ai\\dsh-agent-presets';
+const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = path.join(process.env.APPDATA ?? path.join(os.homedir(), 'AppData', 'Roaming'), 'npm', 'node_modules', '@deepseek-ai', 'dsh', 'node_modules', '@deepseek-ai', 'dsh-agent-presets');
 const PRESETS = ['standard', 'ptc', 'cordis', 'minimal'];
 const PATCHED = ['standard', 'ptc', 'cordis'];
 const FIVE_INSERT_IDS = ['rate-throttle', 'web-search-local', 'web-search-router', 'agent-memory-runtime', 'toolkit-manager'];
-const STATE = '<TOOLKIT_ROOT>\\preset-patch-state.json';
+const STATE = process.env.DSH_PRESET_STATE ?? path.join(REPO, 'preset-patch-state.json');
 
 const out = [];
 const P = (s = '') => { out.push(s); console.log(s); };
@@ -115,6 +118,8 @@ P('═'.repeat(74));
 P(`RESULT: ${pass}/${pass + fail} PASS`);
 P('═'.repeat(74));
 
-const outPath = '<TOOLKIT_ROOT>\\panel\\docs\\evidence\\Q2-SHIPPED-PRESET-SCAN.txt';
+// 输出位置：argv[2] > DSH_SCAN_OUT > 系统临时目录。**不得改回仓内**——坑 13：
+// 写仓内跟踪文件的回归器一旦被接回清单就会改仓（本脚本已于 430a72c 摘除）。
+const outPath = process.argv[2] ?? process.env.DSH_SCAN_OUT ?? path.join(os.tmpdir(), 'Q2-SHIPPED-PRESET-SCAN.txt');
 fs.writeFileSync(outPath, out.join('\n') + '\n', 'utf8');
 console.log(`\n证据已写入: ${outPath}`);
