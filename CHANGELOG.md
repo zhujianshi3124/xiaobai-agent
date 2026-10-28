@@ -6,6 +6,31 @@ P6 起重排：原 P7 收尾顺延为 P8；现状与裁决见 `docs/p0-recon.md`
 
 ## [Unreleased]
 
+### 输出闸门：判官换卡按现任、重复开卡拦截（2026-10-28）
+
+- **选现任不再按 exact name**：`judgeNames` 在换卡后/重启后按同角色卡的会话
+  `createdAt` 选最新一张（同刻按花名册顺序），不再优先名字恰好叫 `reviewer` 的
+  退休卡。起因：`reviewer` 退休后读数冻结在 35.08%，重启丢掉内存里的换卡指向后，
+  闸门又量到这张旧卡并生成 `reviewer4`；真正的现任 `reviewer2` 当时只有 20.11%。
+- **重复开卡拦截**：协调侧 `spawn_teammate` 开审核/监管卡时，若同角色现任
+  ctx 未到指南 2.5 的 35% 换卡线，工具守卫直接拒绝并提示复用现有卡。起因：
+  2026-10-28 14:44 用户暂停导致闸门中断 `reviewer2`，协调侧把
+  “was stopped before it finished” 误读成卡失效，在 `reviewer2` 仅 18.25% 时
+  手工开了 `reviewer3`；该卡从未接到闸门请求。
+- **暂停原因写清**：用户暂停产生的 `CANCELLED` 账本 detail 补明“judge interrupted
+  by the gate（not a card failure — reuse the same card）”。
+- 新增 `test/governance-output-gate-judge-rotation.test.mjs`（5 条）；`inactive`
+  被视为正常空档，只有 `error/failed/crashed` 才允许绕过换卡拦截。宿主无热重载，
+  下一次重启生效。
+
+### 判官裁决时限 180→300 秒
+
+- `gate-guard.js` 两个时限常量同步上调：判官缺失需补建时的 `APPROVAL_TIMEOUT_MS`、
+  双判官在场时的 `PRESENT_TIMEOUT_MS` 缺省值均 180000→300000ms。
+  起因：评审卡对大上下文会话独立取证可超 3 分钟（实测 194 秒完成、差 14 秒记
+  TIMEOUT，双评委整轮作废重审）；`GATE_PRESENT_TIMEOUT_MS` 环境变量覆盖仍有效。
+- 规则唯一源：指南 2.16「闸门时限与上限」（2.21）。机制下次重启生效。
+
 ### 输出闸门：文档先审后写 + `/gate ctx` 实测（同样只改既有插件）
 
 - **文档先审后写**（解决 3.3.1「先写后审 vs 先审后写」死锁）：`send_report`
