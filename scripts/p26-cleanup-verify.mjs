@@ -277,9 +277,9 @@ console.log('\n── ⑤ 同步面 ──')
 
   const reg = readFileSync(join(root, 'scripts', 'regression-all.mjs'), 'utf8')
   check('5.7 regression-all 清单含 p26', reg.includes('p26-cleanup-verify') && reg.includes('scripts/p26-cleanup-verify.mjs'))
-  check('5.7 regression-all 文案已随 17→18 同步', reg.includes('18 专项脚本') && !reg.includes('17 专项脚本'), '仍见 17 或未见 18')
+  check('5.7 regression-all 文案已随 18→19 同步', reg.includes('19 专项脚本') && !reg.includes('18 专项脚本'), '仍见 18 或未见 19')
   const hook = readFileSync(join(root, 'scripts', 'git-hooks', 'pre-commit'), 'utf8')
-  check('5.7 pre-commit hook 文案已随 17→18 同步', hook.includes('18 个专项脚本') && !hook.includes('17 个专项脚本'), '仍见 17 或未见 18')
+  check('5.7 pre-commit hook 文案已随 18→19 同步', hook.includes('19 个专项脚本') && !hook.includes('18 个专项脚本'), '仍见 18 或未见 19')
 
   const q2 = readFileSync(join(root, 'scripts', 'q2-layer-scan.mjs'), 'utf8')
   check('5.8 q2 成卡目录数已改 12', q2.includes('manifests.length === 12'), '未找到 === 12')

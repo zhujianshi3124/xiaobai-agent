@@ -528,8 +528,8 @@ console.log('\n── ③ 仓内一致性守卫 ──')
   const reg = readFileSync(join(root, 'scripts', 'regression-all.mjs'), 'utf8')
   check('3.3 regression-all 清单含 p25-router-verify', reg.includes('p25-router-verify') && reg.includes('scripts/p25-router-verify.mjs'))
   const hook = readFileSync(join(root, 'scripts', 'git-hooks', 'pre-commit'), 'utf8')
-  check('3.3 pre-commit hook 文案已随 17→18 同步', hook.includes('18 个专项脚本') && !hook.includes('17 个专项脚本'), '仍见 17 或未见 18')
-  check('3.3 regression-all 文案已随 17→18 同步', reg.includes('18 专项脚本') && !reg.includes('17 专项脚本'), '仍见 17 或未见 18')
+  check('3.3 pre-commit hook 文案已随 18→19 同步', hook.includes('19 个专项脚本') && !hook.includes('18 个专项脚本'), '仍见 18 或未见 19')
+  check('3.3 regression-all 文案已随 18→19 同步', reg.includes('19 专项脚本') && !reg.includes('18 专项脚本'), '仍见 18 或未见 19')
 }
 
 {
