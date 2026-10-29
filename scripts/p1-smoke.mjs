@@ -49,7 +49,7 @@ const panelMod = await import(pathToFileURL(join(panelDir, "index.js")).href);
 panelMod.apply(fakeCtx, { toolkitRoot: root, doctorCli, devicesFile: fixtureFile });
 // P6 退役：/v2/ui 独立页删除（UI 过渡面退役，管理区并入唯一 toolkit-panel 标签页），
 // /v2/connector.js 保留（归一面板客户端动态 import realtime-connector 的引擎 HTTP 面）。
-check("routes count == 33 (S4 F-37 检索路由入表: P2.4 22 条 + P4 v2 管理 API 10 条 + connector 1 条)", routes.length === 33, String(routes.length));
+check("routes count == 34 (债 7 治理报告只读路由入表: P2.4 22 条 + P4 v2 管理 API 10 条 + connector 1 条 + governance/reports 1 条)", routes.length === 34, String(routes.length));
 check("P2.1 plan route registered", routes.some((r) => r.path === "/api/toolkit-panel/plan"));
 check("P2.1 execute route registered", routes.some((r) => r.path === "/api/toolkit-panel/execute"));
 check("P2.1 plan/status route registered", routes.some((r) => r.path === "/api/toolkit-panel/plan/status"));
@@ -72,6 +72,8 @@ const expectedWhenAllowed = {
   "/api/toolkit-panel/uninstall/plan": ["GET", 405],
   "/api/toolkit-panel/uninstall/execute": ["GET", 405],
   "/api/toolkit-panel/custody": ["GET", 200],
+  // 债 7：治理报告只读清单（GET 形态自然归只读闸；目录缺席也在 200 体里如实申报）
+  "/api/toolkit-panel/governance/reports": ["GET", 200],
   "/api/toolkit-panel/restore/plan": ["GET", 405],
   "/api/toolkit-panel/restore/execute": ["GET", 405],
   // 销毁式 v2（L-060）：挂载路由（重装后）

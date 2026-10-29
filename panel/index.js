@@ -34,6 +34,7 @@ import {
   executeMountPreset,
 } from "./manager/uninstall.mjs";
 import { listCustody, getSoftRecord } from "./manager/custody.mjs";
+import { buildGovernanceReportView } from "./manager/governance-report.mjs";
 import { listRestoreSnapshots } from "./manager/backup.mjs";
 import { PLUGINS, assertUninstallable } from "./manager/plugin-registry.mjs";
 import { contractHttpBase, normalizeServicePrefix } from "../contract/dist/index.js";
@@ -704,6 +705,22 @@ export function apply(ctx, config = {}) {
         const entries = listCustody(toolkitRoot);
         const presetState = JSON.parse(JSON.stringify(loadJsonSafe(join(toolkitRoot, "preset-patch-state.json"))));
         sendJson(response, 200, { ok: true, custody: { entries, presetState: presetState || null } });
+      }),
+    },
+    // 治理报告清单（只读 · 债 7）：把 <toolkitRoot>/.toolkit-governance/<插件>/latest.json
+    // 归一成用户可读的摘要。此前这些报告只有治理插件彼此在读，用户侧零通道。
+    // 只读形态：不标 change ⇒ 走 isAllowedRead；恒 200，目录缺席/报告损坏都在体里如实申报，
+    // 不 5xx、不抛错（面板其余区块不受影响）。本机绝对路径在读取层已归一成占位符。
+    {
+      kind: "exact",
+      path: apiBase + "/governance/reports",
+      handler: guard(async (request, response) => {
+        if (request.method !== "GET") {
+          response.writeHead(405, { allow: "GET" });
+          response.end();
+          return;
+        }
+        sendJson(response, 200, { ok: true, governance: buildGovernanceReportView(toolkitRoot) });
       }),
     },
     // 恢复 plan：软（台账）/ 真（保管区）/ 预设挂载面（managedBy: preset）。

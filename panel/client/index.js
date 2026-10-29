@@ -1634,18 +1634,22 @@ window.__ModuleLoader__.load({
 			footer: "检索帮你找，接手新会话仍需走移交确认。"
 		};
 
-		// ════ 批次4 治理视图（只读区块 · 报告占位）════════════════════════════
-		// 数据面＝GET /custody（面板域既有只读路由，apiBase 前缀；客户端既有调用点见 ConsoleSection）。
-		// 本批零新增路由、零新增事件订阅：治理报告尚无数据面，故只做约定路径占位与空态，
-		// 不建目录、不写任何文件。文案与面板其余降级块同族——如实说明，不假装可用。
+		// ════ 批次4 治理视图（只读区块 · 债 7 改读治理报告）════════════════════════════
+		// 数据面＝GET /governance/reports（面板域只读路由，apiBase 前缀；服务端 panel/manager/
+		// governance-report.mjs 归一 .toolkit-governance/<插件>/latest.json）。
+		// 债 7 之前这里读的是 /custody（保管档＝卸载收据），与「治理报告」是两回事——
+		// 报告写出来了用户一个字节也看不到。现在改为真读报告；保管档仍在操作台里原样可见。
+		// 只读：零新增写路由、零新增事件订阅，不建目录、不写任何文件。
 		var GOVERNANCE_COPY = {
 			title: "治理视图",
-			desc: "本机插件与保管档的只读对账。治理报告按约定落在插件仓的 .toolkit-governance/ 下；本版尚未生成。",
+			desc: "本机治理报告的只读视图：各治理插件把结果写在插件仓的 .toolkit-governance/ 下，这里按插件逐份列出。",
 			reportPath: ".toolkit-governance/",
 			reportAbsent: "治理报告尚未生成（约定目录 .toolkit-governance/ 不存在）。这是当前版本的正常状态，不影响插件开关与体检。",
 			fetchFailed: "读取治理数据时出错（<reason>）。治理视图暂不可用，面板其余区块不受影响。",
-			noData: "已读取，但保管档里没有任何条目——治理数据为空。",
+			noData: "约定目录在场，但里面还没有任何一份治理报告。",
 			loading: "正在读取治理数据…",
+			unreadable: "这份报告读不出来（<reason>），其余报告不受影响。",
+			issueHead: "问题按级别计数",
 			footer: "治理视图只读：不改插件、不改配置、不写任何文件。"
 		};
 
@@ -1776,12 +1780,20 @@ window.__ModuleLoader__.load({
 			});
 		}
 
+		/** 一条问题的人话行：级别 + 码 + 正文（正文里本机路径已由服务端归一成占位符）。 */
+		function governanceIssueLine(row, i) {
+			var level = String((row && row.level) || "info");
+			var code = String((row && row.code) || "");
+			var msg = String((row && row.message) || "");
+			return react.createElement("div", { key: "i" + i, style: styles.govLine },
+				(level === "error" ? "错误" : level === "warn" ? "提醒" : "信息") + (code ? "（" + code + "）" : "") + "：" + msg);
+		}
+
 		/**
-		 * 纯呈现卡（props 进、元素树出）：res=null 尚未读取/报告目录不存在；res.phase=unavailable
-		 * 报告目录不可用；res.phase=error 读取失败；res.phase=done 数据列（空则空态文案）。
+		 * 纯呈现卡（props 进、元素树出）：res=null 尚未读取；res.phase=unavailable 报告目录不在场；
+		 * res.phase=error 读取失败；res.phase=done 逐插件报告列（目录在场但零份则空态文案）。
 		 * 与 MemorySearchCard 同范式：拆出纯函数层，p22 同族可对每个状态真跑
-		 * （headless createElement 陷阱的同族对策）。本批实际只到 null / done / error 三支，
-		 * unavailable 支留给治理报告数据面落地后接——四态结构先立住，不写单支简化版。
+		 * （headless createElement 陷阱的同族对策）。四态齐用——债 7 起报告数据面已落地。
 		 */
 		function GovernanceCard(props) {
 			var res = props.res;
@@ -1808,28 +1820,41 @@ window.__ModuleLoader__.load({
 					String(res.message || GOVERNANCE_COPY.fetchFailed.replace("<reason>", ""))));
 			} else {
 				var data = res.data || {};
-				var rows = Array.isArray(data.entries) ? data.entries : [];
+				var rows = Array.isArray(data.reports) ? data.reports : [];
 				if (rows.length === 0) {
 					kids.push(react.createElement("div", { key: "none", style: styles.govEmpty }, GOVERNANCE_COPY.noData));
 				} else {
+					var totals = data.issueTotals || {};
 					kids.push(react.createElement("div", { key: "head", style: styles.muted },
-						"保管档共 " + rows.length + " 条；预设托管状态：" + (data.presetState ? "已记录" : "未记录")));
+						"共 " + rows.length + " 份治理报告；" + GOVERNANCE_COPY.issueHead + "：错误 "
+						+ Number(totals.error || 0) + " · 提醒 " + Number(totals.warn || 0)
+						+ " · 信息 " + Number(totals.info || 0)));
 					rows.forEach(function (row, i) {
-						var id = String((row && row.custodyId) || "");
-						var plugin = String((row && row.plugin) || "");
-						var files = Number((row && row.fileCount) || 0);
-						var bytes = Number((row && row.totalBytes) || 0);
-						var at = String((row && row.createdAt) || "");
-						kids.push(react.createElement("div", { key: "r" + i, style: styles.searchRowLine },
-							react.createElement("span", { key: "a", style: styles.techRow },
-								id + "｜" + (plugin || "(未记录插件)") + "｜" + files + " 个文件｜" + bytes + " 字节" + (at ? "｜" + at : ""))));
+						var plugin = String((row && row.plugin) || "(未命名)");
+						var at = String((row && row.generatedAt) || "");
+						var issues = (row && row.issues) || {};
+						var lines = Array.isArray(row && row.issueLines) ? row.issueLines : [];
+						var head = plugin + (row && row.readable ? "｜" + (at || "生成时间未记录") : "｜读不出来");
+						if (row && row.readable) {
+							head += "｜问题 " + Number(issues.total || 0) + " 条（错误 " + Number(issues.error || 0)
+								+ " · 提醒 " + Number(issues.warn || 0) + " · 信息 " + Number(issues.info || 0) + "）";
+						}
+						var box = [
+							react.createElement("div", { key: "a", style: styles.techRow }, head),
+							react.createElement("div", { key: "s", style: styles.govLine }, String((row && row.schema) || "")),
+						];
+						if (row && !row.readable) {
+							box.push(react.createElement("div", { key: "nr", style: styles.govLine },
+								GOVERNANCE_COPY.unreadable.replace("<reason>", String((row && row.note) || ""))));
+						}
+						lines.forEach(function (line, k) { box.push(governanceIssueLine(line, k)); });
+						if (row && row.note && row.readable) {
+							box.push(react.createElement("div", { key: "note", style: styles.muted }, String(row.note)));
+						}
+						kids.push(react.createElement("div", { key: "r" + i, style: styles.govBox }, box));
 					});
 				}
 			}
-
-			kids.push(react.createElement("div", { key: "report", style: styles.govBox },
-				react.createElement("div", { key: "h", style: styles.govHead }, "治理报告"),
-				react.createElement("div", { key: "l", style: styles.govLine }, GOVERNANCE_COPY.reportAbsent)));
 
 			kids.push(react.createElement("div", { key: "foot", style: styles.searchFooter }, GOVERNANCE_COPY.footer));
 
@@ -1847,16 +1872,22 @@ window.__ModuleLoader__.load({
 			var load = react.useCallback(async function () {
 				setBusy(true);
 				try {
-					var http = await fetch(PANEL_API + "/custody", { cache: "no-store" });
+					// 债 7：数据面由保管档 /custody 改为治理报告清单 /governance/reports。
+					var http = await fetch(PANEL_API + "/governance/reports", { cache: "no-store" });
 					var body = await http.json();
 					if (!body || body.ok !== true) {
 						setRes({ phase: "error", message: GOVERNANCE_COPY.fetchFailed.replace("<reason>", String((body && body.error) || ("HTTP " + http.status))) });
 						return;
 					}
-					var custody = (body && body.custody) || {};
+					var gov = (body && body.governance) || {};
+					if (gov.available !== true) {
+						// 约定目录不在场：如实申报，不假装读到空数据。
+						setRes({ phase: "unavailable", reason: GOVERNANCE_COPY.reportAbsent });
+						return;
+					}
 					setRes({ phase: "done", data: {
-						entries: Array.isArray(custody.entries) ? custody.entries : [],
-						presetState: custody.presetState || null
+						reports: Array.isArray(gov.reports) ? gov.reports : [],
+						issueTotals: gov.issueTotals || {}
 					} });
 				} catch (e) {
 					setRes({ phase: "error", message: GOVERNANCE_COPY.fetchFailed.replace("<reason>", String((e && e.message) || e)) });
@@ -1988,7 +2019,7 @@ window.__ModuleLoader__.load({
 				react.createElement(MemorySearchSection, { key: "memory-search" }),
 				// 批次4：治理视图（只读区块）——与记忆检索同族：全库只读对账，不碰单插件配置；
 				// 排在 patch 域写操作之前，保持「全局只读 → 单插件写」的既有阅读序。
-				react.createElement("h2", { key: "gov-h2", style: styles.h2 }, "治理视图（只读对账 · 报告占位）"),
+				react.createElement("h2", { key: "gov-h2", style: styles.h2 }, "治理视图（只读对账 · 治理报告）"),
 				react.createElement(GovernanceSection, { key: "governance" }),
 				// P6 归一：旧 5 卡片区降级为「内置插件工具区」，插件特有入口（两层开关/参数编辑/
 				// 卸载恢复/技术详情）原样保留在本区，入口可达（P6 映射表见 P6 报告）

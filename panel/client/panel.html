@@ -105,6 +105,12 @@
   .searchInput { flex: 1; padding: 6px 10px; border-radius: 6px; border: 1px solid #3a3f47; background: #101413; color: #e6e6e6; font-size: 13px; }
   .searchLine { border-bottom: 1px solid #23272d; padding: 7px 2px; font-size: 12.5px; line-height: 1.7; word-break: break-all; }
   .searchFooter { margin-top: 10px; padding-top: 8px; border-top: 1px solid #23272d; font-size: 12px; color: #8fa89e; }
+  /* ---- 债 7 治理视图（只读报告卡；与 React 通道同语义同结构） ---- */
+  .govPath { font-family: ui-monospace, Consolas, monospace; color: #8ab4f8; font-size: 12.5px; }
+  .govBox { margin: 0 0 10px; padding: 10px 12px; border-radius: 6px; background: #151922; border: 1px solid #2a2f36; }
+  .govHead { font-size: 12.5px; font-weight: 700; color: #c8cdd4; margin-bottom: 4px; }
+  .govLine { font-size: 12px; color: #d7dae0; line-height: 1.7; word-break: break-word; }
+  .govEmpty { padding: 10px 2px; font-size: 12.5px; color: #9aa0a6; line-height: 1.7; }
 </style>
 </head>
 <body>
@@ -126,6 +132,16 @@
     </div>
     <div id="searchOut" class="muted">输入关键词，回车检索。范围：全部会话（含已归档）。</div>
     <div class="searchFooter">检索帮你找，接手新会话仍需走移交确认。</div>
+  </div>
+  <h2>治理视图（只读对账 · 治理报告）</h2>
+  <div id="governanceOut" class="card">
+    <div class="desc">本机治理报告的只读视图：各治理插件把结果写在插件仓的 .toolkit-governance/ 下，这里按插件逐份列出。</div>
+    <div class="searchRow">
+      <span class="govPath">.toolkit-governance/</span>
+      <button id="governanceGo">重新读取</button>
+    </div>
+    <div id="governanceBody" class="muted">正在读取治理数据…</div>
+    <div class="searchFooter">治理视图只读：不改插件、不改配置、不写任何文件。</div>
   </div>
   <h2>配置文件原文（cordis.patch.yml · 插件开关所在）</h2>
   <pre id="patch"></pre>
@@ -1300,12 +1316,85 @@ async function runMemorySearch() {
   }
 }
 
+// ════ 债 7 治理视图（只读 · 与 React 通道同语义）════════════════════════════
+// 数据面＝GET PANEL_API + "/governance/reports"（面板域只读路由，服务端
+// panel/manager/governance-report.mjs 归一 .toolkit-governance/<插件>/latest.json）。
+// 这一页是 React 装载失败时的兜底页——没有它，用户在这种情况下看不到任何治理报告。
+// 只读：零写操作、零新增事件订阅；本机路径已由服务端归一成占位符。
+var GOVERNANCE_COPY = {
+  title: "治理视图",
+  desc: "本机治理报告的只读视图：各治理插件把结果写在插件仓的 .toolkit-governance/ 下，这里按插件逐份列出。",
+  reportPath: ".toolkit-governance/",
+  reportAbsent: "治理报告尚未生成（约定目录 .toolkit-governance/ 不存在）。这是当前版本的正常状态，不影响插件开关与体检。",
+  fetchFailed: "读取治理数据时出错（<reason>）。治理视图暂不可用，面板其余区块不受影响。",
+  noData: "约定目录在场，但里面还没有任何一份治理报告。",
+  loading: "正在读取治理数据…",
+  unreadable: "这份报告读不出来（<reason>），其余报告不受影响。",
+  issueHead: "问题按级别计数",
+  footer: "治理视图只读：不改插件、不改配置、不写任何文件。"
+};
+function governanceLevelText(level) {
+  return level === "error" ? "错误" : (level === "warn" ? "提醒" : "信息");
+}
+function governanceReportHtml(row) {
+  var plugin = String((row && row.plugin) || "(未命名)");
+  var readable = !!(row && row.readable);
+  var issues = (row && row.issues) || {};
+  var head = plugin + (readable ? "｜" + (String((row && row.generatedAt) || "") || "生成时间未记录") : "｜读不出来");
+  if (readable) {
+    head += "｜问题 " + Number(issues.total || 0) + " 条（错误 " + Number(issues.error || 0)
+      + " · 提醒 " + Number(issues.warn || 0) + " · 信息 " + Number(issues.info || 0) + "）";
+  }
+  var html = '<div class="govBox"><div class="techRow">' + esc(head) + "</div>"
+    + '<div class="govLine">' + esc(String((row && row.schema) || "")) + "</div>";
+  if (!readable) {
+    html += '<div class="govLine">' + esc(GOVERNANCE_COPY.unreadable.replace("<reason>", String((row && row.note) || ""))) + "</div>";
+  }
+  var lines = (row && row.issueLines) || [];
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i] || {};
+    var code = String(line.code || "");
+    html += '<div class="govLine">' + esc(governanceLevelText(line.level) + (code ? "（" + code + "）" : "") + "：" + String(line.message || "")) + "</div>";
+  }
+  if (readable && row.note) html += '<div class="muted">' + esc(String(row.note)) + "</div>";
+  return html + "</div>";
+}
+function governanceViewHtml(gov) {
+  if (!gov || gov.available !== true) {
+    return '<div class="govEmpty">' + esc(GOVERNANCE_COPY.reportAbsent) + "</div>";
+  }
+  var rows = gov.reports || [];
+  if (rows.length === 0) return '<div class="govEmpty">' + esc(GOVERNANCE_COPY.noData) + "</div>";
+  var totals = gov.issueTotals || {};
+  var html = '<div class="muted">共 ' + rows.length + " 份治理报告；" + esc(GOVERNANCE_COPY.issueHead) + "：错误 "
+    + Number(totals.error || 0) + " · 提醒 " + Number(totals.warn || 0) + " · 信息 " + Number(totals.info || 0) + "</div>";
+  for (var i = 0; i < rows.length; i++) html += governanceReportHtml(rows[i]);
+  return html;
+}
+async function loadGovernance() {
+  var out = el("governanceBody");
+  out.innerHTML = '<span class="muted">' + esc(GOVERNANCE_COPY.loading) + "</span>";
+  try {
+    var res = await fetch(PANEL_API + "/governance/reports", { cache: "no-store" });
+    var body = await res.json();
+    if (!body || body.ok !== true) {
+      out.innerHTML = '<div class="govEmpty">' + esc(GOVERNANCE_COPY.fetchFailed.replace("<reason>", String((body && body.error) || ("HTTP " + res.status)))) + "</div>";
+      return;
+    }
+    out.innerHTML = governanceViewHtml(body.governance);
+  } catch (e) {
+    out.innerHTML = '<div class="govEmpty">' + esc(GOVERNANCE_COPY.fetchFailed.replace("<reason>", String(e && e.message || e))) + "</div>";
+  }
+}
+
 el("refresh").addEventListener("click", loadSnapshot);
 el("doctor").addEventListener("click", runDoctor);
 el("searchGo").addEventListener("click", runMemorySearch);
 el("searchQ").addEventListener("keydown", function (e) { if (e && e.key === "Enter") runMemorySearch(); });
+el("governanceGo").addEventListener("click", loadGovernance);
 loadSnapshot();
 loadStates();
+loadGovernance();
 </script>
 </body>
 </html>
