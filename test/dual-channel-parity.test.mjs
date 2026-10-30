@@ -18,6 +18,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { Inject } from '@deepseek-ai/cordis'
@@ -27,7 +28,7 @@ import { resolveLocalSource } from '../registry/dist/index.js'
 const ROOT = resolve(import.meta.dirname, '..')
 const HOST_LOADER_CANDIDATES = [
   process.env.TOOLKIT_HOST_LOADER_PATH,
-  '<USER_HOME>/AppData/Roaming/npm/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/cordis-plugin-loader/lib/index.js',
+  join(homedir(), 'AppData/Roaming/npm/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/cordis-plugin-loader/lib/index.js'),
 ].filter(Boolean)
 
 /** 官方 unwrapExports 的逐字副本（出处见文件头）。 */

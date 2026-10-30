@@ -2,7 +2,7 @@
 //
 // 钉死四件事：
 //  ① toolkitRoot 推导与**进程 cwd 完全无关**（修复前 registry-host 用 `resolve(process.cwd(),'..')`，
-//     Pack G 实测落点在 `C:\Windows\.registry` 与 `<PLUGINS_ROOT>\.registry` 之间漂移两次）；
+//     Pack G 实测落点在 `C:\Windows\.registry` 与插件桶根下的 `.registry` 之间漂移两次）；
 //  ② 显式 config 优先级最高，空白值不算显式（回落模块位置推导）；
 //  ③ 失效模式①「落点连目录都建不出来」：装配不许裸抛（修复前 audit sink 的无 try/catch
 //     mkdirSync 会把整个面板炸掉），改为不 ok + 点名路径 + 可执行建议；

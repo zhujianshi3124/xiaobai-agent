@@ -24,7 +24,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -540,7 +540,8 @@ test("legacy · apply：三 shipped PATCHED＋unknown/old-plugin 用户件 REFUS
   for (const id of ["standard", "ptc", "cordis"]) {
     const patched = readFileSync(join(sb.presetsDir, id, "agent.cordis.yml"), "utf8");
     assert.ok(patched.includes("name: 'xiaobai-agent/compact-router'"), id);
-    assert.ok(patched.includes("<USER_HOME>\\.agent-memory"), id);
+    // 期望值＝部署机家目录下的固定数据根（脚本按 homedir() 推导，开源清理批不再写死用户名）
+    assert.ok(patched.includes(join(homedir(), ".agent-memory")), id);
     assert.ok(existsSync(join(sb.pluginDir, "preset-backups", id + ".agent.cordis.yml.bak")));
   }
   assert.equal(readFileSync(join(sb.userPresetsDir, "liangshen", "agent.cordis.yml"), "utf8"), LIANGSHEN_LIKE_YAML, "unknown user preset untouched");

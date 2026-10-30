@@ -3,10 +3,18 @@
 // 钉死三件事：
 //  ① `ROW_NEW` 的 agentMemoryRoot 行**求值之后**必须是带真反斜杠的 Windows 路径 ——
 //     单反斜杠形态里 `\U` `\.` 是 JS 的未知转义，求值会把反斜杠整个吞掉，
-//     实际写进预设的是 `C:Users<user>.agent-memory`（一条不存在的路径）；
+//     实际写进预设的是 `C:Users<用户>.agent-memory`（一条不存在的路径）；
 //  ② `OLD_ROW_V2` 同理，且两行各自独立成案 —— 只坏一处时只有对应那条翻红（命题分离，
 //     变异自检才有靶子）；
-//  ③ 全脚本 agentMemoryRoot 字面量**恰两处** —— 多出一处即说明又有第三份路径副本在漂移。
+//  ③ 全脚本 agentMemoryRoot 真源**恰一处**（AGENT_MEMORY_ROOT）—— 多出一处即说明又有路径副本在漂移。
+//
+// 2026-10-29 开源清理批改写：原先两行各持一份硬编码家根字面量（`C:\Users\<作者>\.agent-memory`），
+// 清理后改为单一真源 AGENT_MEMORY_ROOT＝join(homedir(), '.agent-memory')，路径字面量不再存在，
+// 于是"单反斜杠转义被求值吞掉"这条缺陷形态在结构上消失——①②从"解字面量真值"改为
+// "钉住两行都取自同一真源"，③从"字面量恰两处"改为"真源恰一处"，并补一条 F-44 复发钉
+// （脚本内出现硬编码家根字面量即红）。**"求值后是真反斜杠路径"的端到端证据**由
+// test/preset-patch-020.test.mjs 承担（真跑脚本副本，断言写进预设的就是 join(homedir(),'.agent-memory')），
+// 那里是运行时文本，转义坏掉必红。
 //
 // 本文件是纯静态断言：不 import 生产脚本、不 eval、不跑 `--apply` / `--undo`、不碰 `~/.dsh`
 // （红线：探针与取证只读）。成因与两处会真写坏的暴露路径见 docs/repair-plan-20260923.md §10.1 R2。
@@ -19,9 +27,6 @@ import { fileURLToPath } from 'node:url'
 const SCRIPT = join(dirname(fileURLToPath(import.meta.url)), '..', 'scripts', 'apply-preset-patch.mjs')
 const SOURCE = readFileSync(SCRIPT, 'utf8')
 
-// 期望真值：八个空格缩进 + 单枚真反斜杠（String.raw 保形，别让本文件自己也丢转义）
-const EXPECTED_VALUE = String.raw`        agentMemoryRoot: <USER_HOME>\.agent-memory`
-
 function blockOf(constName) {
   const start = SOURCE.indexOf('const ' + constName + ' = [')
   assert.ok(start >= 0, `脚本里找不到 \`const ${constName} = [\` —— 结构变了，本守卫须同步改写`)
@@ -30,35 +35,32 @@ function blockOf(constName) {
   return SOURCE.slice(start, end)
 }
 
-// 取块内 agentMemoryRoot 那一行字面量，并解出它的**求值真值**
-function evaluatedValue(constName) {
-  const block = blockOf(constName)
-  const hit = block.match(/"([^"]*agentMemoryRoot:[^"]*)"/)
-  if (!hit) assert.fail(`${constName}: 块内没有 agentMemoryRoot 字符串字面量`)
-  const raw = hit[1]
-  let value
-  try {
-    // 单反斜杠形态在 JSON 里是非法转义 ⇒ 这里必抛，正是我们要点名报出的缺陷形态
-    value = JSON.parse('"' + raw + '"')
-  } catch {
-    assert.fail(
-      `${constName}: 字面量原文逐字为「${raw}」—— 用的是单枚反斜杠转义，` +
-      `JS 求值会把反斜杠吞掉（写成 C:Users<user>.agent-memory），必须双写。`,
-    )
-  }
-  return value
+// 块内 agentMemoryRoot 行（必须恰好一行）：返回该行原文，供结构断言。
+function agentMemoryRootLine(constName) {
+  const hits = blockOf(constName).split('\n').filter((l) => l.includes('agentMemoryRoot:'))
+  assert.equal(hits.length, 1, `${constName}: agentMemoryRoot 行应恰 1 处，实到 ${hits.length} 处`)
+  return hits[0].trim()
 }
 
-test('R2 · ROW_NEW 的 agentMemoryRoot 求值后是真反斜杠 Windows 路径', () => {
-  assert.equal(evaluatedValue('ROW_NEW'), EXPECTED_VALUE)
+// 单值来源：AGENT_MEMORY_ROOT 的定义行（开源清理批后，路径只剩这一处真源）。
+const SOURCE_OF_TRUTH = (() => {
+  const hits = SOURCE.split('\n').filter((l) => /^const AGENT_MEMORY_ROOT = /.test(l))
+  assert.equal(hits.length, 1, `脚本里 AGENT_MEMORY_ROOT 定义应恰 1 处，实到 ${hits.length} 处`)
+  return hits[0]
+})()
+
+test('R2 · ROW_NEW 的 agentMemoryRoot 行取自单一真源（块内无第二份路径副本）', () => {
+  assert.equal(agentMemoryRootLine('ROW_NEW'), '"        agentMemoryRoot: " + AGENT_MEMORY_ROOT,')
 })
 
-test('R2 · OLD_ROW_V2 的 agentMemoryRoot 求值后是真反斜杠 Windows 路径', () => {
-  assert.equal(evaluatedValue('OLD_ROW_V2'), EXPECTED_VALUE)
+test('R2 · OLD_ROW_V2 的 agentMemoryRoot 行取自同一真源（两行各自独立成案）', () => {
+  assert.equal(agentMemoryRootLine('OLD_ROW_V2'), '"        agentMemoryRoot: " + AGENT_MEMORY_ROOT,')
 })
 
-test('R2 · 全脚本 agentMemoryRoot 字面量恰两处，且两处求值真值一致', () => {
-  const all = SOURCE.match(/"[^"]*agentMemoryRoot:[^"]*"/g) || []
-  assert.equal(all.length, 2, `agentMemoryRoot 字面量应恰 2 处（ROW_NEW + OLD_ROW_V2），实到 ${all.length} 处`)
-  assert.equal(evaluatedValue('ROW_NEW'), evaluatedValue('OLD_ROW_V2'))
+test('R2 · 真源按 homedir() 推导、含 env 逃生口，且脚本内零硬编码家根字面量', () => {
+  assert.match(SOURCE_OF_TRUTH, /process\.env\.AGENT_MEMORY_ROOT \?\?/, 'env 逃生口在场')
+  assert.match(SOURCE_OF_TRUTH, /join\(homedir\(\), "\.agent-memory"\)/, '缺省值按 homedir() 推导')
+  // F-44 复发钉：路径值不得再以字面量形态出现在 agentMemoryRoot 行里（只允许拼 AGENT_MEMORY_ROOT）。
+  // 只看"值位置"，不看注释——注释里讲这条缺陷史是允许的。
+  assert.doesNotMatch(SOURCE, /"\s*agentMemoryRoot:\s*[A-Za-z]:/, 'agentMemoryRoot 行不得硬编码盘符路径')
 })

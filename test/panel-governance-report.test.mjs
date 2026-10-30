@@ -92,16 +92,16 @@ test('GOV-2: 单份报告坏掉只影响它自己（readable:false + 原因）�
 })
 
 test('GOV-3: 本机绝对路径不出本机——盘符形态与 file:// 一律归一成占位符', (t) => {
-  assert.equal(redactPaths('<TOOLKIT_ROOT>\\.toolkit-governance'), PATH_PLACEHOLDER)
-  assert.equal(redactPaths('<USER_HOME>/.dsh/x.json'), PATH_PLACEHOLDER)
+  assert.equal(redactPaths('D:\\some-repo\\.toolkit-governance'), PATH_PLACEHOLDER)
+  assert.equal(redactPaths('C:/Users/someone/.dsh/x.json'), PATH_PLACEHOLDER)
   assert.equal(redactPaths('见 file:///D:/x/y.json 处'), '见 ' + PATH_PLACEHOLDER + ' 处')
   assert.equal(redactPaths('没有路径的普通文本'), '没有路径的普通文本', '无路径文本原样')
 
   const root = makeRoot(t, 'redact')
   writeReport(root, 'governance-preflight', {
     schema: 'toolkit-governance/preflight@1',
-    toolkitRootResolved: '<TOOLKIT_ROOT>',
-    reportRoot: '<TOOLKIT_ROOT>\\.toolkit-governance\\governance-preflight',
+    toolkitRootResolved: 'D:\\some-repo',
+    reportRoot: 'D:\\some-repo\\.toolkit-governance\\governance-preflight',
     issues: [{ level: 'info', code: 'events-declared', message: '目标 ' + root + '\\lib\\x.json', target: root }],
   })
   const view = buildGovernanceReportView(root)

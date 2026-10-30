@@ -1,12 +1,20 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { join, resolve, dirname } from 'node:path';
+import { join, resolve, dirname, relative } from 'node:path';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const NODE = process.execPath;
+
+// 运行期目录在场探测（判据来源见头注）：p22b 的 E4 段要 .panel-write-backups 与 .panel-backups
+// 同时在场（脚本 e4Present 同款判据），q2-layer-scan 的快照枚举要 .panel-backups 在场。
+const RUNTIME_DIRS = {
+  writeBackups: join(ROOT, '.panel-write-backups'),
+  panelBackups: join(ROOT, '.panel-backups'),
+};
+const absentDirs = (...abs) => abs.filter((p) => !existsSync(p)).map((p) => relative(ROOT, p));
 
 // 外部门禁缺席降级（2026-10-02 收尾批，EXE-BOOT-024 续用）：
 // 运行期目录（.panel-backups／.panel-custody／.registry 等，.gitignore 声明"运行期产物，不入库"）
@@ -14,6 +22,12 @@ const NODE = process.execPath;
 // doc-ref-guard 对运行期面引用缺席改判 SKIP 计数；本机（目录在场）行为不变。
 // 两态钉：静态钉（门控在源码，变异即红）＋在场态行为钉（本机子进程照跑、零 SKIP）＋
 // guard 自证格两态（合成树，随每轮门禁自跑）；缺席态行为由"干净克隆实跑"承担（外部口径复验实档）。
+//
+// 在场态行为钉的两态实现（2026-10-29 外部克隆修复批）：
+//   运行期目录在场 ⇒ 子进程照跑、原断言逐字执行（"零 SKIP"要求不变，强度不变）；
+//   运行期目录缺席 ⇒ 该格 t.skip() 并写明缺席的目录名（运行期产物不入库，缺席＝外部克隆环境
+//   正常形态），不把"缺席"判成"回归"。判据来源＝磁盘探测 existsSync，不是环境变量开关——
+//   本机在场时无从绕过断言。
 
 test('静态钉：p22b 含 E4/E1e 运行期缺席明示 SKIP 门控', () => {
   const src = readFileSync(join(ROOT, 'scripts', 'p22b-retention-scope.mjs'), 'utf8');
@@ -45,7 +59,13 @@ test('静态钉：doc-ref-guard 含运行期面缺席 SKIP 判据与自证格两
   assert.match(src, /㉘e 前缀形态运行期目录/);
 });
 
-test('在场态行为钉：p22b 本机照跑（E4 段在场断言执行、零 SKIP）', () => {
+test('在场态行为钉：p22b 本机照跑（E4 段在场断言执行、零 SKIP）', (t) => {
+  const absent = absentDirs(RUNTIME_DIRS.writeBackups, RUNTIME_DIRS.panelBackups);
+  if (absent.length) {
+    t.skip('运行期目录缺席（' + absent.join(' + ') + '）＝外部克隆环境正常形态：运行期产物不入库，'
+      + '.gitignore 已声明；本机在场时本节原断言（含"零 SKIP"）照跑，强度不变');
+    return;
+  }
   const r = spawnSync(NODE, [join(ROOT, 'scripts', 'p22b-retention-scope.mjs')], { encoding: 'utf8' });
   assert.equal(r.status, 0, 'p22b exit 0（本机在场）: ' + (r.stderr || '').slice(-300));
   assert.match(r.stdout, /E4a engine default backupRoot exists on disk/);
@@ -53,7 +73,13 @@ test('在场态行为钉：p22b 本机照跑（E4 段在场断言执行、零 SK
   assert.doesNotMatch(r.stdout, /^SKIP /m);
 });
 
-test('在场态行为钉：q2-layer-scan 本机照跑（快照枚举照常、零 SKIP）', () => {
+test('在场态行为钉：q2-layer-scan 本机照跑（快照枚举照常、零 SKIP）', (t) => {
+  const absent = absentDirs(RUNTIME_DIRS.panelBackups);
+  if (absent.length) {
+    t.skip('运行期目录缺席（' + absent.join(' + ') + '）＝外部克隆环境正常形态：运行期产物不入库，'
+      + '.gitignore 已声明；本机在场时本节原断言（含"零 SKIP"）照跑，强度不变');
+    return;
+  }
   const r = spawnSync(NODE, [join(ROOT, 'scripts', 'q2-layer-scan.mjs')], { encoding: 'utf8' });
   assert.equal(r.status, 0, 'q2 exit 0（本机在场）: ' + (r.stderr || '').slice(-300));
   assert.match(r.stdout, /§6 汇总/);

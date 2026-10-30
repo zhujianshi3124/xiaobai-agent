@@ -6,6 +6,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { join, dirname } from 'node:path'
 
@@ -47,7 +48,7 @@ const PATCH_CONFIGS = {
       ],
     },
   },
-  'agent-memory': { dataRoot: '<USER_HOME>\\.agent-memory', defaultWorkspace: null },
+  'agent-memory': { dataRoot: join(homedir(), '.agent-memory'), defaultWorkspace: null },
   'compact-router': {},
 }
 
