@@ -2,7 +2,7 @@
 # 由仓根 package.json 的 dsh.bundle.patch 数组按序拼接（批次 1 地基）。
 #
 # 双挂载现状（项目档案第九节 4/6）：真机 desktop / deskcheck profile 以
-# file:///<TOOLKIT_ROOT>/lib/agent-model-follow.js 绝对路径挂载兼容 shim（转发到本目录
+# file:///<宿主盘符>/<仓根>/lib/agent-model-follow.js 绝对路径挂载兼容 shim（转发到本目录
 # index.js）；本 insert 行属仓内 bundle 链。宿主 link 改指向 isolated 之前，两者不会同时装载；
 # 改指向批次须同步清理 profile 的 file:// 挂载行（环境红线 7.3，另行呈批）。
 #
