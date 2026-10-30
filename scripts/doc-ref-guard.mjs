@@ -120,6 +120,48 @@ function isArchiveRel(rel) {
   return false;
 }
 
+// 历史文档面忽略清单（2026-10-29 外部克隆修复批）——**逐文件显式登记**，不做目录前缀：
+// 每个文件里的现存失效引用都指向"按设计已不存在"的载体，属文档卫生欠账而非活代码问题：
+//   · var/scratch/exe-boot-*／一次性取证工装：当时就在仓外临时目录，取证完毕即销毁，从未入库；
+//   · lib/search-router/*：批次 2 已整包撤除（目录、挂载行、登记项同批移除）；
+//   · state.json／dsh-rate-throttle-learned.json：home 根下的运行期产物，不入库。
+// 这些文件是历史证词（D-2／A#25 同源纪律：改写即篡改），故清偿方式是"如实计数并忽略"，
+// 不是改文档、更不是放宽判据。三道边界写死在此，防清单变成万能豁免：
+//   ① 只按**文件精确匹配**——新增文档一律不在清单内，照常判红；
+//   ② 只忽略 MISS（目标不存在）一种——行号形态／缺符号／缺前缀／错账勘误在历史文件上照红；
+//   ③ 忽略条数逐文件打印并进汇总行，不静默吞掉；清单内当前零忽略的文件另列提示，防僵尸登记。
+// 为什么在勘误解析**之后**过滤：勘误登记先按原判据清偿（89 条覆盖照旧），剩下的 MISS 才归此处，
+// 否则已登记的 token 会因"红已消失"被判成冗余勘误，凭空造出新红。
+const HISTORIC_DOC_FACE = new Map([
+  ['docs/repair-plan-20260923.md', '2026-09-23 修复计划正本：引用 316→160 条已删的一次性取证产物与撤除插件'],
+  ['docs/debt.md', '债务台账：历史条目引用的载体已被清偿删除，条目本身是账实记录'],
+  ['docs/contract-v1.1-recon.md', 'C-1 侦察轮正本：取证当时的目录形态，载体已撤'],
+  ['docs/feature-inventory-20260923.md', '2026-09-23 功能清点：引用 var/scratch 一次性工装与已撤除的 search-router'],
+  ['docs/p0-recon.md', 'P0 侦察：引用批次 2 撤除的 lib/search-router 与已退役的 home 根产物'],
+  ['docs/embed-toolkit.md', '嵌入工具箱记录：引用 exe-boot-015/022 一次性取证产物'],
+  ['docs/contract.md', '契约正本：引用 exe-boot-003 一次性取证产物（删产物不删证词）'],
+  ['docs/migration.md', '迁移指南：引用批次 2 撤除的 lib/search-router（讲的就是"它没了怎么办"）'],
+  ['docs/contract-v1.1-matrix-embed-toolkit.md', 'C-1 逐行矩阵：审计对象是当时行号，载体已撤'],
+  ['docs/contract-v1.1-matrix-migration.md', 'C-1 逐行矩阵：同上'],
+  ['panel/docs/evidence/G-REAL-HOST-SMOKE.md', '证据正本（只增不改）：真机冒烟当时的路径实况'],
+  ['panel/docs/evidence/H-REAL-HOST-REVERIFY.md', '证据正本：真机复验当时的路径实况'],
+  ['panel/docs/evidence/P7-REAL-HOST-SMOKE.md', '证据正本：真机冒烟当时的路径实况'],
+  ['panel/docs/evidence/D4-WEB-SEARCH-HOST-EVIDENCE.md', '证据正本：D4 宿主取证当时的路径实况'],
+  ['panel/docs/evidence/P7-MOCK-BUCKET-LOOP.md', '证据正本：mock 桶回环当时的路径实况'],
+  ['panel/docs/evidence/T0-REAL-PLUGIN-LOOP.md', '证据正本：T0 真插件回环当时的路径实况'],
+  ['panel/docs/evidence/ROUND13-SUPPLEMENTARY-2.md', '证据正本：第 13 轮补充件当时的路径实况'],
+  ['panel/docs/evidence/BREAKPOINT-FORENSICS-20260923.md', '证据正本：断点取证当时的路径实况'],
+  ['panel/docs/evidence/P24-BATCH1-UI-CLOSURE.md', '证据正本：P24 批次 1 UI 收口当时的路径实况'],
+  // 以下两件引用的目标只在**外部沙箱根**（SANDBOX 及其 doctor 仓副本）下存在：
+  // 本机在场时照验（本清单条目在本机显示为零忽略），外部克隆无该根 ⇒ 环境性缺席，不是仓内账实不符。
+  ['panel/docs/evidence/P24-BATCH2-CONSOLE-EVIDENCE.md', '证据正本：引用外部沙箱根下 src/executor.mjs（仓内无此根）'],
+  ['panel/docs/evidence/README.md', '证据索引：引用外部沙箱根下的裸名件（manifest.json / dsh-rate-throttle.json）'],
+]);
+// 忽略判据（单一入口，自证格直接钉它）：文件已登记 **且** 红属 MISS 一种。
+function shouldIgnoreHistoricRed(rel, kind) {
+  return kind === 'MISS' && HISTORIC_DOC_FACE.has(rel);
+}
+
 // 勘误登记解析（裁② 的清偿口）：存档件文末 `#…引用勘误（守卫登记` 一节，逐条
 // `- "<token>" — 说明`。取 token 原文（ASCII 双引号内），只在本文件内生效。
 const ERRATA_HEADING_RE = /^#{1,6}\s*引用勘误（守卫登记/;
@@ -495,6 +537,17 @@ function selfcheckCases() {
       [rtErrata.reds.length, rtErrata.errataOnSkipped], [0, 1]);
     eq('㉘e 前缀形态运行期目录（.doctor-link-backup-<时间戳>）缺席同 SKIP',
       scan('见 `.doctor-link-backup-20260916-074750/link-backup.json`。', false).reds.length, 0);
+    // ㉙ 历史文档面忽略清单的活性与边界（2026-10-29 外部克隆修复批）：清单只按**文件精确匹配**，
+    //    且只吃 MISS——行号形态/缺符号/缺前缀/错账勘误在历史文件上照红（判据不放宽）。
+    eq('㉙ 历史面清单按文件精确命中、只吃 MISS（非 MISS 类别照红，未登记文件不受影响）', [
+      shouldIgnoreHistoricRed('docs/debt.md', 'MISS'),
+      shouldIgnoreHistoricRed('docs/debt.md', 'LINE'),
+      shouldIgnoreHistoricRed('docs/debt.md', 'SYM'),
+      shouldIgnoreHistoricRed('docs/brand-new.md', 'MISS'),
+      shouldIgnoreHistoricRed('panel/docs/evidence/G-REAL-HOST-SMOKE.md', 'MISS'),
+    ], [true, false, false, false, true]);
+    eq('㉙b 清单不含目录前缀项（防整目录无差别豁免）',
+      [...HISTORIC_DOC_FACE.keys()].every((rel) => rel.endsWith('.md')), true);
 
     const bad = cases.filter(c => !c.ok);
     if (bad.length) {
@@ -528,6 +581,7 @@ function main() {
 
   const reds = [];
   const skips = [];
+  const historicIgnored = new Map(); // rel -> { n, kinds:Set }（历史文档面如实计数）
   let totalTokens = 0, totalTolerated = 0, totalFragments = 0, archiveCount = 0;
   let totalSandboxOnly = 0, totalCovered = 0, totalStale = 0, totalRuntimeAbsent = 0, totalErrataOnSkipped = 0;
   for (const t of targets) {
@@ -543,12 +597,23 @@ function main() {
     for (const s of r.skips) skips.push({ file: t.rel, ...s });
     if (r.archive) archiveCount++;
     // 裁②：存档件的红不再分流为警示——与活文档同价、同阻断（行号形态是唯一容忍面，裁①）
-    for (const red of r.reds) reds.push({ file: t.rel, archive: r.archive, ...red });
+    for (const red of r.reds) {
+      // 历史文档面忽略（见 HISTORIC_DOC_FACE）：只吃 MISS，逐条计入 historicIgnored 供汇总行报告
+      if (shouldIgnoreHistoricRed(t.rel, red.kind)) {
+        const slot = historicIgnored.get(t.rel) || { n: 0, kinds: new Set() };
+        slot.n++;
+        slot.kinds.add(red.kind);
+        historicIgnored.set(t.rel, slot);
+        continue;
+      }
+      reds.push({ file: t.rel, archive: r.archive, ...red });
+    }
   }
 
   const kindCount = {};
   for (const r of reds) kindCount[r.kind] = (kindCount[r.kind] || 0) + 1;
   const livingCount = reds.filter((r) => !r.archive).length;
+  const historicTotal = [...historicIgnored.values()].reduce((a, v) => a + v.n, 0);
 
   console.log('════════════════════════════════════════════════════════');
   console.log('文档引用守卫（D-20 / 收口批 C-1）  ' + new Date().toISOString());
@@ -560,6 +625,16 @@ function main() {
     const ln = s.cite.split(':')[1];
     console.log(`      [SKIP] ${s.file}:${ln}  ${s.token}`);
   }
+  // 历史文档面忽略：逐文件如实报告（不静默吞掉），零忽略的登记项另列提示防僵尸登记
+  const historicZero = [...HISTORIC_DOC_FACE.keys()].filter((rel) => !historicIgnored.has(rel));
+  console.log(`  历史文档面忽略 ${historicTotal} 条（清单登记 ${HISTORIC_DOC_FACE.size} 个文件，实际命中 ${historicIgnored.size} 个；仅忽略"目标不存在"一种，行号/缺符号/缺前缀/错账勘误照红）：`);
+  for (const [rel, v] of [...historicIgnored].sort((a, b) => b[1].n - a[1].n)) {
+    console.log(`      [历史面] ${rel}  ${v.n} 条（${[...v.kinds].join('/')}）`);
+  }
+  if (historicZero.length) {
+    console.log(`      清单内当前零忽略 ${historicZero.length} 个（未失效，非静默项；若长期为零应删登记）：`);
+    for (const rel of historicZero) console.log(`      [历史面·零] ${rel}  — ${HISTORIC_DOC_FACE.get(rel)}`);
+  }
   if (reds.length) {
     console.log(`  ✗ 红集 ${reds.length} 条（活文档 ${livingCount}／存档件 ${reds.length - livingCount}；行号 ${kindCount.LINE || 0}、缺文件 ${kindCount.MISS || 0}、缺符号 ${kindCount.SYM || 0}、缺前缀 ${kindCount.PREFIX || 0}、错账勘误 ${kindCount.ERRATA || 0}）：`);
     for (const r of reds) {
@@ -569,7 +644,7 @@ function main() {
     console.log(`  存在 ${reds.length} 项异常`);
     process.exit(1);
   }
-  console.log('  ✓ 全绿（真树零误报：活文档与存档件红集皆为空）');
+  console.log(`  ✓ 全绿（真树零误报：活文档与存档件红集皆为空；历史文档面 ${historicTotal} 条已如实计数忽略）`);
   process.exit(0);
 }
 

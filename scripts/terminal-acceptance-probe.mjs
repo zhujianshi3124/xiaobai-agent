@@ -2,10 +2,13 @@
 // 目的：对第 10 轮硬判据 a–e 逐条给出磁盘铁证。
 import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { join } from "node:path";
+import { join, resolve, dirname } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 
-const ROOT = "<TOOLKIT_ROOT>";
+// 被取证仓根：DSH_TOOLKIT_ROOT 逃生口，缺省按本脚本位置推导（scripts/ 的上一级）。
+// 历史读数里的本机绝对路径是当时实况，此处只换"怎么找到它"，不换判据。
+const ROOT = process.env.DSH_TOOLKIT_ROOT ?? resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const TARGET = join(ROOT, "cordis.patch.yml");
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const line = (t = "") => console.log(t);
@@ -44,7 +47,7 @@ if (headBlob === null) {
 } else {
   const headLf = Buffer.byteLength(headBlob, "utf8");
   line("  HEAD blob LF 字节 = " + headLf);
-  const APPEND_LF = "\n- insert:\n    - id: toolkit-manager\n      name: 'file:///<TOOLKIT_ROOT>/panel/index.js'\n";
+  const APPEND_LF = "\n- insert:\n    - id: toolkit-manager\n      name: '" + pathToFileURL(join(ROOT, "panel", "index.js")).href + "'\n";
   const baselineLf = headBlob.replace(/\r\n/g, "\n") + APPEND_LF;
   const baselineCrlf = baselineLf.replace(/\n/g, "\r\n");
   const baseSha = sha(Buffer.from(baselineCrlf, "utf8"));
@@ -115,7 +118,7 @@ if (!existsSync(bkRoot)) {
 line("");
 line("【b/c】当前 vs 基准 逐行 diff");
 if (headBlob !== null) {
-  const APPEND_LF = "\n- insert:\n    - id: toolkit-manager\n      name: 'file:///<TOOLKIT_ROOT>/panel/index.js'\n";
+  const APPEND_LF = "\n- insert:\n    - id: toolkit-manager\n      name: '" + pathToFileURL(join(ROOT, "panel", "index.js")).href + "'\n";
   const baselineCrlf = (headBlob.replace(/\r\n/g, "\n") + APPEND_LF).replace(/\n/g, "\r\n");
   const A = baselineCrlf.split("\r\n");
   const B = curText.split("\r\n");

@@ -38,7 +38,7 @@ export function createToolkitServices(ctx, config = {}, logger = console) {
   // 前缀归一走 contract.normalizeServicePrefix（与面板 HTTP 基址同源，缺省值单点定义）。
   const servicePrefix = normalizeServicePrefix(config.servicePrefix)
   // H1（债务 D-11）：以前这一行是 `resolve(process.cwd(), '..')`，于是状态与审计的落点
-  // 随"谁怎么把宿主拉起来"而变（实测在 C:\Windows\.registry 与 <PLUGINS_ROOT>\.registry
+  // 随"谁怎么把宿主拉起来"而变（实测在 C:\Windows\.registry 与插件桶根下的 .registry
   // 之间漂移过两次）。现在与面板同源：显式 config 优先，缺省按模块位置锚定，与 cwd 无关。
   const toolkitRoot = resolveToolkitRoot(config)
   const registryCfg = config.registry || {}

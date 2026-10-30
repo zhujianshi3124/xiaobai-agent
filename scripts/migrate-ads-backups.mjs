@@ -1,7 +1,7 @@
 // D-01 迁移工具：把落在 NTFS 备用数据流(ADS) 的写前备份迁回正常文件。
 //
 // 背景：旧 backup.mjs 的 savedAs 只替换 `\` 与 `/`，未处理盘符冒号 ⇒
-// `D:\…\cordis.patch.yml` → `savedAs="D:__dsh-plugins__…yml"`，Windows 把 `D:`
+// `D:\…\cordis.patch.yml` → `savedAs="D:__<路径分段>__…yml"`，Windows 把 `D:`
 // 当作 ADS 说明符 ⇒ 内容写进 ADS，目录里只剩 0 字节文件 `D`。
 //
 // 迁移步骤（对每个备份目录）：

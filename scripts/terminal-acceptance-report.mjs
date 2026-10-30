@@ -16,7 +16,8 @@
 // 终验取证报告生成器（只读取证 + 落报告文本，不改动任何被取证文件）
 import { readFileSync, readdirSync, existsSync, statSync, writeFileSync, mkdirSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { join } from "node:path";
+import { join, resolve, dirname } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 
 // ↓ 冻结硬闸（2026-09-21 Pack I / D-17）：只拦"再跑一次"，不改下面任何取证逻辑与历史结论文本。
@@ -32,14 +33,16 @@ console.log(
 );
 process.exit(2)
 
-const ROOT = "<TOOLKIT_ROOT>";
+// 被取证仓根：DSH_TOOLKIT_ROOT 逃生口，缺省按本脚本位置推导（scripts/ 的上一级）。
+// 历史读数里的本机绝对路径是当时实况，此处只换"怎么找到它"，不换判据。
+const ROOT = process.env.DSH_TOOLKIT_ROOT ?? resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const TARGET = join(ROOT, "cordis.patch.yml");
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const out = [];
 const L = (t = "") => out.push(t);
 
 const headBlob = execFileSync("git", ["show", "HEAD:cordis.patch.yml"], { cwd: ROOT, maxBuffer: 1 << 24 }).toString("utf8");
-const APPEND_LF = "\n- insert:\n    - id: toolkit-manager\n      name: 'file:///<TOOLKIT_ROOT>/panel/index.js'\n";
+const APPEND_LF = "\n- insert:\n    - id: toolkit-manager\n      name: '" + pathToFileURL(join(ROOT, "panel", "index.js")).href + "'\n";
 const baseline = Buffer.from((headBlob.replace(/\r\n/g, "\n") + APPEND_LF).replace(/\n/g, "\r\n"), "utf8");
 const cur = readFileSync(TARGET);
 const curText = cur.toString("utf8");
@@ -169,7 +172,7 @@ try {
   // 本文件头部的冻结硬闸原样保留——下方取证逻辑仍是历史冻结代码，永不执行；此处仅把
   // 「在用 doctor 硬调」字面量切到桶内成员，完成自包含补全（与 p24-ui-matrix.mjs 同款）。
   const cliPath = process.env.DOCTOR_CLI || join(ROOT, "doctor", "cli", "src", "cli.mjs");
-  const r = await import("file:///<TOOLKIT_ROOT>/panel/manager/doctor-runner.mjs").then((m) =>
+  const r = await import(pathToFileURL(join(ROOT, "panel", "manager", "doctor-runner.mjs")).href).then((m) =>
     m.runDoctorDryRun({ cliPath, scopeRoot: ROOT }));
   L("    ok=" + r.ok + "  exit=" + r.exitCode + "  summary=" + JSON.stringify(r.report && r.report.summary));
   const s = r.report && r.report.summary;

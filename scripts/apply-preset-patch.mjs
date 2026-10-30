@@ -66,6 +66,15 @@ const MARKER = join(PLUGIN_DIR, "preset-patch-state.json");
 const SHIPPED_PRESET_IDS = ["standard", "ptc", "cordis"];
 const USER_PRESETS_DIR = process.env.DSH_USER_PRESETS_DIR ?? join(homedir(), ".dsh", ".agent-presets");
 
+// agent-memory 数据根：写进预设的**是部署机家目录下的固定绝对路径**（compact-router 的
+// agentMemoryRoot 契约：跨工作区一致，见 lib/compact-router/guidance.js:5）。
+// 2026-10-29 开源清理批：原先硬编码作者本机 C:\Users\<作者名>\，改为按 homedir() 推导 +
+// AGENT_MEMORY_ROOT 逃生口；本机求值结果与改前逐字相同（Windows 家目录＝C:\Users\<用户>）。
+// 值是**求值后的真路径**（单反斜杠）：预设是 YAML 纯标量，反斜杠按字面量落盘，不需要加倍转义；
+// 加倍反而会写出 C:\\Users\\… 这类双分隔符。改这里必须同步跑 test/preset-patch-escape.test.mjs
+// 与 test/preset-patch-020.test.mjs（后者端到端钉"写进预设的就是这条真路径"）。
+const AGENT_MEMORY_ROOT = process.env.AGENT_MEMORY_ROOT ?? join(homedir(), ".agent-memory");
+
 const ROW_UPSTREAM = [
   "    - id: compaction-basic",
   "      name: '@deepseek-ai/dsh-compaction-basic'",
@@ -78,7 +87,7 @@ const ROW_NEW = [
   "        mode: auto",
   "        fallbackOnRateLimit: true",
   "        archive: true",
-  "        agentMemoryRoot: <USER_HOME>\\.agent-memory",
+  "        agentMemoryRoot: " + AGENT_MEMORY_ROOT,
 ].join("\n");
 
 const OLD_ROW_V2 = [
@@ -88,7 +97,7 @@ const OLD_ROW_V2 = [
   "        mode: auto",
   "        fallbackOnRateLimit: true",
   "        archive: true",
-  "        agentMemoryRoot: <USER_HOME>\\.agent-memory",
+  "        agentMemoryRoot: " + AGENT_MEMORY_ROOT,
 ].join("\n");
 
 const OLD_NAME_LINE = "      name: '@local/dsh-compact-router'";

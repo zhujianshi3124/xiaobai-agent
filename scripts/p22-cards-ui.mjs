@@ -368,7 +368,8 @@ htmlR.setPatch(PATCH_TEXT);
 const planFixture = {
   token: "0".repeat(32),
   kind: "toggle",
-  file: "<TOOLKIT_ROOT>\\cordis.patch.yml",
+  // 确认页展示用夹具：用仓内相对形态，避免把作者本机绝对路径写进产品面用例
+  file: join("cordis.patch.yml"),
   rowId: "rate-throttle",
   layer: "patch-row.disabled",
   targetEnabled: false,

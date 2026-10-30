@@ -13,7 +13,7 @@
 // 用法：node scripts/p24-ui-matrix.mjs
 
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { dirname, join } from "node:path";
@@ -56,7 +56,7 @@ if (BASE_SHA !== BASE_SHA_EXPECT) {
 }
 
 // S2.5 门禁自包含切换的补齐处（S3 迁移笔查出，2026-10-01）：原硬编码在用沙箱 doctor
-// （<TEST_SANDBOX>\projects\doctor@ce31f83，S2.5 起只服务本地冻结线）。矩阵跑的是**仓内副本 scope**，
+// （本机沙箱根下的 doctor@ce31f83 冻结副本，S2.5 起只服务本地冻结线）。矩阵跑的是**仓内副本 scope**，
 // 用冻结 CLI 会与本仓装载面不同源——清单把 provider 声明迁进 provides 后，冻结 CLI 只读
 // legacy registers.providers，会造出一条假 dangling-reference 警告（A0/C3 两格因此红）。
 // 切到桶内成员＝门禁第 3 步与 parity 用的同一个 CLI；DOCTOR_CLI 环境变量仍可覆盖。
@@ -1316,7 +1316,9 @@ section("批2 操作台/双回滚（D 段）");
   check("D8 面板 h2：体检与操作台（内联）", uiText.includes("体检与操作台"), "");
 
   // ---------- D9 真实 ~/.dsh doctor 三件套零触碰（收尾还有真实仓 custody 守卫） ----------
-  check("D9 真实 ~/.dsh 无 doctor-patch-state.json / doctor-backups / doctor-apply.lock", ["doctor-patch-state.json", "doctor-backups", "doctor-apply.lock"].every((n) => !existsSync(join("C:", "Users", "<user>", ".dsh", n))), "");
+  // 家根用 homedir() 推导（开源清理批：不写作者本机用户名）；判据不变＝真实 ~/.dsh 下三件套皆不存在
+  const realDshHome = process.env.DSH_HOME ?? join(homedir(), ".dsh");
+  check("D9 真实 ~/.dsh 无 doctor-patch-state.json / doctor-backups / doctor-apply.lock", ["doctor-patch-state.json", "doctor-backups", "doctor-apply.lock"].every((n) => !existsSync(join(realDshHome, n))), "");
 
   // ---------- D10 删除原因输入（§3.6a：选填/200 截断/null，两渲染器逐字在产品面） ----------
   const dirD10 = makeCopy("doc-d10", { synth: true });

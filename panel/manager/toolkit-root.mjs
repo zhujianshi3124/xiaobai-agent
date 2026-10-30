@@ -4,7 +4,7 @@
 // `panel/index.js` 按**源文件位置**算（`resolve(panelRoot(), '..')`，稳定），
 // 而 `panel/manager/registry-host.mjs` 按**进程 cwd** 算（`resolve(process.cwd(), '..')`），
 // 且面板往下传的是原始 config（没带已 resolve 的值）⇒ 同一次运行里两个根可以差到十万八千里。
-// Pack G 实测同一次冒烟中状态/审计落点在 `C:\Windows\.registry` 与 `<PLUGINS_ROOT>\.registry`
+// Pack G 实测同一次冒烟中状态/审计落点在 `C:\Windows\.registry` 与插件桶根下的 `.registry`
 // 之间跳过两次（证据 docs/debt.md《D-11 追加》），而 `cordis.patch.yml` 的 toolkit-manager
 // 行**整行没有 config**，所以那条 cwd 缺省推导在真实部署里一直是生效路径，不是理论边界。
 //

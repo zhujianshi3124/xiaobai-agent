@@ -1,8 +1,13 @@
 // 合并保真抽检：用户总文档原文（纯文本，传输已剥离 markdown 强调）关键句 → 逐字比对 HANDOFF-MASTER.md
 // 原则：探针 = 用户粘贴原文的逐字片段（不加任何本侧格式）。落盘文件必须原样包含它们。
 import fs from 'node:fs';
+import { join, resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const F = '<TOOLKIT_ROOT>\\panel\\docs\\HANDOFF-MASTER.md';
+// 被检对象路径：HANDOFF_MASTER 逃生口，缺省按本脚本位置推导（scripts/ 的上一级）。
+// 本工装已不在常跑回归清单（见 scripts/regression-all.mjs 头注），这里只换"怎么找到它"。
+const ROOT = process.env.DSH_TOOLKIT_ROOT ?? resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const F = process.env.HANDOFF_MASTER ?? join(ROOT, 'panel', 'docs', 'HANDOFF-MASTER.md');
 const t = fs.readFileSync(F, 'utf8');
 const norm = s => s.replace(/[ \t]+$/gm, '');
 
@@ -74,5 +79,5 @@ for (const probe of PROBES) {
 P('');
 P(`RESULT: ${pass}/${pass + fail} PASS`);
 P('═'.repeat(74));
-fs.writeFileSync('<TOOLKIT_ROOT>\\panel\\docs\\evidence\\MASTER-MERGE-FIDELITY.txt', out.join('\n') + '\n', 'utf8');
+fs.writeFileSync(process.env.MASTER_MERGE_OUT ?? join(ROOT, 'panel', 'docs', 'evidence', 'MASTER-MERGE-FIDELITY.txt'), out.join('\n') + '\n', 'utf8');
 console.log('\n证据已写入: panel/docs/evidence/MASTER-MERGE-FIDELITY.txt');

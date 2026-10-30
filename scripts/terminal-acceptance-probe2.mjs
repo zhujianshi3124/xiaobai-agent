@@ -1,10 +1,13 @@
 // 终验取证探针 2：用备份链重建每一次写的精确 diff（只读）
 import { readFileSync, readdirSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { join } from "node:path";
+import { join, resolve, dirname } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 
-const ROOT = "<TOOLKIT_ROOT>";
+// 被取证仓根：DSH_TOOLKIT_ROOT 逃生口，缺省按本脚本位置推导（scripts/ 的上一级）。
+// 历史读数里的本机绝对路径是当时实况，此处只换"怎么找到它"，不换判据。
+const ROOT = process.env.DSH_TOOLKIT_ROOT ?? resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const TARGET = join(ROOT, "cordis.patch.yml");
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const L = (t = "") => console.log(t);
@@ -15,7 +18,7 @@ const L = (t = "") => console.log(t);
 L("【时点脚本 · 已冻结】本探针判的是第 10 轮（2026-09-18）的基准复原，今天重跑出现 NO ✗ 属预期（详见本文件头注）。");
 
 const headBlob = execFileSync("git", ["show", "HEAD:cordis.patch.yml"], { cwd: ROOT, maxBuffer: 1 << 24 }).toString("utf8");
-const APPEND_LF = "\n- insert:\n    - id: toolkit-manager\n      name: 'file:///<TOOLKIT_ROOT>/panel/index.js'\n";
+const APPEND_LF = "\n- insert:\n    - id: toolkit-manager\n      name: '" + pathToFileURL(join(ROOT, "panel", "index.js")).href + "'\n";
 const baseline = Buffer.from((headBlob.replace(/\r\n/g, "\n") + APPEND_LF).replace(/\n/g, "\r\n"), "utf8");
 
 const bkRoot = join(ROOT, ".panel-write-backups");

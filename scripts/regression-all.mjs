@@ -11,7 +11,7 @@
 //   ① p22b 在场态钉（:61 doesNotMatch(/SKIP：.panel-backups/)，而本机 .panel-backups/ 不存在）
 //   ② q2-layer-scan 在场态钉（同源同因）
 //   ③ doc-ref-guard 在场态全绿（活文档/存档件引用缺文件）
-//   ④ F2⑤ schemastery（<TEST_SANDBOX> 缺 @deepseek-ai/schemastery，环境红线，不许碰）
+//   ④ F2⑤ schemastery（外部沙箱根缺 @deepseek-ai/schemastery，环境红线，不许碰）
 // 这 4 项清不掉，让 hook 跑全链 ⇒ hook 永久拦一切提交。那不是严格，那是逼人 --no-verify。
 // 注意口径：**默认行为不变**。不加参数仍跑全链、仍含 node --test；开关只在显式传入时生效。
 //
@@ -19,10 +19,10 @@
 // ① q2-shipped-scan：读本机 npm 全局安装的 shipped preset（scripts/q2-shipped-scan.mjs:16
 //    ROOT=C:\Users\…\npm\node_modules\@deepseek-ai\dsh\…\dsh-agent-presets，实测该 presets
 //    目录不存在 ⇒ :40 直接 ENOENT 崩）；且 :118 的 outPath 是硬编码仓外绝对路径
-//    <TOOLKIT_ROOT>\…（实测该目录不存在）。属一次性取证工装，
+//    插件桶根下的绝对路径（实测该目录不存在）。属一次性取证工装，
 //    不是每次改动都该跑的东西；外部克隆环境必然崩，留着只会制造永久红。
 //    另：它具备写盘能力（:119 writeFileSync），一个会写文件的脚本不该进常跑回归器。
-// ② master-merge-fidelity：:6 硬编码读 <TOOLKIT_ROOT>\panel\docs\HANDOFF-MASTER.md
+// ② master-merge-fidelity：原先硬编码读插件桶根下的 panel/docs/HANDOFF-MASTER.md
 //    （实测 Test-Path=False）⇒ 起跑即 ENOENT。属一次性合并保真抽检，被检对象已不存在。
 // 两项脚本文件本身保留（历史取证可重放），只是不再进常跑清单。
 import { execFileSync } from "node:child_process";
