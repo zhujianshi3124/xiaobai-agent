@@ -156,6 +156,8 @@ const HISTORIC_DOC_FACE = new Map([
   // 本机在场时照验（本清单条目在本机显示为零忽略），外部克隆无该根 ⇒ 环境性缺席，不是仓内账实不符。
   ['panel/docs/evidence/P24-BATCH2-CONSOLE-EVIDENCE.md', '证据正本：引用外部沙箱根下 src/executor.mjs（仓内无此根）'],
   ['panel/docs/evidence/README.md', '证据索引：引用外部沙箱根下的裸名件（manifest.json / dsh-rate-throttle.json）'],
+  // 台账移出跟踪批（用户 2026-10-30 指令）：该件已按指令从树中移除，证据正本里的存档时点引用随之失去目标。
+  ['panel/docs/evidence/ROUND12-SUPPLEMENTARY-ACCEPTANCE.md', '证据正本：台账 preset-patch-state.json 已按用户 2026-10-30 指令移除出树，本条引用为存档时点引用'],
 ]);
 // 忽略判据（单一入口，自证格直接钉它）：文件已登记 **且** 红属 MISS 一种。
 function shouldIgnoreHistoricRed(rel, kind) {
