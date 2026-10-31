@@ -295,7 +295,7 @@
 - 安全关键脚本改动必须 diff 留痕 + 全流程重验（restart-trigger 的教训：改动无痕导致三周后 runtime 炸雷）。
 - 重启/写盘前必须用户授权；异常带证据回报，不在线上调试；回滚先于排查。
 - 写前备份（.panel-backups/<name>-<stamp>/ + manifest + SHA）；备份必须语义化命名（同名覆盖曾造成假警报）。
-- 不碰：<USER_HOME>\.dsh（除按既定程序读 devices.json）、cloudflared 进程（用户唯一远程命脉，禁止试杀）、5 个子插件的源码目录。
+- 不碰：~/.dsh（除按既定程序读 devices.json）、cloudflared 进程（用户唯一远程命脉，禁止试杀）、5 个子插件的源码目录。
 - 验收标准以用户体感为准：不读任何说明能说出每个插件干嘛的、开没开着；标识符英文原名+中文注释。
 - 每阶段验证 = p1-smoke + 该阶段专项（如 p21-verify）+ doctor dry-run 0/0/0 + pluggable-lint。
 
