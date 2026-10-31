@@ -11,7 +11,10 @@ import { executeApply, executeRollback, readPatchState } from '../src/executor.m
 const doctorRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cliAbs = path.join(doctorRoot, 'src', 'cli.mjs');
 const realConfigRoot = path.join(os.homedir(), '.dsh');
-const realScopeRoot = 'D:/dsh-plugins/dsh-toolkit';
+// 真实在用仓 scope：环境变量逃生口 DSH_REAL_SCOPE_ROOT，缺省按仓根的同级邻居推导
+// （本仓 <盘>:\<父>\dsh-toolkit-isolated 的同级邻居即 <盘>:\<父>\dsh-plugins\dsh-toolkit，逐字等价）。
+// 缺席即 SKIP——判据强度不变，不做"本机不在场"的写死放宽。
+const realScopeRoot = process.env.DSH_REAL_SCOPE_ROOT ?? path.resolve(doctorRoot, '..', '..', '..', 'dsh-plugins', 'dsh-toolkit');
 
 function mkFixture(name) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-doctor-stage3-' + name + '-'));
@@ -53,7 +56,8 @@ function baseFixture(fixture) {
   writeJson(path.join(fixture.profile, 'package.json'), {
     name: 'dsh-profile-web',
     private: true,
-    dependencies: { '@local/dsh-toolkit': 'link:D:/dsh-plugins/dsh-toolkit' },
+    // 夹具声明：只想表达"本地 link 依赖在场"（$from 指针式样校验读的是存在性，不解析目标目录）。
+    dependencies: { '@local/dsh-toolkit': 'link:./fixture-scope' },
     dsh: { profile: { bundles: ['@local/dsh-toolkit'] } },
   });
 }

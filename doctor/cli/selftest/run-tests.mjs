@@ -54,7 +54,8 @@ function baseFixture(fixture) {
   writeJson(path.join(fixture.profile, 'package.json'), {
     name: 'dsh-profile-web',
     private: true,
-    dependencies: { '@local/dsh-toolkit': 'link:D:/dsh-plugins/dsh-toolkit' },
+    // 夹具声明：只想表达"本地 link 依赖在场"（$from 指针式样校验读的是存在性，不解析目标目录）。
+    dependencies: { '@local/dsh-toolkit': 'link:./fixture-scope' },
     dsh: { profile: { bundles: ['@local/dsh-toolkit'] } },
   });
 }

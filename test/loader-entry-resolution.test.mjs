@@ -229,9 +229,10 @@ test('F2④ 情形 A 的另一半：显式文件路径 lib/agent-memory/plugin.j
 
 // ── ⑤ dsh-repo-spec 真目录只读解析冒烟（legacy 形态不回归）──────────────
 
-// 外部夹具仓：DSH_REPO_SPEC 逃生口，缺省沿用既有本机沙箱路径（缺席即 skip，见下方 skip 判据）。
-// 开源清理批只把"路径从哪来"参数化，判据（真件解析不回归 / monorepo 根报 entry-not-found）不变。
-const REPO_SPEC = process.env.DSH_REPO_SPEC ?? 'D:/dsh-test-sandbox/dsh-repo-spec'
+// 外部夹具仓：DSH_REPO_SPEC 逃生口，缺省按仓根的同级邻居推导（<盘>:\<父>\dsh-test-sandbox\dsh-repo-spec，逐字等价）。
+// 开源清理批只把"路径从哪来"参数化，判据（真件解析不回归 / monorepo 根报 entry-not-found）不变；
+// 在场即跑、缺席即 skip 的闸门仍在 existsSync(REPO_SPEC)，不因改缺省值而降级。
+const REPO_SPEC = process.env.DSH_REPO_SPEC ?? resolve(ROOT, '..', 'dsh-test-sandbox', 'dsh-repo-spec')
 
 test('F2⑤：dsh-repo-spec/packages/dsh-plugin（无 dsh.plugin.json 的 legacy 真件）解析不回归', { skip: !existsSync(REPO_SPEC) }, async () => {
   const dir = join(REPO_SPEC, 'packages/dsh-plugin')
