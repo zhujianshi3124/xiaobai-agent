@@ -154,7 +154,10 @@ function preset020BlockMounted(rec, blockId) {
  */
 function presetPatchedAny(toolkitRoot) {
   const state = loadJson(join(toolkitRoot, "preset-patch-state.json"));
-  if (!state || typeof state !== "object") return { patched: false, all: {} };
+  // 台账缺席/不可解析 ⇒ 预设挂载面「无法判定」，不得当成「未挂载」：
+  // 与 doctor engine.mjs 的 presetMountedFor null 分支同口径（文件缺席 = 信号未声明 = 不产出结论）。
+  // unknown 只在「状态文件整个读不出来」时成立；台账在场但某条 sha 对不上仍是确定的未挂载。
+  if (!state || typeof state !== "object") return { patched: false, all: {}, unknown: true };
   const all = {};
   let any = false;
   for (const [id, entry] of Object.entries(state)) {
@@ -178,7 +181,7 @@ function presetPatchedAny(toolkitRoot) {
       if (patched) any = true;
     }
   }
-  return { patched: any, all };
+  return { patched: any, all, unknown: false };
 }
 
 /**
@@ -193,6 +196,11 @@ function presetPatchedAny(toolkitRoot) {
 function determineAbsenceState({ dir, meta, bodyPresent, rowPresent, softRecord, receiptOnFile, presetState }) {
   if (meta.managedBy === "preset") {
     if (bodyPresent && presetState.patched) return "mounted";
+    // 台账缺席/不可解析 ⇒ 预设挂载面「无法判定」。此时不得下任何缺席态**否定结论**
+    // （installed-unmounted / soft-unmounted 都要台账在案才成立），也不新造状态值
+    // （面板客户端不在本卡授权面，新增 status 会落到兜底文案）。⇒ 静默跳过缺席判定，
+    // 回落 P2.4 之前的基线态：本体在即出卡、状态按 mounted 渲染，与 doctor 的 null 分支同口径。
+    if (bodyPresent && presetState.unknown) return "mounted";
     if (bodyPresent && !presetState.patched) return softRecord ? "soft-unmounted" : "installed-unmounted";
     if (!bodyPresent && receiptOnFile) return "true-uninstalled";
     return "unknown-absent";

@@ -73,8 +73,17 @@ function readPresetState(toolkitRoot) {
 function presetBridgePrecheck(toolkitRoot) {
   const state = readPresetState(toolkitRoot);
   if (!state) {
-    const err = new Error("preset-patch-state.json 缺失：compact-router 预设状态未知，拒绝执行（fail-closed）");
+    // fail-closed 语义不变（一律拒绝执行），只把成因分开，便于用户与日志区分两种完全不同的处境：
+    //   ① 文件压根不在 ⇒ 这台机器从未建立过预设台账（例如首次部署、或台账已被移出跟踪）；
+    //   ② 文件在但读不出来 ⇒ 台账损坏（JSON 语法错、权限、被截断），属需要人工介入的事故。
+    // 两者都以 409 preset-state-missing 返回（错误码是既有对外契约，不新增码）。
+    const p = presetStatePath(toolkitRoot);
+    const msg = existsSync(p)
+      ? "preset-patch-state.json 存在但无法解析（台账损坏）：compact-router 预设状态未知，拒绝执行（fail-closed）"
+      : "preset-patch-state.json 不存在（本机从未建立预设台账）：compact-router 预设状态未知，拒绝执行（fail-closed）";
+    const err = new Error(msg);
     err.code = "preset-state-missing";
+    err.reason = existsSync(p) ? "corrupt" : "absent";
     throw err;
   }
   const missing = [];

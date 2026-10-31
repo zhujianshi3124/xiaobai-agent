@@ -1542,13 +1542,20 @@ function buildMountIssues(records) {
       return false;
     } catch (e) { return false; }
   }
+  // 预设挂载面三态：true=已挂载 / false=台账在案但该本体未挂载 / null=无法判定。
+  // 台账整体缺席或不可解析 ⇒ 不得据此判成「已安装未挂载」（那是把"状态未知"说成"状态是否定"）；
+  // 只有 presetNames 声明的预设托管本体才可能出现 null，其余本体照旧按 false 判。
   function presetMountedFor(pkgName) {
-    if (!presetState || typeof presetState !== 'object') return false;
-    if (presetNames) {
-      const hit = presetNames.some(function (n) {
+    const inDeclared = presetNames === null
+      ? true
+      : presetNames.some(function (n) {
         return n && (pkgName === n || (pkgName && pkgName.indexOf(n + '/') === 0));
       });
-      if (!hit) return false;
+    if (!inDeclared) return false;
+    if (!presetState || typeof presetState !== 'object') {
+      // 只有「信号里声明了预设托管名单」的 scope 才把未知态如实报成未知；
+      // 未声明预设通道的 scope 维持旧口径（false），避免把没接预设的世界整体放宽。
+      return presetNames === null ? false : null;
     }
     for (const id of Object.keys(presetState)) {
       if (id === '020') continue; // 命名空间键，非预设 id（下方按 blockSha 对账）
@@ -1589,15 +1596,21 @@ function buildMountIssues(records) {
     return row.name === body.name || (body.name && row.name.indexOf(body.name + '/') === 0);
   }
   for (const body of bodies) {
-    const mounted = rows.some(function (r) { return r.name && rowMountsBody(r, body); }) || presetMountedFor(body.name);
-    if (!mounted) {
-      if (custodyPlugins[body.name]) {
-        push('mount.custody-archived', 'info', body.rel, 1,
-          body.name + ' 本体在、未挂载、保管区有存档：面板「已卸载可恢复」态，可从面板一键恢复。');
-      } else {
-        push('mount.body-without-row', 'warning', body.rel, 1,
-          body.name + ' 已安装未挂载（不在任何挂载面）：是否恢复？可从面板重新挂载，或核对是否为手工摘除。');
-      }
+    const byRow = rows.some(function (r) { return r.name && rowMountsBody(r, body); });
+    if (byRow) continue;
+    const presetMounted = presetMountedFor(body.name);
+    if (presetMounted === true) continue;
+    if (custodyPlugins[body.name]) {
+      push('mount.custody-archived', 'info', body.rel, 1,
+        body.name + ' 本体在、未挂载、保管区有存档：面板「已卸载可恢复」态，可从面板一键恢复。');
+    } else if (presetMounted === null) {
+      // 台账缺席/不可解析 ⇒ 预设挂载面「无法判定」，不产出任何 issue：
+      // 与 :256-257 既有口径一致——「文件缺席 = 信号未声明 = 检查静默跳过」。
+      // 只在「台账在案且确认未挂载」时才报 mount.body-without-row（见下方 else 分支）。
+      continue;
+    } else {
+      push('mount.body-without-row', 'warning', body.rel, 1,
+        body.name + ' 已安装未挂载（不在任何挂载面）：是否恢复？可从面板重新挂载，或核对是否为手工摘除。');
     }
   }
   for (const row of rows) {
