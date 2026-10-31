@@ -122,6 +122,31 @@ const sha = (t) => createHash("sha256").update(t).digest("hex");
 
 // ---------- 副本构造 ----------
 const work = mkdtempSync(join(tmpdir(), "p24-verify-"));
+// 台账夹具（合成，中性路径）：在副本之外生成自洽条目 ⇒ 副本不再读仓根 preset-patch-state.json，
+// 也不依赖真机预设件/用户目录。判据强度不变：file+patchedSha 自洽仍由盘上文件算出。
+let LEDGER_FIXTURE = null;
+function ledgerFixtureState() {
+  if (LEDGER_FIXTURE) return LEDGER_FIXTURE;
+  const base = join(work, "_ledger-fixture");
+  mkdirSync(base, { recursive: true });
+  const state = {};
+  for (const id of ["liangshen", "standard", "ptc", "cordis"]) {
+    const f = join(base, id + ".agent.cordis.yml");
+    const bak = join(base, id + ".agent.cordis.yml.bak");
+    writeFileSync(f, "# fixture preset " + id + "\n- id: compact-router\n", "utf8");
+    writeFileSync(bak, "# fixture preset " + id + "\n- id: compaction-basic\n", "utf8");
+    state[id] = {
+      file: f,
+      backup: bak,
+      patchedSha: sha(readFileSync(f, "utf8")),
+      originalSha: sha(readFileSync(bak, "utf8")),
+      patchedAt: "2026-01-01T00:00:00.000Z",
+    };
+  }
+  LEDGER_FIXTURE = state;
+  return state;
+}
+
 function makeCopy(name, { patchText, withPlugins = true, synth = false } = {}) {
   const dir = join(work, name);
   mkdirSync(dir, { recursive: true });
@@ -129,7 +154,8 @@ function makeCopy(name, { patchText, withPlugins = true, synth = false } = {}) {
   cpSync(join(root, "doctor-signals.json"), join(dir, "doctor-signals.json"));
   cpSync(join(root, "dsh.plugin.json"), join(dir, "dsh.plugin.json"));
   cpSync(join(root, "package.json"), join(dir, "package.json"));
-  cpSync(join(root, "preset-patch-state.json"), join(dir, "preset-patch-state.json"));
+  // 台账来源＝本脚本自带合成夹具（中性占位路径），不再 cpSync 仓根真台账
+  writeFileSync(join(dir, "preset-patch-state.json"), JSON.stringify(ledgerFixtureState(), null, 2), "utf8");
   if (withPlugins) {
     // 批次 5A/5B/5C、闸门正式化批与批次 8 仓内化向 cordis.patch.yml 追加了 9 条挂载行；副本须同构，否则 doctor 报
     // mount.row-without-body（副本里没有这 9 个本体）。search-router 已出包，本体由 synth 开关合成。

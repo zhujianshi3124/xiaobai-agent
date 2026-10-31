@@ -348,11 +348,21 @@ if (!SCAN_PRESETS) {
     console.log("      显式排除名字含 \".bak\" 的目录（apply-preset-patch.mjs:84），故它不会被重复改写；");
     console.log("      但它同样含 agent.cordis.yml + compact-router 行，**是否会被 dsh 当预设列出属于 dsh 侧行为，本轮未验证**。");
 
-    // 对账 preset-patch-state.json 与 preset-backups/
-    const markerPath = join(root, "preset-patch-state.json");
+    // 对账台账与 preset-backups/
+    // 台账来源＝本脚本自带的合成夹具（中性占位路径，不含任何本机路径/用户名）。
+    // 需要拿真台账人工对账时：设 DSH_Q2_MARKER=<路径>，行为与改前相同（读该文件、缺席则判 FAIL）。
+    const MARKER_FIXTURE = {
+      liangshen: { file: "<fixture>/liangshen/agent.cordis.yml", patchedAt: "2026-01-01T00:00:00.000Z" },
+      standard: { file: "<fixture>/standard/agent.cordis.yml", patchedAt: "2026-01-01T00:00:00.000Z" },
+      ptc: { file: "<fixture>/ptc/agent.cordis.yml", patchedAt: "2026-01-01T00:00:00.000Z" },
+      cordis: { file: "<fixture>/cordis/agent.cordis.yml", patchedAt: "2026-01-01T00:00:00.000Z" },
+    };
+    const markerPath = process.env.DSH_Q2_MARKER ?? null;
     const bkDir = join(root, "preset-backups");
     const bks = existsSync(bkDir) ? readdirSync(bkDir).sort() : [];
-    const marker = existsSync(markerPath) ? JSON.parse(readFileSync(markerPath, "utf8")) : null;
+    const marker = markerPath === null
+      ? MARKER_FIXTURE
+      : (existsSync(markerPath) ? JSON.parse(readFileSync(markerPath, "utf8")) : null);
     if (marker) {
       console.log("\n  preset-patch-state.json 记录（" + Object.keys(marker).length + " 条）：");
       for (const [id, rec] of Object.entries(marker)) {
