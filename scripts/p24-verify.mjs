@@ -106,7 +106,10 @@ PANEL_PLUGINS["search-router"] = {
 // 基准滚存（第 15 次＝副本线第 11 次，批次 8 agent-model-follow 仓内化（目录插件形态）：向
 // cordis.patch.yml 追加 agent-model-follow 一条挂载行，行数与内容变更，守卫机制一字未放宽）：
 // efb47700… → 631128a0…。
-const BASELINE_SHA_EXPECTED = "631128a07f9b87b622345f000c6adc5f4d78b8308b9304e849267bda891bc37a";
+// 基准滚存（第 16 次＝副本线第 12 次，2026-10-31：output-gate 四入口接线——cordis.patch.yml
+// 追加 gate-guard/gate-text/gate-tools 三条 insert，使仓库自身装配复现完整闸门，守卫机制一字未放宽）：
+// 631128a0… → 2df82db5…。
+const BASELINE_SHA_EXPECTED = "2df82db50fadd7e18a4ca4afb8be6c28559e0e91ea8b772b864c2aaa9ffdb230";
 if (BASE_SHA !== BASELINE_SHA_EXPECTED) {
   console.error("ABORT: 真实 cordis.patch.yml 基线漂移（" + BASE_SHA.slice(0, 12) + "）——拒绝在非基准态跑验证");
   process.exit(1);

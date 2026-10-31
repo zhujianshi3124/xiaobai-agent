@@ -148,3 +148,19 @@
     - id: governance-output-gate
       name: 'xiaobai-agent/governance-output-gate'
       inject: [commands, sessions]
+
+# 输出闸门的另三个入口（guard / text / tools）：与真机 desktop profile 的 file:// 四挂载
+# 一一对应，使仓库自身装配即可复现完整闸门（此前只挂根入口，文本门与工具门不生效）。
+# 开关态仍由 ~/.dsh/output-gate.json 决定（缺省 OFF）。
+- insert:
+    - id: governance-output-gate-guard
+      name: 'xiaobai-agent/governance-output-gate/gate-guard'
+      inject: [sessions]
+- insert:
+    - id: governance-output-gate-text
+      name: 'xiaobai-agent/governance-output-gate/gate-text'
+      inject: [sessions, agents, tools]
+- insert:
+    - id: governance-output-gate-tools
+      name: 'xiaobai-agent/governance-output-gate/gate-tools'
+      inject: [tools]

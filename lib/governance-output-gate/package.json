@@ -5,6 +5,9 @@
   "type": "module",
   "exports": {
     ".": "./lib/index.js",
+    "./gate-guard": "./lib/gate-guard.js",
+    "./gate-text": "./lib/gate-text.js",
+    "./gate-tools": "./lib/gate-tools.js",
     "./package.json": "./package.json"
   },
   "dsh": {

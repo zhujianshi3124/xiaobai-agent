@@ -2,13 +2,30 @@
 #
 # 与 lib/rate-throttle、lib/agent-memory、lib/governance-preflight、
 # lib/governance-context-audit、lib/governance-overlap-detect、lib/governance-usage-track、
-# lib/governance-tiering、lib/governance-router、lib/governance-cleanup 同族：本子包自带一条
+# lib/governance-tiering、lib/governance-router、lib/governance-cleanup 同族：本子包自带
 # insert 行，由仓根 package.json 的 dsh.bundle.patch 数组按序拼接（批次 1 地基）。
 #
-# 本行不写 disabled（默认挂载）。闸门的开关态由 ~/.dsh/output-gate.json 决定（缺省 OFF），
-# 本行不带 config：入口不读 config，开关只归用户命令 /gate on|off。
-# inject 与入口 lib/index.js 的 `export const inject` 逐字一致（commands / sessions）。
+# 闸门是四个入口（root / guard / text / tools），与真机 profile 的 file:// 挂载一一对应：
+#   root  commands+sessions  /gate 命令与开关态
+#   guard sessions          判官自动建立、轮换与裁决扫描
+#   text   sessions+agents+tools  文本扣留与 send_report
+#   tools tools             写权与信封判定（ctx.tools.guard）
+# 各行不写 disabled（默认挂载）。闸门的开关态由 ~/.dsh/output-gate.json 决定（缺省 OFF），
+# 不带 config：开关只归用户命令 /gate on|off。
+# inject 与各入口模块的 `export const inject` 逐字一致（test/governance-output-gate-assembly.test.mjs 钉住）。
 - insert:
     - id: governance-output-gate
       name: 'xiaobai-agent/governance-output-gate'
       inject: [commands, sessions]
+- insert:
+    - id: governance-output-gate-guard
+      name: 'xiaobai-agent/governance-output-gate/gate-guard'
+      inject: [sessions]
+- insert:
+    - id: governance-output-gate-text
+      name: 'xiaobai-agent/governance-output-gate/gate-text'
+      inject: [sessions, agents, tools]
+- insert:
+    - id: governance-output-gate-tools
+      name: 'xiaobai-agent/governance-output-gate/gate-tools'
+      inject: [tools]

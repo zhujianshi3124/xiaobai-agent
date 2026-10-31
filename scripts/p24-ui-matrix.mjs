@@ -48,7 +48,10 @@ const patchPath = join(root, "cordis.patch.yml");
 // efb47700 → 631128a0。
 // 成因全文与该文件内注释、
 // panel/docs/evidence/H-REAL-HOST-REVERIFY.md、docs/debt.md A#24 / A#25 / 计划 §29 / §44。
-const BASE_SHA_EXPECT = "631128a07f9b87b622345f000c6adc5f4d78b8308b9304e849267bda891bc37a";
+// 基准滚存（第 12 次，2026-10-31）：output-gate 四入口接线——cordis.patch.yml 追加
+// gate-guard/gate-text/gate-tools 三条 insert，仓库自身装配复现完整闸门，守卫机制一字未放宽。
+// 631128a0 → 2df82db5。
+const BASE_SHA_EXPECT = "2df82db50fadd7e18a4ca4afb8be6c28559e0e91ea8b772b864c2aaa9ffdb230";
 const BASE_SHA = createHash("sha256").update(readFileSync(patchPath, "utf8")).digest("hex");
 if (BASE_SHA !== BASE_SHA_EXPECT) {
   console.error("ABORT: 真实 cordis.patch.yml 基线漂移（" + BASE_SHA.slice(0, 12) + "）——拒绝在非基准态跑矩阵");
