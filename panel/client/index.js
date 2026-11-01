@@ -13,6 +13,33 @@ window.__ModuleLoader__.load({
 		// 按固定模块 id 装载，bundle 不经我们手（详见 docs/embed-toolkit.md 嵌入边界）。
 		var PANEL_API = "/api/toolkit-panel";
 
+		// E4 主张1（写令牌）：危险写操作须携带服务端启动时随机签发的令牌（审核意见 13-§7）。
+		// 本页面启动时经只读通道 GET /auth/token 取一次；下方 fetch 包装对所有非 GET 请求
+		// 自动加 x-panel-write-token 头——12+ 处写调用只改这一个咽喉，漏改不会发生。
+		// 令牌取到之前发起的写会收到 403（错误文案会指引重试），不影响 GET/事件流。
+		var WRITE_TOKEN = null;
+		var _panelFetch = (typeof window !== "undefined" && window.fetch ? window.fetch : null);
+		if (_panelFetch) {
+			window.fetch = function (input, init) {
+				init = init || {};
+				var method = String(init.method || (input && input.method) || "GET").toUpperCase();
+				if (method !== "GET" && method !== "HEAD" && WRITE_TOKEN) {
+					try {
+						var headers = new Headers(init.headers || (input && input.headers) || {});
+						if (!headers.has("x-panel-write-token")) headers.set("x-panel-write-token", WRITE_TOKEN);
+						init.headers = headers;
+					} catch (e) { /* 头构造失败按原样发出，由服务端 403 兜底 */ }
+				}
+				return _panelFetch(input, init);
+			};
+			try {
+				_panelFetch(PANEL_API + "/auth/token", { cache: "no-store" })
+					.then(function (r) { return r.ok ? r.json() : null; })
+					.then(function (j) { if (j && j.ok && j.token) WRITE_TOKEN = j.token; })
+					.catch(function () { /* 取不到令牌时写操作将 403，文案可指引刷新 */ });
+			} catch (e) { /* 同上 */ }
+		}
+
 		// ---- 功能描述：说"这个插件是干嘛的"，不出现工程名词 ----
 		var DESCRIPTIONS = {
 			"agent-memory": "记住你说过的话和项目里的重要信息，下次对话还能用上。",

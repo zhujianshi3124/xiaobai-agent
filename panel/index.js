@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
@@ -47,6 +47,7 @@ import {
   checkCrossField,
 } from "./manager/config-whitelist.mjs";
 import { resolveToolkitRoot } from "./manager/toolkit-root.mjs";
+import { redactSecretDeep } from "./manager/redact.mjs";
 
 export const name = "toolkit-manager";
 export const inject = ["webServer"];
@@ -269,14 +270,23 @@ export function apply(ctx, config = {}) {
   // doctor issueId / 快照 stamp 白名单（防注入与路径穿越；设计稿 §6.2/backup.mjs）
   const ISSUE_ID_RE = /^[A-Za-z0-9._-]+$/;
   const STAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z$/;
+  // E4 主张1（审核意见 13-§7）：危险写操作的本机写令牌。loopback 绑定与逐字确认都不当身份认证——
+  // 真正的写授权是每次启动随机的令牌：React 客户端经 GET /auth/token（只读通道）取，兜底页由
+  // 装配时随页注入（同值）。页面只经只读通道下发、响应无 CORS 头 ⇒ 跨站 drive-by 只能盲发
+  // 请求、读不到令牌。config.writeToken 供测试注入固定值；校验点在 guard 写分支（唯一咽喉）。
+  const writeToken = String(config.writeToken || randomBytes(32).toString("hex"));
   // 兜底页 panel.html 的请求基址是标记占位（P7）：装配时按 apiBase 改写。
   // 标记缺失即抛（fail-closed）——宁可面板装不上，也不能让它带着别人的基址上线串扰。
   const UI_API_TOKEN = "__TOOLKIT_PANEL_API_BASE__";
+  const WRITE_TOKEN_MARK = "__TOOLKIT_PANEL_WRITE_TOKEN__";
   const panelHtmlSrc = readFileSync(join(panelRoot(), "client", "panel.html"), "utf8");
   if (!panelHtmlSrc.includes(UI_API_TOKEN)) {
     throw new Error(`panel.html 缺少请求基址标记 ${UI_API_TOKEN}（P7 路由前缀化要求，见 client/panel.html 顶部注释）`);
   }
-  const uiHtml = panelHtmlSrc.replace(UI_API_TOKEN, apiBase);
+  if (!panelHtmlSrc.includes(WRITE_TOKEN_MARK)) {
+    throw new Error(`panel.html 缺少写令牌标记 ${WRITE_TOKEN_MARK}（E4 主张1 要求，见 panel.html PANEL_WRITE_TOKEN 注释）`);
+  }
+  const uiHtml = panelHtmlSrc.replace(UI_API_TOKEN, apiBase).replace(WRITE_TOKEN_MARK, writeToken);
   // P6 退役：v2.html 独立页（/v2/ui）已删除——registry 通用管理区并入唯一 toolkit-panel
   // 标签页（P6 归一）。/v2/connector.js 保留：归一面板客户端经动态 import 复用
   // realtime-connector.mjs（引擎 HTTP 面不退役）。
@@ -337,6 +347,11 @@ export function apply(ctx, config = {}) {
   const guard = (handler, options = {}) => async (request, response) => {
     const isWrite = options.change === true;
     if (isWrite) {
+      const presented = request.headers && request.headers["x-panel-write-token"];
+      if (presented !== writeToken) {
+        sendJson(response, 403, { ok: false, error: "forbidden: missing or invalid write token (GET auth/token first)" });
+        return;
+      }
       if (!isAllowedWrite(request)) {
         sendJson(response, 403, { ok: false, error: "forbidden: write requires paired device (service-checked)" });
         return;
@@ -368,6 +383,20 @@ export function apply(ctx, config = {}) {
         }
         response.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
         response.end(uiHtml);
+      }),
+    },
+    {
+      kind: "exact",
+      path: apiBase + "/auth/token",
+      handler: guard(async (request, response) => {
+        if (request.method !== "GET") {
+          response.writeHead(405, { allow: "GET" });
+          response.end();
+          return;
+        }
+        // 只读通道下发写令牌。响应默认不带 CORS 头 ⇒ 跨站页面读不到（SOP），
+        // 只能盲发请求——令牌不会经此通道泄露给 drive-by 页面。
+        sendJson(response, 200, { ok: true, token: writeToken });
       }),
     },
     {
@@ -444,7 +473,7 @@ export function apply(ctx, config = {}) {
               value: plan.value,
               changed: plan.changed,
               anchorLine: plan.anchorLine,
-              diff: plan.diff,
+              diff: redactSecretDeep(plan.diff),
               expectedSha: plan.expectedSha,
               nextSha: plan.nextSha,
               createdAt: plan.createdAt,
@@ -502,7 +531,7 @@ export function apply(ctx, config = {}) {
               targetEnabled: plan.targetEnabled,
               changed: plan.changed,
               anchorLine: plan.anchorLine,
-              diff: plan.diff,
+              diff: redactSecretDeep(plan.diff),
               crossRefs: plan.crossRefs,
               expectedSha: plan.expectedSha,
               nextSha: plan.nextSha,
@@ -576,7 +605,7 @@ export function apply(ctx, config = {}) {
               changed: plan.changed,
               anchorLine: plan.anchorLine,
               targetLine: plan.targetLine,
-              diff: plan.diff,
+              diff: redactSecretDeep(plan.diff),
               expectedSha: plan.expectedSha,
               nextSha: plan.nextSha,
               createdAt: plan.createdAt,
@@ -957,7 +986,7 @@ export function apply(ctx, config = {}) {
             rowId: plan.rowId,
             key: plan.key,
             value: plan.value,
-            diff: plan.diff,
+            diff: redactSecretDeep(plan.diff),
             expectedSha: plan.expectedSha,
             createdAt: plan.createdAt,
             expiresAt: plan.expiresAt,
@@ -1204,7 +1233,7 @@ export function apply(ctx, config = {}) {
           putPlan(plan);
           sendJson(response, 200, {
             ok: true,
-            plan: { token: plan.token, kind: "snapshot-restore", stamp: plan.stamp, diff: plan.diff, expectedSha: plan.expectedSha, nextSha: plan.nextSha, createdAt: plan.createdAt, expiresAt: plan.expiresAt },
+            plan: { token: plan.token, kind: "snapshot-restore", stamp: plan.stamp, diff: redactSecretDeep(plan.diff), expectedSha: plan.expectedSha, nextSha: plan.nextSha, createdAt: plan.createdAt, expiresAt: plan.expiresAt },
           });
         } catch (error) {
           const code = error instanceof PlanError || (error && error.code) ? error.code : "internal";

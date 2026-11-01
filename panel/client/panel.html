@@ -152,6 +152,25 @@
 // 本页一切请求的唯一基址（P7 嵌入 / REQ-8）：装配时由服务端按 config.servicePrefix 改写
 // 该标记（contract.contractHttpBase）；缺省前缀 toolkit 下恰为 /api/toolkit-panel，URL 零变化。
 var PANEL_API = "__TOOLKIT_PANEL_API_BASE__";
+// E4 主张1（写令牌）：服务端装配时把本标记改写为本次启动的写令牌（与 GET /auth/token 同值）。
+// 本页全部 POST 由下方 fetch 包装自动带 x-panel-write-token 头——写调用分散多处，只改这一个咽喉。
+// 服务端未替换标记时（不该发生）不发送标记文本本身，由服务端 403 兜底。
+var PANEL_WRITE_TOKEN = "__TOOLKIT_PANEL_WRITE_TOKEN__";
+var _panelFetch = (typeof window !== "undefined" && window.fetch) ? window.fetch.bind(window) : null;
+if (_panelFetch) {
+  window.fetch = function (input, init) {
+    init = init || {};
+    var method = String(init.method || (input && input.method) || "GET").toUpperCase();
+    if (method !== "GET" && method !== "HEAD" && PANEL_WRITE_TOKEN && PANEL_WRITE_TOKEN.indexOf("__") !== 0) {
+      try {
+        var headers = new Headers(init.headers || (input && input.headers) || {});
+        if (!headers.has("x-panel-write-token")) headers.set("x-panel-write-token", PANEL_WRITE_TOKEN);
+        init.headers = headers;
+      } catch (e) { /* 头构造失败按原样发出，由服务端 403 兜底 */ }
+    }
+    return _panelFetch(input, init);
+  };
+}
 var state = null;
 function el(id) { return document.getElementById(id); }
 function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }

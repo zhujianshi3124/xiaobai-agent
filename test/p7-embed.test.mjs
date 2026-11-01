@@ -37,7 +37,9 @@ const rootEntry = await import(asUrl(join(ROOT, 'index.js')))
 const clientSrc = readFileSync(join(ROOT, 'panel', 'client', 'index.js'), 'utf8')
 const fallbackSrc = readFileSync(join(ROOT, 'panel', 'client', 'panel.html'), 'utf8')
 const UI_API_TOKEN = '__TOOLKIT_PANEL_API_BASE__'
-const FIXTURE_DEFAULT_ROUTES = 34 // p1-smoke 同一口径：P2.4 22 + v2 管理 10（S4 F-37 起含 GET /v2/memory/search） + connector 1 + 债 7 治理报告只读清单 1
+const FIXTURE_DEFAULT_ROUTES = 35 // p1-smoke 同一口径：P2.4 22 + v2 管理 10（S4 F-37 起含 GET /v2/memory/search） + connector 1 + 债 7 治理报告只读清单 1 + E4 写令牌 GET /auth/token 1
+// E4 主张1：写令牌用测试固定值（真实现是启动随机；config.writeToken 注入是给自动化用的显式通道）
+const TEST_WRITE_TOKEN = 'p7-embed-e4-write-token'
 const fixturePlugin = join(ROOT, 'test', 'fixtures', 'registry', 'contract-plugin')
 // D-10：自带一份夹具开关（仓内 marker.flag 是 gitignore 的运行产物，干净克隆下不存在；
 // 且并行跑的其它文件会翻它）。本文件需要那个插件"装得起来"，所以写出来、退出即清。
@@ -60,6 +62,7 @@ function stackDir(t, name, prefix) {
     config: {
       servicePrefix: prefix,
       toolkitRoot: ROOT,
+      writeToken: TEST_WRITE_TOKEN,
       devicesFile,
       backupRoot: join(tmp, 'backups'),
       doctorCli: join(tmp, 'doctor-unused.mjs'), // 本文件不触发 dry-run 路由，占位即可
@@ -143,6 +146,7 @@ async function call(route, method, opts = {}) {
   if (opts.origin !== undefined) headers.origin = opts.origin
   if (opts.site !== undefined) headers['sec-fetch-site'] = opts.site
   if (opts.cookie !== undefined) headers.cookie = opts.cookie
+  if (opts.writeToken !== undefined) headers['x-panel-write-token'] = opts.writeToken
   const listeners = { data: [], end: [] }
   const request = {
     method,
@@ -181,7 +185,7 @@ async function call(route, method, opts = {}) {
 const v2post = (base, path, body) =>
   fetch(base + path, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', 'x-panel-write-token': TEST_WRITE_TOKEN },
     body: JSON.stringify(body),
   }).then((r) => r.json())
 
@@ -219,6 +223,9 @@ test('兜底页只留一处基址标记，服务端装配时按 apiBase 改写�
   assert.equal((fallbackSrc.match(new RegExp(UI_API_TOKEN, 'g')) || []).length, 1)
   assert.equal((fallbackSrc.match(/["'`]\/api\/toolkit-panel\//g) || []).length, 0)
   assert.match(fallbackSrc, /var PANEL_API = "__TOOLKIT_PANEL_API_BASE__";/)
+  // E4 主张1：写令牌标记同款纪律——恰一处、装配时改写
+  assert.equal((fallbackSrc.match(/__TOOLKIT_PANEL_WRITE_TOKEN__/g) || []).length, 1, '写令牌标记恰一处')
+  assert.match(fallbackSrc, /var PANEL_WRITE_TOKEN = "__TOOLKIT_PANEL_WRITE_TOKEN__";/)
 })
 
 // ── ④ 根入口自描述 ─────────────────────────────────────────────────────
@@ -315,6 +322,7 @@ test('双实例真 HTTP：两个面板同时可达，A 装的插件不出现在 
     const html = await res.text()
     assert.ok(html.includes(`var PANEL_API = "${expectBase}";`), `${prefix} 兜底页基址未随前缀改写`)
     assert.equal(html.includes(UI_API_TOKEN), false, `${prefix} 兜底页标记未被替换`)
+    assert.equal(html.includes('__TOOLKIT_PANEL_WRITE_TOKEN__'), false, `${prefix} 兜底页写令牌标记未被替换（E4）`)
   }
 
   const pre = await v2post(base, '/api/toolkit-panel/v2/install/precheck', { source: { kind: 'local', path: fixturePlugin } })
@@ -450,4 +458,56 @@ test('guard 用被注入的 webServer 与宿主配对服务：读放行、跨站
   // 单实例装配不得出现别的前缀的面（缺省实例只管自己的基址）
   assert.equal([...byPath.keys()].every((p) => p.startsWith('/api/toolkit-panel/')), true)
   assert.equal(byPath.has('/api/tk2-panel/snapshot'), false)
+})
+
+// ── ⑥ E4 主张1：危险写操作的本机写令牌 ─────────────────────────────────
+// 语义：loopback 绑定与逐字确认都不当身份认证（审核意见 13-§7）。写授权 = 启动随机令牌，
+// 只经 GET /auth/token（只读通道、响应无 CORS 头 ⇒ 跨站页面读不到）下发给同源页面。
+test('E4 写令牌：无/错令牌 403 且先行于其余闸；令牌经 GET /auth/token 下发；带令牌跨站仍被 CSRF 闸拒', async (t) => {
+  const stack = stackDir(t, 'wtoken', DEFAULT_SERVICE_PREFIX)
+  const cap = mount(new Context(), stack.config)
+  t.after(() => {
+    for (const d of cap.disposers) d()
+  })
+  const byPath = new Map(cap.routes.map((r) => [r.path, r]))
+  const tokenRoute = byPath.get('/api/toolkit-panel/auth/token')
+  assert.ok(tokenRoute, 'GET /auth/token 路由已注册（FIXTURE_DEFAULT_ROUTES 计入）')
+
+  // 令牌只经只读通道下发，且值与 guard 校验的一致
+  const issued = await call(tokenRoute, 'GET')
+  assert.equal(issued.status, 200)
+  const issuedBody = JSON.parse(issued.payload)
+  assert.equal(issuedBody.ok, true)
+  assert.ok(issuedBody.token, '令牌非空')
+  assert.notEqual(issuedBody.token, '', '令牌不是空串')
+  // stackDir 固定注入了 TEST_WRITE_TOKEN ⇒ 下发值必须一字不差等于注入值（可验证的下发通道）
+  assert.equal(issuedBody.token, TEST_WRITE_TOKEN, '下发令牌必须等于 config.writeToken 注入值')
+
+  const writeRoute = byPath.get('/api/toolkit-panel/toggle/plan')
+  // 无令牌：403 且错误文案点名令牌（不是配对/CSRF 的文案）——闸的顺序在最先
+  const noToken = await call(writeRoute, 'POST', { json: { rowId: 'probe-row', enabled: true } })
+  assert.equal(noToken.status, 403)
+  assert.match(JSON.parse(noToken.payload).error, /write token/, '无令牌的 403 必须点名令牌闸')
+  // 错令牌：同样 403
+  const badToken = await call(writeRoute, 'POST', {
+    json: { rowId: 'probe-row', enabled: true },
+    writeToken: TEST_WRITE_TOKEN + '-forged',
+  })
+  assert.equal(badToken.status, 403)
+  assert.match(JSON.parse(badToken.payload).error, /write token/)
+  // 令牌放行后跨站仍被 CSRF 闸拒（令牌不是 CSRF 的替代，两道闸独立）
+  const crossSiteWithToken = await call(writeRoute, 'POST', {
+    site: 'cross-site',
+    origin: 'https://evil.example',
+    writeToken: TEST_WRITE_TOKEN,
+    json: { rowId: 'probe-row', enabled: true },
+  })
+  assert.equal(crossSiteWithToken.status, 403)
+  assert.doesNotMatch(JSON.parse(crossSiteWithToken.payload).error, /write token/, '过了令牌闸才轮到 CSRF 闸（错误文案应来自后者）')
+  // 令牌 + 同源：闸全过，请求进入 handler（rowId 不存在 ⇒ 业务 400/404，而不是 403）
+  const legit = await call(writeRoute, 'POST', {
+    writeToken: TEST_WRITE_TOKEN,
+    json: { rowId: 'probe-row', enabled: true },
+  })
+  assert.notEqual(legit.status, 403, `带有效令牌的同源写不得被闸拒绝：${legit.payload}`)
 })

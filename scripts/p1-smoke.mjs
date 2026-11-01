@@ -46,10 +46,12 @@ const fakeCtx = {
   get(name) { throw new Error("probe: no cordis service " + name); },
 };
 const panelMod = await import(pathToFileURL(join(panelDir, "index.js")).href);
-panelMod.apply(fakeCtx, { toolkitRoot: root, doctorCli, devicesFile: fixtureFile });
+// E4 主张1：写令牌测试固定值（config.writeToken 注入；sendCaptured 统一带头）
+const TEST_WRITE_TOKEN = "p1-smoke-e4-write-token";
+panelMod.apply(fakeCtx, { toolkitRoot: root, doctorCli, devicesFile: fixtureFile, writeToken: TEST_WRITE_TOKEN });
 // P6 退役：/v2/ui 独立页删除（UI 过渡面退役，管理区并入唯一 toolkit-panel 标签页），
 // /v2/connector.js 保留（归一面板客户端动态 import realtime-connector 的引擎 HTTP 面）。
-check("routes count == 34 (债 7 治理报告只读路由入表: P2.4 22 条 + P4 v2 管理 API 10 条 + connector 1 条 + governance/reports 1 条)", routes.length === 34, String(routes.length));
+check("routes count == 35 (E4 写令牌 GET /auth/token 入表: P2.4 22 条 + P4 v2 管理 API 10 条 + connector 1 条 + governance/reports 1 条 + auth/token 1 条)", routes.length === 35, String(routes.length));
 check("P2.1 plan route registered", routes.some((r) => r.path === "/api/toolkit-panel/plan"));
 check("P2.1 execute route registered", routes.some((r) => r.path === "/api/toolkit-panel/execute"));
 check("P2.1 plan/status route registered", routes.some((r) => r.path === "/api/toolkit-panel/plan/status"));
@@ -63,41 +65,46 @@ check("批2 snapshot-restore/plan+execute registered", routes.some((r) => r.path
 const expectedWhenAllowed = {
   "/api/toolkit-panel/ui": ["GET", 200],
   "/api/toolkit-panel/snapshot": ["GET", 200],
-  "/api/toolkit-panel/doctor/dry-run": ["GET", 405],
-  "/api/toolkit-panel/plan": ["GET", 405],
-  "/api/toolkit-panel/execute": ["GET", 405],
+  // E4 写令牌：只读下发通道（GET 200；真随机令牌本脚本不消费）
+  "/api/toolkit-panel/auth/token": ["GET", 200],
+  "/api/toolkit-panel/doctor/dry-run": ["GET", 403],
+  "/api/toolkit-panel/plan": ["GET", 403],
+  "/api/toolkit-panel/execute": ["GET", 403],
   "/api/toolkit-panel/plan/status": ["GET", 404],
-  "/api/toolkit-panel/toggle/plan": ["GET", 405],
-  "/api/toolkit-panel/config/plan": ["GET", 405],
-  "/api/toolkit-panel/uninstall/plan": ["GET", 405],
-  "/api/toolkit-panel/uninstall/execute": ["GET", 405],
+  "/api/toolkit-panel/toggle/plan": ["GET", 403],
+  "/api/toolkit-panel/config/plan": ["GET", 403],
+  "/api/toolkit-panel/uninstall/plan": ["GET", 403],
+  "/api/toolkit-panel/uninstall/execute": ["GET", 403],
   "/api/toolkit-panel/custody": ["GET", 200],
   // 债 7：治理报告只读清单（GET 形态自然归只读闸；目录缺席也在 200 体里如实申报）
   "/api/toolkit-panel/governance/reports": ["GET", 200],
-  "/api/toolkit-panel/restore/plan": ["GET", 405],
-  "/api/toolkit-panel/restore/execute": ["GET", 405],
+  "/api/toolkit-panel/restore/plan": ["GET", 403],
+  "/api/toolkit-panel/restore/execute": ["GET", 403],
   // 销毁式 v2（L-060）：挂载路由（重装后）
-  "/api/toolkit-panel/mount/plan": ["GET", 405],
-  "/api/toolkit-panel/mount/execute": ["GET", 405],
+  "/api/toolkit-panel/mount/plan": ["GET", 403],
+  "/api/toolkit-panel/mount/execute": ["GET", 403],
   // 批 2（L-064..L-067）：操作台/双回滚路由
   "/api/toolkit-panel/doctor/states": ["GET", 200],
-  "/api/toolkit-panel/doctor/apply/plan": ["GET", 405],
-  "/api/toolkit-panel/doctor/apply/execute": ["GET", 405],
-  "/api/toolkit-panel/doctor/rollback/plan": ["GET", 405],
-  "/api/toolkit-panel/doctor/rollback/execute": ["GET", 405],
-  "/api/toolkit-panel/snapshot-restore/plan": ["GET", 405],
-  "/api/toolkit-panel/snapshot-restore/execute": ["GET", 405],
-  // P4/P5 泛化线：v2 管理 API（写路由非 GET → 405；读路由 200/400）
+  "/api/toolkit-panel/doctor/apply/plan": ["GET", 403],
+  "/api/toolkit-panel/doctor/apply/execute": ["GET", 403],
+  "/api/toolkit-panel/doctor/rollback/plan": ["GET", 403],
+  "/api/toolkit-panel/doctor/rollback/execute": ["GET", 403],
+  "/api/toolkit-panel/snapshot-restore/plan": ["GET", 403],
+  "/api/toolkit-panel/snapshot-restore/execute": ["GET", 403],
+  // P4/P5 泛化线：v2 管理 API。E4 起写路由的 GET 探测先被令牌闸拦（403 先于 handler 的
+  // 405——令牌闸是写路径最外层闸，fail-closed 顺序如此）；读路由 200/400。
+  // v2/install/precheck 是 change:false 只读语义，GET 仍 405。
   "/api/toolkit-panel/v2/snapshot": ["GET", 200],
   "/api/toolkit-panel/v2/health": ["GET", 400],
   // S4 F-37（批1/裁1）：GET 形态自然归只读闸；无 q 探针＝空结果＋参数提示，200
   "/api/toolkit-panel/v2/memory/search": ["GET", 200],
+  // v2/install/precheck 是 change:false 的只读语义 ⇒ GET 不经令牌闸，仍是 handler 的 405
   "/api/toolkit-panel/v2/install/precheck": ["GET", 405],
-  "/api/toolkit-panel/v2/install/confirm": ["GET", 405],
-  "/api/toolkit-panel/v2/uninstall": ["GET", 405],
-  "/api/toolkit-panel/v2/enabled": ["GET", 405],
-  "/api/toolkit-panel/v2/reload": ["GET", 405],
-  "/api/toolkit-panel/v2/config": ["GET", 405],
+  "/api/toolkit-panel/v2/install/confirm": ["GET", 403],
+  "/api/toolkit-panel/v2/uninstall": ["GET", 403],
+  "/api/toolkit-panel/v2/enabled": ["GET", 403],
+  "/api/toolkit-panel/v2/reload": ["GET", 403],
+  "/api/toolkit-panel/v2/config": ["GET", 403],
   "/api/toolkit-panel/v2/events": ["GET", 200],
   "/api/toolkit-panel/v2/connector.js": ["GET", 200],
 };
@@ -144,13 +151,14 @@ function applyWith(pairingService) {
       return pairingService;
     },
   };
-  panelMod.apply(ctx, { toolkitRoot: root, doctorCli, devicesFile: fixtureFile });
+  panelMod.apply(ctx, { toolkitRoot: root, doctorCli, devicesFile: fixtureFile, writeToken: TEST_WRITE_TOKEN });
   return collected;
 }
 const SNAP = "/api/toolkit-panel/snapshot";
 const DOC = "/api/toolkit-panel/doctor/dry-run";
 const NONLOOP = { remote: "127.0.0.1", host: TUNNEL_HOST, cookie: "dsh_pair=" + FIXTURE_DEVICE };
-const WRITE_HEADERS = { site: "same-origin", origin: "https://" + TUNNEL_HOST };
+// E4 主张1：写令牌并入写头常量——所有写流程检查经它统一带有效令牌（令牌闸本身的用例在 p7-embed）
+const WRITE_HEADERS = { site: "same-origin", origin: "https://" + TUNNEL_HOST, "x-panel-write-token": TEST_WRITE_TOKEN };
 
 async function send(route, method, opts = {}) {
   let status = null;
@@ -163,6 +171,8 @@ async function send(route, method, opts = {}) {
   if (opts.origin !== undefined) headers.origin = opts.origin;
   if (opts.cookie !== undefined) headers.cookie = opts.cookie;
   if (opts.site !== undefined) headers["sec-fetch-site"] = opts.site;
+  // E4 主张1：WRITE_HEADERS 展开进 opts 的写令牌照实透传（矩阵用例不带它 ⇒ 不受影响）
+  if (opts["x-panel-write-token"] !== undefined) headers["x-panel-write-token"] = opts["x-panel-write-token"];
   await route.handler(makeRequest(method, headers, opts.remote, opts.json), res);
   return status || 500;
 }
@@ -205,6 +215,8 @@ async function sendCaptured(route, method, opts = {}) {
   if (opts.origin !== undefined) headers.origin = opts.origin;
   if (opts.cookie !== undefined) headers.cookie = opts.cookie;
   if (opts.site !== undefined) headers["sec-fetch-site"] = opts.site;
+  // E4 主张1：功能链检查默认带有效写令牌（要测令牌闸本身的用例在 test/p7-embed.test.mjs）
+  headers["x-panel-write-token"] = TEST_WRITE_TOKEN;
   await route.handler(makeRequest(method, headers, opts.remote, opts.json), res);
   return { status: status || 500, body };
 }

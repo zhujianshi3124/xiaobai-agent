@@ -15,6 +15,7 @@ import { AUDIT_EVENTS, contractHttpBase, normalizeServicePrefix } from '../../co
 // 惰性探测通道（红线 1 合规动态 import，登记豁免见 p4-no-subplugin-import-check.mjs
 // LAZY_PROBE_EXEMPTIONS）；本文件自身的「零具体子插件模块 import」纪律保持不变。
 import { createMemorySearchHandler } from './memory-search.mjs'
+import { redactHomePath, redactViewDeep } from './redact.mjs'
 
 const ERROR_STATUS = {
   'plugin-unknown': 400,
@@ -147,8 +148,11 @@ function entryView(entry, persisted = true) {
     // 面板据此把状态行标注成"运行中 · 未落盘"，并给出原因与修复建议。
     persisted,
     legacy: entry.legacy,
-    config: entry.config,
-    lastError: entry.lastError ?? null,
+    // E4 主张2（审核意见 13-§7）：下发面字段级脱敏——config 深度掩凭据形态、
+    // 路径族键掩本机身份段。统一面板客户端不回传 config（2026-11-01 实证），
+    // /v2/config 的写入值由调用方自带，不经本视图 ⇒ 掩码不会进入写路径。
+    config: redactViewDeep(entry.config),
+    lastError: entry.lastError == null ? null : redactViewDeep(entry.lastError),
     health: entry.health ?? null,
     healthSummary: entry.health
       ? {
@@ -319,11 +323,12 @@ export function createV2Api(deps) {
       ok: true,
       servicePrefix,
       doctorAvailable: doctor !== undefined && doctor !== null,
-      // 审计落盘位置（债务 #4）：让"事后可查"这件事可被发现；面板内历史浏览仍是显式遗留项
-      ...(auditFile ? { auditFile } : {}),
+      // 审计落盘位置（债务 #4）：让"事后可查"这件事可被发现；面板内历史浏览仍是显式遗留项。
+      // E4 主张2：审计位置属"绝对路径/审计位置"脱敏面——掩本机身份段后下发。
+      ...(auditFile ? { auditFile: redactHomePath(auditFile) } : {}),
       // H1（D-11）：两面落盘事实（state=安装记录能否恢复 / audit=流水能否可查）随快照下发，
       // 面板据此在管理区顶部如实申报"未落盘"，而不是等用户重启后才发现条目没了。
-      ...(typeof durability === 'function' ? { durability: durability() } : {}),
+      ...(typeof durability === 'function' ? { durability: redactViewDeep(durability()) } : {}),
       plugins,
     })
   })

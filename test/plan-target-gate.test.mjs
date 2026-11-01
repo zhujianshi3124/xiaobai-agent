@@ -40,12 +40,15 @@ function makeApi(t) {
   const patchFile = join(kitRoot, 'cordis.patch.yml')
   writeFileSync(patchFile, PATCH_TEXT, 'utf8')
   const routes = []
+  // E4 主张1：写令牌用测试固定值（config.writeToken 注入）
+  const TEST_WRITE_TOKEN = 'plan-target-e4-write-token'
   panelMod.apply({
     effect: (cb) => { cb(); return () => {} },
     get: () => undefined,
     webServer: { register: (route) => { routes.push(route); return () => {} } },
   }, {
     toolkitRoot: kitRoot,
+    writeToken: TEST_WRITE_TOKEN,
     backupRoot: join(kitRoot, '.panel-write-backups'),
     doctorCli: join(kitRoot, 'no-such-doctor.mjs'),
     doctorConfigRoot: join(kitRoot, 'doctor-config'),
@@ -57,7 +60,7 @@ function makeApi(t) {
     const request = {
       method,
       url: '/',
-      headers: { host: '127.0.0.1:3080' },
+      headers: { host: '127.0.0.1:3080', 'x-panel-write-token': TEST_WRITE_TOKEN },
       socket: { remoteAddress: '127.0.0.1' },
       on: (event, cb) => { emitter.on(event, cb); return request },
     }

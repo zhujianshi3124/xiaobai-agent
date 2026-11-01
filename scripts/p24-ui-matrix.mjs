@@ -288,6 +288,8 @@ function makeApi(toolkitRoot) {
   };
   panelMod.apply(ctx, {
     toolkitRoot,
+    // E4 主张1：写令牌测试固定值（真实现启动随机；写流程 call() 统一带头）
+    writeToken: "p24-ui-matrix-e4-write-token",
     backupRoot: join(toolkitRoot, ".panel-write-backups"),
     doctorCli: DOCTOR_CLI,
     doctorConfigRoot: join(toolkitRoot, "doctor-config"),
@@ -297,7 +299,8 @@ function makeApi(toolkitRoot) {
     const route = routes.find((r) => r.path === path);
     if (!route) throw new Error("路由未注册：" + path);
     hits[path] = (hits[path] || 0) + 1;
-    const req = makeRequest({ method: opts.method || "GET", body: opts.body, headers: opts.headers });
+    const headers = Object.assign({ "x-panel-write-token": "p24-ui-matrix-e4-write-token" }, opts.headers || {});
+    const req = makeRequest({ method: opts.method || "GET", body: opts.body, headers });
     const res = makeResponse();
     await route.handler(req, res);
     let json = null;

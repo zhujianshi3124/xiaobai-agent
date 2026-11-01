@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import { PLUGINS, DEPENDENCIES } from "./plugin-registry.mjs";
 import { listCustody, getSoftRecord, custodyRoot } from "./custody.mjs";
+import { redactSecretText, redactHomePath } from "./redact.mjs";
 // 提供面单源化（改名批）：不自建第二份优先级逻辑，直接复用装载面 extractRegisters
 // （provides 三槽优先、缺席回落 legacy registers，同 loader 口径；返回 undefined 时置空对象）。
 import { extractRegisters } from "../../registry/dist/loader.js";
@@ -373,7 +374,7 @@ export function buildSoftReceipt(record, dir, ledgerKey) {
   }
   let place = "本体位置：lib/" + dir + "（源代码文件未动）";
   const backup = record.backupDir || record.evidenceBackupDir;
-  if (backup) place += "；改动前备份：" + backup;
+  if (backup) place += "；改动前备份：" + redactHomePath(backup);
   lines.push(place + "。");
   lines.push("恢复方式：确认后按台账插回原位，卸载时改动的系统设置项一并恢复；完成后需重启生效。");
   if (record.userReason) lines.push("卸载原因：" + record.userReason);
@@ -504,7 +505,10 @@ export async function buildSnapshot({ toolkitRoot, hotRouterPath = join(homedir(
 
   return {
     generatedAt: new Date().toISOString(),
-    toolkitRoot,
+    // E4 主张2（审核意见 13-§7）：下发面按字段脱敏——路径掩本机身份段（homedir→~），
+    // patch 原文掩凭据形态子串。客户端对这三个路径字段零消费（2026-11-01 全文检索实证），
+    // patch 文本仅供展示与行解析（凭据掩码不触碰行结构，- id:/键值解析不受影响）。
+    toolkitRoot: redactHomePath(toolkitRoot),
     toolkitName: pkg.name || null,
     toolkitVersion: pkg.version || null,
     self: {
@@ -516,13 +520,13 @@ export async function buildSnapshot({ toolkitRoot, hotRouterPath = join(homedir(
     aliases: suiteManifest.aliases || {},
     exports: pkg.exports || {},
     patch: {
-      path: patchPath,
-      text: patchText,
+      path: redactHomePath(patchPath),
+      text: redactSecretText(patchText),
       rows,
       webRow,
     },
     custody: {
-      root: custodyRoot(toolkitRoot),
+      root: redactHomePath(custodyRoot(toolkitRoot)),
       entries: custodyEntries,
       presetState: presetState.all,
     },
