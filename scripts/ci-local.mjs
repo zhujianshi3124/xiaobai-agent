@@ -12,6 +12,8 @@
 //         + 回归全跑 19 项（含 doctor CLI 四套件，S2.5 起） + 真实仓 doctor dry-run（须 0/0/0）+ patch 行配置校验（I1 / D-16）
 //   --with-scan：追加 p23-verify（不在 regression-all 清单里的两项之一）
 import { spawnSync } from 'node:child_process'
+import fs from 'node:fs'
+import os from 'node:os'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -20,6 +22,32 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 // 零依赖自包含），门禁默认改调桶内成员——在用沙箱仓自此只服务本地冻结线；DOCTOR_CLI 环境变量仍可覆盖。
 const DOCTOR_CLI = process.env.DOCTOR_CLI || resolve(ROOT, 'doctor/cli/src/cli.mjs')
 const withScan = process.argv.includes('--with-scan')
+
+// E3（审核意见 13-§3）：安装根在启动时解析一次，经 DSH_INSTALL_DIR 显式传入各步——
+// 测试结果不再依赖 npm 包装方式/隔离 HOME 下 `npm root -g` 与 homedir 的同源退化
+// （Windows 上两候选同源于 %APPDATA%，判据与 lib/agent-memory/lib/preflight.js locateDshInstall 一致）。
+// 调用方已显式指定 DSH_INSTALL_DIR 时不覆盖（尊重调用方；传错会由 locator fail-closed 报具体缺失路径）。
+function dshInstallCandidates() {
+  const r = spawnSync('npm root -g', { encoding: 'utf8', timeout: 15000, shell: true })
+  const npmRoot = ((r.stdout ?? '').trim().split(/\r?\n/)[0] ?? '').trim()
+  const candidates = npmRoot ? [npmRoot] : []
+  candidates.push(resolve(os.homedir(), 'AppData', 'Roaming', 'npm', 'node_modules'))
+  return candidates
+}
+function dshInstallAnchors(root) {
+  return {
+    installAnchor: resolve(root, '@deepseek-ai', 'dsh', 'package.json'),
+    dshAppBootPath: resolve(root, '@deepseek-ai', 'dsh', 'node_modules', '@deepseek-ai', 'dsh-app-boot', 'lib', 'index.js'),
+  }
+}
+const DSH_ROOT = process.env.DSH_INSTALL_DIR
+  ? null
+  : dshInstallCandidates().find((root) => {
+      const a = dshInstallAnchors(root)
+      return fs.existsSync(a.installAnchor) && fs.existsSync(a.dshAppBootPath)
+    }) || null
+const stepEnv = DSH_ROOT ? { ...process.env, DSH_INSTALL_DIR: DSH_ROOT } : process.env
+if (DSH_ROOT) console.log('DSH_INSTALL_DIR → ' + DSH_ROOT)
 
 const steps = [
   ['npm test（build×3 + lint + 零子插件引用守卫 + typecheck×3 + node --test）', 'npm', ['test', '--prefix', ROOT]],
@@ -52,7 +80,7 @@ console.log('══════════════════════�
 console.log('本机 CI 门禁  ' + new Date().toISOString() + (withScan ? '  (+scan)' : ''))
 console.log('════════════════════════════════════════════════════════')
 for (const [label, cmd, args] of steps) {
-  const r = spawnSync(cmd, args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26, shell: cmd === 'npm' })
+  const r = spawnSync(cmd, args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26, shell: cmd === 'npm', env: stepEnv })
   const out = String(r.stdout || '') + String(r.stderr || '')
   const ok = r.status === 0
   // doctor dry-run 额外判一次数字（CLI 退出码 0 只代表"跑完了"，不代表 0/0/0）
