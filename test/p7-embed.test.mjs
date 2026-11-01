@@ -511,3 +511,25 @@ test('E4 写令牌：无/错令牌 403 且先行于其余闸；令牌经 GET /au
   })
   assert.notEqual(legit.status, 403, `带有效令牌的同源写不得被闸拒绝：${legit.payload}`)
 })
+
+// ── ⑦ P1-5（复审核意见，2026-11-01）：precheck 不是只读路由 ─────────────
+// 语义：precheck 的来源解析对入口做动态 import（loader.ts resolveLocalSource），
+// 模块顶层代码在「预检」即执行——跨站盲 POST 不能再借 change:false 绕过写令牌闸。
+test('P1-5 写令牌：/v2/install/precheck 归写路由——无令牌 403 先于 handler，带令牌才进 handler', async (t) => {
+  const stack = stackDir(t, 'precheck-gate', DEFAULT_SERVICE_PREFIX)
+  const cap = mount(new Context(), stack.config)
+  t.after(() => {
+    for (const d of cap.disposers) d()
+  })
+  const byPath = new Map(cap.routes.map((r) => [r.path, r]))
+  const route = byPath.get('/api/toolkit-panel/v2/install/precheck')
+  assert.ok(route, 'precheck 路由已注册')
+  const noToken = await call(route, 'POST', { json: { source: { kind: 'local', path: 'D:\\nowhere' } } })
+  assert.equal(noToken.status, 403, 'precheck 无令牌必须被令牌闸拦（不再是 change:false）')
+  assert.match(JSON.parse(noToken.payload).error, /write token/, '403 文案必须来自令牌闸（先于 handler）')
+  const legit = await call(route, 'POST', {
+    writeToken: TEST_WRITE_TOKEN,
+    json: { source: { kind: 'local', path: 'D:\\nowhere' } },
+  })
+  assert.notEqual(legit.status, 403, `带有效令牌的 precheck 不得被闸拒绝（进 handler 后业务自判）：${legit.payload}`)
+})

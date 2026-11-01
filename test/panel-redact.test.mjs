@@ -8,7 +8,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { redactSecretText, redactHomePath, redactViewDeep } from '../panel/manager/redact.mjs'
+import { redactSecretText, redactHomePath, redactViewDeep, mergePreservingRedacted } from '../panel/manager/redact.mjs'
 import { buildSoftReceipt, buildSnapshot } from '../panel/manager/snapshot.mjs'
 
 test('redactSecretText：凭据形态掩码（保留前 6 字符），普通文本零改动', () => {
@@ -97,4 +97,46 @@ test('buildSnapshot：home 前缀 toolkitRoot → ~；patch 原文里的凭据�
   assert.ok(!snap.patch.text.includes('sk-AbCdEfGhIjKlMnOpQrStUvWx'), '凭据全文不得出现在快照')
   assert.ok(snap.patch.rows.some((r) => r.id === 'probe-row'), '行解析不受掩码影响（probe-row 仍在）')
   assert.ok(snap.patch.path.startsWith('~'), `patch.path 须脱敏：${snap.patch.path}`)
+})
+
+test('redactHomePath：正反斜杠混排也能掩 homedir 前缀（复审核意见「脱敏缺口」，2026-11-01）', () => {
+  const home = homedir()
+  const forward = home.replace(/\\/g, '/')
+  const out = redactHomePath(forward + '/.dsh/state.json')
+  assert.ok(out.startsWith('~'), `正斜杠形态的家目录路径也须被掩：${out}`)
+  assert.ok(!out.includes(home), '原样 homedir 不得残留')
+})
+
+test('mergePreservingRedacted：回传掩码视图 ⇒ 原值落盘；真改的字段按回传值生效（P1-4，2026-11-01）', () => {
+  const original = {
+    apiKey: 'sk-AbCdEfGhIjKlMnOpQrStUvWx',
+    state: { path: join(homedir(), '.dsh', 'state.json'), mode: 'fast' },
+    retries: 3,
+  }
+  // 客户端把视图下发的脱敏 config 原样带回（只改了 retries）
+  const incoming = {
+    apiKey: 'sk-AbC…(redacted)',
+    state: { path: redactHomePath(original.state.path), mode: 'fast' },
+    retries: 5,
+  }
+  const merged = mergePreservingRedacted(incoming, original)
+  assert.equal(merged.apiKey, original.apiKey, '掩码值不得覆盖真实 key（P1-4 漏洞本体）')
+  assert.equal(merged.state.path, original.state.path, '掩码路径同样不得覆盖原值')
+  assert.equal(merged.state.mode, 'fast')
+  assert.equal(merged.retries, 5, '真改的字段按回传值写入')
+  // 全字段都没改（纯保存）⇒ 与原值逐字段相等
+  const untouched = mergePreservingRedacted(redactViewDeep(original), original)
+  assert.deepEqual(untouched, original)
+  // 用户把 key 真的改成新值 ⇒ 按回传值写入
+  const rotated = mergePreservingRedacted({ ...incoming, apiKey: 'sk-Zz9Yy8Xx7Ww6Vv5Uu4Tt3Ss' }, original)
+  assert.equal(rotated.apiKey, 'sk-Zz9Yy8Xx7Ww6Vv5Uu4Tt3Ss')
+  // 原值没有的键按回传值新增；原值有而视图没带的键保留
+  const added = mergePreservingRedacted({ ...incoming, extra: 'new' }, original)
+  assert.equal(added.extra, 'new')
+  assert.equal(added.retries, 5)
+  const partial = mergePreservingRedacted({ retries: 1 }, original)
+  assert.deepEqual(partial, { ...original, retries: 1 })
+  // 原值缺失（新装插件 config 为空）⇒ 按回传值
+  assert.deepEqual(mergePreservingRedacted(incoming, undefined), incoming)
+  assert.deepEqual(mergePreservingRedacted(undefined, original), original)
 })

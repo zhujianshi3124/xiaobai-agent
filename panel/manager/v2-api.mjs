@@ -15,7 +15,7 @@ import { AUDIT_EVENTS, contractHttpBase, normalizeServicePrefix } from '../../co
 // 惰性探测通道（红线 1 合规动态 import，登记豁免见 p4-no-subplugin-import-check.mjs
 // LAZY_PROBE_EXEMPTIONS）；本文件自身的「零具体子插件模块 import」纪律保持不变。
 import { createMemorySearchHandler } from './memory-search.mjs'
-import { redactHomePath, redactViewDeep } from './redact.mjs'
+import { redactHomePath, redactViewDeep, mergePreservingRedacted } from './redact.mjs'
 
 const ERROR_STATUS = {
   'plugin-unknown': 400,
@@ -149,8 +149,9 @@ function entryView(entry, persisted = true) {
     persisted,
     legacy: entry.legacy,
     // E4 主张2（审核意见 13-§7）：下发面字段级脱敏——config 深度掩凭据形态、
-    // 路径族键掩本机身份段。统一面板客户端不回传 config（2026-11-01 实证），
-    // /v2/config 的写入值由调用方自带，不经本视图 ⇒ 掩码不会进入写路径。
+    // 路径族键掩本机身份段。客户端**会**把本视图的 config 原样回传保存（复审核意见
+    // P1-4，2026-11-01）⇒ /v2/config 写入前经 mergePreservingRedacted 把「掩码后与
+    // 原值相等」的字段还原为原值，掩码本身不落盘。
     config: redactViewDeep(entry.config),
     lastError: entry.lastError == null ? null : redactViewDeep(entry.lastError),
     health: entry.health ?? null,
@@ -410,7 +411,12 @@ export function createV2Api(deps) {
       if (!('config' in body)) {
         throw Object.assign(new Error('缺少 config'), { code: 'value-invalid' })
       }
-      await registry.setConfig(id, body.config)
+      // P1-4（复审核意见，2026-11-01）：客户端保存时会原样回传视图下发的脱敏 config，
+      // 直接落盘会把真实 key 永久替换成掩码。先与持久层原值合并：掩码后相等的字段
+      // 还原为原值（未真改），真改的字段按回传值写入。
+      const current = registry.get(id)?.config
+      const merged = mergePreservingRedacted(body.config, current)
+      await registry.setConfig(id, merged)
       sendJson(response, 200, { ok: true, entry: entryView(registry.get(id), stateOk()) })
     }),
   )
@@ -421,7 +427,10 @@ export function createV2Api(deps) {
     { method: 'GET', path: `${V2}/snapshot`, handler: snapshot, change: false },
     { method: 'GET', path: `${V2}/health`, handler: health, change: false },
     { method: 'GET', path: `${V2}/memory/search`, handler: memorySearchHandler, change: false },
-    { method: 'POST', path: `${V2}/install/precheck`, handler: installPrecheck, change: false },
+    // P1-5（复审核意见，2026-11-01）：precheck 的来源解析会对入口做动态 import（loader.ts
+    // resolveLocalSource），模块顶层代码在「预检」阶段即执行——不是只读操作，必须走
+    // 与 install/confirm 相同的写令牌＋配对＋CSRF 闸，跨站盲 POST 才进不到 handler。
+    { method: 'POST', path: `${V2}/install/precheck`, handler: installPrecheck, change: true },
     { method: 'POST', path: `${V2}/install/confirm`, handler: installConfirm, change: true },
     { method: 'POST', path: `${V2}/uninstall`, handler: uninstall, change: true },
     { method: 'POST', path: `${V2}/enabled`, handler: setEnabled, change: true },

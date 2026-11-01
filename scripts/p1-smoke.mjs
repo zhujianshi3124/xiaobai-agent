@@ -93,13 +93,13 @@ const expectedWhenAllowed = {
   "/api/toolkit-panel/snapshot-restore/execute": ["GET", 403],
   // P4/P5 泛化线：v2 管理 API。E4 起写路由的 GET 探测先被令牌闸拦（403 先于 handler 的
   // 405——令牌闸是写路径最外层闸，fail-closed 顺序如此）；读路由 200/400。
-  // v2/install/precheck 是 change:false 只读语义，GET 仍 405。
+  // P1-5（复审核意见，2026-11-01）：precheck 的来源解析会动态 import 入口模块，不是
+  // 只读操作 ⇒ 归写路由，GET 同样先被令牌闸拦 403。
   "/api/toolkit-panel/v2/snapshot": ["GET", 200],
   "/api/toolkit-panel/v2/health": ["GET", 400],
   // S4 F-37（批1/裁1）：GET 形态自然归只读闸；无 q 探针＝空结果＋参数提示，200
   "/api/toolkit-panel/v2/memory/search": ["GET", 200],
-  // v2/install/precheck 是 change:false 的只读语义 ⇒ GET 不经令牌闸，仍是 handler 的 405
-  "/api/toolkit-panel/v2/install/precheck": ["GET", 405],
+  "/api/toolkit-panel/v2/install/precheck": ["GET", 403],
   "/api/toolkit-panel/v2/install/confirm": ["GET", 403],
   "/api/toolkit-panel/v2/uninstall": ["GET", 403],
   "/api/toolkit-panel/v2/enabled": ["GET", 403],
@@ -131,6 +131,8 @@ const WRITE_ROUTES = new Set([
   "/api/toolkit-panel/snapshot-restore/plan",
   "/api/toolkit-panel/snapshot-restore/execute",
   // P4/P5 泛化线：v2 管理 API 写路由（registry 操作，guard change:true）
+  // P1-5（复审核意见，2026-11-01）：precheck 的来源解析会动态 import ⇒ 写路由
+  "/api/toolkit-panel/v2/install/precheck",
   "/api/toolkit-panel/v2/install/confirm",
   "/api/toolkit-panel/v2/uninstall",
   "/api/toolkit-panel/v2/enabled",

@@ -40,6 +40,9 @@
     "./governance-router": "./lib/governance-router/index.js",
     "./governance-cleanup": "./lib/governance-cleanup/index.js",
     "./governance-output-gate": "./lib/governance-output-gate/lib/index.js",
+    "./governance-output-gate/gate-guard": "./lib/governance-output-gate/lib/gate-guard.js",
+    "./governance-output-gate/gate-text": "./lib/governance-output-gate/lib/gate-text.js",
+    "./governance-output-gate/gate-tools": "./lib/governance-output-gate/lib/gate-tools.js",
     "./package.json": "./package.json"
   },
   "files": [

@@ -8,9 +8,10 @@
 //   ② 本机身份路径 —— os.homedir() 前缀替换为 ~，\Users\<名>\ 中段替换为 \Users\…\；
 //      其余路径原样保留（面板 UI 需可辨识；真正的身份泄密点在用户名段）。
 // 深度遍历：redactSecretDeep 对任意 JSON 值递归（字符串掩码、结构原样、不改变键）。
-// 安全边界：这些函数只用于**展示面**。凡客户端会回传给服务端落盘的值（config/plan 的
-// value、两段式执行走 plan token），服务端按真实文件计算，不经过本模块——掩码不会
-// 进入任何写路径。
+// 安全边界（2026-11-01 复审核意见 P1-4 更正）：面板客户端**会**把视图下发的 config
+// 原样回传保存（panel/client/index.js 保存按钮直接回传 p.config）——因此 /v2/config
+// 写入前必须经 mergePreservingRedacted 把「与原值掩码后相等」的字段还原为原值，
+// 掩码本身不得落盘。plan/value 等其余写路径仍不经本模块。
 import { homedir } from 'node:os'
 
 const SECRET_PATTERNS = [
@@ -39,8 +40,13 @@ export function redactHomePath(p) {
   let out = p
   try {
     const home = homedir()
-    if (home && out.length >= home.length && out.slice(0, home.length).toLowerCase() === home.toLowerCase()) {
-      out = '~' + out.slice(home.length)
+    // 前缀比较前先把两种斜杠归一（替换长度不变，切片下标对原串仍有效）：
+    // homedir() 返回反斜杠而目标路径经 join/URL 变形成正斜杠时，不归一会整条漏掩
+    // （复审核意见「脱敏缺口」，2026-11-01）。
+    const outN = out.replace(/\//g, '\\')
+    const homeN = String(home ?? '').replace(/\//g, '\\')
+    if (homeN && outN.length >= homeN.length && outN.slice(0, homeN.length).toLowerCase() === homeN.toLowerCase()) {
+      out = '~' + out.slice(homeN.length)
     }
   } catch {
     // homedir 不可得时跳过前缀规则，中段规则照做
@@ -77,4 +83,51 @@ export function redactViewDeep(value) {
     return out
   }
   return value
+}
+
+function isPlainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+/** 视图对该叶子实际会下发的形态：与 redactViewDeep 的逐键规则一致（路径族键加本机身份掩码）。 */
+function viewMasked(key, value) {
+  if (typeof value === 'string' && /path|file|root|dir|audit|home/i.test(key)) {
+    return redactHomePath(redactSecretText(value))
+  }
+  return redactViewDeep(value)
+}
+
+/**
+ * 把「客户端回传的配置」合并到持久层原值上，掩码不落盘（复审核意见 P1-4，2026-11-01）。
+ * 规则：回传叶子与原值叶子**按视图规则掩码后相等** ⇒ 保留原值（即客户端只是把脱敏
+ * 视图原样带回，未真改该字段）；否则按回传值写入（真改就生效）。原值有而视图没带的
+ * 键保留原值。比较必须带键名上下文——路径族键在视图里多做一层本机身份掩码。
+ */
+export function mergePreservingRedacted(incoming, original) {
+  if (incoming === undefined) return original
+  if (original === undefined) return incoming
+  if (isPlainObject(incoming) && isPlainObject(original)) {
+    const out = {}
+    const keys = new Set([...Object.keys(original), ...Object.keys(incoming)])
+    for (const k of keys) {
+      const iv = incoming[k]
+      const ov = original[k]
+      if (iv === undefined) {
+        out[k] = ov
+        continue
+      }
+      if (isPlainObject(iv) && isPlainObject(ov)) {
+        out[k] = mergePreservingRedacted(iv, ov)
+        continue
+      }
+      if (JSON.stringify(viewMasked(k, iv)) === JSON.stringify(viewMasked(k, ov))) {
+        out[k] = ov
+        continue
+      }
+      out[k] = iv
+    }
+    return out
+  }
+  if (JSON.stringify(redactViewDeep(incoming)) === JSON.stringify(redactViewDeep(original))) return original
+  return incoming
 }

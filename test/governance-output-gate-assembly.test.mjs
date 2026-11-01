@@ -80,3 +80,40 @@ test("cordis.patch.yml 模板同样挂载四个入口", () => {
 		assert.deepEqual(hit.inject, entry.mod.inject, entry.id + " inject 与模块自述不一致");
 	}
 });
+
+test("根包 exports 暴露三个闸门子路径入口（patch 挂载名是根包子路径）", () => {
+	const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
+	for (const entry of ENTRIES.slice(1)) {
+		assert.equal(
+			pkg.exports["./governance-output-gate/" + entry.key],
+			"./lib/governance-output-gate/lib/" + entry.key + ".js",
+			"./governance-output-gate/" + entry.key + " 未暴露或指向错误文件",
+		);
+	}
+});
+
+// P0-1（复审核意见，2026-11-01）：此前的装配测试按相对路径 import、只查嵌套子包的
+// package.json——两个动作都绕开根包 exports，patch 里真正使用的「xiaobai-agent/…」
+// 挂载名解析不到也照样全绿。本测试从装配文件本体提取每个挂载 name，逐条走正常包
+// 解析（import.meta.resolve 走 exports 强制），任何缺漏的根包子路径当场红。
+test("装配面每个挂载 name 都能按正常包解析（含部署占位符豁免）", () => {
+	const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
+	const files = ["cordis.patch.yml", ...pkg.dsh.bundle.patch];
+	const names = new Set();
+	for (const rel of files) {
+		const raw = fs.readFileSync(path.join(ROOT, rel), "utf8");
+		for (const m of raw.matchAll(/name:\s*'([^']+)'/g)) names.add(m[1]);
+	}
+	assert.ok(names.has("xiaobai-agent/governance-output-gate/gate-tools"), "挂载面缺 gate-tools");
+	assert.ok(names.has("xiaobai-agent/governance-output-gate/gate-text"), "挂载面缺 gate-text");
+	const unresolvable = [];
+	for (const name of names) {
+		if (!name.startsWith("xiaobai-agent/")) continue; // <PANEL_ENTRY_URL> 等部署占位符不在解析面
+		try {
+			import.meta.resolve(name);
+		} catch {
+			unresolvable.push(name);
+		}
+	}
+	assert.deepEqual(unresolvable, [], "以下挂载名在根包 exports 下不可解析: " + unresolvable.join(", "));
+});
