@@ -97,6 +97,9 @@ test('buildSnapshot：home 前缀 toolkitRoot → ~；patch 原文里的凭据�
   assert.ok(!snap.patch.text.includes('sk-AbCdEfGhIjKlMnOpQrStUvWx'), '凭据全文不得出现在快照')
   assert.ok(snap.patch.rows.some((r) => r.id === 'probe-row'), '行解析不受掩码影响（probe-row 仍在）')
   assert.ok(snap.patch.path.startsWith('~'), `patch.path 须脱敏：${snap.patch.path}`)
+  // 复审核意见「脱敏缺口」（2026-11-01）：整份快照序列化后不得含原始凭据——覆盖
+  // rows/webRow/patchRow/configPanel.values 等结构化下发面（patch.text 已单独断言）。
+  assert.ok(!JSON.stringify(snap).includes('sk-AbCdEfGhIjKlMnOpQrStUvWx'), '整份快照不得含原始凭据（结构化字段同规掩码）')
 })
 
 test('redactHomePath：正反斜杠混排也能掩 homedir 前缀（复审核意见「脱敏缺口」，2026-11-01）', () => {

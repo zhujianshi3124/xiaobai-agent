@@ -51,8 +51,11 @@ const patchPath = join(root, "cordis.patch.yml");
 // 基准滚存（第 12 次，2026-10-31）：output-gate 四入口接线——cordis.patch.yml 追加
 // gate-guard/gate-text/gate-tools 三条 insert，仓库自身装配复现完整闸门，守卫机制一字未放宽。
 // 631128a0 → 2df82db5。
-const BASE_SHA_EXPECT = "2df82db50fadd7e18a4ca4afb8be6c28559e0e91ea8b772b864c2aaa9ffdb230";
-const BASE_SHA = createHash("sha256").update(readFileSync(patchPath, "utf8")).digest("hex");
+// 基准滚存（第 13 次，2026-11-01 复审核意见「回归链 CRLF」）：基线口径从原始字节哈希改为
+// 换行归一哈希（CRLF / LF 两种检出形态同值），2df82db5（CRLF 原始字节）→ 6098aebd（LF 归一
+// 内容）；模板内容一字未变，守卫机制一字未放宽。
+const BASE_SHA_EXPECT = "6098aebd86f4230e1b9f8177e26864200b51fa682f737fbeee78b8920a8a6c8c";
+const BASE_SHA = createHash("sha256").update(readFileSync(patchPath, "utf8").replace(/\r\n/g, "\n")).digest("hex");
 if (BASE_SHA !== BASE_SHA_EXPECT) {
   console.error("ABORT: 真实 cordis.patch.yml 基线漂移（" + BASE_SHA.slice(0, 12) + "）——拒绝在非基准态跑矩阵");
   process.exit(1);
@@ -1350,7 +1353,7 @@ section("批2 操作台/双回滚（D 段）");
 // 6. 收尾：真实仓零写入自证
 // ════════════════════════════════════════════════════════════
 section("收尾");
-check("真实 cordis.patch.yml 全程零写入（基准 631128a0… 不变）", sha(readFileSync(patchPath, "utf8")) === BASE_SHA, sha(readFileSync(patchPath, "utf8")).slice(0, 12));
+check("真实 cordis.patch.yml 全程零写入（LF 归一基线不变，滚存史见第 13 次注）", sha(readFileSync(patchPath, "utf8").replace(/\r\n/g, "\n")) === BASE_SHA, sha(readFileSync(patchPath, "utf8").replace(/\r\n/g, "\n")).slice(0, 12));
 // 守卫口径（Q1' 修正，L-059）：放行「面板运行期合法的长期落痕」，只拦本矩阵**新增**产物。
 //   soft-uninstalls.json —— 软卸载台账（面板发起）
 //   row-adjacency.json    —— 行块邻接留痕（D-UI-05 长期证据，与清账解耦、只增不减）

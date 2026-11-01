@@ -543,12 +543,13 @@ console.log('\n── ③ 仓内一致性守卫 ──')
 }
 
 {
-  // 3.5 p24 两脚本的 sha 硬闸已滚存到当前真值（第 14 次）
-  const realSha = createHash('sha256').update(readFileSync(join(root, 'cordis.patch.yml'), 'utf8')).digest('hex')
+  // 3.5 p24 两脚本的 sha 硬闸已滚存到当前真值（第 17 / 第 13 次；2026-11-01 起两脚本
+  // 基线均为「换行归一哈希」口径——CRLF / LF 检出形态同值，复审核意见「回归链 CRLF」）
+  const realSha = createHash('sha256').update(readFileSync(join(root, 'cordis.patch.yml'), 'utf8').replace(/\r\n/g, '\n')).digest('hex')
   const pv = readFileSync(join(root, 'scripts', 'p24-verify.mjs'), 'utf8')
   const pm = readFileSync(join(root, 'scripts', 'p24-ui-matrix.mjs'), 'utf8')
-  check('3.5 p24-verify 基准 sha = 真实 sha', pv.includes('"' + realSha + '"'), '基准与真值不符（真值 ' + realSha.slice(0, 12) + '…）')
-  check('3.5 p24-ui-matrix 基准 sha = 真实 sha', pm.includes('"' + realSha + '"'), '基准与真值不符')
+  check('3.5 p24-verify 基准 sha（LF 归一口径）= 真实 sha', pv.includes('"' + realSha + '"'), '基准与真值不符（真值 ' + realSha.slice(0, 12) + '…）')
+  check('3.5 p24-ui-matrix 基准 sha（LF 归一口径）= 真实 sha', pm.includes('"' + realSha + '"'), '基准与真值不符')
   check('3.5 p24-verify 副本目录含 governance-router（否则 doctor 报 row-without-body）', pv.includes('"governance-router"'))
   check('3.5 p24-ui-matrix 副本目录含 governance-router', pm.includes('"governance-router"'))
   check('3.5 p24-verify 副本目录含 governance-cleanup', pv.includes('"governance-cleanup"'))
@@ -558,8 +559,8 @@ console.log('\n── ③ 仓内一致性守卫 ──')
   check('3.5 p24-verify 副本目录含 agent-model-follow', pv.includes('"agent-model-follow"'))
   check('3.5 p24-ui-matrix 副本目录含 agent-model-follow', pm.includes('"agent-model-follow"'))
   // 滚存笔必须留痕（本项目的硬规矩：数据变更要能在注释里读出来）
-  check('3.5 p24-verify 有第 14 次滚存笔', pv.includes('第 14 次'))
-  check('3.5 p24-ui-matrix 有第 14 次滚存笔', pm.includes('第 14 次'))
+  check('3.5 p24-verify 有第 17 次滚存笔', pv.includes('第 17 次'))
+  check('3.5 p24-ui-matrix 有第 13 次滚存笔', pm.includes('第 13 次'))
   check('3.5 p24-verify 有第 15 次滚存笔', pv.includes('第 15 次'))
   check('3.5 p24-ui-matrix 有第 15 次滚存笔', pm.includes('第 15 次'))
 }

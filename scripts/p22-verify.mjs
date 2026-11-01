@@ -65,7 +65,11 @@ function layerTwoOf(text, rowId) {
 }
 
 const REAL_PATCH = join(root, "cordis.patch.yml");
-const realText = readFileSync(REAL_PATCH, "utf8");
+// 可移植化（复审核意见「回归链 CRLF」，2026-11-01）：夹具一律归一成 CRLF 再进合成链——
+// 合成锚点（syntheticText）与前提断言（"fixture really is CRLF"）都钉在 CRLF 形态上，
+// LF 检出（如 GitHub zip）原样装载会让锚点全数 miss、前提断言崩溃。归一只影响夹具，
+// 真实文件零写入的收尾判据不受影响。
+const realText = readFileSync(REAL_PATCH, "utf8").replace(/\r?\n/g, "\r\n");
 const realShaBefore = sha(realText);
 
 const work = mkdtempSync(join(tmpdir(), "p22-toggle-"));

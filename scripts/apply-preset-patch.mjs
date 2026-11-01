@@ -238,7 +238,15 @@ function legacyDirCandidate() {
 
 function findInstallDir() {
   const candidates = [];
-  if (process.env.DSH_INSTALL_DIR) candidates.push(process.env.DSH_INSTALL_DIR);
+  if (process.env.DSH_INSTALL_DIR) {
+    // 显式入口兼容两种形态（复审核意见「DSH_INSTALL_DIR 语义」，2026-11-01；
+    // 与 lib/agent-memory/lib/preflight.js locateDshInstall 同口径）：
+    //   ① @deepseek-ai/dsh 包目录（本脚本历史语义）；
+    //   ② node_modules 根（scripts/ci-local.mjs 广播的形态）。
+    const explicit = process.env.DSH_INSTALL_DIR;
+    candidates.push(explicit);
+    candidates.push(join(explicit, "@deepseek-ai", "dsh"));
+  }
   candidates.push(join(process.cwd(), "node_modules", "@deepseek-ai", "dsh"));
   candidates.push(join(homedir(), "AppData", "Roaming", "npm", "node_modules", "@deepseek-ai", "dsh"));
   for (const c of candidates) {

@@ -23,7 +23,18 @@ window.__ModuleLoader__.load({
 			window.fetch = function (input, init) {
 				init = init || {};
 				var method = String(init.method || (input && input.method) || "GET").toUpperCase();
+				// 令牌只随本面板同源请求发出（复审核意见「脱敏缺口」，2026-11-01）：
+				// 发往第三方的 POST/PUT/PATCH/DELETE 不得捎带令牌，防止宿主页面上其他
+				// 脚本借这个包装把令牌带出站外。URL 解析不了的一律不带头（宁缺勿漏，
+				// 服务端 403 兜底）。
+				var attach = false;
 				if (method !== "GET" && method !== "HEAD" && WRITE_TOKEN) {
+					try {
+						var reqUrl = typeof input === "string" ? input : (input && input.url) || "";
+						attach = new URL(reqUrl, window.location.href).origin === window.location.origin;
+					} catch (e) { attach = false; }
+				}
+				if (attach) {
 					try {
 						var headers = new Headers(init.headers || (input && input.headers) || {});
 						if (!headers.has("x-panel-write-token")) headers.set("x-panel-write-token", WRITE_TOKEN);

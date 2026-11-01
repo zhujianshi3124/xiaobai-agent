@@ -1,10 +1,10 @@
 # xiaobai-agent（DSH 工具箱）
 
-`xiaobai-agent`（manifest id：`dsh/toolkit`）是运行在 DSH 宿主中的插件工具箱，当前包版本为 `1.3.0`。它提供模型请求换源与限流、上下文压缩、本地记忆台账、子卡模型跟随，以及插件注册、健康检查和 Web 管理面板，共携带 12 个子插件。
+`xiaobai-agent`（manifest id：`dsh/toolkit`）是运行在 DSH 宿主中的插件工具箱，当前包版本为 `1.3.0`。它提供模型请求换源与限流、上下文压缩、本地记忆台账、子卡模型跟随，以及插件注册、健康检查、Web 管理面板和多代理输出/写权治理（输出闸门），共携带 12 个子插件。
 
-本项目面向希望降低模型使用成本、减少免费 API 限额影响的 DSH 用户，尤其适合轻量化任务。**它不是独立应用，也不是一个自带任务规划与工具执行循环的通用 AI Agent；模型、对话和工具体系由 DSH 宿主提供。**
+本项目面向希望降低模型使用成本、减少免费 API 限额影响，以及需要对多代理输出与写权做治理的 DSH 用户，尤其适合轻量化任务。**它不是独立应用，也不是一个自带任务规划与工具执行循环的通用 AI Agent；模型、对话和工具体系由 DSH 宿主提供。**
 
-## 一、先说明能力边界
+## 一、能力边界
 
 - 多账号/多模型换源的效果取决于可用 provider、model 和 API key 的数量；key 太少时，冷却与换源的作用有限。
 - 故障处理主要针对 RPM/TPM 限流，不代表任意网络错误、鉴权错误或服务端故障都能自动恢复。
@@ -31,6 +31,8 @@
 - **模板/patch 通道**：源码仓的 `cordis.patch.yml` 保留部署占位符 `<AGENT_MEMORY_DATA_ROOT>` 和 `<PANEL_ENTRY_URL>`，部署时必须替换为当前环境的真实值，不能原样用于生产。
 
 不同 DSH 分发形态的安装入口并不相同，请按所用宿主的 bundle/preset 机制安装本包；本仓库不是一个用 `npm start` 独立启动的服务。根 `package.json` 的发布 `files` 未包含 `cordis.patch.yml` 和 `scripts/`，因此使用发布包时不能假设模板与预设脚本会随包提供。
+
+**从 GitHub 第一次部署（最小路径）**：把本仓库克隆或解压到本机任意目录（下称 `<套件目录>`），在所用 DSH profile 的 `cordis.patch.yml` 里参照源码仓 `cordis.patch.yml` 与各 `lib/*/bundle.patch.yml` 的 insert 行，以 `file:///<盘符>/<路径>` 形态挂载需要的入口，替换 `<AGENT_MEMORY_DATA_ROOT>` 与 `<PANEL_ENTRY_URL>` 两个占位符后重启宿主；需要输出闸门时再以 `/gate on` 按工作区启用。git clone 与 zip 下载的换行形态不影响运行，只影响仓内回归脚本——`scripts/p22-verify.mjs` 与 `scripts/p24-verify.mjs` 已做换行归一，两种形态都能跑。
 
 ### 3. 单独启用 compact-router
 

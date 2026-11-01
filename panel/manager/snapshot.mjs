@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import { PLUGINS, DEPENDENCIES } from "./plugin-registry.mjs";
 import { listCustody, getSoftRecord, custodyRoot } from "./custody.mjs";
-import { redactSecretText, redactHomePath } from "./redact.mjs";
+import { redactSecretText, redactHomePath, redactViewDeep } from "./redact.mjs";
 // 提供面单源化（改名批）：不自建第二份优先级逻辑，直接复用装载面 extractRegisters
 // （provides 三槽优先、缺席回落 legacy registers，同 loader 口径；返回 undefined 时置空对象）。
 import { extractRegisters } from "../../registry/dist/loader.js";
@@ -381,6 +381,12 @@ export function buildSoftReceipt(record, dir, ledgerKey) {
   return { recordedAt: record.recordedAt || null, lines };
 }
 
+/** 配置面板下发面的视图掩码：values 过 redactViewDeep（表单基底会随保存回传）；其余键（note/effectNote 文案）原样。 */
+function maskConfigPanel(panel) {
+  if (!panel || typeof panel !== "object" || panel.values === undefined) return panel;
+  return { ...panel, values: redactViewDeep(panel.values) };
+}
+
 export async function buildSnapshot({ toolkitRoot, hotRouterPath = join(homedir(), ".dsh", "dsh-search-router.json"), envMode = process.env.DSH_WEB_SEARCH_ROUTER_MODE } = {}) {
   const pkg = loadJson(join(toolkitRoot, "package.json")) || {};
   const suiteManifest = loadJson(join(toolkitRoot, "dsh.plugin.json")) || {};
@@ -473,7 +479,10 @@ export async function buildSnapshot({ toolkitRoot, hotRouterPath = join(homedir(
       events: (manifest && (manifest.requirements || {}).registers || {}).events || [],
       managedBy: raw.patchRow ? "patch" : meta.managedBy === "preset" ? "preset-script" : "none",
       enabled: raw.patchRow ? raw.patchRow.enabled : meta.managedBy === "preset" ? presetState.patched : false,
-      patchRow: raw.patchRow,
+      // P1-4 后置（复审核意见「脱敏缺口」，2026-11-01）：patchRow 与 values 同为下发面
+      // 结构化字段，与 patch.text 同规过视图掩码；客户端写路径只回传 rowId/confirm/值，
+      // 掩码经 /v2/config 的 mergePreservingRedacted 还原，不进写路径。
+      patchRow: raw.patchRow ? redactViewDeep(raw.patchRow) : raw.patchRow,
       // ---- P2.4 缺席态（六态）----
       status,
       statusCopy: status === "dependency-broken" ? (dependency && dependency.note) || "依赖缺失" : ABSENCE_COPY[status],
@@ -495,7 +504,7 @@ export async function buildSnapshot({ toolkitRoot, hotRouterPath = join(homedir(
         (meta.managedBy === "preset" || raw.receiptOnFile),
       // ---- P2.3 配置编辑（卸载态隐藏多余操作，状态照常渲染）----
       configPanel: mounted
-        ? buildConfigPanel(dir, raw.patchRow ? raw.patchRow.id : null, patchText, { hotRouterPath, envMode })
+        ? maskConfigPanel(buildConfigPanel(dir, raw.patchRow ? raw.patchRow.id : null, patchText, { hotRouterPath, envMode }))
         : { editable: false, hiddenForAbsence: true },
     });
   }
@@ -522,8 +531,10 @@ export async function buildSnapshot({ toolkitRoot, hotRouterPath = join(homedir(
     patch: {
       path: redactHomePath(patchPath),
       text: redactSecretText(patchText),
-      rows,
-      webRow,
+      // 复审核意见「脱敏缺口」（2026-11-01）：rows/webRow 与 text 同源（patch 原文解析），
+      // 同规过视图掩码；id/name 等非凭据形态字段不受影响（行解析与客户端匹配不变）。
+      rows: redactViewDeep(rows),
+      webRow: redactViewDeep(webRow),
     },
     custody: {
       root: redactHomePath(custodyRoot(toolkitRoot)),

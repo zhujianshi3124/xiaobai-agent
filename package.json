@@ -16,7 +16,7 @@
     "hooks:status": "node scripts/install-git-hooks.mjs --status"
   },
   "type": "module",
-  "description": "DSH 套件：rate-throttle / compact-router / agent-memory / search-router 四合一入口；一个版本号管全部。",
+  "description": "DSH 套件：rate-throttle / compact-router / agent-memory / agent-model-follow / 治理插件（含输出闸门）/ 面板 多合一入口；一个版本号管全部。",
   "bin": {
     "dsh-doctor": "./doctor/cli/src/cli.mjs"
   },
